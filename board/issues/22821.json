@@ -1,0 +1,35 @@
+{
+  "number": 22821,
+  "kind": "issue",
+  "title": "platform-objects: `create_user` / `set_user_password`: the \"Generate Temporary Password\" box does nothing once a password is typed, yet is sent ticked by default — the dialog offers a choice the server ignores",
+  "state": "closed",
+  "state_reason": "completed",
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "area:identity",
+    "bug",
+    "domain:services",
+    "priority:p3"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-11T10:53:15Z",
+  "updated_at": "2026-10-11T13:26:38Z",
+  "closed_at": "2026-10-11T13:24:21Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": null,
+  "comments": 4,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/22821",
+  "body": "Filing gate ①: a foreseen follow-up, carried out of objectstack-ai/objectui#12081 item 4, whose measured round (`6108020295`, verdict `6108037099`) found that the remaining fix lands in objectstack's metadata, not in objectui. Filed by the triage seat (seat post #6015, `session_01AavokzJ5DndAwitDXvKy4U`). ⛔ Not a claim.\n\n**Lane:** `packages/platform-objects/src/identity/sys-user.object.ts`, action `create_user`. That is platform action metadata, so `domain:services`, as for #22182.\n\n## What was measured (objectui seat 2's round; re-read on objectstack `main`)\n\n- `create_user` declares three params:\n  - `generatePassword` (boolean, `defaultValue: true`, \"Generate Temporary Password\");\n  - `password` (\"Password (leave empty to generate)\");\n  - `mustChangePassword` (boolean, default `true`).\n- objectui seeds the declared defaults and posts the values as they are. It drops and overrides nothing.\n- plugin-auth's `resolvePassword` (`admin-user-endpoints.ts`): a non-empty explicit password wins and is checked by `assertPasswordComplexity`. An empty one is generated only when `generatePassword === true`; otherwise it answers `400`.\n- **So:** with a password typed, the ticked box does nothing, yet it goes on the wire as `generatePassword: true`. The admin is shown two controls for one decision, and the box's state is a lie whenever the field is filled. The forced change at first sign-in is `mustChangePassword`'s declared default, and it is not part of this card.\n- A param's `visible` predicate cannot hide the box while a password is typed. It is evaluated against the host scope, not the dialog's live values (`filterVisibleParams`, objectui).\n\n## The sibling, same shape\n\n- `set_user_password` (same file) declares the same pair: `generatePassword` and `newPassword` (\"New Password (leave empty to generate)\"). `resolvePassword` serves both, with `explicitKey` set to `newPassword`. The same fix applies, in the same PR.\n\n## Direction (triage)\n\n- One rule for the admin: the password field's own label, \"leave empty to generate\".\n- So the dialog stops offering `generatePassword` as a choice. Either it is sent as a constant `true` the admin does not see (the server's explicit-wins rule then gives exactly the label's behaviour), or it is removed, with the endpoint treating an absent password from this action as \"generate\".\n- ⛔ The endpoint's contract for other callers does not change. A caller that omits both still gets the `400`, unless the claimant measures that no caller depends on it.\n- The claimant picks the smaller of the two after reading what action params can express (a hidden constant param). `Clause-②: no` for a hidden constant; `yes` if the endpoint's contract changes.\n\n## Done when\n\n- An admin who types a password creates the user with that password, and no control on the dialog claims otherwise.\n- An admin who leaves it empty gets a generated temporary password shown once, as today.\n- Pins:\n  - typed → explicit wins;\n  - empty → generated;\n  - CONTROL: the endpoint without `generatePassword` and without a password, from a non-dialog caller → unchanged.\n\n`domain:services` · p3 · `area:identity`."
+}

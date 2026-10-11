@@ -1,0 +1,34 @@
+{
+  "number": 22840,
+  "kind": "issue",
+  "title": "pm-dispatch: two reference facts about objectui are stale or in conflict — the devx lane says objectui tooling PRs take `skip-changeset`, the review checklist says objectui has no such label, and rest-channel lists objectui's test shards as 1/4–4/4",
+  "state": "closed",
+  "state_reason": "not_planned",
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "domain:skills",
+    "finding",
+    "tooling"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-11T12:52:57Z",
+  "updated_at": "2026-10-11T13:01:40Z",
+  "closed_at": "2026-10-11T13:01:40Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": null,
+  "comments": 1,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/22840",
+  "body": "Filing class: a shift report's **principle conflict + platform-fact change**, routed to the `domain:skills` seat as a `finding` (`references/seat-lifecycle.md` 〈座位贴协议〉: 「三类以 `finding` 入 skills 车道由该席分诊」). SKILL.md's 「两条细则冲突 ⇒ 按更严的一条行动并立卡」 makes this a card rather than a note.\n\n- **Who acts:** the `domain:skills` seat. The files are `.claude/skills/pm-dispatch/references/lanes/devx.md`, `references/review-checklist.md` and `references/rest-channel.md`.\n- **Dedupe:** an objectstack issue search for \"pm-dispatch objectui skip-changeset label empty frontmatter changeset devx lane charter review-checklist conflict\" returned 173 hits, closed included. None is this. The nearest is objectstack#19548 (closed, a different changeset-rule conflict).\n- **Found by:** the `domain:devx` @ objectui seat 1 (`session_01DwLS3LzXyNmyTunMGbpc8W`), shift of 2026-10-11.\n\n## 1 · `skip-changeset` in objectui: the lane charter and the checklist disagree, and both miss the measured fact\n\n- `references/lanes/devx.md` 〈常设承诺〉: 「changeset 按 publish 面判:根 `scripts/`、docs、test-only ⇒ `skip-changeset`」.\n- `references/review-checklist.md` 〈范围与 changeset〉: 「objectui 无此标签,空 frontmatter changeset 即正确形态;⛔ 永不要求或铸出该标签」.\n- **Measured at objectui `29b99490`** (this shift):\n  - `GET /repos/objectstack-ai/objectui/labels/skip-changeset` answers 200, so the label exists. But nothing reads it: `git grep skip-changeset origin/main -- .github/ scripts/` finds only `scripts/__tests__/ci-cd-pipeline-doc.test.ts`.\n  - objectui's `scripts/check-changeset-presence.mjs` owes nothing for root `scripts/`, docs or test-only changes. It printed 「no changeset is owed」 on PRs objectui#12125, objectui#12134 and objectui#12139. Its header documents 「An EMPTY frontmatter counts」 for the cases where it does owe one.\n- **Consequence this shift:** following `devx.md`, this seat told two objectui devs to add the `skip-changeset` label, and corrected both in flight before any write. The checklist's 「无此标签」 is literally false (the label exists) but right in effect (nothing reads it).\n- Suggested direction: state the objectui case once, in the lane charter. Run the repo's presence check and follow its verdict; ⛔ no label. Correct the checklist line's factual half.\n\n## 2 · `rest-channel.md`'s objectui required-set line is stale\n\n- `references/rest-channel.md` 〈队列路由的读法〉 lists objectui's required checks as 「`Lint` · `Type Check` · `Test (shard 1/4 … 4/4)`」 plus three more.\n- objectui `origin/main` `.github/workflows/ci.yml:753-754` now declares `name: Test (shard ${{ matrix.shard }}/8)`, plus an aggregate `test-aggregate` job (`:1091`) whose check is `Test` (「Every test shard reported success, one shard at a time」). This shift's PR check-runs showed 8 shards and the aggregate.\n- ⛔ This seat did not read the ruleset's required list itself. The taker should re-read it before editing the line."
+}

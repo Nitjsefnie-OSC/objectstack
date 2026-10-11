@@ -2,8 +2,8 @@
   "number": 22748,
   "kind": "issue",
   "title": "spec: the stack definition has no `email`, `sms` or `appName` key, so the `config.email` / `config.sms` contract `serve` reads is unreachable from a `defineStack` config",
-  "state": "open",
-  "state_reason": null,
+  "state": "closed",
+  "state_reason": "completed",
   "draft": null,
   "author": {
     "login": "objectstack-fleet[bot]",
@@ -14,7 +14,6 @@
     "area:devpath",
     "bug",
     "domain:spec",
-    "pm:dispatched",
     "priority:p3"
   ],
   "assignees": [
@@ -23,11 +22,15 @@
   "milestone": null,
   "type": null,
   "created_at": "2026-10-10T23:53:48Z",
-  "updated_at": "2026-10-11T08:04:11Z",
-  "closed_at": null,
-  "closed_by": null,
+  "updated_at": "2026-10-11T08:57:49Z",
+  "closed_at": "2026-10-11T08:56:25Z",
+  "closed_by": {
+    "login": "os-zhuang",
+    "id": 277994282,
+    "type": "User"
+  },
   "merged_at": null,
-  "comments": 7,
+  "comments": 8,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/22748",
   "body": "Filing gate: ① a finding (declared ≠ reachable) with a public door. Reach: `defineStack({ manifest, email: { persist: false } })` throws `STACK_SCHEMA_INVALID` \"Unrecognized key(s) on this stack definition: `email`\"; the same holds for `sms` and `appName`. Measured by the #22301 dev on PR #22747's tree (report `6103467807`, `out_of_scope_findings` 1). The seat confirmed the schema half on `origin/main` `ed1de8c2db`.\nHands-on reader: triage grades it into the `domain:spec` queue (the stack schema is `packages/spec/src/stack.zod.ts`); the readers' new home after PR #22747 is `@objectstack/plugin-email` / `@objectstack/service-sms` (`domain:services`).\nDedupe: the semantic issue search \"defineStack refuses email sms appName key EmailServiceConfigSchema config.email unrecognized stack key\" returned 2 hits, both closed and different. #5307 added three keys INSIDE `EmailServiceConfigSchema`; #5105 was a docs example. Neither covers the stack-level door.\n\n## The two halves (read on `origin/main` `ed1de8c2db`)\n\n- **Declared and read:**\n  - `@objectstack/spec`'s `EmailServiceConfigSchema` (`packages/spec/src/system/email-config.zod.ts`) documents `config.email.*` \"from `objectstack.config.ts`\" as the operator contract.\n  - `serve` reads `config.email`, `config.sms` and the top-level `config.appName` (`packages/cli/src/commands/serve.ts:4693`, `:6345`–`:6404`). After PR #22747 lands, `bootStack` reads them too.\n- **No door:**\n  - `packages/spec/src/stack.zod.ts` declares no `email`, `sms` or `appName` key on the stack definition (`git grep` finds `analyticsCubes` at `:710` and none of the three), and the definition refuses unrecognized keys.\n  - A config that carries them therefore cannot be built by `defineStack`, and `os build` / `os validate` refuse a config `defineStack` did not build (`STACK_PROVENANCE_MISSING`). Only `os serve` boots it.\n  - So the configuration arm of the mail and SMS readers is reachable only through `OS_EMAIL_*` / `OS_SMS_*` environment, or from a config the build refuses.\n\n## For triage\n\nPer the base ruling (spec declaration > implementation > docs), this is either a missing stack key (admit `email` / `sms` / `appName`, typed by the schemas that already exist) or a dead declaration (retire the `config.*` arm and its docs). Which one is triage's or the maintainer's call. It is pre-existing: PR #22747 moves the readers without changing what they read."

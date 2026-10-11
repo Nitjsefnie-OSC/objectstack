@@ -2,7 +2,7 @@
   "number": 22778,
   "kind": "pull_request",
   "title": "feat(spec): the stack definition admits `appName` and the non-secret `email` / `sms` members; their credentials are refused by name",
-  "state": "open",
+  "state": "closed",
   "state_reason": null,
   "draft": false,
   "author": {
@@ -12,7 +12,6 @@
   },
   "labels": [
     "documentation",
-    "needs-user-decision",
     "protocol:system",
     "size/l",
     "tests",
@@ -24,10 +23,14 @@
   "milestone": null,
   "type": null,
   "created_at": "2026-10-11T06:21:44Z",
-  "updated_at": "2026-10-11T08:03:11Z",
-  "closed_at": null,
-  "closed_by": null,
-  "merged_at": null,
+  "updated_at": "2026-10-11T08:58:15Z",
+  "closed_at": "2026-10-11T08:56:24Z",
+  "closed_by": {
+    "login": "os-zhuang",
+    "id": 277994282,
+    "type": "User"
+  },
+  "merged_at": "2026-10-11T08:56:24Z",
   "comments": 3,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/pull/22778",

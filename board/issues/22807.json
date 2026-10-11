@@ -1,0 +1,37 @@
+{
+  "number": 22807,
+  "kind": "pull_request",
+  "title": "fix(verify): provision the RLS probe persona through the registry, not a set row (#15204 stage 4)",
+  "state": "closed",
+  "state_reason": null,
+  "draft": false,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "documentation",
+    "size/m",
+    "tests",
+    "tooling"
+  ],
+  "assignees": [
+    "marchtian"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-11T08:39:56Z",
+  "updated_at": "2026-10-11T09:50:26Z",
+  "closed_at": "2026-10-11T09:50:25Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": "2026-10-11T09:50:24Z",
+  "comments": 2,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/pull/22807",
+  "body": "Part of #15204\nClause-②: no\n\nStage **4** of #15204 (stage plan 6094501866): `verify` provisions its RLS probe persona through the registry, not a set row. Claimed in the amendment 6106681412. The card stays open; its other stages are untouched here.\n\n## What changes\n\n`packages/verify/src/rls.ts`, `provisionRlsProbePersona`:\n\n- **Before:** it found or created a `sys_permission_set` row named `verify_rls_probe`. When the row was missing, it minted one with the probe's object permissions and RLS serialized into row columns, then granted it.\n- **After:** it mints no permission set.\n  1. It asks the **security catalog**, through `securityCatalogReaderOf(ql).resolve('permission', 'verify_rls_probe')`. That is the read the authorization resolver itself uses (ADR-0131 D3/D4). `rlsProbeSecurity(config)` registers the set at boot. A stack booted without it now fails here, loudly, instead of granting a name that resolves to nothing.\n  2. It **reads** the id of the `sys_permission_set` row the boot already seeded for that registered set. `sys_user_permission_set.permission_set_id` is still a required column (it goes in stage 8 or C7b), and the platform derives the grant's name from it and refuses a disagreement (`grant-permission-set-name.ts`). This is no transition piece: no new read or write is added for an intermediate state. It is the one remaining existing read, narrowed from find-or-create to find.\n  3. It writes the one grant, carrying both columns as before.\n- Either missing piece (no catalog entry, or no seeded row) throws and writes nothing. `objectstack verify --rls` already turns any provisioning failure into `probe.degraded` plus a hard failure, so neither case can pass as a weaker persona.\n\n## Measured before building (`origin/main` `9f5eca52b`)\n\n- **The boot seeds the row.** `SecurityPlugin` passes `options.defaultPermissionSets` (which `rlsProbeSecurity` extends with the probe set) as `bootstrapPermissionSets` to `bootstrapPlatformAdmin` at `kernel:ready`. That function inserts a row for every bootstrap set it does not find (`bootstrap-platform-admin.ts` around line 873).\n  - A real `bootStack(showcase, { security: rlsProbeSecurity(config) })` held exactly one `verify_rls_probe` row afterwards: organization null, `managed_by: platform`.\n- **The catalog serves the set.** On the same boot, `securityCatalogReaderOf(ql).resolve('permission', 'verify_rls_probe')` answered an entry with 24 objects and 24 `rowLevelSecurity` rules. The control, an unregistered name, answered undefined.\n- **Multi-tenant was not measured.** A multi-tenant boot needs the enterprise `@objectstack/organizations` package, which this repository cannot load. The PR's CI is not shown to cover it either: no test drives `verify --rls` end to end.\n\n## Verification\n\nAll at `72cc4a67c8`:\n\n- **Build:** `pnpm --filter '@objectstack/example-showcase^...' --filter '@objectstack/cli...' build` exited 0, as did the `@objectstack/dogfood^...` build.\n- **Unit tests:** `pnpm --filter @objectstack/verify test` passed 29 files, 236 tests. `pnpm --filter @objectstack/verify typecheck` was clean, including `check:test-typecheck`.\n- **`rls-persona-grant.test.ts`, rewritten.** It pins four cases: the registered set is granted by name with the seeded row's id and no set row is inserted; no seeded row refuses and writes nothing; a row with no catalog entry refuses and writes nothing; no catalog bound refuses and writes nothing.\n- **Reverse verification (one-off, not kept):**\n  - `main`'s `rls.ts` was restored under the new test with `git restore --source=9f5eca52b`. The mutant held `genId('ps')` once and `securityCatalogReaderOf` zero times. The result was **3 failed, 1 passed**: every refusal case went red, and the seeded-row case stays green because `main` also reuses a found row.\n  - Restored with `git checkout HEAD`. Blob `edefdfbc2589` matched HEAD, and `git diff HEAD` was empty.\n- **End to end:** `objectstack verify --app ./objectstack.config.ts --rls --json` was run on `examples/app-showcase`, twice on `main`'s code and twice on this branch.\n  - All four runs had `hardFailures: 0` and a probe that was not degraded (`grantedObjects: 24`).\n  - All four had identical totals: 264 objects, 38 consistent, 0 holes, 131 member-visible, 62 probe-blocked, 33 skipped.\n  - All four had identical per-object and per-position statuses.\n  - The only difference was one run's probe target for `showcase_invoice`, adopted rather than created after an admin create answered 400. The second run on this branch created it again, so this is run-to-run noise.\n- **Dogfood suite, in full** (`pnpm --filter @objectstack/dogfood test`; its files import `@objectstack/verify`): 245 files passed, 1 skipped; 1977 tests passed, 9 skipped; exit 0.\n- **Gates:** `node scripts/pm/dispatch-gates.mjs --repo objectstack-ai/objectstack --ran FILE` derived 61; 60 ran green and 1 is NOT MEASURED. That one is `check:dual-build-cjs-loads`, which exited 3 (PREREQUISITE NOT MET: it needs a whole-repo build) and is left to CI.\n\n## Landing order with S5c\n\n#22802 (#15196 S5c, comments only) edits the comment this PR replaces. Branching rules forbid stacked series, so this branch is cut from `main`, not from S5c. Whichever of the two lands second takes one textual conflict in `provisionRlsProbePersona`'s comment block, resolved by keeping this PR's text. #22802 also corrects `rlsProbeSecurity`'s docblock, which this PR leaves untouched for that reason.\n\n## Acceptance notes\n\n- **Carried by stage 6b-2:** this read depends on the boot seeding a `sys_permission_set` row for every registered bootstrap set (`bootstrapPlatformAdmin`). Stage 6b deletes \"platform-admin materialization\". If 6b-2 lands before stage 8 or C7b drops the `permission_set_id` requirement, it must carry this read along with the other grant writers that read a seeded id. Otherwise `verify --rls` reports a degraded persona, loudly, which is the failure mode this PR chose over minting.\n\n---\n_Generated by [Claude Code](https://claude.ai/code/session_01M5baMwzrfukawVWc496yxD)_\n"
+}

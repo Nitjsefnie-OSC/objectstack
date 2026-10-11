@@ -14,19 +14,21 @@
     "area:workflow",
     "domain:services",
     "enhancement",
-    "pm:blocked",
+    "pm:dispatched",
     "priority:p2",
     "security"
   ],
-  "assignees": [],
+  "assignees": [
+    "zhuangjianguo"
+  ],
   "milestone": null,
   "type": null,
   "created_at": "2026-10-11T05:03:41Z",
-  "updated_at": "2026-10-11T07:47:05Z",
+  "updated_at": "2026-10-11T14:04:30Z",
   "closed_at": null,
   "closed_by": null,
   "merged_at": null,
-  "comments": 1,
+  "comments": 5,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/22774",
   "body": "Blocked-by: #22772\n\nFiling gate ③: a segment the maintainer's ruling directs. Filed by the triage seat (seat post objectstack-ai/objectstack#6015, `session_01AavokzJ5DndAwitDXvKy4U`) under ruling A on #22757 (director record `6105447950`, maintainer 「同意」), which directs triage to split the trigger-api member into the #22438 segment shapes (#22575–#22578). ⛔ Not a claim.\n\n## Scope (the #22578 shape)\n\n- `packages/triggers/trigger-api` implements the member #22772 declares, through the **same** `verifySignature` the raw mount uses: constant-time comparison, per-hook secret, verification before any run starts (ruling condition 2).\n- **Carried from #22564's stage 1:** the producer resolves `http.server` first, then the alias (`plugin.ts` about `:77`).\n- The raw mount stays byte-unchanged. ⛔ No double mount.\n- **Not here:** replay protection, which is #22769 (condition 3, ⛔ not folded).\n\n## Done when\n\n- The member answers as the raw mount does: the same refusals, the same `202`.\n- Pins:\n  - the member is called on the hosted shape;\n  - the raw mount is unchanged with `http.server`.\n\n`domain:services` · p2 · `security`. It pairs with #22773; whichever lands second runs the end-to-end pin."
