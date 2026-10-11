@@ -2,21 +2,10 @@
 
 /**
  * [#22801 → A, C3 stage 6b-2] Every landed `permission` mutation derives the
- * `everyone` anchor again.
- *
- * The derivation used to ride the `permission` publish materializer, which
- * retired with the declared-permission seeder (ADR-0131 D3: no catalog row is
- * written). It now hangs off the protocol's post-persistence mutation signal
- * (`onMetadataMutation`), the one choke point every authoring door funnels
- * through — and unconditionally on the body: whether an accepted set still
- * qualifies is `readAcceptedEveryoneSets`' question, asked of what the catalog
- * now serves, so a publish that drops `isDefault` or deletes the set stops it
- * granting at once.
- *
- * Pinned at the wiring: which events re-derive, which do not, and that a
- * bootstrap re-run (the first-user replay) never registers a second listener.
- * What a derivation then declares is U2's own suite
- * (`suggested-audience-bindings.test.ts`, the dogfood acceptance pin).
+ * `everyone` anchor again, off `onMetadataMutation` (the publish materializer
+ * it rode retired with the seeder, ADR-0131 D3). Pinned at the wiring: which
+ * events re-derive, and that a bootstrap re-run never adds a second listener.
+ * What a derivation declares is U2's own suite.
  */
 
 import { describe, it, expect, vi, afterEach } from 'vitest';
@@ -27,23 +16,15 @@ afterEach(() => { vi.restoreAllMocks(); });
 
 type MutationListener = (evt: { type: string; name: string; state: 'active' | 'draft' | 'deleted' }) => void;
 
-/**
- * Field equality plus `{ $in: [...] }`. Anything else is REFUSED rather than
- * answered — a combinator read as a field name matches no row and would report
- * that as "no rows".
- */
+/** Field equality plus `$in`; anything else is REFUSED, never read as "no rows". */
 function rowMatches(row: any, where: Record<string, unknown> = {}): boolean {
   return Object.entries(where).every(([k, v]) => {
-    if (k.startsWith('$')) {
-      throw new Error(`this double implements field predicates only; it cannot answer '${k}'`);
-    }
+    if (k.startsWith('$')) throw new Error(`this double cannot answer '${k}'`);
     const actual = row?.[k] ?? null;
     if (v !== null && typeof v === 'object' && !Array.isArray(v)) {
       const ops = Object.keys(v as Record<string, unknown>);
-      if (ops.length === 1 && ops[0] === '$in') {
-        return ((v as any).$in as unknown[]).some((m) => (m ?? null) === actual);
-      }
-      throw new Error(`this double implements equality and $in only; it cannot answer ${JSON.stringify(ops)}`);
+      if (ops.length === 1 && ops[0] === '$in') return ((v as any).$in as unknown[]).some((m) => (m ?? null) === actual);
+      throw new Error(`this double cannot answer ${JSON.stringify(ops)}`);
     }
     return actual === (v ?? null);
   });
@@ -55,39 +36,27 @@ async function boot() {
   const ql: any = {
     registerMiddleware: () => {},
     // Only the identity objects the plugin's boot gate requires.
-    getSchema: (name: string) =>
-      name === 'sys_user' || name === 'sys_member' ? { name, fields: {} } : undefined,
+    getSchema: (name: string) => (name === 'sys_user' || name === 'sys_member' ? { name, fields: {} } : undefined),
     registry: { listItems: () => [] },
     find: async (object: string, opts?: any) => {
       const matched = (tables[object] ?? []).filter((r) => rowMatches(r, opts?.where ?? {}));
-      // The caller's bound, applied BY PRESENCE and after the filter
-      // (`check:objectql-double-limit`).
+      // The caller's bound, by presence, after the filter (`check:objectql-double-limit`).
       return (typeof opts?.limit === 'number' ? matched.slice(0, opts.limit) : matched).map((r) => ({ ...r }));
     },
-    findOne: async (object: string, query?: EngineFindOneQueryInput) => {
-      assertEngineFindOnePredicate(object, query);
-      return null;
-    },
+    findOne: async (object: string, query?: EngineFindOneQueryInput) => { assertEngineFindOnePredicate(object, query); return null; },
     count: async () => 0,
     insert: async (object: string, data: any) => {
       const row = { id: data?.id ?? `${object}_${(tables[object] ?? []).length + 1}`, ...data };
       (tables[object] ??= []).push(row);
       return { ...row };
     },
-    update: async (_object: string, data: any, options?: any) => {
-      assertEngineUpdateDispatch(data, options);
-      return 0;
-    },
+    update: async (_object: string, data: any, options?: any) => { assertEngineUpdateDispatch(data, options); return 0; },
   };
   const listeners: MutationListener[] = [];
   const protocol = {
-    // Present so the projection wiring takes its awaited seam and adds no
-    // listener of its own: every listener counted below is this stage's.
+    // Present so the projection wiring adds no listener of its own.
     registerMutationProjector: vi.fn(),
-    onMetadataMutation: (listener: MutationListener) => {
-      listeners.push(listener);
-      return () => {};
-    },
+    onMetadataMutation: (listener: MutationListener) => { listeners.push(listener); return () => {}; },
   };
   const services: Record<string, any> = {
     manifest: { register: vi.fn() },
@@ -99,10 +68,7 @@ async function boot() {
   const ctx: any = {
     logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
     registerService: vi.fn(),
-    getService: (name: string) => {
-      if (!(name in services)) throw new Error(`service not registered: ${name}`);
-      return services[name];
-    },
+    getService: (name: string) => { if (!(name in services)) throw new Error(`no service: ${name}`); return services[name]; },
     hook,
   };
   const derive = vi.spyOn(SecurityPlugin.prototype as any, 'declareEveryone').mockResolvedValue(undefined);
@@ -112,7 +78,6 @@ async function boot() {
   const fire = async (event: string) => {
     for (const [, cb] of hook.mock.calls.filter((c: any[]) => c[0] === event)) await cb();
   };
-  /** Let a fire-and-forget listener's promise chain settle. */
   const settle = async () => { for (let i = 0; i < 5; i++) await new Promise((r) => setTimeout(r, 0)); };
   return { ctx, fire, settle, listeners, derive };
 }
@@ -122,9 +87,7 @@ describe('[#22801 → A] a landed permission mutation re-derives everyone', () =
     const { ctx, fire, listeners } = await boot();
     await fire('kernel:ready');
     // Positive control: the bootstrap really completed.
-    expect(
-      ctx.logger.info.mock.calls.filter((c: any[]) => String(c[0]).includes('platform bootstrap complete')),
-    ).toHaveLength(1);
+    expect(ctx.logger.info.mock.calls.filter((c: any[]) => String(c[0]).includes('platform bootstrap complete'))).toHaveLength(1);
     expect(listeners).toHaveLength(1);
     await fire('kernel:ready');
     expect(listeners).toHaveLength(1);

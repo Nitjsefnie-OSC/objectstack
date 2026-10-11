@@ -347,11 +347,7 @@ async function boot(scenario: Scenario): Promise<Booted> {
   }
   recording = false;
 
-  return {
-    engine, metadata, ledger,
-    census: await positionCensus(engine),
-    permissionSetCensus: await permissionSetCensus(engine),
-  };
+  return { engine, metadata, ledger, census: await positionCensus(engine), permissionSetCensus: await permissionSetCensus(engine) };
 }
 
 /** The four principals' resolved grants — needs the organization and its memberships. */

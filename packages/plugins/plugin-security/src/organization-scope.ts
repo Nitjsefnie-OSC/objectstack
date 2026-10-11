@@ -3,10 +3,8 @@
 /**
  * Organization scoping for the RBAC catalog's per-organization passes: the
  * system context one pass runs under and the one read that tells an
- * organization's own row apart from organization-less residue. [#15204 stage
- * 6b-2] The boot sweep's organization enumeration and the loud guard that stood
- * in place of a reap retired with the declared-permission seeder, their one
- * caller; the history below is kept because the reads that remain still apply it.
+ * organization's own row apart from organization-less residue (the sweep and
+ * the reap guard retired with their one caller, the seeder; #15204 stage 6b-2).
  *
  * ## Why the catalog is materialized per organization
  *
