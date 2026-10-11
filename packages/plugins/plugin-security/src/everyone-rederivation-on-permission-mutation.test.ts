@@ -27,6 +27,28 @@ afterEach(() => { vi.restoreAllMocks(); });
 
 type MutationListener = (evt: { type: string; name: string; state: 'active' | 'draft' | 'deleted' }) => void;
 
+/**
+ * Field equality plus `{ $in: [...] }`. Anything else is REFUSED rather than
+ * answered — a combinator read as a field name matches no row and would report
+ * that as "no rows".
+ */
+function rowMatches(row: any, where: Record<string, unknown> = {}): boolean {
+  return Object.entries(where).every(([k, v]) => {
+    if (k.startsWith('$')) {
+      throw new Error(`this double implements field predicates only; it cannot answer '${k}'`);
+    }
+    const actual = row?.[k] ?? null;
+    if (v !== null && typeof v === 'object' && !Array.isArray(v)) {
+      const ops = Object.keys(v as Record<string, unknown>);
+      if (ops.length === 1 && ops[0] === '$in') {
+        return ((v as any).$in as unknown[]).some((m) => (m ?? null) === actual);
+      }
+      throw new Error(`this double implements equality and $in only; it cannot answer ${JSON.stringify(ops)}`);
+    }
+    return actual === (v ?? null);
+  });
+}
+
 /** Boot the real plugin over an in-memory engine, with a protocol that exposes the mutation signal. */
 async function boot() {
   const tables: Record<string, any[]> = {};
@@ -37,12 +59,10 @@ async function boot() {
       name === 'sys_user' || name === 'sys_member' ? { name, fields: {} } : undefined,
     registry: { listItems: () => [] },
     find: async (object: string, opts?: any) => {
-      for (const k of Object.keys(opts?.where ?? {})) {
-        if (k.startsWith('$')) throw new Error(`this double implements field predicates only; it cannot answer '${k}'`);
-      }
-      const rows = tables[object] ?? [];
-      // The caller's bound, applied BY PRESENCE (`check:objectql-double-limit`).
-      return (typeof opts?.limit === 'number' ? rows.slice(0, opts.limit) : rows).map((r) => ({ ...r }));
+      const matched = (tables[object] ?? []).filter((r) => rowMatches(r, opts?.where ?? {}));
+      // The caller's bound, applied BY PRESENCE and after the filter
+      // (`check:objectql-double-limit`).
+      return (typeof opts?.limit === 'number' ? matched.slice(0, opts.limit) : matched).map((r) => ({ ...r }));
     },
     findOne: async (object: string, query?: EngineFindOneQueryInput) => {
       assertEngineFindOnePredicate(object, query);
