@@ -241,19 +241,6 @@ export const enObjects: NonNullable<TranslationData['objects']> = {
         label: "Customized",
         help: "This packaged permission set has an environment customization overlay (ADR-0094). Reset it (delete through the data door) to return to the shipped baseline."
       },
-      drift_status: {
-        label: "Declaration Drift",
-        help: "Cause of a declared≠enforced mismatch for this package-declared set. 'overlay_shadow' = a Studio-authored environment overlay is shadowing the packaged declaration. 'provenance_skip' = this row predates package provenance tracking, so boot sync treats it as environment-authored and never reconciles it with the package (no automated fix — file an issue / see the ops runbook for the manual adoption recipe). Absent = enforced grants match the shipped artifact, or this set is not currently package-declared.",
-        options: {
-          overlay_shadow: "Overlay shadow",
-          provenance_skip: "Provenance skip",
-          other: "Drift (other)"
-        }
-      },
-      drift_detail: {
-        label: "Drift Detail",
-        help: "Human-readable detail for `drift_status` — names the grant-count mismatch and its cause."
-      },
       id: {
         label: "Permission Set ID"
       },
@@ -273,9 +260,6 @@ export const enObjects: NonNullable<TranslationData['objects']> = {
       },
       all_permsets: {
         label: "All"
-      },
-      drifted: {
-        label: "Needs Attention"
       }
     },
     _actions: {
