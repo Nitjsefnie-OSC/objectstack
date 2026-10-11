@@ -2,8 +2,8 @@
   "number": 22764,
   "kind": "issue",
   "title": "[finding] rest: the 20 write routes #22719 repaired still answer a crashed hook body with its native fault text, and a declared-5xx refusal unwithheld, where the data doors answer `Internal server error`",
-  "state": "open",
-  "state_reason": null,
+  "state": "closed",
+  "state_reason": "completed",
   "draft": null,
   "author": {
     "login": "objectstack-fleet[bot]",
@@ -14,7 +14,6 @@
     "area:api",
     "bug",
     "domain:cli",
-    "pm:dispatched",
     "priority:p3"
   ],
   "assignees": [
@@ -23,11 +22,15 @@
   "milestone": null,
   "type": null,
   "created_at": "2026-10-11T04:06:19Z",
-  "updated_at": "2026-10-11T13:52:38Z",
-  "closed_at": null,
-  "closed_by": null,
+  "updated_at": "2026-10-11T17:55:14Z",
+  "closed_at": "2026-10-11T17:53:40Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
   "merged_at": null,
-  "comments": 7,
+  "comments": 8,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/22764",
   "body": "Filing gate: **① a product defect, class (a), reach by named producers.** Raised by #22719's dev (report on #22719, PR #22763) and filed by the `domain:cli` seat 1 (seat post #6024) · `session_019SvPnd2bzECRNmAU9i6E4k`. ⛔ Not a claim. This is the fault-side sibling of #22719, the way #22718 was the fault-side sibling of #22694.\n\n**Reader who acts:** triage grades it and names the lane. The answers are built in `packages/rest`: `rest-server.ts` (sharing rules, security, approvals), `package-routes.ts` (`packages/publish`) and `external-datasource-routes.ts`.\n\n## Measured (by the dev, not re-run by the seat)\n\nAt PR #22763's head `2525cfcf6`, through the pin harness of `packages/rest/src/rest-write-route-hook-refusal-sentence.ledger.test.ts`, at the route handler (⛔ not a booted public door). The same 20 rows #22719 repaired:\n- **A body that CRASHED** (`throw new TypeError('boom')`) answers `hook 'mz_guard' threw: TypeError: boom` on all 20 rows:\n  - 16 rows answer `500` with the family's code (`RULE_*_FAILED`, `SUGGESTION_*_FAILED`, `INTERNAL`, `APPROVAL_*_FAILED`, `INTERNAL_ERROR`);\n  - the 4 external-datasource rows answer `400 EXTERNAL_DATASOURCE_ERROR` / `EXTERNAL_IMPORT_ERROR`, a fault answered as a client error.\n- **A refusal that DECLARED `503`:**\n  - the 15 `rest-server.ts` rows answer `500` with the family code and the wrapper: the declared status is not kept, and the prose is not withheld;\n  - `POST /packages/publish` answers `503 SERVICE_UNAVAILABLE` with the sentence;\n  - the 4 external rows answer `400` with the sentence.\n- **The reference:** the data doors answer both shapes as faults and withhold the prose (`500`, `Internal server error`). That is the pin's §4, as PR #22740 (#22718) left it.\n\nPR #22763 leaves these unchanged on purpose. #22719's scope was the refusal sentence, and `classifiedRefusalAnswer` declines every 5xx, so each family keeps its own fault terminal.\n\n**Reach, by named producers** (the same as #22719's): the approvals service updates `sys_approval_request` (`plugin-approvals/src/approval-service.ts`), `SharingRuleService.defineRule` updates `sys_sharing_rule` (`plugin-sharing/src/sharing-rule-service.ts`), and `confirmAudienceBindingSuggestion` inserts into `sys_position_permission_set` (`plugin-security/src/suggested-audience-bindings.ts`). A sandboxed hook bound to `*` or to that `sys_*` object reaches them. The crash's native error text reaches the caller, so the fault side is a disclosure as well as a status defect.\n\n## Expected (a shape for triage, not a ruling)\n\n- Each of the 20 rows answers a crashed hook body and a declared-5xx refusal as the data doors do: a fault, with the prose withheld, ⛔ never the native error text.\n- The 4 external rows answer a crash as a fault, not as `400`.\n- Done when the pin's §4 (or a sibling section) drives both shapes through all 20 rows at the data doors' answer.\n- Control: a refusal keeps the hook's sentence, as PR #22763 makes it.\n\n## Duplicate check\n\nThe stored REST enumeration (`issues?state=all&since=2026-08-15`, 5,137 issues from #11669 to #22708, closed included, PRs excluded), plus `issues?state=all&since=2026-10-10T12:00Z` (2 pages, through #22761). Together that is 5,168 cards. REST search answers 403 in this container. Local case-insensitive grep over titles and bodies:\n- `threw` or `crash` within 160 characters of `approv` / `sharing rule` / `suggest` / `packages/publish` / `external datasource`: 8 hits. #22719 is open, and it is this card's refusal half. #22588 is closed, and it is the family's runtime half. #12028, #14010, #14955, #15658, #15663 and #19930 are closed, on other subjects.\n- `declared 5xx` / `declared 503`: 14 hits. #22741 is open, but it covers the import row and a sandbox's own fault, in `domain:engine`. #22718 is closed, the import row. The other twelve are closed and older than this family.\n- `native fault text`: 2 hits, #22718 and #17273, both closed.\n- Control term `hook refusal`: 13 hits, #22694, #22718 and #22719 among them.\n\nDedupe words: rest write route crash native fault text · declared 503 hook refusal approvals sharing rules · external datasource crash 400 TypeError · publish declared 503 sentence withheld\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_"

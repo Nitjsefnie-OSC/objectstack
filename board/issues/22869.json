@@ -1,0 +1,31 @@
+{
+  "number": 22869,
+  "kind": "issue",
+  "title": "platform-checklist + NORTH-STAR: retire `records-forms.picklist-org-append` and the \"customers append values per organization\" promise — the per-organization picklist append is ruled out",
+  "state": "open",
+  "state_reason": null,
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "area:records",
+    "domain:skills",
+    "pm:queue",
+    "priority:p2"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-11T16:59:59Z",
+  "updated_at": "2026-10-11T16:59:59Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 0,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/22869",
+  "body": "Filing gate: ③ — maintainer direct order.\n\nProvenance: the maintainer, live PM chat in session `session_01EgxC4UNYnzhuvmG12fh5A8`, 2026-10-11, verbatim: 「按组织追加 picklist 值，不考虑」, given while executing the order 「该关的关，改开卡的开卡」 on the open `pm:epic` cards. Parent context: #18164 (the picklist epic, closed in the same act with a pointer here).\n\n## What is wrong\n\nTwo declarations still promise a capability the maintainer has ruled out. Readings on `main` at `8532783f`:\n\n- `docs/qa/platform-checklist/areas/records-forms.json:4372`: item `records-forms.picklist-org-append`, `\"status\": \"planned\"`, P2, titled \"An organization appends a value to a shared picklist without changing the app source: that organization can write it, and another organization is refused\". Its sibling `records-forms.picklist-shared-across-objects` cross-references it (`:4357`: \"the verification sentence that this item and records-forms.picklist-org-append split between them\"), and `docs/qa/platform-checklist/coverage.json` names it.\n- `docs/NORTH-STAR.md:43`: the functional point 「共享选项集:多个对象复用同一份选项,客户按组织追加值而不改应用源码」, listing `picklist-shared-across-objects, picklist-org-append`.\n\nADR-0131 D6 had already retired the per-organization overlay axis the item depended on (`docs/adr/0131-total-organization-ownership-no-null-organization-id.md:105`: \"ADR-0005's per-organization overlay axis is retired\").\n\n## Change\n\n1. Retire `records-forms.picklist-org-append` using the checklist's own convention (`docs/qa/platform-checklist/README.md:49`: `active | draft | planned | retired`; read its \"Implementation status\" section first). Update the cross-reference in `picklist-shared-across-objects` and `coverage.json` so they agree.\n2. Rewrite `docs/NORTH-STAR.md:43` to the capability that exists: shared option sets reused across objects (the phase-1 `picklist` kind, #19518 / #19519, Studio objectui#10202). Drop the per-organization append clause and the retired id.\n3. Run the gates `node scripts/pm/dispatch-gates.mjs --commands` derives for this file surface.\n\n⛔ No product code. ⛔ Do not re-scope the append to environment level. The ruling drops it rather than moving it.\n\n## Who acts\n\nThe `domain:skills` seat, which owns the governed face `docs/NORTH-STAR.md`. The `docs/qa/**` hunk rides the same PR because the two must agree in one commit. Tier H: the maintainer merges.\n\n## Dedup\n\nMCP issue search over objectstack-ai/objectstack, open and closed, query \"picklist org append organization appends value shared picklist retire checklist item\": 5 hits. They are #18164 (the parent, closed in this act), and #19518, #19519, #21018 and #21957, all closed. None of them retires the item.\n\nRefs: #18164 · ADR-0131 D6."
+}

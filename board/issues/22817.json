@@ -2,8 +2,8 @@
   "number": 22817,
   "kind": "issue",
   "title": "Action activation door refuses an action no package ships, though its docblock says it does not require one (503, code and status mismatched)",
-  "state": "open",
-  "state_reason": null,
+  "state": "closed",
+  "state_reason": "completed",
   "draft": null,
   "author": {
     "login": "objectstack-fleet[bot]",
@@ -11,20 +11,26 @@
     "type": "Bot"
   },
   "labels": [
+    "area:api",
+    "domain:cli",
     "domain:engine",
-    "pm:queue",
-    "priority:p3",
-    "target:v18"
+    "priority:p3"
   ],
-  "assignees": [],
+  "assignees": [
+    "os-steve"
+  ],
   "milestone": null,
   "type": null,
   "created_at": "2026-10-11T09:34:43Z",
-  "updated_at": "2026-10-11T09:34:43Z",
-  "closed_at": null,
-  "closed_by": null,
+  "updated_at": "2026-10-11T18:21:48Z",
+  "closed_at": "2026-10-11T18:18:35Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
   "merged_at": null,
-  "comments": 0,
+  "comments": 6,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/22817",
   "body": "Filing gate ①: a product defect with a named landing point and a measured reach. Filed by the epic PM of #15194, `session_01Rerax7QTjKMPCUZxQUtPFR` (`marchtian`), on escalation ③.2 of the contract record 6107624825 on #22811 (#15204 stage 2d).\n\n**The reader who acts:** a `domain:engine` seat, or the #15204 lane if it is still running when the card is claimed. Dedupe: open and closed issue titles matching `action.*activation|_activation|action door|environment-authored action` → 1 hit, #22736 (stage 2c, closed), which is a different door.\n\n## The defect\n\n`POST /api/v1/actions/_activation/:object/:action` cannot switch an action that no package ships (one saved through the metadata door). Its own docblock declares that it can.\n- **Declared:** `packages/runtime/src/domains/actions.ts:146`–`:147`: \"⛔ It does not require the action to be PACKAGED. Neither does the flow toggle: a row for a runtime-authored artifact is harmless (absence means …)\".\n- **Delivered:** the door computes `String(declaration.action._packageId ?? declaration.obj._packageId ?? '')` (`actions.ts:223`) and passes `''` through `ql.setActionActive` (objectql `engine.ts:5217`) to the shared activation store.\n\n**Reach** (traced on `main` by the contract seat in 6107624825 ③.2):\n- **Before #22811:** `sys_metadata_activation.package_id` was `required`, so the request answered 503 `VALIDATION_FAILED` \"Package is required\". The code and the status disagreed.\n- **After #22811** (stage 2d makes `package_id` optional and the store refuse `''`): the request answers 503 `SERVICE_UNAVAILABLE` with the store's sentence. That sentence (\"Omit packageId for an item no package ships\") is written for a TypeScript caller and is served to an HTTP client.\n- No row lands in either case. A 503 tells the client to retry a refusal that no retry clears.\n\n## What fixes it (the reader's measured call)\n\n- **Option A, honour the docblock (the seat expects this one):** the door passes `undefined` when no package ships the action. This is the same fix #22811 made for the catalog door, and the store then writes `null`.\n- **Option B, refuse deliberately:** the door returns a 4xx pair with a sentence, and the docblock is corrected.\n- **If the reader finds a real product choice** (whether an environment-authored action should have an install-level switch at all), it stops at the measurement, and the seat files the decision.\n- **Either way:**\n  - the `?? ''` goes;\n  - `InMemoryMetadataActivationStore.setActive` refuses `''` like the real store (it is the flow and action stores' test double, now more lenient than what it stands for; ③.6 of the record);\n  - the action door's own `catch` keeps ADR-0112's code and status together.\n- `metadata-lifecycle.mdx` documents the action switch for packaged actions only, so no published page is false today.\n\n**Priority:** low. Nothing lands on either side, and nothing newly reachable opens. It is a declared-but-unenforced capability (Prime Directive #10). `Clause-②`: A is `yes (widening)`, B is `no (narrowing)`; either way the PR owes a contract review."

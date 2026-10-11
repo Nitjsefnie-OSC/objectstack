@@ -1,0 +1,37 @@
+{
+  "number": 22868,
+  "kind": "issue",
+  "title": "[finding] data door: a sandboxed hook's capability denial or missing ctx.api method naming the requested object answers 404 OBJECT_NOT_FOUND (\"Object 'X' is not registered\") through the unknown-object heuristic",
+  "state": "closed",
+  "state_reason": "completed",
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "area:api",
+    "bug",
+    "domain:cli",
+    "priority:p3"
+  ],
+  "assignees": [
+    "os-steve"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-11T16:48:52Z",
+  "updated_at": "2026-10-11T19:55:46Z",
+  "closed_at": "2026-10-11T19:54:23Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": null,
+  "comments": 5,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/22868",
+  "body": "Filing gate: **① a product defect, class (a), reach by a named producer.** Raised by #22741's dev (os-dev-report on #22741, out-of-scope finding 1; PR #22867) and filed by `domain:engine` seat 2 (#20966) · `session_01ADzJtzYTLUfgrRZHxkagkX`. ⛔ Not a claim. ⛔ Not graded here: triage grades and routes.\n\n**Reader who acts:** triage, then the lane that owns `classifyDataError` in `packages/types/src/data-error-classification.ts` (`domain:cli` by the lane table). #22741 does not reach it: its import row copies the door's answer only for a 5xx, so this 404 is outside its contract.\n\n## The gap\n- The QuickJS runner raises its own `SandboxError`s with no `innerMessage` (the runner's declared contract for its internal faults). Two of them name the object the body addressed:\n  - the capability gate, through `throwSandboxFault` in `packages/runtime/src/sandbox/quickjs-runner.ts`: \"capability api.read not granted to hook H (called ctx.api.object(OBJ).find)\";\n  - the missing-method arm: \"ctx.api.object(OBJ).find not implemented\".\n- `classifyDataError`'s unknown-object limb answers 404 `OBJECT_NOT_FOUND`, \"Object 'OBJ' is not registered\", for any message that holds the quoted requested object name AND the substring `not` (`looksLikeUnknownObject`, read on `origin/main` `eed637c09f`).\n- So when the hook's body addressed the same object the request did, the data door answers a sandbox capability denial or a missing method as \"this object does not exist\". Every other runner fault site answers `500 INTERNAL_ERROR`, which is what the producer's contract says such an error is.\n- **Measured** by the dev through the real `QuickJSScriptRunner` at `eed637c09f` into the real `mapDataError(err, OBJ)`, the classification `POST /api/v1/data/:object` serves. Not measured at a booted door.\n\n## Direction (not a ruling)\n- The heuristic should not judge an error the sandbox raised itself. `isSandboxOwnFault` (PR #22867, in the same file) recognises that error off the producer, and the classification could answer it as the fault it is before the substring limb runs. ⛔ No second rule, and no new wording test.\n- Pin: each runner fault text that names the requested object answers `500 INTERNAL_ERROR` at `mapDataError`, and a real unknown-object driver text still answers 404 (control).\n\n## Duplicate check\n- **Population:** 5,122 issues, closed included (5,043 closed), #11835 to #22865 (REST list of issues updated since 2026-08-15, newest 99 pages), local grep over titles and bodies; comments are outside this instrument's radius.\n- **Queries:** `looksLikeUnknownObject` 0; `throwSandboxFault` 0; `unknown-object` 0; `capability.*not granted` 1 (#21155, closed, a plugin-audit snapshot leak, different); `classifyDataError` 3, all closed (#17273, #13095, #12975, none about this limb); `OBJECT_NOT_FOUND` 10 and `is not registered` 15, all closed, none about a sandbox fault.\n- **Control:** `mapDataError` 10, including the open #22741, so the instrument reaches this family."
+}

@@ -1,0 +1,34 @@
+{
+  "number": 22885,
+  "kind": "issue",
+  "title": "[finding] rest: 23 hand-built write routes answer the sandbox's own fault (a denied capability, a missing ctx.api method, a budget) with the runner's diagnostic text, where the data door answers `Internal server error`",
+  "state": "open",
+  "state_reason": null,
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "area:api",
+    "bug",
+    "domain:cli",
+    "pm:dispatched",
+    "priority:p3"
+  ],
+  "assignees": [
+    "os-steve"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-11T19:04:24Z",
+  "updated_at": "2026-10-11T20:22:59Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 2,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/22885",
+  "body": "Filing gate **①**: a product defect with a named landing point and a named real producer. **Class (a).** It also meets the \"may leak data\" exception: the text names the hook, the object and the capability.\n\nFiled by `domain:cli` seat 2 (#22648) · `os-steve` · session `session_01VoSxBQujKLZKPwK2u5ehQ6`, from #22868's dev (`os-dev-report` `6112555965` on #22868, out-of-scope finding 1; PR #22882). ⛔ Not a claim. Lane and grade are triage's.\n\n**Reader who acts:** triage grades it. The defect is in `packages/rest`, so a repair lands in `domain:cli` unless triage reads it otherwise. The landing point is `sandboxFaultAnswer` in `packages/rest/src/error-response.ts`, which returns `undefined` unless `isSandboxOrigin(error)` holds (read on `origin/main` `51f36e7750`, about `:725`–`:728`). The record-share rows reach the same gap through their own fault terminal.\n\n## The gap\n\n- The QuickJS runner raises some `SandboxError`s itself, with no `innerMessage`. They are the runner's own faults: a denied capability, an unavailable or missing `ctx.api` method, a budget, an install or marshal failure. `isSandboxOwnFault` (`packages/types/src/data-error-classification.ts`, landed by PR #22867) recognises them off the producer.\n- `sandboxFaultAnswer` asks only `isSandboxOrigin`, so an own fault falls through to each route family's own terminal, which relays `.message`.\n- **Measured** by the dev through the real handlers (`RestServer.registerRoutes` with `mountAndRecordDirectRoutes`, the write-route ledger harness) at `31b25500d1`, ⛔ not at a booted door. Two own-fault shapes were added to §6 `SANDBOX_FAULTS` of `packages/rest/src/rest-write-route-hook-refusal-sentence.ledger.test.ts`: 46 failed / 229 passed, all 46 on 23 hand-built rows. For example: expected `Internal server error`, received the capability text. That probe was reverted; nothing of it is committed.\n- **The 23 rows:**\n  - `POST /analytics/dataset/query`;\n  - `POST /security/explain`;\n  - `POST` and `DELETE /data/:object/:id/shares`;\n  - `POST /sharing/rules`, `DELETE /sharing/rules/:idOrName` and `POST /sharing/rules/:idOrName/evaluate`;\n  - `POST /security/suggested-bindings/:id/confirm` and `/dismiss`;\n  - the nine `POST /approvals/requests/:id/*` writes;\n  - `POST /packages/publish`;\n  - the four `POST /datasources/:name/external/*` routes.\n- **What the data door does for the same error:** `POST /api/v1/data/:object` answers `500 INTERNAL_ERROR` with `Internal server error`, and the runner's text goes to the server log. After PR #22882 (#22868) lands, that holds for every own fault, not only the ones that named no object.\n- **Not measured:** the status and code of those rows (the sentence assertion fails first). Also not measured: the own-fault kinds beyond the two object-naming texts. By the mechanism, every own-fault kind takes the same path.\n\n## Family\n\nSandbox fault text: #22588, #22694, #22719, #22764, #22741, #22868. The REST write-route side's previous card, #22764, closed on the crash member. This is the own-fault member, a different predicate on the same rows. The family's enumeration pin is the write-route ledger above, and these two texts belong in its §6 once the rows answer them.\n\n## Direction (not a ruling)\n\n- `sandboxFaultAnswer` answers an own fault (`isSandboxOwnFault`) with the same withheld `500` it gives a crash, so the rows that already ask it are covered by one change. ⛔ No second rule, and ⛔ no wording test.\n- The pins are the two own-fault shapes in the ledger's §6 over all its rows, with the existing crash rows as the CONTROL.\n\n## Dedupe\n\nMCP `search_issues` on this repo, closed included:\n- `REST write routes relay the sandbox own fault text verbatim instead of Internal server error sandboxFaultAnswer isSandboxOrigin innerMessage`: 6 hits, all closed. The nearest are #22764 (the crash member, a different predicate), #22719 (the refusal member), #22741 (import rows) and #11683 / #11588 (older wrapper leaks).\n- CONTROL `rest write routes crashed hook body native fault text withheld Internal server error`: 9 hits, including #22764, so the instrument reaches this family.\n\nDedupe words: sandboxFaultAnswer own fault; isSandboxOwnFault REST write routes; capability not granted relayed verbatim; hand-built write route fault terminal.\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_"
+}

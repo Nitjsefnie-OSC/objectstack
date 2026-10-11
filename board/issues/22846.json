@@ -2,7 +2,7 @@
   "number": 22846,
   "kind": "pull_request",
   "title": "docs(automation): every sender-facing text for an inbound api hook teaches the timestamped x-objectstack-signature form only",
-  "state": "open",
+  "state": "closed",
   "state_reason": null,
   "draft": false,
   "author": {
@@ -21,10 +21,14 @@
   "milestone": null,
   "type": null,
   "created_at": "2026-10-11T13:39:30Z",
-  "updated_at": "2026-10-11T14:15:11Z",
-  "closed_at": null,
-  "closed_by": null,
-  "merged_at": null,
+  "updated_at": "2026-10-11T14:40:13Z",
+  "closed_at": "2026-10-11T14:40:12Z",
+  "closed_by": {
+    "login": "os-zhuang",
+    "id": 277994282,
+    "type": "User"
+  },
+  "merged_at": "2026-10-11T14:40:12Z",
   "comments": 3,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/pull/22846",
