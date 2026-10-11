@@ -9,7 +9,7 @@ feat(plugin-security,cli)!: the boot writes no `sys_permission_set` row — the 
 
 Clause-②: yes (narrowing)
 
-<!-- adr-0087: not-required (no-migration-prescription) A runtime and data-door change on a platform object's rows and on TypeScript and CLI surfaces, not on any metadata schema: no key of any spec schema is removed, renamed or re-shaped, so there is nothing for `objectstack migrate meta` to rewrite and no tombstone. Rows the retired seeders wrote stay in the table until a later ADR-0131 stage; nothing reads them for authorization. The package publishes (not unpublished); no ADR-0087 id covers this rule and this diff adds none (not registered / already-registered). -->
+<!-- adr-0087: not-required (runtime-interface-only packages/plugins/plugin-security/src/bootstrap-declared-permissions.ts#bootstrapDeclaredPermissions, packages/plugins/plugin-security/src/bootstrap-platform-admin.ts#bootstrapPlatformAdmin) runtime TypeScript service plumbing, a CLI command and a platform object's diagnostic columns, with no metadata surface: no key of any spec schema is removed, renamed or re-shaped, so there is nothing for `objectstack migrate meta` to rewrite and no tombstone; the compiler names every TypeScript caller, and the rows the retired seeders wrote stay in the table until a later ADR-0131 stage -->
 
 **BREAKING**, shipped as `minor` under the repo's launch-window convention for breaking changes.
 
@@ -28,10 +28,10 @@ Removed from `@objectstack/plugin-security`'s public exports, with no replacemen
 - `computePermissionSetDriftDiagnostics`, `persistPermissionSetDriftDiagnostics`, `runPermissionSetDriftDiagnostics`, and the types `PermissionSetDriftStatus`, `PermissionSetDriftDiagnostic`, `DriftDiagnosticsOptions`
 - `CAPABILITY_DECLARATION_UNOWNED`, `CAPABILITY_PLATFORM_NAME_REFUSED`, `PERMISSION_SET_DECLARATION_UNOWNED`, `capabilityDeclarationUnownedDiagnostic`, `capabilityPlatformNameRefusedDiagnostic`, `permissionSetDeclarationUnownedDiagnostic`, `reportCapabilityDeclarationUnowned`, `reportCapabilityPlatformNameRefused`, `reportPermissionSetDeclarationUnowned`, and the types `CapabilityDeclarationUnownedDiagnostic`, `CapabilityPlatformNameRefusedDiagnostic`, `PermissionSetDeclarationUnownedDiagnostic`
 
-FROM → TO:
+What to change:
 
-- FROM reading a platform default or a package's permission set from `sys_permission_set` → TO the security catalog read (`createSecurityCatalogReader`) or `GET /api/v1/meta/permission/:name`.
-- FROM `os meta resync` after editing a default set → TO restarting the server; the edited declaration is served as shipped. Remove the command from any script that calls it.
-- FROM `bootstrapPlatformAdmin(ql, sets, { resync: true })` → TO `bootstrapPlatformAdmin(ql, sets)`; there is no row to reconcile.
-- FROM reading `sys_permission_set.drift_status` / `drift_detail` or the **Needs Attention** view → TO the boot log's packaged-overlay report, which names every set an environment overlay shadows (`os migrate security-catalog-overlays` lists them offline).
-- FROM importing any name in the list above → TO deleting the import; there is nothing to call in its place.
+- Read a platform default or a package's permission set through the security catalog (`createSecurityCatalogReader`) or `GET /api/v1/meta/permission/:name`, not from `sys_permission_set`.
+- Remove `os meta resync` from any script that calls it. After editing a default set, restart the server: the edited declaration is served as shipped.
+- Call `bootstrapPlatformAdmin(ql, sets)` without the `resync` option; there is no row to reconcile.
+- In place of `sys_permission_set.drift_status` / `drift_detail` and the **Needs Attention** view, read the boot log's packaged-overlay report, which names every set an environment overlay shadows (`os migrate security-catalog-overlays` lists them offline).
+- Delete any import of the names listed above; there is nothing to call in their place.
