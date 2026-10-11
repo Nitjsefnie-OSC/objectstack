@@ -152,13 +152,11 @@ them, and treat "sensitive field on a public object" as a review smell.
 The metadata↔config boundary follows one line: **definitions travel with the
 package (metadata); subject bindings and env-specific values stay as config.**
 
-- A package ships **its own permission sets** (Shape B), recorded with
-  `managedBy: 'package'` + owning `packageId` on `sys_permission_set`
-  (`package_id` / `managed_by` columns). `bootstrapDeclaredPermissions`
-  (`packages/plugins/plugin-security/src/bootstrap-declared-permissions.ts`)
-  seeds `stack.permissions` at boot — idempotent, re-seeded on upgrade, and it
-  **never clobbers** env-authored (`platform`/`user`/legacy) rows. A package
-  never writes into a foreign record.
+- A package ships **its own permission sets** (Shape B): its
+  `stack.permissions` are registry items stamped with the owning package
+  (`_packageId`), served by name from the security catalog (ADR-0131 D3). The
+  boot writes no `sys_permission_set` row for them, and a package never
+  writes into a foreign definition.
 - The environment admin **assigns** sets to positions/users; the runtime unions
   them. One shared set with hand-picked cross-package grants remains an
   env-admin-only construct.
