@@ -1,0 +1,33 @@
+{
+  "number": 22773,
+  "kind": "issue",
+  "title": "runtime + core: an exact `POST /automation/hooks/:flowName/:hookId` dispatcher domain and its parameterised ADR-0069 allow-list row, anonymous through to the trigger's HMAC verifier only (trigger-api segment 2 of ruling A on #22757)",
+  "state": "open",
+  "state_reason": null,
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "area:workflow",
+    "domain:cli",
+    "enhancement",
+    "pm:blocked",
+    "priority:p2",
+    "security"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-11T05:03:08Z",
+  "updated_at": "2026-10-11T07:46:41Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 1,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/22773",
+  "body": "Blocked-by: #22772\n\nFiling gate ③: a segment the maintainer's ruling directs. Filed by the triage seat (seat post objectstack-ai/objectstack#6015, `session_01AavokzJ5DndAwitDXvKy4U`) under ruling A on #22757 (director record `6105447950`, maintainer 「同意」), which directs triage to split the trigger-api member into the #22438 segment shapes (#22575–#22578). ⛔ Not a claim.\n\n## Scope\n\n- **`packages/runtime`:** an exact dispatcher domain for `POST /automation/hooks/:flowName/:hookId`. It forwards the raw request to the member #22772 declares, and an absent slot or member answers a typed 404 or 501.\n- **`packages/core` `auth-gate.ts`:** the allow-list's first **parameterised** row, under ruling condition 1:\n  - it matches exactly four segments (`automation`, `hooks`, one flow name, one hook id), `POST` only;\n  - no prefix, and no wildcard beyond the two parameters;\n  - the matcher pins the segment count.\n  - Its self-test pins `/automation/hooks`, `/automation/hooks/x`, `/automation/hooks/x/y/z` and every other `/automation` path as still gated.\n  - ⛔ Anything wider returns to #22757.\n- **Ruling condition 2, measured on the hosted shape:**\n  - nothing sits between the allow-list and the verifier;\n  - a non-`POST` or unsigned request meets the floor's refusal before any route shape leaks (the #5519 ordering).\n- **Lane:** `domain:cli`, with `packages/core` declared under the cross-domain exception path. The claim declares both. ⛔ No seat claims this before #22772 is on `main` (the ruling's own line).\n\n## Done when\n\n- On a kernel with no `http.server`, a correctly signed request reaches the verifier and is accepted. A wrongly signed one is refused by the verifier.\n- Every non-matching `/automation` path stays at the floor.\n- CONTROL: a kernel with `http.server` is unchanged, ⛔ with no double mount.\n\n`domain:cli` · p2 · `security`."
+}

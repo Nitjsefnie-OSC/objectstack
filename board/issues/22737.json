@@ -24,11 +24,11 @@
   "milestone": null,
   "type": null,
   "created_at": "2026-10-10T22:28:47Z",
-  "updated_at": "2026-10-11T02:14:59Z",
+  "updated_at": "2026-10-11T08:23:42Z",
   "closed_at": null,
   "closed_by": null,
   "merged_at": null,
-  "comments": 1,
+  "comments": 5,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/22737",
   "body": "This card carries **census row 4** of #22661 (part of #22661). #22661 keeps rows 1–3, landing through PR #22735, and the enumeration pin. ⛔ Classes, positions and functions only.\n\n**Filing class:** ① a product defect, class (a). **Reach:** measured once at a public door by #22661's dev on a real stack (report 6102815147, census row 4), for an administrator and a member alike. **Reader who acts:** the `domain:engine` lane, seat 1 (#6367), which owns #22661's derived sub-issues and dispatches this one directly.\n\n## The gap\n- The data door's list and query routes admit a filter that names a condition on a lookup's related object.\n- The engine evaluates it on the target: `ObjectQL.lowerRelationConditions` reads the related object as the caller, and it does not ask the target's exposure decision.\n- The door's own walk over nested-relation conditions (`relationConditionSites`, from #22646) judges `internal: true` fields only.\n- So a source row comes back only when the related value matches, even when the target declares that the API does not serve it.\n\n## Direction (from #22661's triage, not a ruling)\n- Each nested-relation condition asks `apiExposureDenialReason` for its target. ⛔ No second rule.\n- The measured precedent for an unreadable related object at this position is a refusal, so the answer is the data door's declared exposure refusal.\n- If that needs a provenance row under `@objectstack/metadata-protocol` in `packages/spec`'s error-code ledger, it rides the pre-approved ledger-append class.\n- Pins: a member and an administrator are refused for an unexposed target, and an exposed target is unchanged. Ablation-verified. Join #22661's enumeration pin.\n\n## Duplicate check\nIssues updated since 2026-09-01 were paged to the end through REST: 4,476 issues, PRs excluded, closed included, #1795 to #22729. A local grep over titles and bodies (comments are outside this instrument's radius) for `lowerRelationConditions` or a relation filter or condition within 200 characters of `apiEnabled` or exposure found 0 hits. Control: `apiEnabled` alone found 11 hits.\n\nDedupe words: nested relation filter exposure · lowerRelationConditions apiEnabled · related object condition unexposed target"

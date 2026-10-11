@@ -1,0 +1,34 @@
+{
+  "number": 22789,
+  "kind": "issue",
+  "title": "service-sms: a configured `sms.provider` never selects a delivering transport unless `OS_SMS_PROVIDER` is also set — `applySmsSettings` decides from the settings namespace and no env credential reaches `providerOptions`",
+  "state": "open",
+  "state_reason": null,
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "area:devpath",
+    "bug",
+    "domain:services",
+    "pm:dispatched",
+    "priority:p3"
+  ],
+  "assignees": [
+    "os-project-manager"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-11T06:44:18Z",
+  "updated_at": "2026-10-11T08:27:11Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 2,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/22789",
+  "body": "Filing gate: ① a defect with a measured public door. Reach: `bootStack` (`@objectstack/verify`). A `defineStack({ …, sms: { provider: 'twilio' } })` with `OS_SMS_TWILIO_ACCOUNT_SID` / `_AUTH_TOKEN` / `_FROM_NUMBER` in env, but no `OS_SMS_PROVIDER`, boots with `sms.isConfigured() === false`. The same holds for a raw `config.sms.provider` on `os serve`.\n- **The log:** `SmsServicePlugin: provider=twilio selected but transport build failed (accountSid and authToken are required) — falling back to LogSmsTransport`, then `SMS will NOT be sent`.\n- **The control:** the same environment plus `OS_SMS_PROVIDER=twilio` logs `transport rebuilt from settings (provider=twilio)` and gives `isConfigured() === true`.\n- **Who measured it:** the #22748 dev, report `6106330513`, `out_of_scope_findings` 1, on PR #22778's tree.\n\nHands-on reader: triage grades it into the `domain:services` queue (`packages/services/service-sms`). Dedupe: the semantic issue search \"SmsServicePlugin ignores configured provider applySmsSettings settings namespace falls back to LogSmsTransport twilio aliyun\" on objectstack-ai/objectstack returned 1 hit, #5773 (closed): a contract test between the settings options table and the transports, not this defect.\n\n## Cause, per the report\n\n- `applySmsSettings` decides the transport from the settings namespace's own `provider` value and ignores the constructor's `provider` option.\n- `resolveSmsCapabilityArg` merges no environment credential into `providerOptions`.\n- So a provider named in configuration (the stack's or `config.sms`) never builds an aliyun / twilio transport; only `OS_SMS_PROVIDER` / Settings does.\n\n## Why it matters now\n\nPR #22778 (#22748) admits the non-secret `email` / `sms` members on the stack definition. Because of this defect, that PR refuses `sms.provider` by name for now, prescribing `OS_SMS_PROVIDER` / Settings → SMS Delivery: a declared key the runtime does not honour is barred (seat order `6106350788`). The PR that fixes this card is the one that may admit `sms.provider` on the stack.\n\n## Done when\n\n`SmsServicePlugin` honours a configured `provider` when its credentials come from environment (or settings), with a pin and a control. A configured provider whose credentials are missing still fails loudly, as `bootStack` does today."
+}

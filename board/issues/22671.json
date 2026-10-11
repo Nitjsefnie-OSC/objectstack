@@ -2,7 +2,7 @@
   "number": 22671,
   "kind": "pull_request",
   "title": "feat(plugin-security): a boot report lists, per organization, every catalog reference whose name resolves nowhere (ADR-0131 D3/D4, C3 stage 3)",
-  "state": "open",
+  "state": "closed",
   "state_reason": null,
   "draft": false,
   "author": {
@@ -22,10 +22,14 @@
   "milestone": null,
   "type": null,
   "created_at": "2026-10-10T10:03:28Z",
-  "updated_at": "2026-10-11T02:23:38Z",
-  "closed_at": null,
-  "closed_by": null,
-  "merged_at": null,
+  "updated_at": "2026-10-11T02:42:35Z",
+  "closed_at": "2026-10-11T02:42:33Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": "2026-10-11T02:42:33Z",
   "comments": 2,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/pull/22671",

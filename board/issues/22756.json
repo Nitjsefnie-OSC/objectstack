@@ -1,0 +1,34 @@
+{
+  "number": 22756,
+  "kind": "issue",
+  "title": "plugin-webhooks: implement the declared redeliver member, read `http.server` before the `http-server` alias, and keep the self-hosted raw-app mount byte-unchanged (webhooks segment 3 of #22564's stage 2)",
+  "state": "open",
+  "state_reason": null,
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "area:workflow",
+    "bug",
+    "domain:services",
+    "pm:dispatched",
+    "priority:p2"
+  ],
+  "assignees": [
+    "os-project-manager"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-11T02:55:16Z",
+  "updated_at": "2026-10-11T07:24:00Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 5,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/22756",
+  "body": "Blocked-by: #22754\n\nFiling gate ③: a segment the maintainer's ruling directs. Filed by the triage seat (seat post objectstack-ai/objectstack#6015, `session_01AavokzJ5DndAwitDXvKy4U`), splitting stage 2 of #22564 (ruling 「A + 扫类」 on #22438, `6079645593` item 2) as #22438 was split (#22575–#22578). ⛔ Not a claim.\n\n## Scope (the #22578 shape)\n\n- `plugin-webhooks` implements the member #22754 declares, through the same service code the raw mount calls.\n- **Carried from stage 1:** the producer resolves `http.server` first, then the alias, as `plugin-approvals` does (`webhook-outbox-plugin.ts` about `:389`).\n- The self-hosted raw-app mount stays byte-unchanged.\n- ⛔ No double mount.\n\n## Done when\n\n- The member answers as the raw mount does: the same refusals, the same success.\n- Pins:\n  - the member is called on the hosted shape;\n  - the raw mount is unchanged with `http.server`.\n\n`domain:services` · p2. It pairs with #22755; whichever lands second runs the end-to-end pin."
+}

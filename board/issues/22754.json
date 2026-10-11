@@ -1,0 +1,37 @@
+{
+  "number": 22754,
+  "kind": "issue",
+  "title": "spec: declare the forward target for `POST /api/v1/webhooks/redeliver` — an optional, transport-neutral service member a dispatcher domain can reach (webhooks segment 1 of #22564's stage 2)",
+  "state": "closed",
+  "state_reason": "completed",
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "area:workflow",
+    "bug",
+    "domain:spec",
+    "priority:p2"
+  ],
+  "assignees": [
+    "marchtian"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-11T02:54:16Z",
+  "updated_at": "2026-10-11T05:37:18Z",
+  "closed_at": "2026-10-11T05:36:01Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": null,
+  "comments": 4,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/22754",
+  "body": "Filing gate ③: a segment the maintainer's ruling directs. Filed by the triage seat (seat post objectstack-ai/objectstack#6015, `session_01AavokzJ5DndAwitDXvKy4U`), splitting stage 2 of #22564 (ruling 「A + 扫类」 on #22438, `6079645593` item 2) as #22438 was split (#22575–#22578). ⛔ Not a claim.\n\n## Why\n\n- Stage 1 (`6093135788`, accepted at `6093165613`) measured `plugin-webhooks`' `POST /api/v1/webhooks/redeliver`. On a kernel with no `http.server` (the hosted shape) it answers `404 ROUTE_NOT_FOUND`, because it mounts only on the raw app.\n- Neither producer owns a service slot today:\n  - `plugin-webhooks` registers only `webhook.autoEnqueuer`;\n  - `redeliverHttp` lives undeclared on the messaging service. It has 0 hits in `packages/spec/src` on `origin/main` `d7b26df5`.\n\n## Scope (the #22575 convention)\n\n- Declare one optional, transport-neutral member that redelivers a webhook delivery, on the service contract this segment chooses: a webhooks service contract, or the messaging service's.\n- **Choosing the slot is this segment's contract call.** If it cannot choose on the four axes, it returns `needs_decision`.\n- `Clause-②: yes`, since it is a new optional member.\n- ⛔ No runtime or plugin code here: segments 2 and 3 read this member's shape.\n\n## Done when\n\n- The member and its docblock are on `main`, with a type-level pin.\n- Segments 2 and 3 can name it.\n\n`domain:spec` · p2."
+}

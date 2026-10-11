@@ -1,0 +1,33 @@
+{
+  "number": 22801,
+  "kind": "issue",
+  "title": "[Decision] 装包时包里声明的「默认权限集」怎么生效：管理员整部署接受一次、装包即自动生效，还是取消这条路（安全边界）",
+  "state": "open",
+  "state_reason": null,
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "area:access",
+    "domain:services",
+    "needs-user-decision",
+    "priority:p1",
+    "security",
+    "target:v18"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-11T07:53:33Z",
+  "updated_at": "2026-10-11T07:53:33Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 0,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/22801",
+  "body": "Filing gate ②：只有维护者能做的决定。这是一条权限安全边界（ADR-0090 D5「装包不得静默扩大所有用户的权限」），改与不改都要维护者裁。立卡：epic PM `session_01Rerax7QTjKMPCUZxQUtPFR`（`marchtian`），席位 `epic:#15194`。动手的读者：裁后由本席派 #15204 的 U2 阶段落实，并解锁 6b-2。查重：本仓 `needs-user-decision` 标签全部卡（含已关）的标题里搜 suggest / isDefault / audience / everyone / anchor，命中 0；标题含 Decision 的卡按同一组词搜，命中 0。\n\n## 维护者速读\n\n一个软件包可以把自己的某个权限集标成「默认」（`isDefault: true`），意思是「建议所有登录用户都拥有它」。今天的做法是：装包后，后台出现一条建议，管理员点「接受」才生效。\n\n**问题是：从 #15204 第 1 阶段起，这个「接受」按钮点了也不生效。** 实测，点完返回成功，但用户的权限一点没变。原因是权限现在只看岗位定义；而 `everyone`（所有登录用户）这个岗位的定义被封死了，任何人都改不了（2c 的规则）。按「声明了就必须兑现」的原则，这个按钮要么让它真正生效，要么去掉。它也卡着发版前提 (d) 和 6b-2。\n\n三个方案：\n- **A 保留「接受」，改成整个部署接受一次：** 管理员接受后，系统把这个权限集加进 `everyone`。装包仍然不会自动扩权。\n- **B 取消这条路：** 去掉建议和接受；包里的「默认」标记对已安装的包一律拒绝。要给人权限，管理员走现有的手动分配。\n- **C 声明即生效：** 装了包，它的默认权限集就自动给所有登录用户，卸载即收回；高危权限一律挡掉。建议和接受去掉。\n\n**本席推荐 A**（开发席推荐 C）。选 A、B 还是 C？\n\n## 背景（实测：objectstack `origin/main` `9f5eca52`；U2 测量报告 6106844492）\n\n- **接受不生效，实测：** 启动 showcase，把示例包的默认权限集当作「装包建议」。管理员调 `POST /security/suggested-bindings/:id/confirm`，返回 200 `bindingCreated: true`。之后普通成员读 4 个对象，接受前后都是 403；接受后新注册的成员也是 403；`everyone` 定义不变。对照组：把同一个权限集写进 `everyone` 定义，同样 4 次读取都是 200。\n- **没有门能改 `everyone`：** 平台管理员 `PUT /api/v1/meta/position/everyone` 得 403 `NOT_OVERRIDABLE`。`position` 类型不接受环境覆盖（`allowOrgOverride: false`）。`everyone` 的定义只在启动时由安全插件写一次。\n- **「默认」今天分两条轨：** 正在运行的应用自己的默认权限集，启动时自动进 `everyone`；其他已安装包的，只生成一条建议。「接受」只为第二条轨存在。\n- **谁在用：**\n  - 本仓唯一的默认权限集是 showcase 自己的（走第一条轨），已安装包这条轨的生产者为 0；\n  - 唯一的界面消费者是 objectui 的 `SuggestedBindingsPanel`，挂在应用市场页和 Studio 上；\n  - cloud 和已发布的市场包未测（不在本会话范围）。\n- **6b-2、阶段 8 需要什么：**\n  - 6b-2 需要这个模块不再引用 `readDeclared`、`upsertPackagePermissionSet`；\n  - 阶段 8 需要它不再读 `sys_position`、`sys_permission_set`、`sys_position_permission_set` 三张表。\n  \n  三个方案都满足这两点。\n\n## Governing text\n\n- **ADR-0090 D5**（`docs/adr/0090-permission-model-v2-concept-convergence.md:236`）：「**Packages suggest, admins confirm.** `isDefault: true` on a package permission set produces an install-time prompt … It is **never** auto-bound: installing a package must not silently widen every tenant user's access.」\n- **ADR-0131 D3**（`docs/adr/0131-…md:282-299`，已裁）：\n  - 「the everyone baseline stays derived from isDefault」；\n  - 「an ADR-0090 D9 suggestion, when accepted, edits the position's definition instead of inserting a row」；\n  - 按组织各自绑定的表「is recorded and rejected in §5」。\n- **#22621 → A：** 定义由持 `manage_metadata` 者管，组织管理员只分配、不定义。\n- **#22601 → B：** 不做过渡件。\n- **2c（#22736）：** 两个受众锚点岗位「sealed against every caller-reachable write」。\n- **协议声明：** spec 的 `confirmAudienceBindingSuggestion` 写着「writes the binding」，`isDefault` 的包级说明写着「an admin confirms in Setup」，两者今天都不兑现。A 改写这两段文字；B 和 C 删掉它们。\n\n## 前提（每条带复核命令）\n\n- 接受不生效：`git grep -n \"sys_position_permission_set\" origin/main -- packages/core/src/security/resolve-authz-context.ts`，应只命中第 16 行的文件头注释（解析器不读这张表）。\n- `everyone` 封死：`git grep -n \"allowOrgOverride\" origin/main -- packages/spec/src/kernel/metadata-plugin.zod.ts`，看 `position` 那一行。\n- 包级生产者为 0：`git grep -n -E \"isDefault:\\s*true\" origin/main -- 'examples/*/src/security/*.ts'`，应只命中 showcase 的 `permission-sets.ts:302`（另一处是 `:288` 的注释）。\n\n## 选项 × 真实代价\n\n| 选项 | 做什么 | 客户能感知的后果 | 工作量 |\n|---|---|---|---|\n| **A 部署级显式接受** | 持 `manage_metadata` 的管理员对整个部署接受一次，记录归属默认组织；安全插件重新推导 `everyone` = 基线 + 已接受的包默认集，接受、卸载、发布时都重算；定义侧加高危权限闸；对账改看定义 | 和今天的产品承诺一致：装包不自动扩权，管理员点接受后才生效，而且这次是真的生效 | 约 1.2–1.8k 行加测试；`Clause-②: yes`；要说明 2c「封死」的措辞：接受改变的是推导结果，不是由调用方去写定义 |\n| **B 取消，不自动** | 删除建议面：模块、对象、3 条路由及其分发器副本、3 个契约成员、SDK、文档、objectui 面板（要升 objectui 版本）；已安装（非运行中）包的 `isDefault` 在安装/发布时响亮拒绝 | 应用市场里不再有「建议加到所有人」；管理员要用，就手动分配权限集或建一个岗位 | 约 2.5k 行删除；BREAKING；新增一条拒绝；需改 ADR-0090 D5/D9 |\n| **C 声明即生效** | `everyone` = `member_default` + 每个已启用包里通过高危过滤的默认集，装、卸、发布时重算；建议面像 B 一样删除，不加拒绝、不加存储 | 装包即给所有登录用户加上该包的默认权限（高危的挡掉），卸载立即收回；多租户下一次安装影响所有组织的成员 | 约 2.5k 行删除 + 0.2–0.4k 行新增；BREAKING；需改 ADR-0090 D5（安全原则反转） |\n\n（D，按组织各自绑定锚点岗位：已被 ADR-0131 D3 §5、#22601 → B、#22621 → A 排除，不再列为选项。）\n\n## 业务含义直译\n\n- **A：** 像 Salesforce 装包时让管理员选「给所有用户 / 只给管理员」。是否放权，由装包的人明确决定。\n- **B：** 像大多数企业软件那样，包里带的权限集只是「可分配的选项」，从不自动给人；要给，管理员自己分配。\n- **C：** 像手机装 App 自动获得声明的普通权限：装了就有，卸了就没；平台替管理员挡掉危险权限。\n\n## 四轴（从业务看）\n\n- **项目长远合理性（领起，权重 ≥50%）：** 两年后的样子是一个有应用市场的平台。主流平台（Salesforce AppExchange、ServiceNow Store、Dynamics AppSource）对装包带来的权限，**都要求管理员明确同意**，没有一家因为装包就静默给全员扩权。A 保留「同意」这一步，把它做成真正生效的部署级动作，ADR-0090 D5 不用改。C 用一条规则替代两条轨，最省事，但反转了一条安全原则。B 删得干净，但要新增一条安装拒绝，还拿掉了市场包「建议默认」的能力。\n- **实际业务拉动：** 实测本仓已安装包这条轨的生产者为 0，「接受」从第 1 阶段起就没生效过，也没人报。唯一的消费者是 objectui 的市场/Studio 面板。cloud 和市场包未测。拉动弱，这一轴偏向 B 或 C（删）。\n- **防 AI 犯错（出错时谁看到什么）：**\n  - C：AI 写了 `isDefault: true`，结果就是全员获得，所见即所得；高危权限在编写时被 D7 lint 响亮拒绝。但写错一个默认集，会直接扩到全体成员，没有人工闸。\n  - A：AI 写的声明要等管理员接受才生效，错误会先摆在管理员眼前。\n  - B：在已安装包上写 `isDefault` 会被响亮拒绝。\n- **创业阶段不扩散：** B、C 删除一个零消费的已发布能力（不因沉没成本豁免）；C 不加门禁，B 加一条拒绝（新增门禁默认否），A 增加一个部署级记录和重算路径。\n\n<!-- os-decision-facets -->\nos-decision-facets\n- ① 项目长远合理性：A 保留「管理员明确同意」这一主流做法，不改安全原则；C 一条规则最省，但反转 ADR-0090 D5；B 删净，但要新增拒绝并拿掉市场包的建议能力。\n- ② 实际业务拉动：已安装包这条轨实测生产者为 0，接受从第 1 阶段起不生效、无人报告；cloud 与市场包未测。\n- ③ 防 AI 犯错：A 有人工闸，错误先到管理员面前；C 所见即所得，但错一个默认集直达全员；B 响亮拒绝。\n- ④ 创业阶段不扩散：B、C 删除零消费能力，C 不加门禁；A 增加部署级记录与重算路径。\n\nPrior rulings read: `isDefault`, `everyone`, `suggest`, `confirm`, `auto-bound` in `docs/adr/` → ADR-0090 D5/D9, ADR-0131 D3 §5; thread: #22601 → B, #22621 → A, #15204 stage-1 ACCEPT 6102862135, the 2c Landed record 6105781131.\n\n## 推荐\n\n**推荐 A**，回退 C。\n- 只看① 选 A；②③④ 是否翻转：是（零实测拉动，④ 倾向删除）。但安全边界恒在人工地板，不改字母。\n- 置信缺口：cloud 与已发布的市场包有没有用「默认权限集」，本会话测不到。如果它们实测为 0，且你认为「装包即生效、高危自动挡掉」可以接受，C 更省；那样要同时裁 ADR-0090 D5 的修订。\n- 开发席（U2 报告 6106844492）推荐 C，理由是零拉动、一条规则、零新增存储。\n\n## 裁后执行\n\n- **裁 A：** 本席派 #15204 U2 构建阶段（约 1.2–1.8k 行，同头合同复核），落地即满足发版前提 (d)，6b-2 随后派出。\n- **裁 B 或 C：**\n  - 先派测试删除 T-PR，再派 U2 删除 PR（约 2.5k 行，每个 PR 都控制在 3,000 行内）；\n  - objectui 删除面板，并随下一次 objectui 版本升级带回 objectstack；\n  - ADR-0090 修订随 PR 一起落；\n  - C 另加推导与重算（0.2–0.4k 行）；B 另加安装拒绝。\n- 不论裁哪一项，你只需回一个字母；附加条件随执行落地。"
+}

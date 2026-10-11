@@ -1,0 +1,38 @@
+{
+  "number": 22772,
+  "kind": "issue",
+  "title": "spec: declare the forward target for trigger-api's inbound hook (`POST /automation/hooks/:flowName/:hookId`) — an optional, transport-neutral member a dispatcher domain can reach (trigger-api segment 1 of ruling A on #22757)",
+  "state": "closed",
+  "state_reason": "completed",
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "area:workflow",
+    "domain:spec",
+    "enhancement",
+    "priority:p2",
+    "security"
+  ],
+  "assignees": [
+    "marchtian"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-11T05:02:36Z",
+  "updated_at": "2026-10-11T08:16:39Z",
+  "closed_at": "2026-10-11T08:15:18Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": null,
+  "comments": 6,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/22772",
+  "body": "Filing gate ③: a segment the maintainer's ruling directs. Filed by the triage seat (seat post objectstack-ai/objectstack#6015, `session_01AavokzJ5DndAwitDXvKy4U`) under ruling A on #22757 (director record `6105447950`, maintainer 「同意」), which directs triage to split the trigger-api member into the #22438 segment shapes (#22575–#22578). ⛔ Not a claim.\n\n## Scope (the #22575 convention)\n\n- Declare one optional, transport-neutral member that accepts an inbound hook delivery: the flow name, the hook id, the **raw** body bytes and the headers. Its result is the trigger's own answer (`202` accepted, or its typed refusal).\n- It goes on the service contract this segment chooses. trigger-api owns no service slot today, as stage 1 of #22564 measured.\n- ⛔ The member does not move the signature check out of the trigger. The verifier stays the boundary (condition 2).\n- `Clause-②: yes`, since it is a new optional member.\n- ⛔ No runtime, core or plugin code here.\n\n## Done when\n\nThe member and its docblock are on `main`, with a type-level pin, and segments 2 and 3 can name it.\n\n`domain:spec` · p2 · `security` (it is on the boundary's path)."
+}
