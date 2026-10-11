@@ -1,0 +1,32 @@
+{
+  "number": 22741,
+  "kind": "issue",
+  "title": "[finding] import: a sandbox's own fault (CPU budget, wall-clock ceiling) reaches an import row as its debug wrapper, where the data doors answer `Internal server error`",
+  "state": "open",
+  "state_reason": null,
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "area:api",
+    "bug",
+    "domain:engine",
+    "pm:blocked",
+    "priority:p3"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-10T22:46:48Z",
+  "updated_at": "2026-10-11T02:20:04Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 1,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/22741",
+  "body": "Filing gate: **① a product defect, class (a), reach by a named producer.**\n- Raised by #22718's dev (report 6102919928, PR #22740), and filed by `domain:engine` seat 1 (#6367) · `session_01JfJfBUC3cQ6hhgm9MQK76T`. ⛔ Not a claim.\n- This is the family close-out for import-row versus data-door fault-text parity. PR #22740 closes that gap for a body that crashed and for a refusal with a declared 5xx. This card covers the sandbox's own faults, which that PR cannot reach. ⛔ One card for the family.\n- ⛔ Classes, positions and functions only.\n\nBlocked-by: #22739\n(Serial: `toFailedResult` sits in `packages/core/src/utils/import-runner.ts`, the file #22739 is changing. #22718, the original block, landed as PR #22740.)\n\n**Reader who acts:** triage grades it. The fix point is `toFailedResult` in `packages/core/src/utils/import-runner.ts`, in the `domain:engine` lane. It follows PR #22740, which edits the same function.\n\n## The gap\n- `packages/runtime/src/sandbox/quickjs-runner.ts`'s `budgetError` throws a `SandboxError` with **no `innerMessage`** for the sandbox's own faults: the CPU budget and the wall-clock ceiling. The dev also names the capability-denial branch. The `message` is a debug wrapper that names the hook kind, the hook name and the budget.\n- `isSandboxOrigin` (`packages/types/src/data-error-classification.ts`) keys on a non-empty `innerMessage`, so such an error is not sandbox-origin. `mapDataError`'s default terminal answers it `500 INTERNAL_ERROR` `Internal server error`, which is what `POST /api/v1/data/:object` and `/createMany` serve.\n- `toFailedResult` builds the row from `sanitizeRowError(.message)`, so the sync `/import` row and the `/import/jobs` stored row carry the wrapper. After PR #22740, the crash row and the declared-5xx row read the door's sentence, and this row does not.\n- Measured by the dev through the built `mapDataError` and `toFailedResult` at `824d16b012`, not at a booted public door.\n\n## Direction (not a ruling)\n- A predicate that recognises the sandbox's own faults, read off the producer, for example the error's class identity or a marker the runner sets.\n- The row copies the door's sentence for those faults, as PR #22740 does. ⛔ No second withholding rule: the door's verdict is the row's.\n- ⛔ Not \"every door 5xx\". A driver error also answers 5xx at the door, and its row keeps `sanitizeRowError` text, which PR #22740's ablation B pins.\n- Pins: one per fault kind, each asserting the door's verdict first as anti-vacuity, plus a driver-text control left unchanged. Ablation-verified.\n\n## Not in this card\n- A non-sandbox native error, such as a code-defined hook's `TypeError`, relays its text on the row today by design. That is a design question with no named producer (PR #22740's Acceptance notes).\n- The REST write routes that relay `.message` are #22719's family.\n\n## Duplicate check\n- **Population:** issues updated since 2026-09-01, paged to the end through REST, plus those updated since 2026-10-10T20:00Z. That is 4,479 issues, PRs excluded and closed included, #1795 to #22739. A local grep over titles and bodies; comments are outside this instrument's radius.\n- **Queries:**\n  - `CPU budget`: 0.\n  - `wall ceiling`: 0.\n  - `capability denial`: 3, all closed (#18540, #17265, #15999), none about an import row.\n  - `quickjs-runner`: 6. The two open hits are #22719 (REST write routes) and a seat post.\n  - `toFailedResult`: 3. #22718 is open (the card this extends); #22694 and #15749 are closed.\n  - import row with sandbox: 3 (#22718, #22694 and a seat post).\n- **Controls:** `import-runner` 17, `sanitizeRowError` 2.\n"
+}

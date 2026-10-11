@@ -1,0 +1,35 @@
+{
+  "number": 22738,
+  "kind": "issue",
+  "title": "security(approvals, audit): a lookup target's title is resolved into the approvals inbox payload and the activity summary without asking the target's exposure (census rows 5-6 of #22661)",
+  "state": "open",
+  "state_reason": null,
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "area:access",
+    "bug",
+    "domain:engine",
+    "pm:dispatched",
+    "priority:p2",
+    "security"
+  ],
+  "assignees": [
+    "os-project-manager"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-10T22:29:21Z",
+  "updated_at": "2026-10-11T02:15:38Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 1,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/22738",
+  "body": "This card carries **census rows 5 and 6** of #22661 (part of #22661). #22661 keeps rows 1–3, landing through PR #22735, and the enumeration pin. ⛔ Classes, positions and functions only.\n\n**Filing class:** ① a product defect, class (a). **Reach:** measured at public doors by #22661's dev on a real stack (report 6102815147, census rows 5 and 6), for an administrator and a member alike. **Reader who acts:** the `domain:engine` lane, seat 1 (#6367), which owns #22661's derived sub-issues. The fix lands in `domain:services` packages, so the claim declares the cross-domain path, as #22661's analytics half did.\n\n## The gap (one defect shape, two positions)\nA lookup target's title is read under a system context and served, without asking the target's exposure decision:\n- **Row 5, the approvals inbox.** `ApprovalService.enrichRows` resolves referenced records' titles (via `referenceTargetOf`) into `payload_display`, which `GET /api/v1/approvals/requests` serves.\n- **Row 6, the activity summary.** `resolveLookupTitles` (`plugin-audit`'s `audit-writers.ts`) reads the target's title column through `api.sudo()` at write time. The title is denormalised into the activity row that `GET /api/v1/data/sys_activity` serves.\n\n## Direction (from #22661's triage, not a ruling)\n- Each title resolution asks `apiExposureDenialReason` for the target. ⛔ No second rule.\n- On refusal, the precedent is the stored id in place of the title, as #22661's dimension labels answer.\n- Pins: per position, an unexposed target's title is not served, and an exposed target is unchanged. Ablation-verified. Join #22661's enumeration pin.\n\n## Duplicate check\nIssues updated since 2026-09-01 were paged to the end through REST: 4,476 issues, PRs excluded, closed included, #1795 to #22729. A local grep over titles and bodies (comments are outside this instrument's radius) for `payload_display`, `enrichRows` or `resolveLookupTitles` within 300 characters of `apiEnabled` or exposure found 0 hits. Control: `apiEnabled` alone found 11 hits.\n\nDedupe words: approvals inbox payload_display exposure · enrichRows referenced title unexposed · resolveLookupTitles apiEnabled · activity summary lookup title exposure"
+}
