@@ -134,8 +134,8 @@ export async function tryFind(ql: any, object: string, where: any, limit = 100, 
  * every caller that wants "the rows I could see", wrong for anyone who has to
  * decide whether a row is GONE. `[]` from that helper means "no row matched OR
  * the read blew up", and a caller reading it as "gone" reports a deletion that
- * an outage invented. `listSeedOrganizationIds` in `per-organization-catalog.ts`
- * states the same rule for the same shape: zero organizations is "nothing to
+ * an outage invented. The retired seeder's organization enumeration
+ * stated the same rule for the same shape: zero organizations is "nothing to
  * seed", an unreadable table is "we do not know".
  *
  * So `unknown` is its own answer and the caller must decide what it means —
