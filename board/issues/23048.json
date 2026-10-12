@@ -12,7 +12,7 @@
   },
   "labels": [
     "area:devpath",
-    "domain:devx",
+    "domain:skills",
     "pm:queue",
     "priority:p2",
     "tooling"
@@ -21,11 +21,11 @@
   "milestone": null,
   "type": null,
   "created_at": "2026-10-12T13:35:45Z",
-  "updated_at": "2026-10-12T14:09:54Z",
+  "updated_at": "2026-10-12T16:53:22Z",
   "closed_at": null,
   "closed_by": null,
   "merged_at": null,
-  "comments": 2,
+  "comments": 4,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/23048",
   "body": "Filed by the director seat (summon #37, `session_01LqNgdPZB2Jnr5HpGbaqLeB`) on the maintainer's word 「两仓加治理行」 (2026-10-12), the answer A to the seat's question (A: the two public repositories add the row and the tooling register follows; B: leave workflows ungoverned). Filing gate ③: maintainer-directed. ⛔ Not a claim. Tier H: `AGENTS.md` (H) and `.claude/**` (S) are in the diff, so the PR stays a draft until a `GOVERNED_APPROVERS` member approves it; the seat then lands it.\n\n## Why\nThis round every CI PR of the fleet waited for the maintainer's approval (objectstack #23014, #23020, #23043; objectui #12232, #12250; cloud #2800, #2802, #2810, #2812, #2813), and cloud wrote `.github/workflows/**` into its governed table (cloud#2809, PR #2810). In this repository the register `GOVERNED_SURFACES` (`scripts/pm/check-governed-merges.mjs`) has six rows and no workflows row, so `check-governed-merges.mjs --pr 23043` answered NOT governed and the queue guard would have let a seat land a workflow PR on green. Three devs flagged the gap (objectui#12214 report 6123124321, objectstack#23017 report 6124930963, cloud#2805 report 6123735599). Rule 14 of `AGENTS.md` says adding a surface is an edit to the register, never to the prose alone, and `check:pm-governed-prose` pins the prose to it.\n\n## What to build\n1. **The register row** in `scripts/pm/check-governed-merges.mjs`: `{ id: 'workflows', prefix: '.github/workflows/', glob: '.github/workflows/**', tier: GOVERNED_TIER_H, what: 'CI, deploy and release workflows: what runs on every push, what deploys, what gates the queue' }` (the wording of cloud's table row), with the register's own self-test cases (a workflow path → GOVERNED Tier H; `.github/ISSUE_TEMPLATE/**` → not).\n2. **The prose the checker pins:** rule 14's enumeration in `AGENTS.md` (containment: the glob verbatim as a code span) and every other region `check-governed-prose.mjs` reads (read its region list; the `.claude/skills/pm-dispatch/SKILL.md` line 「governed 面统一定义」 and any reference file that enumerates the surfaces move with it); `pnpm check:pm-governed-prose` exit 0 after.\n3. **Consumers:** `scripts/pm/check-governed-queue-guard.mjs` imports the register — its self-test gains the workflow case; `dispatch-gates.mjs` reads `ROOT_FILE_WATCH_HINTS` only (no change unless its tier globs enumerate surfaces); the queue guard workflow's `paths:` filter, if it enumerates the surfaces, gains the glob.\n4. Nothing else: no tier change for existing rows, no change to `GOVERNED_APPROVERS`.\n\n## Acceptance\n- `node scripts/pm/check-governed-merges.mjs --pr 23043` (a workflow-only PR) answers GOVERNED, Tier H; `pnpm check:pm-governed-prose` exit 0; `node scripts/pm/check-governed-queue-guard.mjs --self-test` exit 0 and `--test .github/workflows/lint.yml` answers GOVERNED; the PR body lists every prose region touched.\n\nRelated: cloud#2809 (PR #2810) · objectui's sibling card (filed in the same act) · objectstack#22998 · `scripts/pm/check-governed-merges.mjs` · `AGENTS.md` rule 14."

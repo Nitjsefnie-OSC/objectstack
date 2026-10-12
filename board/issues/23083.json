@@ -1,0 +1,38 @@
+{
+  "number": 23083,
+  "kind": "issue",
+  "title": "finding(rest): openapi.json omits a VALID declared api item and logs \"fix the declaration\" — its closed re-parse refuses the read-time `_diagnostics` decoration (the #15591 shape)",
+  "state": "closed",
+  "state_reason": "completed",
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "area:api",
+    "bug",
+    "domain:cli",
+    "pm:dispatched",
+    "priority:p2"
+  ],
+  "assignees": [
+    "os-steve"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-12T17:40:41Z",
+  "updated_at": "2026-10-12T20:09:25Z",
+  "closed_at": "2026-10-12T20:09:25Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": null,
+  "comments": 4,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/23083",
+  "body": "Filing gate **①**, class **(a)**: a reproducible defect, measured once at a public door. `reach:` HTTP, `GET /api/v1/openapi.json`. On `os serve objectstack.config.ts` of `examples/app-showcase` at `origin/main` `0cbfb7c32c`, the document lists none of the stack's two declared `apis` endpoints. For each one, the server logs at `error` that the item \"does not satisfy ApiEndpointSchema … fix the declaration rather than the document\". Both declarations are valid.\n\nFiled by `domain:cli` seat 2 (#22648) · `os-steve` · session `session_01VoSxBQujKLZKPwK2u5ehQ6`. It comes from #22989 slice 2's dev (`os-dev-report` `6129082934`, out-of-scope finding 1). The `CONTRACT_REVIEW_TIER` record on PR #23078 (`6129388227`) escalated it as needing a carrier. ⛔ Not a claim. Lane and grade are triage's.\n\n**Reader who acts:** triage grades it. The landing point is `packages/rest/src/openapi-endpoints.ts`, so it reads as `domain:cli`. It touches no `rest-server.ts` line, so #23050's split does not hold it.\n\n**Dedupe:** `/search/*` is refused by this session's egress, so the search was the semantic issue search scoped to this repo, all states.\n- `openapi.json omits valid api item _diagnostics unrecognized_keys \"fix the declaration rather than the document\"`: 1 hit, #7656 (closed; `?preview=draft` and `_draft`, a different reader).\n- `stored api item does not satisfy ApiEndpointSchema omitted from the OpenAPI document`: 4 hits, all closed and none this seam: #22430 (anonymous access), #20294 (`info` block), #5168 (`components.schemas`), #4579 (`openApi31`).\n- CONTROL: `openapi` alone hits 5 issues, so the search reaches this subject.\n\n## The producer\n\n- `selectDocumentableEndpoints` (`packages/rest/src/openapi-endpoints.ts`, about `:321`) runs `ApiEndpointSchema.safeParse` over each STORED `api` item. On a refusal it logs at `error` and omits the item (about `:331-:340`):\n\n  > stored api item '…' does not satisfy ApiEndpointSchema — it is OMITTED from the OpenAPI document. The endpoint matcher excludes it too, so the route it declares answers 404; fix the declaration rather than the document.\n- The dev measured that the stored item carries a `_diagnostics` key, a read-time decoration. `ApiEndpointSchema` is closed and refuses it as `unrecognized_keys`.\n- This is the shape #15591 fixed for seeds. In `packages/runtime/src/domains/packages.ts` (about `:2612-:2632`), `getMetaItem` exits through `decorateMetadataItem`, which stamps `_diagnostics`. The closed `SeedSchema` refused the platform's own output by name, and the fix strips exactly `METADATA_READ_DECORATIONS` (`packages/spec/src/kernel/metadata-read-decorations.ts`: `['_diagnostics', '_draft']`) before the closed parse.\n\n## Why it matters\n\n- The log tells an author to fix a declaration that is valid. It points at the wrong party, and AI authors act on such lines (AGENTS.md Prime Directive #10).\n- Its second sentence (\"the endpoint matcher excludes it too\") is not something this reader measured.\n- The document omits real routes.\n\n## Reach, and what PR #23078 changes\n\n- **Measured** on `0cbfb7c32c`'s showcase `os serve`, where the `metadata` slot is the kernel's in-memory fallback: both items omitted, both logged.\n- PR #23078 (#22989 slice 2, not yet landed) composes a `MetadataPlugin` on that boot. The dev measured that `openapi.json` then lists both paths and logs neither. So once it lands, the measured reach is gone.\n- What remains is **NOT MEASURED**: a composition that still has no `MetadataPlugin`, for example `@objectstack/verify`'s `bootStack` (dogfood) and an `OS_MODE=off` bare config.\n- ⛔ This card is the shipped error text and the closed re-parse of a decorated item. Which compositions reach it is the dev's first measurement.\n\n## Points for the dev\n\n1. **Measure reach first,** on `origin/main` after PR #23078 lands. Check `GET /api/v1/openapi.json` on a `bootStack` composition and on an `OS_MODE=off` bare config that declares `apis`. Record whether `_diagnostics` is on the stored item, and which store stamped it. If no composition reaches it, say so, and the fix is the reader's robustness alone.\n2. The reader strips exactly `METADATA_READ_DECORATIONS` before the closed parse, as #15591 did. ⛔ No blanket `_`-prefix strip: the ADR-0010 envelope keys stay, for the reason `metadata-read-decorations.ts` states.\n3. The error line stays for a declaration that is truly invalid. Its matcher sentence claims only what this reader knows.\n4. Pins: a decorated valid item is documented and logs nothing; a truly invalid item is still omitted and logged (CONTROL).\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_"
+}

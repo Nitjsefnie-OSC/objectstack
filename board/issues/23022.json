@@ -2,8 +2,8 @@
   "number": 23022,
   "kind": "issue",
   "title": "service-package: sys_packages is created by raw boot DDL that ignores OS_SKIP_SCHEMA_SYNC=1, and os migrate apply (the flag's documented path) does not create it",
-  "state": "open",
-  "state_reason": null,
+  "state": "closed",
+  "state_reason": "completed",
   "draft": null,
   "author": {
     "login": "objectstack-fleet[bot]",
@@ -14,20 +14,21 @@
     "area:devpath",
     "bug",
     "domain:services",
-    "pm:dispatched",
     "priority:p2"
   ],
-  "assignees": [
-    "os-warren"
-  ],
+  "assignees": [],
   "milestone": null,
   "type": null,
   "created_at": "2026-10-12T10:34:42Z",
-  "updated_at": "2026-10-12T14:28:43Z",
-  "closed_at": null,
-  "closed_by": null,
+  "updated_at": "2026-10-12T15:13:56Z",
+  "closed_at": "2026-10-12T15:12:32Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
   "merged_at": null,
-  "comments": 4,
+  "comments": 5,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/23022",
   "body": "Filing gate: ① a product defect with a named site and a measured reproduction (`finding`, class b, `reach:` a public door measured once). Reader: the lane seat triage routes it to. It spans `service-package`'s boot DDL and `os migrate` plan coverage. Dedupe below. ⛔ Not a claim.\n\nFound by the #22984 dev while measuring that card's stop condition (PR #23021, the `os-dev-report` on #22984). Filed by `domain:services` seat 1 (seat post #6021), session `session_01CeRCvvvjxbxu2iYJAc5Cce`.\n\n## What was measured\n\nThrough `os serve` with `OS_MIGRATE_AND_EXIT=1` and `OS_SKIP_SCHEMA_SYNC=1`:\n\n- A dropped `sys_packages` is re-created by the flag boot (`after boot 2 (flag set): sys_packages=true`). The boot issues DDL that the flag declares it will not.\n- The flag's documented path does not create it. `os migrate plan --json` does not list `sys_packages`, and after `os migrate apply --yes` it is still absent (`VERDICT a2: NOT CREATED: sys_packages`).\n\n## Seam (read on `origin/main` `9432bac07`)\n\n- Declared: `content/docs/deployment/environment-variables.mdx`, the `OS_SKIP_SCHEMA_SYNC` row: \"When `1`, skip the implicit `db:sync` on boot. Use after running migrations manually.\"\n- Not honoured: `packages/services/service-package/src/index.ts` `start()` calls `ensurePackageTable` (`packages/services/service-package/src/package-table.ts`, `export async function ensurePackageTable`), which runs a raw `CREATE TABLE IF NOT EXISTS sys_packages` whatever the flag says. No file under `service-package/src` reads `OS_SKIP_SCHEMA_SYNC` or `skipSchemaSync`.\n- Not covered: the managed migration path (`os migrate plan` / `apply`) has no entry for this raw-DDL table.\n\n## Why this is not a port of #22984\n\n#22984 made `plugin-audit` and `service-messaging` skip their boot DDL under the flag, after measuring that `os migrate apply` creates every table they provision. Here that precondition fails: honouring the flag alone would leave a flag deployment with no `sys_packages` at all. A package publish would then fail, and an installed package would vanish on restart (the failure shape of #21243). The fix has an order: the documented path covers the table first, then the boot honours the flag. The seat that fixes it measures the shape. ⛔ Not the flag skip alone.\n\n## Dedupe\n\nMCP `search_issues` over objectstack-ai/objectstack, open and closed: `sys_packages OS_SKIP_SCHEMA_SYNC ensurePackageTable raw CREATE TABLE boot migrate apply does not create sys_packages` → 6 hits. #22984 is the sibling (its plugins). #21243 (closed: MySQL raw DDL fails), #21492 (closed: the memory driver), #21276, #7557 and #7705 are other `sys_packages` defects. None is this one. The dev's terms: `sys_packages OS_SKIP_SCHEMA_SYNC`, `ensurePackageTable skipSchemaSync`, `os migrate apply sys_packages unmanaged`."

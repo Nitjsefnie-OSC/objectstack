@@ -1,0 +1,37 @@
+{
+  "number": 23068,
+  "kind": "issue",
+  "title": "metadata-protocol: the migrate-stored pass and its REST, runtime and CLI doors pass a label as PutOptions.actor; the contract says null, and the label lands in recorded_by (and updated_by after PR #23067)",
+  "state": "closed",
+  "state_reason": "completed",
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "area:studio",
+    "bug",
+    "domain:engine",
+    "priority:p3"
+  ],
+  "assignees": [
+    "os-steve"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-12T15:39:53Z",
+  "updated_at": "2026-10-12T19:52:11Z",
+  "closed_at": "2026-10-12T19:50:16Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": null,
+  "comments": 5,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/23068",
+  "body": "Filing gate **①**, class (b): a declared contract that the named producers break. `reach:` four named producers:\n- `ObjectStackProtocolImplementation.migrateStoredMetadata` (`packages/metadata-protocol/src/protocol.ts`) defaults to `actor: request.actor ?? 'migrate-stored'`;\n- the REST handler `POST …/meta/_migrate-stored` (`packages/rest/src/rest-server.ts`) passes `'USER (POST …/_migrate-stored)'` or `'POST …/_migrate-stored'`;\n- `packages/runtime/src/domains/meta.ts` uses the same shape;\n- `os migrate meta --stored` (`packages/cli/src/commands/migrate/meta.ts`) passes `'os migrate meta --stored'`.\n\nFiled by `domain:engine` seat 2 (#20966) · `os-steve` · `session_01ADzJtzYTLUfgrRZHxkagkX` · 2026-10-12T15:39Z. It comes from #23033's dev (os-dev-report 6127496314, open question 1 and out-of-scope finding 1). The seat answered A (a card of its own), so it does not ride PR #23067. ⛔ Not a claim. Lane and grade are triage's. Its files sit in `domain:engine` (`protocol.ts`), `domain:cli` (`rest`, `runtime`, `cli`).\n\n## The contract it breaks\n- `PutOptions.actor` (`packages/metadata-core/src/types.ts`) is stored in `sys_metadata_history.recorded_by`, a `lookup(sys_user)`. Its own text says: \"Pass null — never a label like `system` — when the write has no human actor\".\n- `recorded_by`'s field description says: \"NULL = system-initiated (boot sync, migration, scheduled job) — never a sentinel string\". #4556 retired the `'system'` sentinel for exactly this reason.\n- One sentence in the same file reads the other way. `MetadataItemSchema.authoredBy`'s describe lists `\"cli\"` and `\"ai:claude\"` as writer identities. The fix settles it: either the describe follows `PutOptions.actor`'s #4556 rule, or the actor contract is reopened. Both cannot stand.\n\n## What lands today, and after PR #23067\n- Today the label lands in `recorded_by` on every history row the migrate pass writes: a non-id in a reference column.\n- PR #23067 (#23033) stamps `sys_metadata.updated_by` from the same `actor`. On rows the migrate pass rewrites, the label then lands in the row's `updated_by` too.\n- The write does not fail, because `put` writes under `isSystem` and the engine's write-time reference check returns early for `isSystem` (`engine.ts`, the reference-check guard). The value is simply a dangling reference.\n\n## Wanted\n- Each producer passes the acting user's id when one exists, and `null` otherwise.\n- The door's name moves to where it belongs: the source field (`source: 'migrate-stored'` is already stated) or a log line, not the actor.\n- Pins:\n  - a migrate pass run by a user records that user's id;\n  - one with no user records `null` in `recorded_by` and `updated_by`;\n  - no label string reaches either column.\n- ⛔ Not a repository-side filter of non-id values: the producer is off-contract, so the repository is not the place to fix it.\n\n## Sequencing\n`protocol.ts` and `rest-server.ts` are held at this stamp by #22877 stage 2's by-name doors (other functions), and `runtime` by #23027 (PR #23045, in the merge queue). Neither holds `migrateStoredMetadata` or its handlers, so these are textual neighbours. The later lander merges `main`.\n\nDedupe: a search of the issues for \"migrate-stored actor\", \"recorded_by label\", \"PutOptions.actor label\" found #4556 (closed; it retired the `'system'` sentinel at the repository) and #7749 (closed; the bearer `/meta` PUT). Neither covers these producers.\n"
+}

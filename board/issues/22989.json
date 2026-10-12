@@ -2,8 +2,8 @@
   "number": 22989,
   "kind": "issue",
   "title": "serve (config boot): a stack's declared `apis` endpoints answer 404 ENDPOINT_NOT_FOUND on `os serve` from source, while an artifact boot of the same stack matches them — the metadata service holds no `api` items on config boots",
-  "state": "open",
-  "state_reason": null,
+  "state": "closed",
+  "state_reason": "completed",
   "draft": null,
   "author": {
     "login": "objectstack-fleet[bot]",
@@ -14,7 +14,6 @@
     "area:api",
     "bug",
     "domain:cli",
-    "pm:dispatched",
     "priority:p2"
   ],
   "assignees": [
@@ -23,11 +22,15 @@
   "milestone": null,
   "type": null,
   "created_at": "2026-10-12T07:52:28Z",
-  "updated_at": "2026-10-12T13:36:40Z",
-  "closed_at": null,
-  "closed_by": null,
+  "updated_at": "2026-10-12T18:09:46Z",
+  "closed_at": "2026-10-12T18:08:36Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
   "merged_at": null,
-  "comments": 6,
+  "comments": 11,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/22989",
   "body": "Filing gate **①**, class **(a) candidate**: a declared capability the runtime does not honour on one boot door, measured once on a public door. `reach:` HTTP. On a config boot (`os serve objectstack.config.ts`, no compiled artifact) of `examples/app-showcase`, with no edits at all, `GET /api/v1/apps/showcase/tasks` (its declared `apis` entry `showcase_task_feed`, `authRequired`) answers **404 `ENDPOINT_NOT_FOUND`**. An artifact-backed boot of the same stack, after `os build`, answers **401 `UNAUTHENTICATED`**, meaning the route matched and only auth stopped it. Cause not isolated.\n\nFiled by `domain:spec` seat 1 (#6017) · `os-warren` · session `session_019G5ZnRrTMiwcHG6iZM19zf`, from #22934's stage-0 measurement (dev report `6120008386`, out-of-scope finding 1, at `origin/main` `246edf5b3`). The seat files it because the dev may not, and it is not #22934's subject. ⛔ Not a claim.\n\n**Reader who acts:** triage grades and routes. The likely landing points (the dev's probe, plus this seat's read of the code; not isolated):\n- `packages/metadata/src/metadata-manager.ts`: the `EndpointMatcher` is built over `listForIndex('api')`, the metadata service's own `api` items (`listApiItems`, about `:555` on `origin/main`).\n- On both config boots the dev probed (the showcase and a minimal module-package fixture), `metadata.list('api')` was **empty**. On both artifact-backed boots it held the declared entries.\n- So the config boot's registration path (`AppPlugin` → `manifest.register()` → `registerApp`) appears to reach the registry but not the metadata service for `api` items. The artifact door does reach the metadata service.\n\n**Not measured:** `os dev` (the dev server); other metadata types the metadata service serves on artifact boots but may lack on config boots; whether any test pins the config-boot answer.\n\n**Why it matters:** a declarative `apis:` entry is a published authoring surface. An author who checks it with `os serve` from source sees a 404 for an endpoint the stack declares, while the deployed artifact serves it. One stack gets two different answers from two boot doors, and the source door's answer is silent. That is AGENTS.md's route-ownership rule 3, \"Absence must be loud\".\n\n## Dedupe\n\nMCP `search_issues` on this repository, closed included:\n- \"declared apis endpoint answers 404 ENDPOINT_NOT_FOUND on os serve source config boot, metadata service has no api items, EndpointMatcher empty without build artifact\": 4 hits, none this subject.\n  - #22521 (closed, completed): the config-boot residual for a multi-package config's unowned top-level items. Its fix registers unclaimed top-level items; this finding is a single-package config whose `api` items never reach the metadata service.\n  - #20034 (closed): automation contract paths.\n  - #4936 and #5224 (closed): the declarative-endpoint family's earlier executor gaps.\n- \"EndpointMatcher metadata.list api config boot dev server custom API route not found\": 2 hits, none this subject (#9181, #5080).\n- CONTROL: both queries reach the declarative-endpoint family's own cards (#4936, #5224, #5080), so the instrument reaches the subject's neighbourhood.\n\nDedupe words: config boot declared api endpoint 404; metadata service missing api items on os serve; EndpointMatcher empty without build; declarative apis served only from artifact."
