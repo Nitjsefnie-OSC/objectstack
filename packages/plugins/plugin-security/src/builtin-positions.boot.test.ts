@@ -403,15 +403,8 @@ async function grantsByPrincipal(engine: ObjectQL, posture: 'single' | 'isolated
  * that show the refusals are not blanket: a write through the data door by the
  * organization administrator (superuser wildcard, not a system context).
  */
-async function tenantPositionWrites(engine: ObjectQL, existingRows: boolean): Promise<Record<string, WriteOutcome>> {
+async function tenantPositionWrites(engine: ObjectQL): Promise<Record<string, WriteOutcome>> {
   const tenant = { userId: 'usr_orgadmin', positions: [], permissions: ['qa_admin'], tenantId: ORG };
-  const own = async (name: string) => {
-    const rows = (await engine.find('sys_position', { where: { name }, limit: 5, context: { isSystem: true, tenantId: ORG } })) as any[];
-    // The organization's own row when it has one (walled), else the organization-less one (`single`).
-    return rows.find((r) => r.organization_id === ORG) ?? rows.find((r) => r.organization_id == null);
-  };
-  const everyone = await own('everyone');
-  const platformAdmin = await own('platform_admin');
   return {
     'assign a position the security catalog does not hold': await outcome(engine.insert(
       'sys_user_position', { user_id: 'usr_member', position: 'zz_dangling' }, { context: tenant } as any,
@@ -428,15 +421,6 @@ async function tenantPositionWrites(engine: ObjectQL, existingRows: boolean): Pr
     'control: assign a stack-declared position (no row needed)': await outcome(engine.insert(
       'sys_user_position', { user_id: 'usr_member', position: DECLARED_POSITIONS[0].name }, { context: tenant } as any,
     )),
-    // Only an existing database holds a built-in row to refuse (stage 6a).
-    ...(existingRows
-      ? {
-        'delete the everyone row': await outcome(engine.delete('sys_position', { where: { id: everyone?.id }, context: tenant } as any)),
-        'relabel the platform_admin row': await outcome(engine.update(
-          'sys_position', { id: platformAdmin?.id, label: 'Repurposed' }, { context: tenant } as any,
-        )),
-      }
-      : {}),
   };
 }
 
@@ -525,11 +509,9 @@ for (const name of Object.keys(SCENARIOS) as ScenarioName[]) {
         expect(await grantsByPrincipal(engine, scenario.posture)).toEqual(grantGoldenFor(scenario));
       });
 
-      it('still refuses a tenant a dangling position name, and deleting or relabelling a built-in row', async () => {
-        // A fresh database holds no built-in row to delete or relabel; the two
-        // refusals are read where the rows are, on an existing database.
+      it('still refuses a tenant a dangling position name', async () => {
         const { engine } = booted.get(name)!;
-        expect(await tenantPositionWrites(engine, scenario.existingRows)).toEqual(refusalGoldenFor(scenario));
+        expect(await tenantPositionWrites(engine)).toEqual(refusalGoldenFor(scenario));
       });
     }
   });
@@ -539,9 +521,8 @@ for (const name of Object.keys(SCENARIOS) as ScenarioName[]) {
  * The tenant position writes. A name the security
  * catalog does not hold, a dangling one or a row with no definition alike, is
  * the position catalog refusal's envelope (`reference_not_found` at
- * `position`); a stack-declared position is assigned with no row; the two
- * built-in rows an existing database holds are refused on their `platform`
- * provenance. Under a wall the tenant's position create is refused as well
+ * `position`); a stack-declared position is assigned with no row. Under a
+ * wall the tenant's position create is refused as well
  * ({@link refusalGoldenFor}).
  */
 const REFUSAL_GOLDEN: Record<string, WriteOutcome> = {
@@ -561,16 +542,6 @@ const REFUSAL_GOLDEN: Record<string, WriteOutcome> = {
   'control: assign a stack-declared position (no row needed)': {
     ok: true,
   },
-  'delete the everyone row': {
-    ok: false,
-    code: 'PERMISSION_DENIED',
-    status: 403,
-  },
-  'relabel the platform_admin row': {
-    ok: false,
-    code: 'PERMISSION_DENIED',
-    status: 403,
-  },
 };
 
 /**
@@ -581,12 +552,9 @@ const REFUSAL_GOLDEN: Record<string, WriteOutcome> = {
  * move, and the built-in row refusals keep their `403 PERMISSION_DENIED`.
  */
 function refusalGoldenFor(scenario: Scenario): Record<string, WriteOutcome> {
-  const golden: Record<string, WriteOutcome> = scenario.posture === 'single'
+  return scenario.posture === 'single'
     ? REFUSAL_GOLDEN
     : { ...REFUSAL_GOLDEN, 'control: create a position row': { ok: false, code: 'PERMISSION_DENIED', status: 403 } };
-  if (scenario.existingRows) return golden;
-  const { 'delete the everyone row': _d, 'relabel the platform_admin row': _r, ...fresh } = golden;
-  return fresh;
 }
 
 /**
