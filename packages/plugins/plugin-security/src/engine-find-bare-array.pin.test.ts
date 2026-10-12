@@ -170,22 +170,6 @@ function assertBareArrayPage(seen: Seen, label: string): void {
   }
 }
 
-/** A logger that records what a seeder said, so a fallback can be asserted absent. */
-function recordingLogger() {
-  const warns: string[] = [];
-  const infos: string[] = [];
-  return {
-    warns,
-    infos,
-    logger: {
-      info: (m: string) => { infos.push(m); },
-      warn: (m: string) => { warns.push(m); },
-      debug: () => { /* noop */ },
-      error: (m: string) => { warns.push(m); },
-    },
-  };
-}
-
 describe('[#15598] block 4 — auto-org-admin-grant tryFind', () => {
   it('reads the set and the membership out of bare arrays, and grants on them', async () => {
     const engine = await boot();
