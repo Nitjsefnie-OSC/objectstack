@@ -1,0 +1,34 @@
+{
+  "number": 22908,
+  "kind": "issue",
+  "title": "finding: a multi-valued reference field (`lookup`/`user` with `multiple: true`) admits an element of the wrong shape: REST stores an embedded record `[{ id }]` with 201, where the single-valued field refuses it `invalid_type` (ADR-0104 D1)",
+  "state": "open",
+  "state_reason": null,
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "area:records",
+    "bug",
+    "domain:engine",
+    "pm:dispatched",
+    "priority:p2"
+  ],
+  "assignees": [
+    "os-steve"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-12T00:30:23Z",
+  "updated_at": "2026-10-12T02:41:03Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 2,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/22908",
+  "body": "Filing gate **①**: a product defect with a public door measured and a named real producer. **Class (b):** a declared contract the runtime does not honour. `reach:` REST `POST` / `PATCH /api/v1/data/:object`, measured.\n\nFiled by `domain:cli` seat 2 (#22648) · `os-steve` · session `session_01VoSxBQujKLZKPwK2u5ehQ6`, from #15953 slice 1's dev (`os-dev-report` `6115578862` on #15953, out-of-scope finding 1; PR #22907). The new `@objectstack/verify` reference-shape family found it. ⛔ Not a claim. Lane and grade are triage's.\n\n**Reader who acts:** triage grades it. The gap is in the engine's write validation, `packages/objectql`, so a repair reads as `domain:engine` unless triage routes it elsewhere.\n\n## What is measured\n\nThe dev ran the derived family over a fixture with a `lookup` `multiple: true` and a `user` `multiple: true`, on `origin/main` `9fdb12752c`:\n- **REST, as the signed-in admin:** inserting or updating an element that is an embedded record object (`[{ id }]`) answers `201` / `200` and stores `[{ id }]`. `[false]` and `[42]` are refused only as `reference_not_found` (\"no TARGET record has id \"false\"\"), never as a shape error.\n- **The engine's own write, as the system principal** (`hooks.run` `{ system: true }`): `[false]`, `[42]` and `[{ id }]` are all admitted and stored verbatim.\n- **CONTROL:** single-valued `lookup`, `user` and `master_detail` refuse all three with `invalid_type` on both doors.\n- **Named real producer of the shape:** `examples/app-showcase/src/data/objects/project.object.ts:89`, `team_members: Field.user({ label: 'Team Members', multiple: true })`.\n\n## Why\n\n- The spec's stored form (`valueSchemaFor` / `ReferenceIdValueSchema`, `packages/spec/src/data/field-value.zod.ts`) is an array of record-id strings for a multi-valued reference.\n- `packages/objectql/src/validation/record-validator.ts`, multi-value branch: it returns `null` early for `lookup` / `user` / `file` / `image` elements, with the comment \"reference integrity is handled elsewhere\". So the element's shape is never checked against that stored form.\n- `packages/objectql/src/engine.ts` `assertReferencesResolve` skips object-typed elements, and returns at once for an `isSystem` context. So nothing downstream catches the shape either.\n- Seam: `spec:` `valueSchemaFor` / `ReferenceIdValueSchema` → `runtime:` the record validator's multi-value branch and `assertReferencesResolve`.\n\n## Not measured\n\n- `file` / `image` with `multiple: true` (the same early return).\n- Whether the system principal is meant to bypass the SHAPE check, as distinct from the existence check that #4551 discussed for `isSystem` writes.\n\n## Family and related\n\n- ADR-0104 D1 value shapes. #4455 (closed) was the migrate scan missing a lookup holding an embedded record. #4441 and #4551 (closed) are about whether a referenced id EXISTS, not its shape.\n- PR #22907 lands the derived family as opt-in `os verify --reference-shapes`, BECAUSE this gap would turn it red on `examples/app-showcase`. Its report recommends making the family default in the PR that lands this repair.\n\n## Direction (not a ruling)\n\n- A multi-valued reference element is held to the same stored-shape check as a single value, at the same validator, so an embedded record, a boolean or a number answers `invalid_type` naming the field.\n- The pin: the derived family over a `multiple: true` fixture with no holes. CONTROL: the single-valued rows unchanged.\n\n## Dedupe\n\nMCP `search_issues` on this repo, closed included:\n- `multi-valued lookup multiple true element value shape embedded record admitted stored ADR-0104 reference value`: 2 hits, neither open nor on this gap (#22678, #4455).\n- `record-validator multiple lookup elements return null reference integrity handled elsewhere assertReferencesResolve isSystem`: 4 hits, all closed, all about the existence of a referenced id (#16611, #20007, #4551, #4441).\n- `lookup field refuses a value of the wrong shape invalid_type reference value shape ADR-0104`: 3 hits, all closed (#15882, #15800, #4455).\n- CONTROL: the first and third queries return #4455, the ADR-0104 D1 migrate member, so the instrument reaches this family.\n\nDedupe words: multiple lookup element value shape; ADR-0104 multi-valued reference element; reference_not_found boolean element; embedded record in multi lookup; assertReferencesResolve isSystem.\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_"
+}

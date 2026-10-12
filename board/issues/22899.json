@@ -1,0 +1,37 @@
+{
+  "number": 22899,
+  "kind": "pull_request",
+  "title": "feat(cli)!: delete os meta resync and the example position binders (#15204 stage 6b-2a)",
+  "state": "closed",
+  "state_reason": null,
+  "draft": false,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "documentation",
+    "size/l",
+    "tests",
+    "tooling"
+  ],
+  "assignees": [
+    "marchtian"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-11T21:38:35Z",
+  "updated_at": "2026-10-12T01:12:48Z",
+  "closed_at": "2026-10-12T01:11:15Z",
+  "closed_by": {
+    "login": "os-zhuang",
+    "id": 277994282,
+    "type": "User"
+  },
+  "merged_at": "2026-10-12T01:11:15Z",
+  "comments": 5,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/pull/22899",
+  "body": "Part of #15204\nClause-②: yes (narrowing)\n\n**6b-2a of stage 6b-2**: `os meta resync` is deleted (Q2 → A, 6109520247), along with the two example binders (E4 → A, 6110777865). It does not depend on T1 or T2 and can land first. It must land before the 6b-2 code PR #22900, which stays under 3,000 changed lines only once this PR is on `main` (seat notes 6114241228, 6114456408). **Tier H**: the diff touches `skills/objectstack-platform/references/operations.md`.\n\n## What changes\n\n| Surface | Before | Now |\n|:--|:--|:--|\n| `os meta resync` (`packages/cli/src/commands/meta/resync.ts`) | reconciled the platform-default `sys_permission_set` rows to the shipped declaration | deleted. The resolver reads sets from the catalog (ADR-0131 D3), so an edited default is served from its declaration at the next boot. A script that calls it gets oclif's unknown-command error |\n| `skills/objectstack-platform/references/operations.md` | listed `os meta resync` | the row now names `os meta register` |\n| `examples/app-crm/src/security/bind-position-sets.ts`, `examples/app-showcase/src/security/bind-position-sets.ts` | wrote `sys_position_permission_set` rows at enable or seed | deleted with their registrations. The positions declare their sets (`PositionSchema.permissionSets`), and the resolver reads those. The examples' tests pin the declared pairs literally: crm 3, showcase 8 |\n| CLI internals, `driver-sql`, `runtime`, plugin-security comments and one warning sentence | named the command | no longer do. Behaviour unchanged |\n| `resync-skip-explanation.test.ts` | pinned the command's skip line | deleted with the command |\n| `bootstrap-platform-admin.test.ts`, `bootstrap-platform-admin-seeded-provenance.test.ts` | pin the platform-default seeding and its `resync` option | **kept**, byte-identical to `main`: that code runs on `main` until #22900 deletes it, so the suites leave with T2 (#22898), directly before #22900 |\n| `scripts/docs-audit/affected-docs.mjs`, `scripts/check-cli-command-ids.mjs` | self-test specimens named `meta resync` | they name `meta register`, a command that exists |\n\n## Changeset\n\n`@objectstack/cli` **minor**, BREAKING. `plugin-security`, `driver-sql` and `runtime` are patch (comments and one warning sentence). `Clause-②: yes (narrowing)`, ADR-0087 `not-required (no-migration-prescription)`.\n\n## Size\n\n31 files, +94 / −659 (753 changed lines).\n\n## Verification\n\nOn this branch: CLI typecheck green; plugin-security full suite, 194 files, 3,958 passed; CLI unit tier, 282 files, 4,233 passed; the three edited CLI integration suites, 3 files, 90 passed; example-crm 6 files, 46 passed; example-showcase 33 files, 409 passed. `check:adr-0087-registration`, `check:changeset-no-major`, `check:cli-command-ids`, the double-contract gates and `check:nul-bytes` green.\n\nRound 3 (`a9339b02f`): the two restored suites, 2 files / 15 passed; `engine-double`, `objectql-double-limit`, `where-matcher`, `check:cli-command-ids`, `check:changeset-no-major`, `check:adr-0087-registration` and `check:nul-bytes` exit 0; `check-empty-changeset` exits 1 by design (Notes).\n\n## Notes\n\n- **A correction to someone else's pending release note: please confirm it here.** This PR edits `.changeset/22581-migrate-reads-env-files.md` (#22581, not yet released, so it ships in the same release as this PR). Its list of commands that load the project's `.env` files named `os meta resync`, which this PR deletes. The edit drops `os meta resync, ` from that list and leaves the rest of the sentence intact. Nothing else in that note changes.\n- Because of that edit, **`Check Changeset` stays red on this PR by design** (`check-empty-changeset.mjs`, #17712, the DELIBERATE CORRECTION class). Per the ruling on #18375, `skip-changeset` is not applied to a PR that edits an existing changeset. The check is not a required context, so the approver merges over it once the correction above is confirmed. Restoring the old sentence would republish a command that no longer exists.\n- Also in the same commit, two one-line comment fixes in files this PR already touches: the showcase `inert-wirings.test.ts` comment no longer says the junction binder still writes rows, and `schema-migrate.lazy-driver-import.test.ts` reads \"was\" for \"is was\".\n\n## 维护者速读（草稿）\n\n**改了什么**：删除 CLI 命令 `os meta resync`，以及 CRM 和 showcase 两个示例里在启用或种子阶段写岗位—权限集绑定行的脚本。skills 参考文档里对应的一行改为 `os meta register`。\n\n**为什么改**：鉴权解析器已从注册表读取权限集定义（ADR-0131 D3），`resync` 对齐的那些行不再决定任何权限。岗位自己声明权限集，示例的绑定行是多余的第二个来源。\n\n**风险与代价（含回滚）**：调用 `os meta resync` 的脚本会报「未知命令」——changeset 标为 BREAKING。示例行为不变，测试逐对钉住了声明的绑定。回滚：直接 revert，无数据迁移。\n\n**席位意见**：\n\n**你要做的**：本 PR 因修改 skills 文件为 Tier H，需要维护者批准；不依赖 T1、T2，须在 #22900 之前合并。终稿见席位在本 PR 上的速读评论。\n\n---\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nhttps://claude.ai/code/session_013XKtmoR5QCUSTMjiQ3os49\n\n"
+}

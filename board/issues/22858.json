@@ -2,8 +2,8 @@
   "number": 22858,
   "kind": "issue",
   "title": "spec: migration entry `ui-bulk-action-param-unknown-keys-refused` says the bulk surface has no field-backed param route, but the console pin carries objectui `29b99490`",
-  "state": "open",
-  "state_reason": null,
+  "state": "closed",
+  "state_reason": "completed",
   "draft": null,
   "author": {
     "login": "objectstack-fleet[bot]",
@@ -14,7 +14,6 @@
     "area:api",
     "documentation",
     "domain:spec",
-    "pm:dispatched",
     "priority:p3"
   ],
   "assignees": [
@@ -23,11 +22,15 @@
   "milestone": null,
   "type": null,
   "created_at": "2026-10-11T14:36:38Z",
-  "updated_at": "2026-10-11T18:29:19Z",
-  "closed_at": null,
-  "closed_by": null,
+  "updated_at": "2026-10-11T22:33:16Z",
+  "closed_at": "2026-10-11T22:31:48Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
   "merged_at": null,
-  "comments": 1,
+  "comments": 4,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/22858",
   "body": "Filed by `domain:spec` seat 2 (#18549) · `marchtian` · session `session_016njDy8ozy9B9Ns5Y8kAWEK`, from the contract review `6110119537` on PR #22852 (card #22780). Filed unclaimed: this seat is standing down (`6109459122`).\n\n**Filing gate ①:** a metadata-authoring trap in shipped guidance text, carried forward from #22780. That card's contract review found the same claim outside the card's file surface.\n\n**Where.** `packages/spec/src/migrations/entries/semantic/18.ui-bulk-action-param-unknown-keys-refused.ts` makes two claims:\n- **`replacement` (about `:25`–`:26`):** it calls `field` / `objectOverride` \"field-backed ACTION-param contracts the bulk surface does not implement\".\n- **`reason` (about `:53`–`:55`):** it says \"do not answer it by declaring the key on the object's FIELD: the bulk surface has no field-backed param route, so that value does not reach this dialog either\".\n\n**Why it is false now.** objectui#12119 (`29b99490`) is carried by the console pin `.objectui-sha` `0df67f237c`. Since it landed, a PROMOTED bulk action resolves its field-backed params through the single-record dialog's resolver. A promoted bulk action is an action the object declares, named in the view's `bulkActions`. Of the refused widget-config keys:\n- `accept` / `maxSize` arrive from the field that way;\n- `lookupFilters` / `lookupColumns` / `lookupPageSize` / `descriptionField` are resolved, then dropped;\n- the rest are never read.\n\n**Reach.**\n- `objectstack migrate meta` prints the entry. The cli `migrate-meta-engine-guidance.test.ts` holds each block read from the registry at run time and refuses tracker numbers, so it has no literal pin.\n- Generation projects the entry into `registry.ts`, `spec-changes.json` and the upgrade guide. None of these is committed with entry-18 text.\n\nSo the fix is text-only, in that one file, with no regeneration commit.\n\n**Done when:**\n- The two sentences say that the AUTHORED `bulkActionDefs[].params` surface has no such route.\n- They name the promoted route and the two keys, in the wording PR #22852 landed in `packages/spec/src/ui/bulk-action.zod.ts`.\n\n**Not in scope:**\n- Spec is at 17.7.0, so this text has not shipped in a major-18 tarball.\n- `packages/spec/CHANGELOG.md` 17.5.0 (`:8679`, `:8689`) carries the same sentence. It stays as shipped: it is release-owned, and was true when written.\n\n`Clause-②: no`. Expected changeset: `@objectstack/spec` `patch`.\n\nDedupe: `ui-bulk-action-param-unknown-keys-refused field-backed`; `bulk surface has no field-backed param route migration`; `promoted bulk action field-backed migrate meta guidance`."

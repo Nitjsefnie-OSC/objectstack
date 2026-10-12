@@ -1,0 +1,32 @@
+{
+  "number": 22918,
+  "kind": "issue",
+  "title": "tooling(adr-0087): a seventh disposition category, runtime-export-retired, for a changeset that retires published runtime exports and carries a FROM to TO block (ruling A on #22915)",
+  "state": "open",
+  "state_reason": null,
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "area:devpath",
+    "domain:devx",
+    "needs-user-decision",
+    "priority:p2",
+    "tooling"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-12T01:54:33Z",
+  "updated_at": "2026-10-12T02:27:19Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 3,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/22918",
+  "body": "Protects: the ADR-0087 changeset disposition vocabulary and its gate (`scripts/check-adr-0087-registration.mjs`) — the published upgrade contract every BREAKING changeset of `@objectstack/*` ships to consumers through `CHANGELOG.md` and `os migrate meta`.\n\nFiled by the director seat (summon #37, `session_01LqNgdPZB2Jnr5HpGbaqLeB`) on the maintainer's ruling **A** on #22915 (comment 6116351873, the maintainer's word verbatim 「22915 同意」). Filing gate ①: the fix lands in a gate script and a governed ADR addendum, so the card is `tooling` · `domain:devx` · `area:devpath` · `priority:p2`, in `pm:queue`. ⛔ Not a claim. ⛔ Not a decision: every design choice below was ruled on #22915; a dev that finds a premise false reports the fork, never a different letter.\n\n## What to build\n\n**A seventh ADR-0087 disposition category, `runtime-export-retired`, for a changeset that retires published runtime exports and carries a FROM → TO block.**\n\n- **Spelling:** `<!-- adr-0087: not-required (runtime-export-retired <package>#<name>[, ...]) <why> -->`.\n- **Predicates, re-verified on every gate run** (the D7 / #13080 method — a positive, re-runnable finding, never an allow-list):\n  1. each named `<package>#<name>` is reachable from the package's published entry at the merge base and is absent at HEAD (pick the resolver the api-surface gates already use; do not write a new one);\n  2. none of the named exports is a metadata surface: not under `*.zod.ts`, not under `packages/spec/src/contracts/**`, not an object definition; and no metadata surface references the export at the merge base;\n  3. a FROM → TO block in the body is admitted only when its FROM operands are exactly the named exports (any other FROM operand keeps the `no-migration-prescription` refusal the category would otherwise inherit).\n- **ADR-0087 addendum:** record the category beside `runtime-interface-only` (D7) and `type-surface-only` (#13080), with the worked example `.changeset/15205-email-templates-resolve-registry.md` (PR #22875, `7de0265fc7`: nine exports and two plugin options of `@objectstack/plugin-email`, a six-line FROM → TO block, admitted today only because the detector requires an arrow the list lines do not carry) and the measured history, as the two neighbours have.\n- **Self-tests:** the category accepted on the worked example; refused when a named export still exists at HEAD, when a named export is a `*.zod.ts` symbol, when the FROM → TO block names an operand outside the named set, and when the marker names nothing; the six existing categories unchanged (their self-tests stay green).\n- **Not in scope:** re-grading existing changesets (ruled: new retirements use the category); any change to `no-migration-prescription`'s refusal or to the detector's arrow rule (option C was not taken).\n\n## Governing text\n\n- ADR-0087 addendum (`docs/adr/0087-metadata-protocol-upgrade-contract.md` near `:727`–`:742`): the closed vocabulary; \"`no-migration-prescription` is refused by a body that carries a migration prescription\"; D7 (`:747`): the compiler is the channel, and an exemption \"held by a detector miss rather than by a positive finding\" is the shape to retire; D8 (`:864`).\n- #13080's ruling 5468992520 and PR #13596 (+956 / −10): the sixth category, the precedent for shape and size.\n- The ruling on #22915 (comment 6116351873): the letter, the predicates, and what was not taken.\n\n## Landing\n\n- `docs/adr/**` is a governed surface (Tier H): the PR carries `## 维护者速读（草稿）`, the seat's ACCEPT swaps it for the 终稿 and requests review from `os-zhuang` and `hotlong`; the maintainer's APPROVED review lands it through the owning seat. `Clause-②: no` (no `packages/spec` schema change).\n- Workload: `domain:devx` · 1 PR · precedent PR #13596 (+956 / −10).\n- Done when: the gate accepts the worked example under the new marker, refuses the four negative cases above, the six existing categories' self-tests stay green, and the addendum names the category with its predicates and example."
+}

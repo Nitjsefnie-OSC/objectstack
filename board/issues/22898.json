@@ -1,0 +1,32 @@
+{
+  "number": 22898,
+  "kind": "pull_request",
+  "title": "test(dogfood): fixtures read permission sets from the security catalog (#15204 stage 6b-2, T2)",
+  "state": "open",
+  "state_reason": null,
+  "draft": true,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "size/xl",
+    "skip-changeset",
+    "tests"
+  ],
+  "assignees": [
+    "marchtian"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-11T21:38:29Z",
+  "updated_at": "2026-10-11T22:27:23Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 1,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/pull/22898",
+  "body": "Part of #15204\nClause-②: no\n\n**T2 of stage 6b-2**: tests only. Fixtures that looked up a permission set's seeded `sys_permission_set` row now read the set from the security catalog (ADR-0131 D3, the catalog is its one home). Fixtures that model an **existing** database write the legacy row themselves. It is split off the 6b-2 code PR (#22900) so that PR falls under 3,000 changed lines.\n\n**Landing, as sequenced by the seat:** T1, T2 and the 6b-2 code PR (#22900) stay drafts until #22900's own gates clear (the #22865 pickers and objectui PR-4), then land back to back, **T1 → T2 → #22900**. That way the publish materializer and the seeders are never live on `main` with their pins gone. 6b-2a (#22899) is independent and goes to the maintainer separately. This branch is green on `main` as it is today, while the seeder still runs. No production file changes.\n\n## What changes\n\n- New `packages/qa/dogfood/test/catalog-permission-set.ts`:\n  - `catalogPermissionSet(ql, name)` returns the set the catalog serves (via `securityCatalogReaderOf`; it throws if no reader is bound, so a missing catalog cannot pass as an absent set);\n  - `ensureLegacyPermissionSetRow(ql, name, { managedBy })` writes the organization-less legacy row with its full body from the catalog definition, for the suites whose data-door cases need a row.\n- About 30 dogfood suites move from `findOne('sys_permission_set')` preconditions to `catalogPermissionSet`.\n- `showcase-permission-zoo`, `two-doors-permission`, `showcase-permission-projection`, `permission-set-write-through-package-binding` and `permission-set-lock-row-provenance` write the legacy row where their cases edit one. `two-doors-permission` 块1 (a publish materializes a row) goes; the materializer is deleted in 6b-2.\n- `armed.dogfood.test.ts`: the seeded controls use signed-up members, not `usr_system`.\n- `permission-set-clone-boot-unowned-warning.dogfood.test.ts` is deleted (it pins the seeder's boot warning).\n- plugin-security: new `src/__tests__/legacy-catalog-rows.testkit.ts` (`seedLegacyPlatformBucket`). Eight suites that model an existing database call it before their bootstrap.\n\n## Size\n\n51 files, +312 / −308 (620 changed lines).\n\n## Verification\n\nOn this branch, with the seeder still running: full build; dogfood typecheck green; the 8 plugin-security fixture suites, 8 files, 72 passed; the 40 migrated dogfood suites, 40 files, 447 passed, 1 skipped. The three double-contract gates, `check:changeset-no-major`, `check:nul-bytes` green. The same fixtures also pass with the seeder deleted: they are inside the 6b-2 branch's full dogfood run (248 files green).\n\nTest-only: `skip-changeset`.\n\n---\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nhttps://claude.ai/code/session_013XKtmoR5QCUSTMjiQ3os49\n"
+}

@@ -2,8 +2,8 @@
   "number": 22841,
   "kind": "issue",
   "title": "cli: the 9 `packages/cli`-owned rule ids and the action-governance boot-log lines print one verdict sentence each (≤ 200 chars), with the reasoning behind `os explain rule <id>` (#22161, the `domain:cli` half)",
-  "state": "open",
-  "state_reason": null,
+  "state": "closed",
+  "state_reason": "completed",
   "draft": null,
   "author": {
     "login": "objectstack-fleet[bot]",
@@ -14,18 +14,23 @@
     "area:devpath",
     "domain:cli",
     "enhancement",
-    "pm:queue",
     "priority:p3"
   ],
-  "assignees": [],
+  "assignees": [
+    "os-steve"
+  ],
   "milestone": null,
   "type": null,
   "created_at": "2026-10-11T12:53:25Z",
-  "updated_at": "2026-10-11T14:29:42Z",
-  "closed_at": null,
-  "closed_by": null,
+  "updated_at": "2026-10-12T00:28:34Z",
+  "closed_at": "2026-10-12T00:27:03Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
   "merged_at": null,
-  "comments": 1,
+  "comments": 5,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/22841",
   "body": "Filing gate ③: a maintainer-dispatched task, split out of #22161 by triage's `pm:retriage` answer. The maintainer's words, verbatim, are on #22161: 「validate 的警告段落约 900 字符,不可读。……建议一行裁决 + `rule:` id + \"`os explain field-no-consumers` 看完整推理\",长文搬进 explain 或文档」. Filed by the triage seat (seat post #6015, `session_01AavokzJ5DndAwitDXvKy4U`). ⛔ Not a claim.\n\n**Lane:** `domain:cli`. These ids and the boot-log lines are produced in `packages/cli` files, and #22161's body already names the `domain:cli` seat as the printer's reader.\n\n## What is left for this lane (from #22161's landing record of slice 10)\n\n- **Rule ids produced in `packages/cli`:**\n  - `hook-body/not-lowerable`, `hook-body/unparseable`, `hook-body/bundled-fallback`, `hook-body/extraction-failed`;\n  - `docs/uncollected-directory`, `docs/duplicate-name`, `docs/nav-target`, `docs/frontmatter-tags`;\n  - `picklist-reference-unverified`.\n- **The `action-governance.ts` boot-log lines.** #22161's body calls the dead-button `action-governance` line one of \"the next two a newcomer meets\".\n\n## The shape, as #22161's slices built it in `packages/lint`\n\n- Each finding prints one verdict sentence (≤ 200 characters), one `fix:` line, and the `rule:` line as it is today.\n- The reasoning moves to `os explain rule <id>`, which reads `RULE_EXPLANATIONS`. Re-measure where a `packages/cli`-owned id's entry belongs. ⛔ Do not create a second explanation registry.\n- Ids, severities, paths and accept/refuse behaviour are unchanged.\n\n## Done when\n\n- A census of these ids' messages (before → after) shows each at ≤ 200 characters, each with an `os explain rule <id>` entry.\n- The `action-governance` boot-log lines are one line each.\n- The cli suites that name these ids are green.\n- `Clause-②: no` (message text only).\n\n**Sequence:** `hook-body/*` messages live in `extract-hook-body.ts`, which PR #22834 (#22810) and #22837 also edit. Take the `hook-body/*` ids after those land, or as their own last slice.\n\n`domain:cli` · p3 · `area:devpath`."
