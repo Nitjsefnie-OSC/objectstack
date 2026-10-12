@@ -44,6 +44,8 @@ describe('showcase: declared permission sets are served by the security catalog 
 
   it('the boot writes no sys_permission_set row — and the census can see one', async () => {
     const SYS = { context: { isSystem: true } };
+    // Stage 8 retires the object: with no table to write, the census has nothing to count.
+    if (!ql.getObject?.('sys_permission_set')) return;
     expect(await ql.find('sys_permission_set', { where: {} }, SYS)).toEqual([]);
     // Positive control: the same read sees a row once one exists.
     await ql.insert('sys_permission_set', { id: 'ps_census_control', name: 'zz_census_control', label: 'Control' }, SYS);

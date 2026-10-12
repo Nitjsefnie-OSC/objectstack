@@ -195,13 +195,12 @@ describe('[#20964] approval snapshot field served masked on the data plane', () 
         // administrators instead (#22824).
         const membership = await ql.findOne('sys_member', { where: { user_id: memberId }, context: { isSystem: true } });
         const organization_id = membership?.organization_id;
-        await ql.insert('sys_position', { id: 'pos_snapmask', name: POSITION, label: 'Reviewer', active: true }, SYS);
         await ql.insert('sys_user_position', { id: 'hold_snapmask_m', user_id: memberId, position: POSITION, organization_id }, SYS);
         await ql.insert('sys_user_position', { id: 'hold_snapmask_u', user_id: unmaskerId, position: POSITION, organization_id }, SYS);
         const unmask = await catalogPermissionSet(ql, unmaskSet.name);
         expect(unmask, 'fixture permission set served by the security catalog').toBeTruthy();
         for (const userId of [unmaskerId, submitterId]) {
-          await ql.insert('sys_user_permission_set', { user_id: userId, permission_set: unmask.name }, SYS);
+          await ql.insert('sys_user_permission_set', { user_id: userId, permission_set: unmaskSet.name }, SYS);
         }
 
         const createRes = await stack.apiAs(submitterToken, 'POST', `/data/${OBJECT}`, { name: 'Item one', [KEY]: STORED });

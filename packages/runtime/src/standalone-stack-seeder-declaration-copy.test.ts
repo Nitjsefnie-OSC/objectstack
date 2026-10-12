@@ -191,6 +191,7 @@ interface ObjectQlRegistrySlot {
   /** The private field `plugin-sharing`'s `readDeclared` spells instead. */
   readonly _registry: unknown;
   find(object: string, query: Record<string, unknown>): Promise<DeclaredItem[]>;
+  getObject?(object: string): unknown;
 }
 
 interface MetadataListSlot {
@@ -258,7 +259,8 @@ beforeAll(async () => {
   for (const t of ['sys_permission_set', 'sys_capability', 'sys_sharing_rule']) {
     // The seeded rows as the platform reads them: the explicit system opt-in.
     // A context-less read is refused by the security middleware (ADR-0096 D5).
-    rows[t] = await ql.find(t, { context: { isSystem: true } });
+    // [C3 stage 8] A retired catalog row object has no table, and no rows.
+    rows[t] = ql.getObject?.(t) ? await ql.find(t, { context: { isSystem: true } }) : [];
   }
 }, BOOT_TIMEOUT);
 
@@ -383,34 +385,9 @@ describe('#14491 Q1 + Q4 — which copy the seeders consume, and which copy wins
     expect(door).toMatchObject({ isDefault: false, _packageVersion: '3.0.0' });
   });
 
-  it('⚠️ NOT ABSORBED — `sys_permission_set` persists the UN-PARSED registry copy, byte for byte', () => {
-    const reg = byName(registryCopy.permission, 'probe_agent');
-    const door = byName(doorCopy.permission, 'probe_agent');
-    const row = byName(rows.sys_permission_set, 'probe_agent');
-
-    // The decisive read: the stored authorization map is deep-equal to the
-    // registry copy's and NOT to the door's. Nothing between `readDeclared` and
-    // `tryInsert` re-parses it — `permissionSetRowFields` serialises what it
-    // was handed.
-    const storedObjects = JSON.parse(row.object_permissions);
-    expect(storedObjects).toEqual(reg.objects);
-    expect(storedObjects).not.toEqual(door.objects);
-
-    const storedRls = JSON.parse(row.row_level_security);
-    expect(storedRls).toEqual(reg.rowLevelSecurity);
-    expect(storedRls).not.toEqual(door.rowLevelSecurity);
-
-    // Spelled out key by key, so a future change to either side names itself.
-    expect(storedObjects.crm_ticket).toMatchObject({ allowRestore: true, allowPurge: false });
-    expect(storedObjects.crm_ticket).not.toHaveProperty('allowTransfer');
-    expect(storedObjects.crm_ticket).not.toHaveProperty('viewAllRecords');
-    expect(storedObjects.crm_ticket).not.toHaveProperty('modifyAllRecords');
-    expect(storedRls[0]).toMatchObject({ priority: 10 });
-
-    expect(row).toMatchObject({
-      managed_by: 'package', package_id: 'com.test.issue-14491', active: true, customized: false,
-    });
-  });
+  // [ADR-0131 D3] Which copy a `sys_permission_set` row persisted is no longer
+  // a question: no boot writes that row (C3 stage 6b-2), and the object itself
+  // is retired (C3 stage 8). The registry copy is what the catalog serves.
 
   it('`sharing_rule`: the registry copy keeps the legacy `sharedWith.type` and `accessLevel` the door forward-converts', () => {
     const regLegacy = byName(registryCopy.sharing_rule, 'share_legacy_deals');

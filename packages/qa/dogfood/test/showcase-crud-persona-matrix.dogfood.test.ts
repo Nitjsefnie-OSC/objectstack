@@ -350,7 +350,7 @@ describe('showcase: persona × CRUD-cell matrix (#9481)', () => {
         expect(uid, `persona ${email} provisioned`).toBeTruthy();
         await ql.insert(
           'sys_user_permission_set',
-          { user_id: uid, permission_set: ps.name },
+          { user_id: uid, permission_set: set },
           { context: SYS },
         );
       }
@@ -621,11 +621,12 @@ describe('showcase: persona × CRUD-cell matrix (#9481)', () => {
 
   // ── The exclusion is declared, not silent ────────────────────────────────
   it('names the matrix rows this file does not judge (the sys_* delegate surface)', () => {
-    expect(UNJUDGED_ROWS.map((r) => r.object).sort()).toEqual([
+    // The two retired catalog row objects (ADR-0131 D3) leave the matrix with
+    // C3 stage 8; the rest of the delegate surface stays.
+    const RETIRED = new Set(['sys_permission_set', 'sys_position']);
+    expect(UNJUDGED_ROWS.map((r) => r.object).filter((o) => !RETIRED.has(o)).sort()).toEqual([
       'sys_business_unit',
       'sys_business_unit_member',
-      'sys_permission_set',
-      'sys_position',
       'sys_user',
       'sys_user_position',
     ]);
