@@ -29,12 +29,12 @@ import type { PermissionSet } from '@objectstack/spec/security';
 import { SecurityPlugin } from './security-plugin.js';
 import { SysUser, SysMember } from '@objectstack/platform-objects/identity';
 import { SysMetadataActivation } from '@objectstack/platform-objects/system';
-import { SysPosition } from './objects/sys-position.object.js';
+import { SysPosition } from './__tests__/legacy-catalog-objects.testkit.js';
 import { SysUserPosition } from './objects/sys-user-position.object.js';
-import { SysPermissionSet } from './objects/sys-permission-set.object.js';
-import { SysPositionPermissionSet } from './objects/sys-position-permission-set.object.js';
+import { SysPermissionSet } from './__tests__/legacy-catalog-objects.testkit.js';
+import { SysPositionPermissionSet } from './__tests__/legacy-catalog-objects.testkit.js';
 import { SysUserPermissionSet } from './objects/sys-user-permission-set.object.js';
-import { SysCapability } from './objects/sys-capability.object.js';
+import { SysCapability } from './__tests__/legacy-catalog-objects.testkit.js';
 import { WALLED_CATALOG_OBJECT_TYPES } from './walled-catalog-data-door.js';
 
 const ORG = 'org_a';
