@@ -33,19 +33,19 @@ silent, and `node scripts/tenant-audit-census.mjs --write` is the resolution.
 
 | Measure | Value |
 |---|---:|
-| Write call sites | 222 |
-| Object name statically decidable | 153 |
-| Object name chosen at run time | 69 |
+| Write call sites | 219 |
+| Object name statically decidable | 152 |
+| Object name chosen at run time | 67 |
 | Against a tenancy-enabled object | 151 |
 | Against an object declaring tenancy off | 1 |
-| Threading a tenant context | 161 |
+| Threading a tenant context | 158 |
 | Provably carrying none | 8 |
 | …and decidably tenancy-enabled | 2 |
 | Options argument unreadable | 53 |
 | …and decidably tenancy-enabled | 32 |
-| Threading a decidably elevated context | 117 |
+| Threading a decidably elevated context | 116 |
 | Threading a decidably non-elevated context | 0 |
-| Threading a context of undecidable elevation | 97 |
+| Threading a context of undecidable elevation | 95 |
 
 ## Subtractions the census could NOT defend — enforced
 
@@ -90,14 +90,14 @@ holds still. They are required to be HERE and to say WHEN they were true;
 their values are not compared. The reasoning, and the measurement behind it,
 are in `scripts/check-tenant-audit-census.mjs`.
 
-Measured on 2026-10-12 at `06d8f97f0`.
+Measured on 2026-10-12 at `1bbcd057a`.
 
 | corpus scale (not enforced) | count |
 | :--- | ---: |
-| tracked non-test sources scanned | 623 |
+| tracked non-test sources scanned | 620 |
 | engine-shaped types recognised | 70 |
 | declared objects in the registry | 113 |
-| same-named calls subtracted as non-engine | 161 |
+| same-named calls subtracted as non-engine | 160 |
 
 ## Every site
 
@@ -161,9 +161,6 @@ Measured on 2026-10-12 at `06d8f97f0`.
 | `packages/plugins/plugin-security/src/grant-permission-set-name-backfill.ts` | `insert` | `DATA_MIGRATION_FLAG_OBJECT` | undecidable | elevated | 1 |
 | `packages/plugins/plugin-security/src/grant-permission-set-name-backfill.ts` | `update` | `GRANT_OBJECT` | undecidable | context, elevation undecidable | 1 |
 | `packages/plugins/plugin-security/src/invitation-placement.ts` | `insert` | `sys_user_position` | enabled | elevated | 1 |
-| `packages/plugins/plugin-security/src/permission-set-projection.ts` | `insert` | `object` | undecidable | context, elevation undecidable | 1 |
-| `packages/plugins/plugin-security/src/permission-set-projection.ts` | `update` | `object` | undecidable | context, elevation undecidable | 1 |
-| `packages/plugins/plugin-security/src/permission-set-projection.ts` | `delete` | `sys_permission_set` | undeclared-name | elevated | 1 |
 | `packages/plugins/plugin-security/src/suggested-audience-bindings.ts` | `delete` | `sys_audience_binding_suggestion` | enabled | context, elevation undecidable | 1 |
 | `packages/plugins/plugin-security/src/suggested-audience-bindings.ts` | `insert` | `sys_audience_binding_suggestion` | enabled | context, elevation undecidable | 1 |
 | `packages/plugins/plugin-security/src/suggested-audience-bindings.ts` | `update` | `sys_audience_binding_suggestion` | enabled | context, elevation undecidable | 3 |
