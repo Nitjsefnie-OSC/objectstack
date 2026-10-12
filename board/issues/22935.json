@@ -2,7 +2,7 @@
   "number": 22935,
   "kind": "pull_request",
   "title": "fix(security)!: under a wall a catalog-carrying package is the platform operator's — install-local and the /packages delete refuse tenants (ADR-0131 D3)",
-  "state": "open",
+  "state": "closed",
   "state_reason": null,
   "draft": false,
   "author": {
@@ -24,10 +24,14 @@
   "milestone": null,
   "type": null,
   "created_at": "2026-10-12T03:49:58Z",
-  "updated_at": "2026-10-12T08:17:55Z",
-  "closed_at": null,
-  "closed_by": null,
-  "merged_at": null,
+  "updated_at": "2026-10-12T08:59:03Z",
+  "closed_at": "2026-10-12T08:59:01Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": "2026-10-12T08:59:01Z",
   "comments": 8,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/pull/22935",

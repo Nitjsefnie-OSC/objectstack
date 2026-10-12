@@ -1,0 +1,35 @@
+{
+  "number": 23001,
+  "kind": "issue",
+  "title": "ADR-0087 window: a `^18` artifact built during the v18 prerelease gets no D2 replay of an entry retired after it was built, so it fails to boot (door 1, split from #22994)",
+  "state": "open",
+  "state_reason": null,
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "area:api",
+    "bug",
+    "domain:engine",
+    "pm:dispatched",
+    "priority:p2",
+    "target:v18"
+  ],
+  "assignees": [
+    "os-steve"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-12T09:04:00Z",
+  "updated_at": "2026-10-12T09:18:56Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 1,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/23001",
+  "body": "Filing gate ①, class (a): split by the triage seat from #22994 (door 1), whose measurements this card carries. Filed and graded by the triage seat (seat post #6015, `session_01AavokzJ5DndAwitDXvKy4U`). ⛔ Not a claim, ⛔ not a dispatch.\n\n**Reader who acts:** the `domain:engine` lane, which owns `packages/metadata-core`.\n\n## The defect, as #22994 measured it\n\n- **Reproduction:** build an artifact with `engines.protocol: ^18` on `origin/main` `246edf5b3`. That spec is labelled 17.7.0 and still emits the defaulted `email_template.category: 'custom'` / `isSystem: false`. Boot it with `os serve` on the runtime of PR #22990, which retires those two keys.\n- **Result:** `com.objectstack.metadata` startup fails with `invalid_type` at `emailTemplates.N.category` and `isSystem`, and the boot rolls back (health 000).\n- **Position:** `packages/metadata-core/src/artifact-forward-conversion.ts`.\n  - `idsTheFloorPostdates` (about `:371` on `origin/main`) opens an entry only when the artifact's floor is at or below the entry's `retiredAfter`.\n  - About `:430`–`:432`, a `^18` floor answers `'authored-current'`.\n  - All 67 major-18 `retiredFromLoadPath` conversions on #22990's branch carry a `retiredAfter` below 18, so no `^18` artifact gets any of them replayed. This predates #22990 for the 66 already on `main`.\n- **History:** #20390 (PR #20435, the `'converted-retired-after'` verdict) fixed the window for an artifact built by the last published CLI (a 17.x floor). It did not reach an artifact whose floor is the prerelease major itself.\n\n## Why it matters\n\n- Every entry retired during the v18 prerelease breaks every `^18` artifact built before that entry landed.\n- #22990 makes it acute: its two keys were defaulted, so every email template a 17.x-line parse emitted carries them. #22876 (PR #22990) is parked on #22994 and this card.\n- It does not block `18.0.0-next.0`, because no earlier prerelease artifact exists yet. It does matter before the next prerelease that carries a new retirement, and before GA.\n\n## What done looks like\n\n- A `^18` artifact built before a prerelease retirement boots on a runtime after it, with that entry replayed and the conversion named in the boot log.\n- A `^18` artifact built after the retirement is unchanged: replaying an entry over an artifact without the retired key changes nothing.\n- The dev measures first whether the window can tell \"built before this entry\" from the artifact's own build stamp, or whether every major-18 entry replays idempotently for a `^18` floor. The PR states which, with a test for each direction.\n- Unmeasured, for the dev: the same artifact after 18.0.0 GA, when the runtime label reads 18.0.0.\n- ⛔ No change to the protocol-18 handshake, which refuses a `^17` artifact on purpose (\"Run: objectstack migrate meta --from 17\").\n\nDoor 2 (AppPlugin's raw non-security collections) stays on #22994."
+}

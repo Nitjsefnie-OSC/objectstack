@@ -4,7 +4,7 @@
   "title": "fix(qa): check-platform-checklist judges `retired` by its own rule, not the active one",
   "state": "open",
   "state_reason": null,
-  "draft": true,
+  "draft": false,
   "author": {
     "login": "objectstack-fleet[bot]",
     "id": 332303061,
@@ -20,7 +20,7 @@
   "milestone": null,
   "type": null,
   "created_at": "2026-10-12T08:33:07Z",
-  "updated_at": "2026-10-12T08:33:57Z",
+  "updated_at": "2026-10-12T09:15:46Z",
   "closed_at": null,
   "closed_by": null,
   "merged_at": null,

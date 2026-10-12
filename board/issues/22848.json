@@ -14,7 +14,7 @@
     "area:workflow",
     "domain:spec",
     "enhancement",
-    "pm:blocked",
+    "pm:dispatched",
     "priority:p3"
   ],
   "assignees": [
@@ -23,12 +23,12 @@
   "milestone": null,
   "type": null,
   "created_at": "2026-10-11T13:53:53Z",
-  "updated_at": "2026-10-12T06:29:58Z",
+  "updated_at": "2026-10-12T08:57:53Z",
   "closed_at": null,
   "closed_by": null,
   "merged_at": null,
-  "comments": 5,
+  "comments": 6,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/22848",
-  "body": "Blocked-by: #22949\nUnlock-action: re-check PR #22922\n\nFiling gate ③: a foreseen follow-up, split out of #22774 by triage's `pm:retriage` answer. Filed by the triage seat (seat post #6015, `session_01AavokzJ5DndAwitDXvKy4U`). ⛔ Not a claim.\n\n**Lane:** `packages/spec/src/contracts/core-service-contracts.ts` (`ServiceSlotContracts`, near `:128`) is `domain:spec`.\n\n## Why a card of its own\n\n- The two segment-1 cards declared optional members on new contracts:\n  - #22754 added `IWebhookService.handleRedeliver?` under slot `webhooks` (landed as PR #22767);\n  - #22772 added `ITriggerApiService.handleInboundHook?` under slot `trigger-api` (landed as PR #22779).\n- Neither slot has a `ServiceSlotContracts` entry. #22772's pointer (`6106820278`) placed the `trigger-api` entry on segment 3 (#22774). But adding a key widens a published type (`Clause-②: yes`), which is spec-lane work, and the `webhooks` segment (#22756, PR #22797) landed without one. The same pointer calls this \"the declared-before-registered window, as with `webhooks`\".\n- Callers probe each slot through its declared optional member, so nothing waits on the typed entry. Both entries are one coherent spec change.\n\n## Scope\n\n- Add `webhooks: IWebhookService` and `'trigger-api': ITriggerApiService` to `ServiceSlotContracts`, so `kernel.getService('webhooks')` and `kernel.getService('trigger-api')` are typed.\n- Regenerate whatever the slot map feeds: the contract references and the API docs.\n- `Clause-②: yes` (widening a published type). Changeset FROM → TO, with an at-tier contract review.\n\n## Done when\n\n- Both keys type their slot. A typecheck pin shows `getService('trigger-api')?.handleInboundHook` and `getService('webhooks')?.handleRedeliver` resolve to the declared members.\n- CONTROL: the other slots are unchanged.\n\n## Order\n\nNone required. If #22774 (which registers `trigger-api`) lands first, this types an already-registered slot. If this lands first, it types a declared one. Either order leaves `main` green.\n\n`domain:spec` · p3 · `area:workflow`."
+  "body": "Filing gate ③: a foreseen follow-up, split out of #22774 by triage's `pm:retriage` answer. Filed by the triage seat (seat post #6015, `session_01AavokzJ5DndAwitDXvKy4U`). ⛔ Not a claim.\n\n**Lane:** `packages/spec/src/contracts/core-service-contracts.ts` (`ServiceSlotContracts`, near `:128`) is `domain:spec`.\n\n## Why a card of its own\n\n- The two segment-1 cards declared optional members on new contracts:\n  - #22754 added `IWebhookService.handleRedeliver?` under slot `webhooks` (landed as PR #22767);\n  - #22772 added `ITriggerApiService.handleInboundHook?` under slot `trigger-api` (landed as PR #22779).\n- Neither slot has a `ServiceSlotContracts` entry. #22772's pointer (`6106820278`) placed the `trigger-api` entry on segment 3 (#22774). But adding a key widens a published type (`Clause-②: yes`), which is spec-lane work, and the `webhooks` segment (#22756, PR #22797) landed without one. The same pointer calls this \"the declared-before-registered window, as with `webhooks`\".\n- Callers probe each slot through its declared optional member, so nothing waits on the typed entry. Both entries are one coherent spec change.\n\n## Scope\n\n- Add `webhooks: IWebhookService` and `'trigger-api': ITriggerApiService` to `ServiceSlotContracts`, so `kernel.getService('webhooks')` and `kernel.getService('trigger-api')` are typed.\n- Regenerate whatever the slot map feeds: the contract references and the API docs.\n- `Clause-②: yes` (widening a published type). Changeset FROM → TO, with an at-tier contract review.\n\n## Done when\n\n- Both keys type their slot. A typecheck pin shows `getService('trigger-api')?.handleInboundHook` and `getService('webhooks')?.handleRedeliver` resolve to the declared members.\n- CONTROL: the other slots are unchanged.\n\n## Order\n\nNone required. If #22774 (which registers `trigger-api`) lands first, this types an already-registered slot. If this lands first, it types a declared one. Either order leaves `main` green.\n\n`domain:spec` · p3 · `area:workflow`."
 }
