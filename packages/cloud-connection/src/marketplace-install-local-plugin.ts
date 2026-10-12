@@ -136,7 +136,8 @@ import { ConnectionCredentialStore } from './connection-credential-store.js';
 import { MARKETPLACE_INSTALLED_UI_BUNDLE } from './marketplace-ui.js';
 import { matchSeedRows, purgeSeedRows, type PurgeSeedDataset } from './marketplace-install-local-purge.js';
 import type { IHttpServer, IMetadataService, IObjectQLEngine } from '@objectstack/spec/contracts';
-import type { DeletePackageRequest, UninstallCleanupOutcome } from '@objectstack/metadata-protocol';
+import type { DeletePackageRequest, UninstallCleanupOutcome, UninstalledCatalogItem } from '@objectstack/metadata-protocol';
+import { declaredCatalogItemsOf } from '@objectstack/metadata-protocol';
 
 const ROUTE_BASE = '/api/v1/marketplace/install-local';
 
@@ -159,7 +160,7 @@ const ROUTE_BASE = '/api/v1/marketplace/install-local';
  */
 type UninstallCleanupRunner = {
     runUninstallCleanups?(
-        request: Pick<DeletePackageRequest, 'packageId' | 'actor'>,
+        request: Pick<DeletePackageRequest, 'packageId' | 'actor'> & { declared?: ReadonlyArray<UninstalledCatalogItem> },
     ): Promise<UninstallCleanupOutcome[]>;
 };
 
@@ -1658,12 +1659,16 @@ export class MarketplaceInstallLocalPlugin implements Plugin {
         // they had just selected and removed. The cleanups lose nothing by
         // going second: `deletePackage` already runs every registered cleanup
         // after its withdrawal, and the one registered today
-        // (`security.package-permissions`) selects by package id in the store,
+        // (`security.package-permissions`) revokes by the names read above,
         // never through the registry.
+        // [ADR-0131 D3, C3 stage 8] What the package declared in the security
+        // catalog, read before the withdrawal takes it out of the registry: the
+        // cleanups revoke the grants that name those items.
+        const declared = this.declaredCatalogItems(ctx, manifestId);
         const withdrawal = this.withdrawFromRunningKernel(ctx, manifestId);
         const cleanups = [
             ...(withdrawal ? [withdrawal] : []),
-            ...await this.runUninstallCleanups(ctx, manifestId, admission.userId),
+            ...await this.runUninstallCleanups(ctx, manifestId, admission.userId, declared),
         ];
         ctx.logger?.info?.(
             `[MarketplaceInstallLocal] uninstalled ${manifestId} (cached manifest removed; `
@@ -1786,10 +1791,21 @@ export class MarketplaceInstallLocalPlugin implements Plugin {
      *     tell "nothing to revoke" from "the revocation never ran";
      *   - otherwise the runner's outcomes, verbatim.
      */
+    /** The security-catalog items a still-registered package declares (`declaredCatalogItemsOf`). */
+    private declaredCatalogItems = (ctx: PluginContext, manifestId: string): UninstalledCatalogItem[] => {
+        try {
+            const ql = ctx.getService<IObjectQLEngine>('objectql');
+            return declaredCatalogItemsOf((ql?.registry as any)?.getPackage?.(manifestId)?.manifest);
+        } catch {
+            return [];
+        }
+    };
+
     private runUninstallCleanups = async (
         ctx: PluginContext,
         manifestId: string,
         actor: string,
+        declared: ReadonlyArray<UninstalledCatalogItem> = [],
     ): Promise<UninstallCleanupOutcome[]> => {
         let protocol: UninstallCleanupRunner | undefined;
         try { protocol = ctx.getService<UninstallCleanupRunner>('protocol'); } catch { /* no protocol service */ }
@@ -1806,7 +1822,7 @@ export class MarketplaceInstallLocalPlugin implements Plugin {
             );
         } else {
             try {
-                outcomes = await protocol.runUninstallCleanups({ packageId: manifestId, actor });
+                outcomes = await protocol.runUninstallCleanups({ packageId: manifestId, actor, ...(declared.length > 0 ? { declared } : {}) });
             } catch (err: any) {
                 ctx.logger?.warn?.(`[MarketplaceInstallLocal] the uninstall cleanups of ${manifestId} could not be run: ${err?.message ?? err}`);
                 outcomes = notRun('the uninstall cleanups could not be run');
@@ -2407,7 +2423,7 @@ export class MarketplaceInstallLocalPlugin implements Plugin {
         } catch (err: any) {
             ctx.logger?.warn?.(
                 `[MarketplaceInstallLocal] ${manifestId} is installed, but the metadata:reloaded re-sync FAILED — its `
-                + 'record-change flows may not fire and its permission sets may be missing from sys_permission_set '
+                + 'record-change flows may not fire '
                 + `until the runtime restarts (the restart re-reads every installed package). Cause: ${err?.message ?? err}`,
             );
         }
