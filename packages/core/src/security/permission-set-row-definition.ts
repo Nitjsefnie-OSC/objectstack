@@ -28,8 +28,9 @@
  *    `fields` (`{}`), `system_permissions` → `systemPermissions` (`[]`),
  *    `row_level_security` → `rowLevelSecurity` (`[]`), `tab_permissions` →
  *    `tabPermissions` (`{}`). A column that is JSON text is parsed; one a
- *    driver already parsed is taken as it is; an empty string, JSON `null`,
- *    text that does not parse, or an absent column answers the default;
+ *    driver already parsed is taken as it is; a `null` or absent column, an
+ *    empty string, JSON `null`, or text that does not parse answers the
+ *    default;
  *  - `admin_scope` → `adminScope` (ADR-0090 D12), only when the column is
  *    truthy and reads to a truthy value.
  *
@@ -42,8 +43,8 @@
  * survives.
  *
  * ⛔ It is not validation. A row whose stored facet JSON is off-contract still
- * answers a body; the metadata door's validation is what refuses it, and the
- * ceremony reports that refusal per row.
+ * answers a body; the metadata door's validation is what refuses it, and
+ * reporting that refusal is the ceremony's.
  */
 
 import { PermissionSetSchema } from '@objectstack/spec/security';

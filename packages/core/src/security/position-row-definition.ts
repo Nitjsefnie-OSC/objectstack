@@ -36,7 +36,7 @@
  *
  * ⛔ It is not validation, and it does not judge the name. A name outside the
  * metadata door's item-name grammar still answers a body; the door's own
- * validation refuses it, and the ceremony reports that refusal per row. Nor
+ * validation refuses it, and reporting that refusal is the ceremony's. Nor
  * does it reconcile rows: where two organizations' rows of one name answer
  * different definitions, which one the environment keeps is the ceremony's to
  * report, never this function's to pick.
