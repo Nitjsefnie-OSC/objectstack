@@ -23,7 +23,7 @@
  *  - `name` → `name`, as stored;
  *  - `label` → `label` when it is a non-empty string, else the name;
  *  - `description` → `description` only when it is a non-empty string: the
- *    schema declares it optional, not nullable, so a `null` or blank column is
+ *    schema declares it optional, not nullable, so a `null` or empty column is
  *    absent, never `null`;
  *  - `delegatable` → `delegatable`, always present: `true` for a stored
  *    `true`, `1`, `'1'` or `'true'`, and `false` for anything else, an absent

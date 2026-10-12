@@ -85,7 +85,7 @@ describe('positionDefinitionFromRow', () => {
     // Row state and organization differ; the definition does not.
     expect(serialized({ ...storedRow, id: 'pos_02', organization_id: 'org_2', active: true, delegatable: 'true' }))
       .toBe(serialized(storedRow));
-    // A blank description is the same definition as a null one.
+    // An empty description is the same definition as a null one.
     expect(serialized({ name: 'p', label: 'P', description: '' })).toBe(serialized({ name: 'p', label: 'P', description: null }));
     // A different label is a different definition.
     expect(serialized({ ...storedRow, label: 'Area Manager' })).not.toBe(serialized(storedRow));
