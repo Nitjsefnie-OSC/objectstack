@@ -1,0 +1,35 @@
+{
+  "number": 23010,
+  "kind": "issue",
+  "title": "spec: a `type:'url'` action's `target` declares its closed scheme set (`http:`, `https:`, `mailto:`, in-app relative paths) and refuses every other scheme at the authoring door (objectui#12191 ruled A+)",
+  "state": "open",
+  "state_reason": null,
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "area:access",
+    "domain:spec",
+    "enhancement",
+    "pm:dispatched",
+    "priority:p1",
+    "security"
+  ],
+  "assignees": [
+    "zhuangjianguo"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-12T09:42:45Z",
+  "updated_at": "2026-10-12T14:06:59Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 2,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/23010",
+  "body": "Filing gate: **④ a ruling's execution card.** Filed by the director seat (summon #38, `session_013UzShSJnH3HuoZgVrYF9i8`, written as `objectstack-fleet[bot]` via the relay) on the maintainer's word, verbatim 「22861  objectui#12191 同意。」 (batch #327 item 3 → letter **A+** on objectstack-ai/objectui#12191; the ruling comment and the `Ruled:` line are on that card in the same act). This is the spec half of A+; the runner half (objectui `ActionRunner.isValidUrl` admits `mailto:` through one predicate shared with `resolveCtaHref`) is objectui#12191's own PR. The two do not block each other. ⛔ Classes, positions and functions only.\n\n**Reader who acts:** the `domain:spec` seat. Grade follows objectui#12191 (`priority:p3`, `security`, `area:access`); triage may re-grade.\n\n## Governing text\n\n- `packages/spec/src/ui/action.zod.ts:1040` — `target: z.string().optional().describe('URL, Script Name, Flow ID, or API Endpoint. …')`: no scheme set is declared, so `javascript:` and `data:` targets parse clean and fail only at click, the same trap objectui#12191 reports for `mailto:`.\n- #7496 (2026-08-11, the maintainer's ruling on `submitBehavior.url`): the scheme form is refused at the authoring door, the message names the rule and prescribes the fix, and the accepted shapes are pinned as hard as the refusals (`packages/spec/src/ui/view.zod.ts#checkSubmitRedirectUrl`, `view-submit-redirect-url.test.ts`). This card follows that shape for a different field with a different admitted set.\n- The four-axis principle on the ruling: declared = enforced; the scheme set is stated once in the contract and the runtime fulfils exactly that, instead of a consumer-side narrowing nobody can read from the schema.\n\n## The work\n\n- On both url-action doors (`ActionSchema` and the inline action form that accepts `to` as a legacy spelling), when `type` is `'url'`: a `target` that opens with a scheme (`/^[a-z][a-z0-9+.-]*:/i`) must be `http:`, `https:` or `mailto:` (case-insensitive); protocol-relative `//host` is refused by name; `javascript:`, `data:`, `tel:` and every other scheme are refused. The message names the admitted set and the fix (write an `http(s)://` URL, a `mailto:` address, or an in-app path such as `/thanks`), states the rule and not the ruling's date, and carries no tracker id (#22093's rule).\n- Relative paths (`/…`, `./…`) and targets that open with `${param.X}` / `${ctx.X}` pass unchanged; interpolation and `openIn` are not touched. **`tel:` is not admitted** (zero measured pull; one maintainer word adds it, as a one-line enum change).\n- Pins: every refusal case checks the message; every accepted shape is pinned (`https://…`, `mailto:a@b.com`, `/path`, `./path`, `${ctx.url}`); a CONTROL that `type:'script'` / `'flow'` / `'api'` / `'form'` targets are untouched by the refine.\n- `Clause-②: yes` (the published accept set narrows). One changeset, FROM → TO. The `objectui validate` strict face inherits the refusal through the spec, nothing to do on the objectui side for this half.\n- **Fork clause:** if a non-test producer in either repository, or an example app, writes a scheme outside the admitted set into a url target, the dev reports it and stops; ⛔ the set is not widened to fit it.\n\n## Duplicate check\n\n- MCP `search_issues` over objectstack-ai/objectstack, closed included: \"url action target scheme allowlist mailto javascript refused at publish authoring door ActionRunner isValidUrl\" → **1 hit**: #7496 (closed, the submit-redirect precedent above, a different field). No open card on this slot."
+}

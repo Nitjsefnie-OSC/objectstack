@@ -2,8 +2,8 @@
   "number": 22991,
   "kind": "issue",
   "title": "ci(lint): measure where `Lint & Repo Gates`' 198 serial steps spend 14–37 minutes, and bring the maintainer a split plan (maintainer-directed)",
-  "state": "open",
-  "state_reason": null,
+  "state": "closed",
+  "state_reason": "completed",
   "draft": null,
   "author": {
     "login": "objectstack-fleet[bot]",
@@ -13,21 +13,22 @@
   "labels": [
     "area:devpath",
     "domain:devx",
-    "pm:dispatched",
     "priority:p1",
     "tooling"
   ],
-  "assignees": [
-    "os-zhuang"
-  ],
+  "assignees": [],
   "milestone": null,
   "type": null,
   "created_at": "2026-10-12T07:55:26Z",
-  "updated_at": "2026-10-12T08:56:16Z",
-  "closed_at": null,
-  "closed_by": null,
+  "updated_at": "2026-10-12T11:34:10Z",
+  "closed_at": "2026-10-12T11:29:06Z",
+  "closed_by": {
+    "login": "os-zhuang",
+    "id": 277994282,
+    "type": "User"
+  },
   "merged_at": null,
-  "comments": 2,
+  "comments": 5,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/22991",
   "body": "Protects: the merge queue's required context `Lint & Repo Gates` (AGENTS.md:519), the published check-run name every PR, merge group and release of `@objectstack/*` passes through; this card keeps the name and cuts its wall.\nRuled: 6120820653 · letter D · 2026-10-12T08:44Z\n\nFiling gate **③**: a maintainer-directed task. In the `domain:devx` seat 1 session (`session_012yK1ddAdAqfzwigRHZq3r2`), the maintainer asked「22973 一个 ci 30 分钟还没跑完，其他主流类似的系统也是这么慢吗」. The seat answered with the readings below and offered a card to measure the job's step-time distribution and bring back a split plan. The maintainer replied, verbatim:「开卡吧」.\n\n**Reader who acts:** `domain:devx` seat 1 dispatches the measurement (part 1). The split plan (part 2) goes to the maintainer as a decision with the four-axis analysis. ⛔ `lint.yml` is not restructured before that ruling. Lane and grade are triage's.\n\n## What is measured (seat 1, 2026-10-12)\n\n- **PR #22973** (head `ef3d0764b`): 31 of its 32 non-skipped checks finished within 8.5 minutes. Test Core's slowest shard was 8.5 min, Type Check 3–4 min, Build Docs 3.6 min. `Lint & Repo Gates` alone was still running at 32 minutes, with 128 of its 197 steps done.\n- **`Lint & Repo Gates`, newest completed runs** (`lint.yml`, jobs API, 05:06Z–07:50Z):\n\n  | event | runs | min | median | p90 | max |\n  |:--|--:|--:|--:|--:|--:|\n  | `pull_request` | 24 | 6.1 | 14.3 | 20.9 | 35.9 |\n  | `merge_group` | 25 | 10.5 | 15.5 | 34.5 | 37.6 |\n\n  Every run has 198 steps in one job on one runner.\n- **It is the job the queue waits on about half the time.** In 13 of those 25 merge groups, `Lint & Repo Gates` finished after the whole `CI` workflow of the same group, by up to 23.3 minutes. The differences, lint end minus CI end in minutes, run −14.3 … +23.3.\n- **The workflow's size:** `lint.yml` has 7186 lines and 284 `- name:` steps, 199 `pnpm check:` invocations and 118 `node scripts/` invocations. `scripts/` holds 165 `check-*.mjs` files.\n\n## What to do\n\n1. **Measure** (dispatchable). Read the step-level `started_at` / `completed_at` that the jobs API returns, over a window of PR and merge_group runs. Report:\n   - each step's median and p90;\n   - the top steps by share of the job;\n   - which steps are already path-scoped by `scripts/ci/select-gate-families.sh` (#16496), and which run on every PR;\n   - the `needs` chain, if a later step needs an earlier one's output.\n   ⛔ No change to `lint.yml` in this part.\n2. **Propose** (for the maintainer's ruling). Give options with workload and four-axis analysis, at least these:\n   - (a) split the job into N parallel lanes behind an aggregator that keeps the required `Lint & Repo Gates` context. The precedent is `TypeScript Type Check` and its `Type Check · *` lanes in the same file.\n   - (b) extend #16496's per-family path scoping to the steps that still run on every PR.\n   - (c) a cache for gates whose inputs did not change.\n   - (d) a combination.\n   Name the critical path each option is expected to reach, as a measurement-backed estimate, never a guess.\n\n## Prior work (read before proposing)\n\n- #16496 (closed `completed`, PR #16754): `select-gate-families.sh`, path-scoped families on merge groups.\n- #22076 (closed `completed`): the PM dispatch-gates self-test, 7.6–13.1 min, was this job's critical path; it was tiered.\n- #19189 (closed `not_planned` on 2026-09-25, triage `5831394361`): \"Lint & Repo Gates is the merge-group critical path\". It was closed because the job then measured 8–14 min at parity with the other legs. Its reopen condition: \"a merge group's `Lint & Repo Gates` is again the job the queue waits on\". The table above meets that condition in 13 of 25 groups.\n- #19686 (closed `duplicate` of #19189): the earlier measured split proposal, \"193 serial steps are 28 minutes … the way `TypeScript Type Check` already is\".\n- #21050: this job's `timeout-minutes`.\n\n## Dedupe\n\n- MCP `search_issues` on this repo, closed included: \"Lint & Repo Gates job duration serial steps shard parallel matrix split lint.yml wall time\" → 31 hits, all read by title. None is open.\n- The nearest are #19189 and #19686, both closed. This card is new because it is maintainer-directed, and it asks for a measurement and a plan, not an immediate split.\n- Dedupe words: Lint & Repo Gates; serial steps; critical path; split lanes; aggregator; select-gate-families.\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_\n"

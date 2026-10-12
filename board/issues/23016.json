@@ -1,0 +1,35 @@
+{
+  "number": 23016,
+  "kind": "issue",
+  "title": "spec(ui): a page element dataSource can name an API endpoint (provider: 'api'), so a product page composes from a control-plane summary in metadata instead of a product-specific React widget (maintainer ruling 2026-10-12)",
+  "state": "open",
+  "state_reason": null,
+  "draft": null,
+  "author": {
+    "login": "hotlong",
+    "id": 50353452,
+    "type": "User"
+  },
+  "labels": [
+    "area:api",
+    "domain:spec",
+    "enhancement",
+    "needs:contract-review",
+    "pm:dispatched",
+    "priority:p1"
+  ],
+  "assignees": [
+    "zhuangjianguo"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-12T10:02:37Z",
+  "updated_at": "2026-10-12T14:07:48Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 2,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/23016",
+  "body": "Filing gate: a maintainer ruling in chat, 2026-10-12 (「现在转向」): cloud's pages stay metadata, objectui ships only product-agnostic blocks, and no new `cloud:*` widgets are added. Filed from the cloud maintainer's session. ⛔ Not a claim.\n\n## The gap\n\n`ElementDataSourceSchema` (`packages/spec/src/ui/page.zod.ts`, the block around L236–300) binds a page element to an OBJECT: `object`, `view`, `filter`, `limit`. A control-plane summary such as cloud's `GET /api/v1/cloud/home` (plan, AI seats, storage, checklist flags, environments with their marketplace installs) is not an object, so a cloud page could not reach it, and every such need became a cloud-specific React widget in objectui: `cloud:onboarding-next`, `cloud:plan-status`, `cloud:workspace-timezone-notice`, `cloud:ai-model-status`, and the queued `cloud:home`. Their copy lives in objectui's bundles, so a cloud wording change is an objectui PR and a pin bump.\n\nThe renderer already has the adapter: `@object-ui/core`'s `ApiDataSource` (`provider: 'api'`, `HttpRequest` read/write configs carried in `ViewData`), the one the approvals UI rebuild on the standard renderer uses (objectui#2763). The contract has no door to it from a page element.\n\n## Ruling\n\n- `dataSource` gains a second shape beside the object one: `{ provider: 'api', read: { url, method? }, path? }`. `url` is a same-origin API path (the renderer promotes `apiBase` the way it does for `url` actions); `path` is an optional dotted path selecting the sub-tree of the `{ success, data }` envelope the element binds, e.g. `data.environments`.\n- Element templates read the bound value through the existing expression holes and the `visibleWhen` `data` binding; a list-shaped block iterates it; a scalar block (stat, usage bar) reads fields.\n- Same-origin only. No credentials in metadata; the console's authenticated fetch is reused. A cross-origin `url` is refused at parse with a migration-named message.\n- Companion generic blocks (`stat`, `usage-bar`, `checklist`) are objectui#12197, re-scoped by the same ruling.\n\n## Acceptance\n\n1. Zod: both shapes parse; a cross-origin `url` is refused; `objectui validate` accepts a page that uses the `api` shape.\n2. Docs: the page reference shows an `api` example beside the object one.\n3. A cloud page (objectstack-ai/cloud#2777 part B) binds `GET /api/v1/cloud/home` with no cloud-specific React.\n\n## Related\n\nobjectstack-ai/cloud#2777 · objectstack-ai/cloud#2774 · objectstack-ai/cloud#2772 · objectui#12197 (generic blocks) · objectui#2763 (`ApiDataSource` precedent) · ADR-0068 (`visibleWhen` roots) · ADR-0089\n"
+}

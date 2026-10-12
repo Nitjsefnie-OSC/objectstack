@@ -1,0 +1,32 @@
+{
+  "number": 23039,
+  "kind": "issue",
+  "title": "docs(adr,skills): ADR-0029, ADR-0126 and the published objectstack-data indexing rule still state the overlay uniqueness key as four parts — bundle_member since 5677add93f (family closure for #23006)",
+  "state": "open",
+  "state_reason": null,
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "area:devpath",
+    "documentation",
+    "domain:skills",
+    "pm:queue",
+    "priority:p3"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-12T12:02:41Z",
+  "updated_at": "2026-10-12T13:07:27Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 2,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/23039",
+  "body": "Filing gate **①**, class (b), family closure. An accepted record, or a shipped skill, states the current overlay uniqueness key, and since `5677add93f` (PR #22954, #22877 ruling `6116165299` letter A) that statement is false. The key carries a fifth part, `bundle_member`. #23006 is the family's first card: it fixes ADR-0005 alone, in PR #23037. This card covers every remaining position, so no single-point cards follow. `reach:` named producer `5677add93f`. Readers: every agent and author who reads these records, plus every customer agent that loads the published `objectstack-data` skill (North Star 4: `skills/**` ships).\n\nFiled by `domain:skills` seat 2 (#19287) · `os-justin` · `session_012dGTuJen61ECNHXYXKChoC`, from the #23006 dev report's `out_of_scope_findings` (comment 6123800633 on #23006), which named the positions. The seat re-read each position on `origin/main`. ⛔ Not a claim. Lane and grade are triage's.\n\n## Positions (read on `origin/main` at `e4a770d6b`)\n\n1. `docs/adr/0029-kernel-object-ownership-and-platform-objects-decomposition.md:669`: \"the overlay-uniqueness index keys on `(type, name, organization_id, COALESCE(package_id, ''))` (ADR-0005 amendment 2026-08-09, #6825)\". The argument around it (two packages may each hold an active row for one `(type, name)`) still holds under the five-part key; only the key's spelling is stale.\n2. `docs/adr/0126-packaged-metadata-customization-model.md:313`: \"the uniqueness index keys on `(type, name, organization_id, COALESCE(package_id, ''))` (ADR-0005 amendment, #6825; …)\". Same shape.\n3. `skills/objectstack-data/rules/indexing.md:165`, published: \"The platform does exactly this for its own overlay uniqueness: `metadata-protocol`'s `ensureOverlayIndex` runs\" a four-part `CREATE UNIQUE INDEX … ON sys_metadata (type, name, organization_id, COALESCE(package_id, '')) WHERE state = 'active'`. The sentence claims what the platform runs, and the platform no longer runs that. The file is under the per-file skills token ratchet: an edit pays for itself with a deletion, or the example is re-cut so it does not restate the platform's key.\n\nThe runtime key on the same tree: `OVERLAY_INDEX_COLUMNS = ['type', 'name', 'organization_id', 'package_id', OVERLAY_MEMBER_COLUMN]` with `OVERLAY_MEMBER_COLUMN = 'bundle_member'`, and both folded through `COALESCE(…, '')` (`packages/metadata-protocol/src/migrations/overlay-index.ts`, `overlayIndexKeyParts`).\n\n## Not in this family (seen, not owed here)\n\n- `docs/qa/platform-checklist/areas/cli.json:1125` recreates \"the declared NULL-distinct form\" with four columns. The step still seeds the duplicates it needs, so this is unexercised drift, not a wrong statement.\n- `packages/metadata-core/src/objects/sys-metadata.object.ts:244-249`, a code comment: \"it still prevents duplicate ACTIVE overlays\" about the declared coarse fallback. After `5677add93f` that fallback is NULL-distinct on `bundle_member` and holds no canonical row unique (the #23006 dev's SQLite probe; PR #23037 Acceptance note 2). No composition was measured to get only the declared tier, so it stays an acceptance note.\n\n## Re-check (the enumeration pin)\n\n```\ngit grep -n -F \"COALESCE(package_id, ''))\" origin/main -- docs skills content .claude AGENTS.md\n```\n\nPositive control on the same corpus and instrument: `git grep -n -F \"idx_sys_metadata_overlay_active\" origin/main -- docs skills content .claude AGENTS.md` → 7 hits at `e4a770d6b` (a zero there means the instrument broke, not that the family is closed). At `e4a770d6b` the pin reads 4 hits: ADR-0005:867 (fixed by PR #23037) plus the three positions above. The card is done when the pin reads 0 hits in present-tense statements; dated historical text that names the key as it was may stay, annotated.\n\n## Dedupe\n\nMCP `search_issues`, closed included:\n- `overlay uniqueness key bundle_member ADR-0029 ADR-0126 four parts indexing skill` → 3 hits: #23006 (this family's first card, the carrier of ADR-0005 only), plus #15678 and #6771 (other subjects).\n- `idx_sys_metadata_overlay_active partial index example skills objectstack-data indexing.md stale key` → 31 hits; none of the first ten covers these positions.\n\nDedupe words: overlay key bundle_member family; ADR-0029 overlay uniqueness four parts; ADR-0126 uniqueness index key; objectstack-data indexing.md ensureOverlayIndex example.\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_"
+}

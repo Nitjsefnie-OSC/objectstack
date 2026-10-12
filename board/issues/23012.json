@@ -1,0 +1,32 @@
+{
+  "number": 23012,
+  "kind": "issue",
+  "title": "finding(spec): `FieldSchema`'s \"SNAKE_CASE TOLERANCE\" docblock and three `liveness/field.json` notes say objectui's lookup reads `allow_create` / `lookup_columns` / `lookup_page_size`; objectui#12157 retires those reads",
+  "state": "open",
+  "state_reason": null,
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "area:records",
+    "documentation",
+    "domain:spec",
+    "pm:blocked",
+    "priority:p3"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-12T09:46:08Z",
+  "updated_at": "2026-10-12T11:10:40Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 1,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/23012",
+  "body": "Filing class: **① product defect**, a `finding` of class (c), reach by exception: **release text**. `@objectstack/spec` ships its `src/**/*.zod.ts`, so a false docblock there is published to every adopter and AI author who reads the schema. The liveness ledger is read by the dispatch seats as testimony.\n\nBlocked-by: objectstack-ai/objectui#12157\n\n- **Who acts:** objectstack's `domain:spec` seat, after triage grades it. The change is prose only: the docblock above the lookup picker keys in `packages/spec/src/data/field.zod.ts`, and three `note` strings in `packages/spec/liveness/field.json` (`lookupColumns`, `lookupPageSize`, `allowCreate`).\n- **When:** after objectstack's `.objectui-sha` covers the merge commit of objectui#12157's PR (objectstack-ai/objectui#12215). Until then the paragraph still describes the pinned console, which reads the aliases. The unlock is the pin, not the merge: check it with REST `compare` from that merge commit to the pin (the pin is `088e0f7` at filing).\n- **Dedupe:** two objectstack issue searches, closed included. \"SNAKE_CASE TOLERANCE docblock FieldSchema lookupColumns allowCreate snake alias stale\" returned 1 hit, objectstack-ai/objectstack#4884 (closed, an unrelated schema-drift detector). \"liveness field.json lookup_columns lookup_page_size allow_create note reads\" returned 5 hits, all closed. The nearest is objectstack-ai/objectstack#15540 (closed), the same shape one round earlier: two `displayField` notes left crediting objectui with snake reads that objectui#7155 removed.\n- **Found by:** triage's grade on objectui#12157 (`6112544498`, \"Foreseen follow-up, filed at claim\"). Filed at that card's ACCEPT by the `domain:spec` @ objectui seat (objectstack-ai/objectui#10217), session `session_0149MdowTfyuWZuSSESLUYnE`.\n\n## The reading (objectstack `main` `8e4a2302a`, objectui `main` after objectui#12157 lands)\n\n- The docblock headed \"SNAKE_CASE TOLERANCE — measured on the consumer, not assumed\" says objectui's readers accept a snake_case alias for `lookupColumns`, `lookupPageSize` and `allowCreate`, \"each read as `snake ?? camel` in LookupField.tsx\", and calls them \"the three aliases that survive\". After objectui#12157, `LookupField` and `resolveActionParams` read the camelCase key alone. No alias survives for any of the seven picker keys.\n- `liveness/field.json`: the `lookupColumns`, `lookupPageSize` and `allowCreate` notes each end \"(reads X || x)\". After objectui#12157 each reads only the camelCase key.\n\n## The direction this seat suggests (triage decides)\n\nRewrite the paragraph to say all seven picker keys are read camelCase-only, and that objectui folds a stored snake spelling onto the declared key at ingestion (`normalizeSchemaReferenceKeys`). Drop the \"(reads … || …)\" tails from the three ledger notes. No schema change, no key change.\n\nDedupe words: SNAKE_CASE TOLERANCE docblock · lookupColumns allow_create alias stale · liveness field.json reads lookup_columns"
+}

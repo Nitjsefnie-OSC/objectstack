@@ -2,8 +2,8 @@
   "number": 22983,
   "kind": "issue",
   "title": "tooling(pm): check-skill-id-lint scans the published skills/** catalog too — 0 hits today, so the widening lands green and holds the no-issue-id rule on the surface customers load",
-  "state": "open",
-  "state_reason": null,
+  "state": "closed",
+  "state_reason": "completed",
   "draft": null,
   "author": {
     "login": "objectstack-fleet[bot]",
@@ -13,7 +13,6 @@
   "labels": [
     "area:devpath",
     "domain:skills",
-    "pm:dispatched",
     "priority:p3",
     "tooling"
   ],
@@ -23,11 +22,15 @@
   "milestone": null,
   "type": null,
   "created_at": "2026-10-12T07:38:38Z",
-  "updated_at": "2026-10-12T09:15:08Z",
-  "closed_at": null,
-  "closed_by": null,
+  "updated_at": "2026-10-12T10:02:24Z",
+  "closed_at": "2026-10-12T09:54:55Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
   "merged_at": null,
-  "comments": 3,
+  "comments": 4,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/22983",
   "body": "Protects: the published `skills/**` catalog — the surface `npx skills add` and `@objectstack/skills` ship to customer agents.\n\nFiling gate: ③ — maintainer direct order.\n\nProvenance: the maintainer, live PM chat in session `session_01CinRQcE6T8SvMbhH8D3NhS` (skills seat 1), 2026-10-12. The seat put the prevention half of the inherited question 「对外的 skills 中有issue id…如何避免」 as: on objectstack, widen the EXISTING id-lint to `skills/**` (a scan-set widening of a gate that exists, not a new gate; 0 hits today); on objectui, no gate. The maintainer selected, verbatim, 「不加,写成文规则(推荐)」 for objectui; the question text they answered stated the objectstack half as the default: 「objectstack 侧扩既有 id-lint 到 skills/** 不算新门禁、默认会做」. The principle is the 2026-08-12 ruling quoted in this gate's own header.\n\n## Reading\n\nOn `origin/main` `246edf5b3`: `scripts/pm/check-skill-id-lint.mjs` scans `SCAN_ROOT = '.claude/skills/pm-dispatch'` plus `EXTRA_FILES = ['.claude/agents/os-dev.md', 'AGENTS.md']` (lines 55–56) with the pattern `/#[0-9]{3,}/`. `git grep -c -E '#[0-9]{3,}' origin/main -- 'skills/**'` answers 0 files: the published catalog is clean today by discipline alone, and nothing holds it there. The sister tree on objectui accumulated 41 citations in 13 files under the same absence (the objectui cleanup card is filed beside this one).\n\n## Change\n\n1. Add the published catalog to the scan set: a second scan root, `skills` (every `.md` under it, the same walker), beside `SCAN_ROOT` for the internal corpus. The header's \"What it scans\" paragraph names the new root and why: the reader is a customer agent, so the 2026-08-12 ruling applies a fortiori.\n2. Self-test: a case where a `.md` under the new root carrying `#1234` is red; the existing cases stay. `pnpm check:pm-skill-id-lint` (self-test + gate) green on the tree.\n3. Derivation: this gate declares its surface for `scripts/pm/dispatch-gates.mjs` through the path literals in its own source (the two constants and `ROOT_FILE_WATCH_HINTS`). Confirm with `node scripts/pm/dispatch-gates.mjs --commands --repo objectstack-ai/objectstack skills/objectstack-data/SKILL.md` that a `skills/**` change now derives `check:pm-skill-id-lint`. ⛔ `scripts/pm/dispatch-gates.mjs`, `dispatch-gates.data.mjs` and `dispatch-gates.self-test.mjs` are FROZEN (ruling 208 R6): if the derivation needs an edit there, stop and report `blocked` with the reading; do not edit them.\n4. `.github/workflows/lint.yml` already runs `pnpm check:pm-skill-id-lint` (line 958 today); no workflow change is expected. `scripts/pm/**` is not published → `skip-changeset`.\n\n## Who acts\n\nThe `domain:skills` seat (`scripts/pm/**` PM tooling; the gate's SUBJECT is the governed and published skill text). Not a governed path, so the seat lands it through the queue after its own at-tier review.\n\n## Dedup\n\nMCP issue search over objectstack-ai/objectstack, open and closed, query \"check-skill-id-lint widen scan set published skills catalog skills/** issue number citations\": 55 hits. Nearest: #22059 (closed decision on how published-skills teaching errors are found) and #9923 (closed: the published catalog carried no line-ratchet ceiling). None widens this gate's scan set.\n\nRefs: the objectstack-ai/objectui card filed in the same act (the 41-site cleanup + the AGENTS.md rule)."

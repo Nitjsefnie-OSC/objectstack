@@ -1,0 +1,34 @@
+{
+  "number": 23009,
+  "kind": "issue",
+  "title": "spec: declare the RLS deny sentinel once in `@objectstack/spec`, imported by `plugin-security` and `objectql` (ADR-0139 D2 step 2; #22861 sub-question 2 ruled (i))",
+  "state": "open",
+  "state_reason": null,
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "area:access",
+    "domain:spec",
+    "enhancement",
+    "pm:dispatched",
+    "priority:p2"
+  ],
+  "assignees": [
+    "os-support-ai"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-12T09:42:13Z",
+  "updated_at": "2026-10-12T14:17:37Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 2,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/23009",
+  "body": "Filing gate: **④ a ruling's execution card.** Filed by the director seat (summon #38, `session_013UzShSJnH3HuoZgVrYF9i8`, written as `objectstack-fleet[bot]` via the relay) on the maintainer's word, verbatim 「22861  objectui#12191 同意。」 (batch #327 item 1 → letter A on #22861, whose sub-question 2 is ruled **(i)**; the ruling comment and the `Ruled:` line are on #22861 in the same act). Derived from #22861, E2 of ADR-0139's plan (parent #22788). ⛔ Classes, positions and functions only.\n\n**Reader who acts:** the `domain:spec` seat. Grade inherited from #22861 (`priority:p2`, `area:access`); triage may re-grade.\n\n## The work\n\n- Today the deny sentinel is a private literal of one plugin: `packages/plugins/plugin-security/src/rls-compiler.ts` exports `RLS_DENY_FILTER` (the dev's reading on #22861, 6119740461: `{ id: '__rls_deny__:0000…' }`). `objectql` cannot import a plugin, and ADR-0139 D2 step 2 needs the engine to recognise the sentinel to answer `$in: []`.\n- Declare it **once** in `packages/spec/src/data/**` (beside `readable-ids.ts`), exported from the package's `data` entry, with its docblock naming D2 step 2 as the reader. `plugin-security` imports the spec's object and keeps no second literal; `objectql`'s E2 seam (#22861) imports the same object and recognises it **by identity**. ⛔ No structural equality on a guessed value shape, no duplicated string (sub-question 2's option (ii) was not offered and is not taken).\n- `Clause-②: yes` — a new exported member of the published spec. One changeset, FROM → TO.\n\n## Acceptance\n\n- One definition in the tree: `git grep -n \"__rls_deny__\" -- packages` outside tests hits the spec file only; `plugin-security`'s compiler emits the spec's object (a pin asserts identity, not shape).\n- The E2 card (#22861) imports it. **Serial constraint:** #22861's PR lands after this card's PR; the engine lane may draft against the constant's shape and rebase.\n\n## Duplicate check\n\n- MCP `search_issues` over objectstack-ai/objectstack, closed included: \"RLS_DENY_FILTER deny sentinel declared once in @objectstack/spec shared by plugin-security and objectql\" → **0 hits**. Control: \"ReadableIds leaf composed fail closed ADR-0139\" → 11 hits (#22861, #22787, #22678 among them)."
+}

@@ -1,0 +1,28 @@
+{
+  "number": 23047,
+  "kind": "issue",
+  "title": "finding(plugin-hono-server): the /auth/me/permissions outer catch answers without systemPermissions, which the console reads as \"capabilities unknown\" and fails open",
+  "state": "open",
+  "state_reason": null,
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "finding"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-12T13:26:10Z",
+  "updated_at": "2026-10-12T13:26:10Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 0,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/23047",
+  "body": "Filing gate: **① a product defect, class (b): two declared answers to the same failure disagree.**\n- **reach:** named producer. It is the `/auth/me/permissions` handler's outer `catch` in `packages/plugins/plugin-hono-server/src/current-user-endpoints.ts`, read on objectstack `main` `38d98d8d8`.\n- **Found by:** the dev of objectstack-ai/objectui#12198 (os-dev-report `6124626764`, `out_of_scope_findings[0]`). It was measured on objectui's test harness with the real `MePermissionsProvider`, not on a booted deployment.\n- **Filed by:** `domain:ui` seat 2 (seat post objectstack-ai/objectui#9771) · `session_01G5TSaEwbEQsKMjhzTB4rEd`.\n- ⛔ Not graded or routed here; ⛔ not a claim.\n\n**Who acts on it:** triage grades it and routes it to the seat that owns `plugin-hono-server`'s current-user endpoints.\n\n**Dedupe:** `/search/*` is refused by the egress proxy, so this used the REST issue list of this repo.\n- Scope: all states, closed included, updated since 2026-09-01. 8,852 items were read, of which 4,624 are issues.\n- Match, done locally: `me/permissions` together with `systemPermissions`, `fail open` or `outer catch`, plus any hit on `current-user-endpoints`.\n- Result: 7 hits. None of them is this seam:\n  - #22258: session renewal;\n  - #20083, #18931 and #18990: the wildcard object map;\n  - #15387: localization;\n  - #15747: the ExecutionContext envelope;\n  - #14788: language spelling.\n- Control: `me/permissions` alone hits 16 issues, and `ADR-0066` hits 18.\n\n## The producer\n\nOnce the caller is known, the handler has two throw paths, and they answer differently:\n\n1. **The permission-set resolver throws.** The code is `resolvePermissionSets(execCtx).catch(() => [])`, with the comment \"Fails CLOSED on a throw, as the contract requires: no sets merge to no access\". The body then carries `systemPermissions: []`, so every capability gate closes.\n2. **Anything else inside the `try` throws**, for example `permissionSetResolver(ctx)` or `buildEffectiveObjectPermissions(...)`. The outer `catch` logs `[hono] /auth/me/permissions failed` and answers `{ authenticated: true, userId, objects: {}, fields: {} }`. That body has no `systemPermissions`, no `positions`, no `permissionSets` and no `tabPermissions`.\n\n## The reader, and what it does with that body\n\n- objectui's `MePermissionsProvider` keeps \"absent\" and \"empty\" apart (objectui#4656). Its `hasCapabilities` answers `true` when `systemPermissions` is absent.\n- The published `@object-ui/app-shell` hook `useCanAuthorMetadata` limits that case, in its own docstring, to \"a deployment predating ADR-0066\".\n- ADR-0066 states the client doctrine: \"fail OPEN when the client does not know the caller's capabilities — unknown is not denied\".\n\nSo a throw on path 2 tells the console \"capabilities unknown\", about a server that does have them.\n\n**Measured** on objectui's harness for objectstack-ai/objectui#12198: the real `AppHeader`, `AppSwitcher` and `PageView`, under the real `MePermissionsProvider`.\n- The persona is an organization owner: a workspace admin with the `organization_admin` set and no `manage_metadata`.\n- With `systemPermissions` omitted from that owner's payload, the owner sees the page pencil, the \"Edit app\" button and the switcher's Studio row.\n- With the owner's real set in the same payload, all three are hidden.\n- The harness omitted `systemPermissions` only. The real path-2 body also drops `positions`. Whether the console's workspace-admin read then takes the caller's positions from this body or from the session was **not measured**.\n- The server still refuses the write. This is a wrong offer of an authoring handle, not an escalation.\n\n## The question for the handler's owner\n\nPaths 1 and 2 are the same event for the caller: the server failed to compute the answer. One path answers \"no capabilities\" and the other answers \"capabilities unknown\". Which answer the outer `catch` owes is the handler owner's call. Two possible readings:\n- the outer `catch` answers `systemPermissions: []`, as path 1 does;\n- the console is told this is a failure (a non-200 status), rather than receiving the pre-ADR-0066 shape.\n\nOut of scope:\n- ⛔ objectui's fail-open doctrine for a genuine pre-ADR-0066 server is not the subject.\n- The deliberate degraded branch (no SecurityPlugin or no metadata service wired, where the server is open too) is not part of this finding.\n\nA possible **Done when**, for triage to keep or change: a throw inside the handler, after the caller is known, no longer answers the pre-ADR-0066 shape, and a test in `plugin-hono-server`'s suite pins this.\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_"
+}

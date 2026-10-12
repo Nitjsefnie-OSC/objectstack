@@ -1,0 +1,35 @@
+{
+  "number": 23017,
+  "kind": "issue",
+  "title": "ci(lint): Type Check · workspace re-typechecks every package on every PR and merge group (486 s median): its turbo cache key is scoped to github.ref_name and saved only on push, so PR and queue runs never restore main; fix the key, affected-only",
+  "state": "closed",
+  "state_reason": "completed",
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "area:devpath",
+    "domain:devx",
+    "priority:p1",
+    "tooling"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-12T10:04:54Z",
+  "updated_at": "2026-10-12T14:20:25Z",
+  "closed_at": "2026-10-12T13:42:57Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": null,
+  "comments": 4,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/23017",
+  "body": "Protects: the merge queue's required context `TypeScript Type Check` (AGENTS.md's required set), the published check-run name every PR and merge group of `@objectstack/*` passes through; this card keeps the name and cuts the wall of the lane behind it.\n\nFiled by the director seat (summon #37, `session_01LqNgdPZB2Jnr5HpGbaqLeB`) on the maintainer's word 「Type Check 的两张后续卡也立吧」 (2026-10-12), the follow-up objectstack#22998 names. Filing gate ①: a measured defect with a named landing point. ⛔ Not a claim. Tier H: `.github/workflows/**`; the PR stays a draft until a `GOVERNED_APPROVERS` member approves it.\n\n## What is measured (29 completed runs of `lint.yml`, 12 `pull_request` + 10 `merge_group` + push, the jobs API, 2026-10-12)\n\n| reading | value |\n|---|---|\n| `Type Check · workspace` job wall min / median / p90 / max | 1 / 11.1 / 14.2 / 18.0 min |\n| step `Type check workspace packages` | 486 s median, 627 p90, 643 max (80 % of the job) |\n| step `Build workspace packages` | 42 s median, 276 p90, 366 max (cache misses on some runs) |\n| step `Restore Turbo cache` | 10 s median |\n| on merge groups (15 runs, earlier reading) | 11.8 min median, the second-longest leg; the longest once #22991 and #22998 land |\n\n**Why it re-typechecks everything:** the job restores `actions/cache` with `key: ${{ runner.os }}-turbo-typecheck-${{ github.ref_name }}-${{ github.sha }}` and `restore-keys: ${{ runner.os }}-turbo-typecheck-${{ github.ref_name }}-`, and saves only `if: github.event_name == 'push'` (where `ref_name` is `main`). On `pull_request`, `github.ref_name` is `<n>/merge`; on `merge_group` it is `gh-readonly-queue/main/pr-<n>-<sha>`. Neither prefix ever matches a saved key, so every PR and queue run starts with an empty turbo cache and `turbo run typecheck --filter='./packages/*' --filter='./packages/*/*' --filter='./apps/*'` re-executes all packages. `turbo.json` declares `typecheck` cacheable (`outputs: []`, inputs excluding `dist/**`), so a restored cache would replay unchanged packages in seconds.\n\n## What to build (one PR, Tier H, draft until approved; lands after #22991's PR, which edits the same file's `lint` job)\n\n1. **Restore from `main`'s cache on every event:** `restore-keys` gains `${{ runner.os }}-turbo-typecheck-main-` after the ref-scoped prefix (the exact-key line stays), for both the typecheck and the build steps' shared `.turbo/cache`; the save stays `push`-only so PR runs never pollute it. Verify on the PR's own run that the turbo run summary (or `--summarize`) reports cache hits for untouched packages.\n2. **Typecheck affected-only on `pull_request` / `merge_group`:** `turbo run typecheck` scoped to the packages the diff affects and their dependents (`--affected` against the merge base, or `--filter=...[<base>]`), the whole workspace on `schedule` and `push` (the doctrine's full battery). State the rule for root-level changes (lockfile, `tsconfig.base.json`, `turbo.json`, `package.json`): everything affected.\n3. The job keeps its name; the `TypeScript Type Check` aggregator and its roster are unchanged.\n\nExpected: `Type check workspace packages` from 486 s to about 60–120 s on a typical PR (cache replay of unchanged packages plus the affected set); the merge-group `Lint & Type Check` wall then follows the lint lanes (#22991).\n\n## Acceptance\n- `Type Check · workspace` median under 4 minutes on three consecutive merge groups and three PRs, read from the jobs API and written in the PR body with the before figures above.\n- The turbo summary of one PR run shows cache hits for packages the diff did not touch.\n\nRelated: objectstack#22998 · objectstack#22991 · `.github/workflows/lint.yml` (`typecheck-workspace` job) · `turbo.json`."
+}

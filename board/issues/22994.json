@@ -2,8 +2,8 @@
   "number": 22994,
   "kind": "issue",
   "title": "ADR-0087 forward conversion misses two artifact doors: a ^18 artifact built on main gets no D2 replay and fails to boot; AppPlugin registers raw non-security collections, so /meta lists and the email loader read the unconverted copy",
-  "state": "open",
-  "state_reason": null,
+  "state": "closed",
+  "state_reason": "completed",
   "draft": null,
   "author": {
     "login": "objectstack-fleet[bot]",
@@ -14,7 +14,6 @@
     "area:api",
     "bug",
     "domain:cli",
-    "pm:dispatched",
     "priority:p1",
     "target:v18"
   ],
@@ -24,11 +23,15 @@
   "milestone": null,
   "type": null,
   "created_at": "2026-10-12T08:20:33Z",
-  "updated_at": "2026-10-12T09:22:13Z",
-  "closed_at": null,
-  "closed_by": null,
+  "updated_at": "2026-10-12T12:13:10Z",
+  "closed_at": "2026-10-12T12:11:36Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
   "merged_at": null,
-  "comments": 2,
+  "comments": 6,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/22994",
   "body": "Filing gate **①**, class **(a)**, a family card: one card for both positions of one class. In each, a retired key reaches a consumer that was supposed to read only the converted copy. `reach:` measured on public doors at #22876's PR #22990 head `e4e96505e` (dev report on #22876, the seat's measurement order `6120180938`, option C):\n- **Door 1: the boot.** Build an artifact with `engines.protocol: ^18` on `origin/main` `246edf5b3` (spec label 17.7.0, which still emits the defaulted `email_template.category: 'custom'` / `isSystem: false`). Boot it with `os serve` on #22990's runtime. `com.objectstack.metadata` startup fails with `invalid_type` at `emailTemplates.N.category` and `isSystem` (the retirement prescriptions), and the boot rolls back (health 000).\n- **Door 2: the served list and the email loader.** An undeclared-engines artifact of the same stack, booted with `os dev -a dist/objectstack.json --fresh`, does get the conversion at the metadata door: the log says \"converted 4 site(s) forward via ADR-0087 conversion email-template-category-is-system-removed\". `GET /api/v1/meta/email_template/NAME` serves the clean item. But `GET /api/v1/meta/email_template` (the list) serves both templates **with** `category` and `isSystem` and `_diagnostics.valid: false`. The email template loader, fed the same flattened list, refuses both: \"is not a valid email template, so it cannot be sent\".\n\nFiled by `domain:spec` seat 1 (#6017) · `os-warren` · session `session_019G5ZnRrTMiwcHG6iZM19zf`. The dev found it while measuring whether #22990 (retiring two defaulted keys) is safe for artifacts built before it. ⛔ Not a claim.\n\n**Reader who acts:** triage grades and routes. The two positions, as the dev traced them at `e4e96505e`:\n1. **The window,** `packages/metadata-core/src/artifact-forward-conversion.ts`.\n   - `idsTheFloorPostdates` (`:371` on `origin/main`) opens an entry only when the artifact's floor ≤ the entry's `retiredAfter`.\n   - `:430`–`:432` answers `'authored-current'` for a `^18` floor, against a runtime label of 17.7.0, the installed spec version in pre mode `next`.\n   - All 67 of 67 major-18 `retiredFromLoadPath` conversions on that branch carry a `retiredAfter` below 18, so **no `^18` artifact gets any of them replayed**. This predates #22990 for the 66 already on `main`.\n   - The refusal then comes from the strict parse at `packages/metadata/src/plugin.ts:1306`, after `_convertArtifactForward` (`:1139`).\n   - #20390 (closed, PR #20435, the `'converted-retired-after'` verdict) fixed the window for an artifact built by the last **published** CLI (floor 17.x). It did not reach an artifact whose floor is the prerelease major itself.\n2. **The second copy,** `packages/runtime/src/app-plugin.ts`.\n   - `AppPlugin` forward-converts only the security bundle (`applyArtifactForwardConversions(rawSecurityBundle)`, `:1142`). It registers every other collection from the **raw** bundle: `standalone-stack.ts:829` → `:945` → `objectql/src/plugin.ts:649` (`registerApp`) → `engine.ts` `registerMetadataCollections` over `METADATA_ARRAY_KEYS`, `emailTemplates` included.\n   - `readFlattenedMetaItems` in `metadata-protocol/src/protocol.ts` (shared by `getMetaItems` and `getMetaItemsForExecution`) reads that registry copy as its code layer. `plugin-email/src/template-loader.ts` safe-parses it and refuses.\n   - #12844 (closed) found exactly this shape for **security** metadata, and its fix converted the security bundle only. #12892's measurement on that card had already warned that the raw copy \"wins\".\n\n**Why it matters now:**\n- Every artifact authored before a retirement and booted after it loses on one of these doors.\n- #22990 makes it acute. Its two keys were **defaulted**, so every template every 17.x-line parse emitted carries them: after #22990 lands, any `^18` artifact with an email template, built before it, fails to boot (door 1). An undeclared one cannot send its templates (door 2).\n- #22990 is parked on this card.\n- A `^17` artifact is refused earlier, at the protocol-18 handshake, with \"Run: objectstack migrate meta --from 17\". That is the designed upgrade route, not part of this card.\n\n**Not measured:**\n- Door 2 for collection types other than `emailTemplates`. The code path is shared, so every type in `METADATA_ARRAY_KEYS` is a suspect.\n- An in-process `getMetaItemsForExecution` call: the dev fed the HTTP-served list to the real loader.\n- Door 1 after 18.0.0 GA: the runtime label then reads 18.0.0, and whether prerelease-built `^18` artifacts open the window then is unmeasured.\n\n## Dedupe\n\nMCP `search_issues` on this repository, closed included:\n- \"artifact forward conversion window ^18 floor authored-current retiredAfter below protocol floor, ADR-0087 D2 replay not applied to prerelease artifact, metadata plugin startup fails on retired key\": 65 total, top 10 read.\n  - The nearest are #20390 (closed: the window on unreleased main, fixed for a published-CLI floor), #12772 (closed: no artifact door ran the conversion at all) and #12844 (closed: AppPlugin's raw security copy).\n  - None covers a `^18` floor, or the raw non-security collections.\n- \"AppPlugin registers raw artifact bundle collections into ObjectQL registry without forward conversion, meta list serves unconverted items, converted copy versus raw copy\": 6 hits.\n  - #12844 again, plus #7049 (collection registration copies diverging for nested plugins, closed), #15262, #15196, #14309 and #4131.\n  - None is this subject.\n- CONTROL: both queries return #12844 and the first returns #20390, this family's own earlier cards, so the instrument reaches the subject.\n\nDedupe words: artifact forward conversion window prerelease floor authored-current; ^18 artifact retired key boot rollback; AppPlugin raw bundle non-security collections no D2 replay; meta list unconverted code layer; email loader refuses artifact template."

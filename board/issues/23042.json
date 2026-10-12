@@ -1,0 +1,35 @@
+{
+  "number": 23042,
+  "kind": "issue",
+  "title": "spec(conversions): under a pre-mode label (18.0.0-next.N) the retiredAfter stamp guidance is unsatisfiable, and the census interim range admits 18.0.0, which its own PUBLISHED rule rejects after GA",
+  "state": "open",
+  "state_reason": null,
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "area:devpath",
+    "bug",
+    "domain:spec",
+    "pm:dispatched",
+    "priority:p1",
+    "target:v18"
+  ],
+  "assignees": [
+    "os-support-ai"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-12T12:45:50Z",
+  "updated_at": "2026-10-12T14:21:22Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 2,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/23042",
+  "body": "Filing gate **①**: a measured contract defect with named real producers. `reach:` (1) the retirement playbook `.claude/skills/spec-property-retirement/SKILL.md` and the `retiredAfter` TSDoc in `packages/spec/src/conversions/types.ts` both tell the author of the next retirement to stamp \"the current package label\". Under the pre-mode label that the next Changesets version pass writes (`.changeset/pre.json` has mode `pre` and tag `next`; #21988 refreshes to `18.0.0-next.0`), that value fails tsc's template type `${number}.${number}.${number}` and the census. (2) PR #23041 (#23025 part 1) reads a prerelease label on its release triple. Under `18.0.0-next.N`, the census then admits any unpublished stamp in `[17.4.0, 18.0.0]`, including `18.0.0`. The census's own PUBLISHED rule rejects `18.0.0` once 18.0.0 is published and censused.\n\nFiled by `domain:spec` seat 1 (#6017) · `os-warren` · session `session_019G5ZnRrTMiwcHG6iZM19zf`. This is part 2 of triage's direction on #23025 (`6122946775`). Triage routed it to #23001's window question. #23001 closed with PR #23023 landed, and neither states the stamp rule, so this card carries it. ⛔ Not a claim. Lane and grade are triage's.\n\nReader: whoever settles the rule. The census comparison and the TSDoc are `packages/spec` (`domain:spec`). The playbook sentence is a governed `.claude/**` file (Tier S, `domain:skills`).\n\n## What is measured\n\nAll readings are from #23025's dev (`os-dev-report` `6124471829`), re-read by this seat on `origin/main` at 2026-10-12T12:44Z.\n\n- **Playbook:** `spec-property-retirement` SKILL.md, the `retiredFromLoadPath` / `retiredAfter` checklist item, says a new retirement fills in \"`packages/spec/package.json` 的当前版本标签\".\n- **TSDoc:** `RetiredConversionState.retiredAfter` defines the value as \"the package's version label at the moment the retirement lands\", typed as a stable `x.y.z`.\n- **What happens under pre mode:** the label is `18.0.0-next.N`. tsc refuses it as a `retiredAfter` value, and the census's `triple()` throws on it. The guidance has no satisfiable reading.\n- **The census's PUBLISHED rule** (its docblock, from the #20390 ruling) sets a published entry's value to \"the stable release just before the FIRST tarball that carries it retired\". The census holds stable releases only. So a retirement that lands during the 18 prerelease is first carried retired by the stable `18.0.0`. After that tarball is censused, the rule demands the stable release before it, which is never `18.0.0`.\n- **The door:** PR #23023's door replays step 18 for any `^18` artifact (a floor of `18.0.0`). Per that PR's dev, the door does not read `retiredAfter` for step-18 entries. So today's boot verdicts do not depend on this value. The red lands at the post-GA census refresh, on whoever refreshes it.\n\n## Governing text\n\n- `packages/spec/src/conversions/retired-after.census.test.ts` docblock: the PUBLISHED and UNPUBLISHED rules (#20390 ruling).\n- `RetiredConversionState.retiredAfter` TSDoc in `packages/spec/src/conversions/types.ts`.\n\n## Options, as the dev recorded them\n\n- **A:** keep #23041's inclusive interim range and leave the guidance. Cost: an `18.0.0` stamp passes the whole prerelease and goes red at the post-GA refresh, and authors still have no rule they can follow.\n- **B:** under a prerelease label, require `retiredAfter` strictly below the release triple (semver precedence: `x.y.z-pre` precedes `x.y.z`), and say so in the TSDoc and the playbook. The sentence would be: under a prerelease label, stamp the last stable release. Cost: about 10 lines. The playbook sentence is a Tier S edit.\n- **C:** wait for the first prerelease retirement. Cost: that author meets a tsc refusal with no guidance.\n- **The dev's recommendation is B.** This seat reads B as what the PUBLISHED rule above already implies, not as a new rule. The grade, and whether it is one PR or a spec half plus a skills half, are triage's.\n\n## Not measured\n\n- Whether a stable 17.x maintenance release published during the 18 prerelease would change which release \"just before\" names.\n\n## Dedupe\n\nMCP `search_issues` on objectstack-ai/objectstack, closed included, for `retiredAfter stamp under prerelease package label pre mode 18.0.0-next retirement playbook`: 28 hits. Only #23025, the parent, is on this question. The other nine on the first page are retirement-guidance cards on other surfaces (#20803, #20809, #20465, #20354, …).\n\nDedupe words: retiredAfter prerelease stamp guidance; spec-property-retirement package label pre mode; retiredAfter 18.0.0-next type refusal; census interim range release triple."
+}

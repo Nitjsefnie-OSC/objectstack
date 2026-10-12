@@ -2,8 +2,8 @@
   "number": 22999,
   "kind": "issue",
   "title": "[finding] board-snapshot is red on every run: the archive holds 59 open (113 total) issues GitHub no longer shows. Restore them or record them in gone.json",
-  "state": "open",
-  "state_reason": null,
+  "state": "closed",
+  "state_reason": "completed",
   "draft": null,
   "author": {
     "login": "hotlong",
@@ -21,11 +21,15 @@
   "milestone": null,
   "type": null,
   "created_at": "2026-10-12T08:52:51Z",
-  "updated_at": "2026-10-12T09:23:42Z",
-  "closed_at": null,
-  "closed_by": null,
+  "updated_at": "2026-10-12T09:41:40Z",
+  "closed_at": "2026-10-12T09:41:40Z",
+  "closed_by": {
+    "login": "hotlong",
+    "id": 50353452,
+    "type": "User"
+  },
   "merged_at": null,
-  "comments": 1,
+  "comments": 2,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/22999",
   "body": "## What is red\n\nEvery scheduled `board-snapshot.yml` run is red at its last step, \"Fail the run if the snapshot did not read the board, or the archive is behind it\". The cause is `board-snapshot exited 2`, which means a failed count check. Latest run: https://github.com/objectstack-ai/objectstack/actions/runs/38225529983 (2026-10-12 08:45 UTC). `board/manifest.json` on `board-archive` reads:\n\n```\ncount_check: verdict=surplus  expected=110  archived=169  surplus=59  gone_ledger=0\n```\n\n## Why it only shows now\n\nThe snapshot step has exited 2 on every run I sampled (the six scheduled runs from 2026-10-10 20:22 to 2026-10-12 02:46 UTC). The red gate never got to fire, because from 2026-09-19 onward every scheduled run was **cancelled** inside \"Upload the archive to R2\": it hit `timeout-minutes: 15` while re-uploading all ~41k objects. A cancelled run shows grey, not red. #22930, merged 2026-10-12, makes the R2 step upload only changed objects (274 objects and about 1 minute on the 08:45 run, plus the first daily tarball since 09-19). Now the step after it runs, and the count check is visible for the first time.\n\n## What the surplus most likely is: records GitHub no longer shows\n\nComparing archive counts with GitHub search counts, both on 2026-10-12:\n\n| | archive (`manifest.json`) | GitHub search | difference |\n|---|---|---|---|\n| open issues | 169 | 110 | 59 |\n| closed issues | 9,828 | 9,774 | 54 |\n| total issues | 9,997 | 9,884 | **113** |\n\nIf the surplus were only stale state (closed on GitHub, still marked open in the archive), the totals would match. They are 113 apart. So about 113 issues the archive holds are no longer visible on GitHub, 59 of them archived while open. That fits the case this workflow was built for: content destroyed along with a suspended fleet account (see the header of `board-snapshot.yml` and #17390). One caveat: search counts exclude hidden content, so measure the list before deciding anything.\n\n## To decide (maintainer)\n\n1. List the numbers. Compare the archive's issue records (`board/issues/N.json` on `board-archive`) against the live API: a 404 or 410 means gone, closed means only stale state. Record the list here.\n2. For each gone number, choose one:\n   - **restore**: `node scripts/pm/board-snapshot.mjs --restore=N` prints a recreate payload for a seat to post.\n   - **accept as gone**: add it to `gone.json`, which is the only way the count check goes quiet.\n3. If any surplus is only stale state, that is a separate bug in the delta walk, related to #18045.\n\nUntil one of these is done, every run (4 a day) stays red. The archive branch and the R2 copy are still written on each run, so nothing is being lost meanwhile.\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n"

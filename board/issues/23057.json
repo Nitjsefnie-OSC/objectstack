@@ -1,0 +1,26 @@
+{
+  "number": 23057,
+  "kind": "issue",
+  "title": "skills(spec-property-retirement): under a prerelease package label, the retiredAfter checklist item stamps the newest published stable release — the governed half of #23042",
+  "state": "open",
+  "state_reason": null,
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [],
+  "assignees": [],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-12T14:20:26Z",
+  "updated_at": "2026-10-12T14:20:26Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 0,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/23057",
+  "body": "Blocked-by: #23042\n\nFiling gate **④**, a coordination node: the governed half of #23042, split off by triage's direction on that card (`6124786465`): \"The playbook sentence (`.claude/skills/spec-property-retirement/SKILL.md`) is governed, so it is its own small `domain:skills` PR, filed by the claiming seat at claim. ⛔ It does not ride this spec PR.\" Filed by `domain:spec` seat 3 (#18883) · `os-support-ai` · session `session_012uFegdfR6K6uqvLzt7XsdZ`, at its claim on #23042. ⛔ Not a claim. Lane and grade are triage's.\n\n**Reader who acts:** the `domain:skills` seat, once #23042 lands. That card's PR states the rule in the `retiredAfter` TSDoc (`packages/spec/src/conversions/types.ts`) and in the census (`packages/spec/src/conversions/retired-after.census.test.ts`). This card then brings the playbook's one sentence into line with the landed text.\n\n## The sentence\n\n- **Where:** `.claude/skills/spec-property-retirement/SKILL.md`, the `retiredFromLoadPath` / `retiredAfter` checklist item. On `origin/main` `df7a137923` it tells the author of a new retirement to fill in \"`packages/spec/package.json` 的当前版本标签\".\n- **Why it is wrong under pre mode:** once the Version Packages pass writes a prerelease label (`18.0.0-next.N`), that value fails tsc's `${number}.${number}.${number}` template type and the census's `triple()`. The census's own PUBLISHED rule sets a published entry to \"the stable release just before the FIRST tarball that carries it retired\", so a retirement that lands during the 18 prerelease is first carried by the stable `18.0.0`, and its value is the newest stable release before that.\n- **What it should say:** whatever #23042's landed TSDoc says, restated. Triage's direction reads: under a pre-mode label, a new retirement stamps the newest published stable release, ⛔ not the prerelease label. The words come from the landed text, ⛔ not from this card.\n- **Tier:** `.claude/**` is Tier S. It lands on a contract-tier review of record, by the owning seat.\n\n## Duplicate check\n\nREST issue list of objectstack-ai/objectstack, `state=all`, updated since 2026-10-01 (1,124 issues across 23 pages, stopped at the short page), matched locally for `spec-property-retirement` AND `retiredAfter`: 1 hit, #23042 (the parent). Control, `retiredAfter` alone: 7 hits (#23042, #23038, #23029, #23025, #23001, #22994, #19287). None of them is on the playbook sentence.\n\nDedupe words: spec-property-retirement retiredAfter prerelease; playbook package label pre mode; retiredAfter newest stable release stamp."
+}

@@ -1,0 +1,32 @@
+{
+  "number": 23051,
+  "kind": "pull_request",
+  "title": "docs(pm-dispatch): a UI card names the generic block or spec door it needs (rider for objectstack-ai/objectui#12224)",
+  "state": "open",
+  "state_reason": null,
+  "draft": true,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "documentation",
+    "size/xs",
+    "skip-changeset"
+  ],
+  "assignees": [
+    "os-justin"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-12T13:37:51Z",
+  "updated_at": "2026-10-12T13:38:38Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 0,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/pull/23051",
+  "body": "Clause-②: no\n\nThis is the objectstack rider for objectstack-ai/objectui#12224, the card for objectui as a product-neutral renderer. The objectui half is draft PR objectstack-ai/objectui#12253: an `AGENTS.md` rule, ADR-0060, and a ratchet test. This pull request adds the matching line to the filing gate, so a UI card is filed in a shape the renderer can accept. It closes no card. `.claude/**` is governed at Tier S, so the pull request stays a **draft** until a contract-tier review of record. Drafted in session `session_012dGTuJen61ECNHXYXKChoC`, on branch `claude/issue-12224-objectui-filing-gate-rider`.\n\nThe maintainer's ruling, verbatim and untranslated:\n\n> 规则应该写入 objectui 仓库，要不然每个项目都会有页面定制的需求\n\n## 维护者速读(草稿)\n\n**改了什么**\n\n- 立卡门(`.claude/skills/pm-dispatch/references/filing-gate.md` 〈立卡门〉)新增一行:UI 卡必须写明它需要哪个**通用块**,或哪个 `@objectstack/spec` **契约门**。向 objectui 要产品命名的 widget、dialog、hook 或文案命名空间的卡,一律退回重立。\n- 为了给这一行腾地方,删掉了文件开头引言里的一句自我描述:「本文是「什么才算一张卡」与定级、读数三组判据的执行说明」。\n\n**为什么改**\n\n- objectui 现在定位为「产品中立的渲染器」(objectstack-ai/objectui#12224,ADR-0060)。如果立卡时就要求写明通用块或契约门,产品专用的需求就不会以卡的形式流到 objectui 车道。\n\n**风险与代价(含回滚)**\n\n- 文件行数棘轮的上限是 58 行,这个文件本来就是 58 行。新增的一行靠删内容付账,文件仍是 58 行,上限不动,也没有靠合并折行凑出空行。\n- 删掉的那句只是复述文件的三个标题(`## 立卡门`、`## 定级判据…`、`## 读数判据…`),内容仍在标题里,不丢任何规则。\n- 回滚:revert 本 PR 即可。这是内部指令面,不发版。\n\n**席位意见**\n\n(留空,由席位定稿)\n\n**你要做的**\n\n- 无需您批准:`.claude/**` 是 Tier S,由席位做契约档复核后落地。若您不同意这条立卡门规则,请直接在本 PR 上说。\n\n## What changes\n\n`.claude/skills/pm-dispatch/references/filing-gate.md` (58 → 58 lines; `check-skill-line-ratchet` ceiling 58, unchanged):\n\n- **Deleted** from the intro: the clause 「本文是「什么才算一张卡」与定级、读数三组判据的执行说明」. The intro becomes its pointer sentence alone, on one line: 「见 triage-duties.md 与 reading-discipline.md 的指针行。」\n- **Added** under `## 立卡门`: 「- UI 卡写明所需通用块或 spec 契约门;要产品命名 widget/dialog/hook/命名空间的卡退回重立。」 (116 bytes, under the 120-byte line rule).\n\n## Acceptance notes\n\n- **The deleted clause is a description, not a rule.** It restates the file's three headings (`## 立卡门`, `## 定级判据(北极星「优先级」的执行说明)`, `## 读数判据(判据的可达半径与零)`), and its content still lives there. The line it frees comes from deleting content. It does not come from re-wrapping, and no other line in the file changed.\n- **The PM chose this payment.** On objectstack-ai/objectui#12224, comment `6125224340`, the PM answered option A to the dev report's open question and widened the claim's file surface to this intro and the one new line. Option B (a maintainer ruling to raise the ceiling) and option C (landing red) were not taken.\n- **Measured, at the base.** Before the payment, the line alone took the file to 59 against the ceiling of 58, and the ratchet answered `✗ … filing-gate.md is 59 lines; the ratchet ceiling is 58`. After the payment, it answers `✓ … filing-gate.md is 58 lines (ceiling 58; headroom 0)`.\n- **No changeset.** `.claude/**` ships in no package, so the pull request carries `skip-changeset`.\n\n## Gates (at `6b43997f7`)\n\nThe list was derived with `node scripts/pm/dispatch-gates.mjs --commands --repo objectstack-ai/objectstack` (no paths; change set `.claude/skills/pm-dispatch/references/filing-gate.md`, +2 / −2). Every command ran, and each exit code was captured before any pipe. `--ran` reconciliation: `17 derived, 17 run, 0 NOT-MEASURED, 0 UNRUN` (a derived zero: all 17 recorded an exit code).\n\n| Command | Exit | Verdict line |\n|---|---|---|\n| `pnpm check:pm-skill-ratchet` | 0 | `✓ check-skill-line-ratchet: …/filing-gate.md is 58 lines (ceiling 58; headroom 0).` |\n| `pnpm check:pm-skill-id-lint` | 0 | `✓ check-skill-id-lint: 87 file(s) clean (pattern /#[0-9]{3,}/g).` |\n| `pnpm check:nul-bytes` | 0 | `check-nul-bytes: OK (scanned 11047 text file(s) … no raw ASCII control bytes).` |\n| `pnpm check:pm-governed-merges` | 0 | self-test passes; live generator certified the tree |\n| `pnpm check:skill-frame-sync` | 0 | binding sentence present; 90 markdown files scanned |\n| `pnpm check:doc-authoring` | 0 | `✓ doc authoring guard: … clean` |\n| `pnpm check:cross-package-test-inputs` | 0 | `OK: 30 package(s) read outside themselves, all declared` |\n| `pnpm check:agent-test-spelling` | 0 | clean |\n| `pnpm check:driver-memory-census` | 0 | `check-driver-memory-census: OK` |\n| `pnpm check:gitlink-declared` | 0 | `check-gitlink-declared: OK` |\n| `pnpm check:refd-timer-probe` | 0 | `OK check-refd-timer-probe` |\n| `pnpm check:watch-hint-literal` | 0 | `✓ check-watch-hint-literal: 73 declaration(s)` |\n| `node scripts/check-closing-keyword-parity.mjs` · `--self-test` | 0 · 0 | sweep done · `40 assertions, 5 mutations … driven to red` |\n| `node scripts/check-comment-mask-corpus.mjs` | 0 | `8862 files, 0 disagree, 0 unparseable` |\n| `node scripts/pm/check-harness-current.mjs --self-test` | 0 | `all 26 cases passed` |\n| `pnpm --filter @objectstack/lint run check:doc-formula-expressions` | 0 | gate ran after its declared prerequisites were built (see below) |\n\n`check:doc-formula-expressions` first exited 3, `PREREQUISITE NOT MET` (`@objectstack/formula` and `@objectstack/lint` were not built in the fresh worktree). That run measured nothing. After `turbo run build --filter=@objectstack/formula --filter=@objectstack/lint` (4/4), the re-run exited 0.\n\n---\n_Generated by [Claude Code](https://claude.ai/code/session_012dGTuJen61ECNHXYXKChoC)_\n"
+}

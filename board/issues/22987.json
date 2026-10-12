@@ -2,8 +2,8 @@
   "number": 22987,
   "kind": "issue",
   "title": "tooling(qa): check-platform-checklist has no legal shape for a planned item retired before it was implemented — statusFieldProblems judges `retired` by the active rule (`since` must be a release, `steps` non-empty)",
-  "state": "open",
-  "state_reason": null,
+  "state": "closed",
+  "state_reason": "completed",
   "draft": null,
   "author": {
     "login": "objectstack-fleet[bot]",
@@ -13,7 +13,6 @@
   "labels": [
     "area:devpath",
     "domain:skills",
-    "pm:dispatched",
     "priority:p2",
     "tooling"
   ],
@@ -23,11 +22,15 @@
   "milestone": null,
   "type": null,
   "created_at": "2026-10-12T07:47:26Z",
-  "updated_at": "2026-10-12T08:40:53Z",
-  "closed_at": null,
-  "closed_by": null,
+  "updated_at": "2026-10-12T09:53:37Z",
+  "closed_at": "2026-10-12T09:47:37Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
   "merged_at": null,
-  "comments": 3,
+  "comments": 4,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/22987",
   "body": "Unblocks: #22869 — PR #22982 (the retire of `records-forms.picklist-org-append`) would add 2 validator problems on main until this lands. This card carries the checker fix; the parent keeps the retire and its three ledger files.\n\nDerived from the in-flight card #22869 by the skills seat (`session_01CinRQcE6T8SvMbhH8D3NhS`), from the dev's class-a finding measured at PR #22982 head `57ef232b7`; parent domain and priority inherited (the one bypass of triage, for a sub-issue a claimed card needs to land). Cross-lane: `scripts/check-platform-checklist.mjs` is the devx lane's file by path; the seat declares the touch on the devx seat post.\n\n## Reading\n\n- `scripts/check-platform-checklist.mjs#statusFieldProblems` (line ~172 on `origin/main` `246edf5b3`): one branch for `status === 'planned'`; every other status, `retired` included, falls through to the active rule — `\"since\" must be the release that introduced the capability` and `\"steps\" must be a non-empty array of strings`.\n- `docs/qa/platform-checklist/README.md`, Lifecycle → Retire: set `status: \"retired\"` + `retiredReason` (and `supersededBy` when a successor exists); the row stays. It asks for no `since` and no `steps`.\n- The only two retired items before PR #22982 (`dashboards.saved-report-ownership`, `dashboards.report-schedule-dispatch-delivery`) were active before retiring (`since: \"v15.1\"`, steps present), so this path was never exercised.\n- Measured on PR #22982: base `117817ec2` reads `check-platform-checklist: 8 problem(s)` (symbol anchors in `access-security`, `attachments-storage`, `search` — the open main-red anchor #22924's); head `57ef232b7` reads 10; the diff of the two lists is exactly the 2 lines above, both on `records-forms.picklist-org-append`. Minimal repro: flip any planned item to `retired` with a `retiredReason`.\n- Public door: `pnpm check:platform-checklist`, run on main by `platform-checklist-watchdog.yml`; by maintainer decision it is not per-PR CI (`.github/workflows/lint.yml:3102–3110`).\n\n## Change\n\n1. `statusFieldProblems`: a `retired` branch that judges by the README's Retire rule — `retiredReason` is a non-empty string; `since` is `null` (never shipped) or a release-shaped string; `steps` may be absent or empty (a never-implemented capability has nothing to drive). A retired item that was active keeps whatever it had and still passes. ⛔ No new required field beyond what the README names; ⛔ no change to the `planned` or active rules.\n2. `--self-test`: a retired item with `since: null` and no `steps` passes; a retired item without `retiredReason` fails; a retired item with a non-release `since` string fails; the existing active and planned cases unchanged. The script's own mutation battery (its header describes the shadowing checks on `statusFieldProblems`) must still red when the new branch is dropped.\n3. Verify the unblock: with PR #22982's `records-forms.json` applied in the worktree (uncommitted, restored after), `pnpm check:platform-checklist` reads 8 problems, not 10; report both counts and the restore proof.\n4. Gates: `node scripts/pm/dispatch-gates.mjs --commands --repo objectstack-ai/objectstack` from the worktree; a `scripts/` script edit owes the script's own tests beyond the derived families (`git grep -l check-platform-checklist -- 'scripts/**/*.test.*' scripts/__tests__` for siblings). `skip-changeset` (`scripts/` is not published).\n\n⛔ No ledger data invented; ⛔ no `docs/qa/**` edit here (the parent's PR owns them); ⛔ `dispatch-gates*.mjs` stay frozen.\n\n## Who acts\n\nThe skills seat dispatches it as the blocked seat (the unowned-blocker channel) and, the path not being governed, lands it through the queue after its own at-tier review. PR #22982 lands after this PR.\n\n## Dedup\n\nMCP issue search over objectstack-ai/objectstack, open and closed, query \"check-platform-checklist retired item since steps statusFieldProblems retire planned item validator\": 28 hits. Nearest: #22924 (open: the watchdog's main-red anchor for the 8 symbol-anchor problems — a different failure, which this card does not touch), #19157 (closed: introduced `status: planned`, the origin of the one-branch shape), #22487 (closed: retired a step and a clause of an active item), #22557 (closed, not planned: an anchor red). None gives `retired` its own rule.\n\nRefs: #22869 · PR #22982 · #22924."

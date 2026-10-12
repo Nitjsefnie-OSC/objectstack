@@ -1,0 +1,36 @@
+{
+  "number": 23035,
+  "kind": "pull_request",
+  "title": "docs(adr): ADR-0139 reads Accepted, and D2 names the executor boundary as the composition seam (record half of the ruling on #22861)",
+  "state": "closed",
+  "state_reason": null,
+  "draft": false,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "documentation",
+    "size/s",
+    "skip-changeset"
+  ],
+  "assignees": [
+    "os-steve"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-12T11:29:33Z",
+  "updated_at": "2026-10-12T13:08:24Z",
+  "closed_at": "2026-10-12T13:05:52Z",
+  "closed_by": {
+    "login": "os-zhuang",
+    "id": 277994282,
+    "type": "User"
+  },
+  "merged_at": "2026-10-12T13:05:52Z",
+  "comments": 2,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/pull/23035",
+  "body": "Part of #22861\nClause-②: no\n\n**Tier H, draft only.** The diff touches `docs/adr/**`, a governed surface (Prime Directive #14). This PR lands only on an APPROVED review by an account in `GOVERNED_APPROVERS`. ⛔ No seat readies it, queues it or arms auto-merge on it.\n\nThis is the record half of the ruling `6121741984` on #22861 (letter A, maintainer 「22861  objectui#12191 同意。」). It is docs only, one file: `docs/adr/0139-engine-internal-semi-join-leaf-readable-parent-ids.md`, +14 / -7. E2's code PR does not wait for this text, and this text does not wait for the code.\n\n## What changes\n\n1. **D2's position sentence.** The text that sat at lines 127-129 on `main` named the seam \"where `lowerRelationConditions` runs today, after ingress parsing and the comparand doors\". Per the ruling, it now names the executor boundary: on the final AST, after ingress parsing, the comparand doors, the middleware chain (`packages/objectql/src/engine.ts#executeWithMiddleware`) and the before-hooks, immediately before each driver call of `find`, `findOne`, `count` and `aggregate`. The rest of D2 is unchanged: steps 1 to 3, the composed form, and the uncomposed refusal at the driver.\n2. **E0's status line.** The record read \"Proposed (2026-10-10)\". It now reads \"Accepted (2026-10-11), accepted by the merge that landed it on `main` (#22707)\", in the words of the E0 row on #22788. The approving review on that PR was submitted 2026-10-11T06:02Z, and the merge followed at 06:38Z (`a2e94c2a05`). One **Amended** (2026-10-12) note names the D2 change and the ruling. Two verbs in the same paragraph move to the past tense (\"becomes\" to \"became\", \"stays\" to \"stayed\"), because the paragraph described the time before acceptance.\n\nNothing else in the record moves.\n\n## Why\n\nThe old position ran before the middleware chain. All six D4 consumers write their leaf inside that chain (object-scoped middlewares writing `ctx.ast.where`), and `beforeFind` hooks rewrite the AST inside the executor. So a seam at the old position could never see a D4 leaf. The previous dev measured this on `246edf5b39` (os-dev-report `6119740461`). The director seat re-read it on `74c4b3435e4d` for the ruling. On `9432bac077` the positions are unchanged: `find` calls `resolveWhereTokens` at `engine.ts` line 13160, the chain at 13162, `beforeFind` at 13174 and `driver.find` at 13178.\n\n## Gates\n\n`node scripts/pm/dispatch-gates.mjs --commands --repo objectstack-ai/objectstack` derives 19 families on this diff, and all 19 were run at `d43e9a99ed`. Exit codes were captured before any pipe.\n\n- Exit 0: `check-adr-links` (and `--self-test`), `check-adr-symbol-anchors` (and `--self-test`; its verdict line reads \"2317 anchors across 142 records resolve\"), `check-ci-filter-parity`, `check-closing-keyword-parity` (and `--self-test`), `check-comment-mask-corpus`, `check:adr-anchors`, `check:cross-package-test-inputs`, `check:doc-authoring`, `check:driver-memory-census`, `check:gitlink-declared`, `check:nul-bytes`, `check:pm-governed-merges`, `check:pm-prior-rulings`, `check:refd-timer-probe` and `check:watch-hint-literal`.\n- `@objectstack/lint check:doc-formula-expressions`: the first run exited 3 (PREREQUISITE NOT MET, lint was not built), so it measured nothing. After `turbo run build --filter=@objectstack/formula --filter=@objectstack/lint` (under `os-verify-lock`, VERDICT command-exit 0), the rerun exited 0.\n- Reconciliation: `dispatch-gates --ran` reports \"19 derived famil(ies) accounted for — 19 run, 0 NOT-MEASURED (a DERIVED zero)\".\n\n**Changeset:** none. `docs/adr/**` publishes nothing from any package. The dispatch forbids label writes, so `skip-changeset` is not applied here. The seat applies it, or `Check Changeset` stays red; it is not one of the seven required contexts.\n\n## 维护者速读(草稿)\n\n**改了什么:** 只改一份 ADR(ADR-0139,「只返回你能读的父记录」)里的两处文字,不动任何代码。\n- 第一处:D2 说明引擎在哪一步把这个叶子换成真正的查询条件。原来写的位置在中间件链之前,现在改为「最终查询交给数据库驱动之前的最后一步」。\n- 第二处:状态行从「提议」改为「已接受」,注明是 #22707 合并时接受的。\n\n**为什么改:** 你在 #22861 上已经裁了 A。原文的位置看不见六个使用方自己写入的条件(活动流、审计、评论、回复、附件、字段隐藏),因为它们都在中间件链里写入。照原文实现,这些条件会原样漏到数据库。这次只是把已裁的结论写进记录。状态行是之前就欠下的 E0。\n\n**风险与代价(含回滚):** 纯文档,没有运行时影响,也不发布任何包。回滚就是撤回这一个 PR。代码 PR(E2)不等这份文字,这份文字也不等代码。\n\n**席位意见:**\n\n**你要做的:** 看过这两处改动后,在本 PR 上点 APPROVE。\n\n---\n_Generated by [Claude Code](https://claude.ai/code/session_01ADzJtzYTLUfgrRZHxkagkX)_\n"
+}

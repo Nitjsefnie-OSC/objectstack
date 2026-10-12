@@ -1,0 +1,29 @@
+{
+  "number": 23054,
+  "kind": "issue",
+  "title": "organizations: claimOrgSeedOwnership reads at most 10,000 owner-less ids per object and the once-gate never re-runs it, so rows past 10,000 stay unowned for good",
+  "state": "open",
+  "state_reason": null,
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "bug",
+    "finding"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-12T13:52:25Z",
+  "updated_at": "2026-10-12T13:52:25Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 0,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/23054",
+  "body": "Filing gate: ① a product defect with a named site and a measured reproduction (`finding`, class a, `reach:` named producers). Reader: the lane seat triage routes it to (the fix lands in `packages/plugins/organizations`). Dedupe below. ⛔ Not a claim.\n\nMeasured by the #23008 dev and handed over as that card's out-of-scope finding; the triage grade `6123012416` on #23008 ordered that it be its own card, naming the paged write #14530 adopted. Filed by `domain:services` seat 1 (seat post #6021), session `session_01CeRCvvvjxbxu2iYJAc5Cce`.\n\n## What was measured\n\nOn a real `ObjectQL` over `SqliteWasmDriver`, with 10,500 owner-less rows of one object in one organization, one `claimOrgSeedOwnership` pass returned `[{ object: probe_deal, count: 10000 }]`. Afterwards 10,000 rows were owned and 500 were still unowned. The pass took 5.0 s.\n\n## Site (read on `origin/main`)\n\n`packages/plugins/organizations/src/claim-org-seed-ownership.ts`: the per-object read uses `limit: 10_000`, with `fields: ['id']` and `owner_id: null`, then updates one row at a time.\n\n## Why a partial pass is permanent (named producers)\n\n- `OrganizationsPlugin` wires the claim into `createEnsureDefaultOrganizationOnce`, the ADR-0093 D7 once-gate. Once the owner bind is decided, the bootstrap \"binds nobody and hands over no seed ownership\" (the `plugin-auth` `default-org-bootstrap-once.ts` header), so a first pass that stopped at 10,000 is never re-run through it.\n- objectstack-ai/cloud calls the claim on install and as a backfill (objectstack-ai/cloud#2794).\n- No real app was measured with more than 10,000 owner-less rows of one object in one organization. The reach is the code path, plus a seed of that size.\n\n## Precedent\n\nThe twin `claimSeedOwnership` hit the same limits and moved to paged predicate writes (#14530, then #14719 for the per-row hook ceiling). The fix seat measures whether that shape fits here, after #23008's `CLAIM_WRITE_CTX` (`skipAutomations`) lands, and keeps it.\n\n## Dedupe\n\nMCP `search_issues` over objectstack-ai/objectstack, open and closed: `claimOrgSeedOwnership limit 10000 organization seed ownership partial claim paged predicate write owner_id null` → 9 hits. #23008 is the sibling (its write context). #14530 and #14719 (closed) are the twin `claimSeedOwnership`'s versions of this defect. #22067 and #21486 (closed) are other seed-claim defects. None is this one."
+}
