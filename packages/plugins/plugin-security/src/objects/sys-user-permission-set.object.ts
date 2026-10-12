@@ -76,13 +76,19 @@ export const SysUserPermissionSet = ObjectSchema.create({
     // [ADR-0131 D10] The grant's former id reference to a catalog row. No
     // writer fills it and no reader confers anything through it: a grant names
     // its set by `permission_set` below. Optional, and kept only until D10
-    // drops the column with its data (C7b); the one-time name backfill reads
-    // it on grants written before the name column existed.
-    permission_set_id: Field.lookup('sys_permission_set', {
+    // drops the column with its data (C7b), whose verified rewrite reads it on
+    // grants written before the name column existed.
+    //
+    // [C3 stage 8] Plain text, no longer a lookup: the catalog row object it
+    // pointed at is retired. Same name, same stored ids, same two indexes
+    // below, and the same `varchar(255)` a lookup is stored in, so the column
+    // itself does not change.
+    permission_set_id: Field.text({
       label: 'Permission Set (legacy id)',
       required: false,
+      maxLength: 255,
       description:
-        '[ADR-0131 D10] Legacy id reference to a sys_permission_set row, dropped with its data by a later stage. ' +
+        '[ADR-0131 D10] Legacy id of a retired permission-set catalog row, dropped with its data by a later stage. ' +
         'Not written and not read to grant anything: the grant names its set by permission_set.',
     }),
 

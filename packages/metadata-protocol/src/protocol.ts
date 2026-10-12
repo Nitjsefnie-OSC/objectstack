@@ -5149,7 +5149,59 @@ export type PublishMaterializer = (args: {
 export type UninstallCleanup = (args: {
     packageId: string;
     actor?: string;
+    /**
+     * [ADR-0131 D3, C3 stage 8] The security-catalog items (positions,
+     * permission sets, capabilities) the package declared, read off it by the
+     * uninstalling door BEFORE it withdrew the package — so by the time a
+     * cleanup runs, the registry no longer holds them. A cleanup that revokes
+     * what those names granted reads the names here. Empty when the door read
+     * none.
+     */
+    declared?: ReadonlyArray<UninstalledCatalogItem>;
 }) => Promise<{ success: boolean; removed: number; error?: string }>;
+
+/** One security-catalog item an uninstalled package declared (ADR-0131 D3). */
+export interface UninstalledCatalogItem {
+    type: 'position' | 'permission' | 'capability';
+    name: string;
+}
+
+const UNINSTALLED_CATALOG_COLLECTIONS: ReadonlyArray<[UninstalledCatalogItem['type'], string]> = [
+    ['position', 'positions'], ['permission', 'permissions'], ['capability', 'capabilities'],
+];
+
+/**
+ * The security-catalog items a package declares: its manifest's (and its
+ * bundled plugins') `positions` / `permissions` / `capabilities` arrays, plus
+ * any of its stored `sys_metadata` rows of those types. Read by an uninstalling
+ * door before it withdraws the package, for {@link UninstallCleanup}'s
+ * `declared`. A non-array `permissions` is the ADR-0025 capability grant, not a
+ * list of sets, and is skipped.
+ */
+export function declaredCatalogItemsOf(
+    manifest: unknown,
+    rows: ReadonlyArray<{ type?: unknown; name?: unknown }> = [],
+): UninstalledCatalogItem[] {
+    const out = new Map<string, UninstalledCatalogItem>();
+    const add = (type: UninstalledCatalogItem['type'], name: unknown) => {
+        if (typeof name === 'string' && name !== '') out.set(`${type}|${name}`, { type, name });
+    };
+    const read = (source: unknown) => {
+        if (!source || typeof source !== 'object') return;
+        for (const [type, key] of UNINSTALLED_CATALOG_COLLECTIONS) {
+            const items = (source as Record<string, unknown>)[key];
+            if (Array.isArray(items)) for (const item of items) add(type, (item as { name?: unknown } | null)?.name);
+        }
+    };
+    read(manifest);
+    const plugins = (manifest as { plugins?: unknown } | null | undefined)?.plugins;
+    if (Array.isArray(plugins)) for (const plugin of plugins) read(plugin);
+    for (const row of rows) {
+        const type = canonicalMetaType(String(row?.type ?? ''));
+        if (type === 'position' || type === 'permission' || type === 'capability') add(type, row?.name);
+    }
+    return [...out.values()];
+}
 
 /** Per-cleanup outcome reported on the `deletePackage` response. */
 export interface UninstallCleanupOutcome {
@@ -5950,7 +6002,10 @@ export class ObjectStackProtocolImplementation implements
      * does — and never swallows it.
      */
     async runUninstallCleanups(
-        request: Pick<DeletePackageRequest, 'packageId' | 'actor'>,
+        request: Pick<DeletePackageRequest, 'packageId' | 'actor'> & {
+            /** The package's catalog items, read before its withdrawal ({@link declaredCatalogItemsOf}). */
+            declared?: ReadonlyArray<UninstalledCatalogItem>;
+        },
     ): Promise<UninstallCleanupOutcome[]> {
         const cleanups: UninstallCleanupOutcome[] = [];
         for (const [name, cleanup] of this.uninstallCleanups) {
@@ -5958,6 +6013,7 @@ export class ObjectStackProtocolImplementation implements
                 const r = await cleanup({
                     packageId: request.packageId,
                     ...(request.actor ? { actor: request.actor } : {}),
+                    ...(request.declared ? { declared: request.declared } : {}),
                 });
                 cleanups.push({
                     name,
@@ -23868,6 +23924,17 @@ export class ObjectStackProtocolImplementation implements
             packageRegistry.assertPackageUninstallable(request.packageId);
         }
 
+        // [ADR-0131 D3, C3 stage 8] What the package declared in the security
+        // catalog, read now: the withdrawal below takes it out of the registry
+        // and the per-item deletes take its rows, so the cleanups that revoke
+        // grants by name could not read it afterwards.
+        let declared: UninstalledCatalogItem[] = [];
+        try {
+            declared = declaredCatalogItemsOf(packageRegistry?.getPackage?.(request.packageId)?.manifest, rows);
+        } catch {
+            declared = declaredCatalogItemsOf(undefined, rows);
+        }
+
         // [#21276] THE STORE DELETE COMES FIRST, and its refusal is this verb's
         // refusal. Triage's ruling: refuse before withdrawing, not undo. Every
         // step above this one only reads; every step below it — the per-item
@@ -24006,7 +24073,7 @@ export class ObjectStackProtocolImplementation implements
         // a security condition) is visible to the caller, never silent.
         // [#21490] Through the registry's one runner, which install-local's
         // uninstall door calls too.
-        const cleanups = await this.runUninstallCleanups(request);
+        const cleanups = await this.runUninstallCleanups({ ...request, declared });
 
         return {
             success: failed.length === 0 && deleted.length > 0,

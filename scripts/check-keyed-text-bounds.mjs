@@ -383,16 +383,20 @@ const MEASURED = Object.freeze({
   // reproduces it, and for why that distinction is not a detail. Immutable, so
   // the record stays reproducible forever even as `main` moves away from it.
   // ⛔ Never repoint it without re-running all five counts against the new ref.
-  ref: 'fa5d137ab0',
-  files: 113,
-  objects: 118,
-  indexEntries: 255,
-  textFields: 594,
-  keyedTextColumns: 151,
+  //
+  // [C3 stage 8] Re-measured, all five, when the four security-catalog row
+  // objects retired (ADR-0131 D3) and took their declarations and 25 index
+  // entries with them: the census is the stage-8 branch's, the ref its base.
+  ref: 'eab7236ff7',
+  files: 108,
+  objects: 113,
+  indexEntries: 230,
+  textFields: 569,
+  keyedTextColumns: 144,
 });
 const MIN_FILES = 105;
 const MIN_OBJECTS = 110;
-const MIN_INDEX_ENTRIES = 235;
+const MIN_INDEX_ENTRIES = 210;
 const MIN_TEXT_FIELDS = 550;
 const MIN_KEYED_TEXT_COLUMNS = 140;
 
@@ -1763,11 +1767,14 @@ export function selfTest() {
       + 'Every other site interpolates it, so a count and its tree cannot be edited apart',
       ownCode.split(MEASURED.ref).length - 1 === 1,
       `${ownCode.split(MEASURED.ref).length - 1} code occurrence(s) of the ref literal`);
-    const provDrifted = provenanceLine({
-      files: 112, objects: 117, indexEntries: 251, textFields: 589, keyedTextColumns: 148,
-    });
+    // A census just below the record, derived from it, so a re-measure moves it too.
+    const drifted = {
+      files: MEASURED.files - 1, objects: MEASURED.objects - 1, indexEntries: MEASURED.indexEntries - 4,
+      textFields: MEASURED.textFields - 5, keyedTextColumns: MEASURED.keyedTextColumns - 3,
+    };
+    const provDrifted = provenanceLine(drifted);
     t('PROVENANCE — a passing run shows the census it read AND the census the floors came from',
-      provDrifted.includes('112/117/251/589/148')
+      provDrifted.includes(FLOORS.map(([key]) => drifted[key]).join('/'))
       && provDrifted.includes(FLOORS.map(([key]) => MEASURED[key]).join('/'))
       && provDrifted.includes(FLOORS.map(([, min]) => min).join('/'))
       && provDrifted.includes(MEASURED.ref), provDrifted);

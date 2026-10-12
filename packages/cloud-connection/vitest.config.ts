@@ -50,6 +50,15 @@ export default defineConfig({
         find: /^@objectstack\/metadata-core$/,
         replacement: path.resolve(__dirname, '../metadata-core/src/index.ts'),
       },
+      // The install-local uninstall door reads a package's declared catalog
+      // items with `declaredCatalogItemsOf` (C3 stage 8) — a VALUE import of
+      // `@objectstack/metadata-protocol`, so its suites must run this checkout's
+      // source, not a `metadata-protocol/dist` that may be behind it. Anchored,
+      // same reason as the entries above.
+      {
+        find: /^@objectstack\/metadata-protocol$/,
+        replacement: path.resolve(__dirname, '../metadata-protocol/src/index.ts'),
+      },
     ],
   },
   // Discovery is untouched — but this file is NOT "the alias and nothing else".
