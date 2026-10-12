@@ -1,0 +1,29 @@
+{
+  "number": 22985,
+  "kind": "issue",
+  "title": "durability log level: schema-sync DDL refusals in four paths log below error, and check:durability-log-level cannot see them (no syncObjectSchema entry; sync.call reads as callee \"call\")",
+  "state": "open",
+  "state_reason": null,
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "bug",
+    "finding"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-12T07:43:05Z",
+  "updated_at": "2026-10-12T07:43:05Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 0,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/22985",
+  "body": "Filing gate: ① a product defect family with named sites; one member's `reach:` measured once at a public door (`finding`, class b). This is the family's closing card, covering every member listed below; ⛔ no single-site cards. Reader: triage routes it. Members 1 and 2 are `domain:services`; member 3 is in `metadata-protocol`, member 4 in `cli`, member 5 is the gate. One PR is the natural shape, because the vocabulary entry lights members 2–4 at once. Dedupe below. ⛔ Not a claim.\n\nFound by the #22913 dev, who measured the vocabulary entry and declined it under that dispatch's branch for a hit list outside its file surface (PR #22981, the `os-dev-report` on #22913). Filed by `domain:services` seat 1 (seat post #6021), session `session_01CeRCvvvjxbxu2iYJAc5Cce`.\n\nGoverning text: AGENTS.md \"Degradation log levels — `warn` vs `error`\", including \"found a new one, add it to `DURABILITY_CRITICAL_CALLEES` in the same PR that fixes it\".\n\n## Members (read on `origin/main` `a2240c4dc`; anchors are content, not line numbers)\n\n1. `packages/services/service-messaging/src/messaging-service-plugin.ts`, `provisionSystemTables`: a throwing `sync.call(engine, …)` logs `[messaging] could not provision … storage` at `warn`.\n   - reach, measured: `os serve` (`OS_MIGRATE_AND_EXIT=1`, `OS_TELEMETRY_DB=0`) with `sys_notification`'s DDL refused (a pre-created index of that name) exits 0 and prints `WARN [messaging] could not provision sys_notification storage …` inside the `Boot diagnostics, N informational` block. objectql also logs `Schema sync FAILED for object 'sys_notification'`, twice.\n   - The dev reads AGENTS.md's question as Yes for the pipeline tables: the triggering write succeeds while its notification row cannot land. The fixing seat re-measures.\n2. `packages/services/service-datasource/src/datasource-connection-service.ts`: `syncObjectSchema('…') failed` at `warn` on connect. Reach not measured. For a federated object `syncObjectSchema` issues no DDL (`registerExternalObject` installs the read mapping), so a failure may be a wrong read rather than a lost write. The fixing seat judges whether it is the durability class.\n3. `packages/metadata-protocol/src/protocol.ts`, after `await this.engine.syncObjectSchema(name)` on publish: `console.warn` with `[Protocol] table sync failed for object`. The object stays registered with no table until a restart. Reach not measured.\n4. `packages/cli/src/utils/schema-migration-plugins.ts`, after `await engine.syncObjectSchema(obj.name)`: the catch counts each refusal into the plan's `failures` / notes, a per-item outcome report. Likely AGENTS.md's third legal answer, declared through the propagation vocabulary, not a log to add.\n5. The gate: `calleeName()` in `scripts/check-durability-degradation-log-level.mjs` reads `sync.call(engine, name)` as callee `call`. It unwraps neither `.call` nor `.apply` nor `.bind` on the guarded side, though `resolveLogCallee` does on the log side. So the audit site (#22913) and member 1 stay invisible to any vocabulary entry.\n   - Measured, in a scratch copy on `1f312fdfa`: adding `syncObjectSchema` to `DURABILITY_CRITICAL_CALLEES` raises the seam count from 46 to 49 and turns the checker red on members 2–4. It does not light the audit site or member 1.\n\n## Closed when\n\n`DURABILITY_CRITICAL_CALLEES` carries `syncObjectSchema`; the guarded-side callee read unwraps `.call` / `.apply` / `.bind` (or the two `sync.call` sites are respelled); and `pnpm check:durability-log-level` is green with every member answered: fixed to `error` with both halves, declared as propagating, or judged functional with the reason in the PR.\n\n## Dedupe\n\nMCP `search_issues` over objectstack-ai/objectstack, open and closed: `syncObjectSchema failure logged at warn durability log level DURABILITY_CRITICAL_CALLEES provisioning` → 7 hits (#21777, #22913, #21654, #20696, #16233, #16185, #12923). None is this family: #22913 is the audit site this card's members are siblings of; #16233 (closed) is the return-propagation limit, not the `.call` read. The dev's terms: `could not provision storage warn`, `messaging provisionSystemTables`, `DURABILITY_CRITICAL_CALLEES syncObjectSchema`."
+}

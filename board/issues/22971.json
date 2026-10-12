@@ -1,0 +1,35 @@
+{
+  "number": 22971,
+  "kind": "issue",
+  "title": "[Decision] 「非托管」安装复制带 `_lock` 的打包项时：去掉锁（A）、拒绝这类包（B），还是原样保留锁（C）？（ADR-0131 D6 × ADR-0010 保护模型）",
+  "state": "closed",
+  "state_reason": "completed",
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "area:access",
+    "domain:spec",
+    "priority:p2",
+    "security"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-12T06:57:35Z",
+  "updated_at": "2026-10-12T07:25:49Z",
+  "closed_at": "2026-10-12T07:25:49Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": null,
+  "comments": 2,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/22971",
+  "body": "Ruled: 6119681934 · letter A · 2026-10-12T07:24Z\n\nFiling gate ②: a decision only the maintainer can make. Every option either loosens a protection layer that ADR-0010 gives package authors, or adds a new authoring refusal. Filed by the triage seat (seat post #6015, `session_01AavokzJ5DndAwitDXvKy4U`) as the answer to #15213's `pm:retriage` (`6118956122`). ~~⛔ Not a claim.~~\n\n**Anchor:** #15213 (S2 is in flight as PR #22916). S2 lands without this answer, because its shipped texts already name the `_lock` exception (`6118361628`). **S3 (the authoring page) and any change to `importUnmanagedPackage`'s planner wait on it.**\n\n## 维护者速读\n\n你批的「非托管（unmanaged）安装」（#15213 → B，ADR-0131 D6）规定：包里的元数据复制一次进环境，从此是环境自己的，\"在 Studio 里像自己写的一样可以改\"。但 ADR-0010 的保护模型允许包作者给某个条目加锁（`_lock`），理由例如\"租户改了会把用户锁在外面\"。开发实测：带锁的条目被原样复制后，下一次在 Studio 里保存答 403 `ITEM_LOCKED`，和\"像自己写的一样可以改\"矛盾。三条路：\n- **A**：复制时去掉锁，导入结果逐条列出去掉了哪些锁。和 Salesforce 非托管包一致：装进来就全归你。一个小改动，随 S3 或 S2 的后续。\n- **B**：一个包如果既允许非托管安装、又带锁，就在编写时（`defineStack`）和安装入口直接拒绝，作者二选一。新增一条拒绝，约 1 个 PR。\n- **C**：原样保留锁，复制品仍锁着，只改文档。不写代码，但与 D6\"可以改\"的原文相抵。\n\n席位推荐 A，其次 B。\n\n选 A、B 还是 C？\n\n<!-- os-decision-facets -->\nos-decision-facets\n- ① 项目长远合理性：A 让「非托管 = 环境自己的」只有一种含义，与 Salesforce 非托管包一致；B 把锁和非托管做成互斥，规则清楚但多一条拒绝；C 让 D6 的原文有例外。\n- ② 实际业务拉动：`examples/` 里 `_lock:` 为 0，拉动是前瞻的；S3 的编写页要写明这一条。\n- ③ 防 AI 犯错：A 下导入结果逐条点名去掉的锁，不静默；B 在编写时就响亮拒绝；C 下 AI 写的「可编辑」承诺会在保存时被 403 打脸。\n- ④ 创业阶段不扩散：A 不新增门禁；B 新增一条编写期和安装期拒绝（新增门禁默认否）；C 零代码。\n\n## Background (measured)\n\n- **S2 report `6116157070`, open question 1, carried unruled by ACCEPT `6117037795`:** a package item authored with `_lock: 'full'` is copied as written by an `unmanaged` install. On a showcase boot, the next `PUT /api/v1/meta/view/NAME` answered `403 ITEM_LOCKED`.\n- **`examples/`:** zero `_lock:` occurrences (the S2 dev), so no shipped package hits this today.\n- **The vendor's consent:** a package opts into `unmanaged` explicitly through its `installModes` (S2's manifest key), so the vendor chose to let environments take copies.\n\n## Governing text\n\n- **ADR-0131 D6** (`docs/adr/0131-…md` near `:414`): \"**Unmanaged.** The package's metadata is copied **once** into the environment definition ledger as environment-provenance items — from then on it is the environment's own metadata, editable in Studio like anything authored there … Salesforce's unmanaged package.\"\n- **ADR-0010** (Metadata Protection Model): L3 per-item `_lock` → `403 item_locked`. Package-level `metadataDefaults.lock`, for example `lockReason: 'Core admin UI — tenant edits can lock users out'`, is resolved into each artifact's `_lock` by the loader.\n- **Ruling on #15213:** B, spelled `unmanaged` (`6108509158`, and the spelling note in ADR-0131 `:380`).\n- **Triage's rule:** loosening a protection boundary always escalates. That is why this is not answered in the retriage.\n\n## Options × real cost × workload\n\n| Option | What it does | What a customer sees | Workload |\n|:--|:--|:--|:--|\n| **A** | The unmanaged import strips `_lock` / `_lockReason` / `_lockSource` from each copied item, and the import result names each stripped lock | Every copied item is editable, as D6 says. The admin sees which vendor locks were dropped | `domain:spec` (planner) · small, inside the S3 or S2 follow-up PR · precedent: none |\n| **B** | A package that permits `unmanaged` and ships any locked item is refused at `defineStack` and at the install door, naming the items | Package authors choose: locks or unmanaged installs. A locked item can never be copied | `domain:spec` · 1 PR, a new refusal (`Clause-②: no`, narrowing) · precedent: the stack aggregate's other refusals |\n| **C** | Copies keep their locks. The authoring page states the exception | A copied locked item stays locked, against D6's \"editable\" | docs only |\n\nPrior rulings read: #15213 B (`6108509158`); ADR-0131 D6 (`:414`–`:419`) and its spelling note (`:380`); ADR-0010 L3 and the `metadataDefaults.lock` loader rule; S2 report `6116157070`; ACCEPT `6117037795`; retriage `6118956122`.\n\n**Recommended: A. Fallback: B.**\n- On ① alone, A: the vendor opted into `unmanaged`, and D6 defines that as \"the environment's own metadata\". A visible strip keeps that one meaning.\n- ②③④ do not flip it: ④ favours A, ③ is close between A and B.\n- **Confidence gap:** a vendor may want some items never copied unlocked. B serves that, at the cost of a new refusal.\n"
+}

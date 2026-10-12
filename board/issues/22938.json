@@ -1,0 +1,34 @@
+{
+  "number": 22938,
+  "kind": "issue",
+  "title": "[Decision] 17.7.0 的两个跨租户写入（W、W2）：维持 #15193「不做 17.x 发布线」，只发安全公告加规避说明（A）；一次性 17.7.1（B）；还是恢复 17.x 维护分支（C）",
+  "state": "closed",
+  "state_reason": "completed",
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "domain:devx",
+    "priority:p1",
+    "security"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-12T03:57:53Z",
+  "updated_at": "2026-10-12T07:13:57Z",
+  "closed_at": "2026-10-12T07:13:57Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": null,
+  "comments": 5,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/22938",
+  "body": "Ruled: 6119525648 · letter N (npm) · 2026-10-12T07:13Z\nCloud half: **D 否** (cloud waits for v18) · the maintainer's word verbatim 「22938 cloud 等 v18」\n\nFiling gate ②：只有维护者能做的决定。要不要推翻维护者自己在 #15193 上的发布线裁定，以及安全公告怎么发，都是发布和安全披露的取舍。立卡：epic PM `session_01Rerax7QTjKMPCUZxQUtPFR`（`marchtian`），席位 `epic:#15194`。维护者在本席会话中要求立此卡。\n\n**锚点：** #15193 已关（v18 开线门）；#21993（17.x 分支）已按 `not_planned` 关闭，所以单开本卡。\n\n**查重：** 搜 objectstack 卡，关键词 17.x / 17.7.1 / backport / advisory / release/17.x，开着的卡 0 张。#21993 已关。\n\n**动手的读者：** 裁后由本席执行。A 由本席起草公告文本，维护者发布；B 由本席派开发做回移，维护者手工发布。\n\n## 维护者速读\n\n本 epic 实测到的两个跨租户写入，在已发布的 17.7.0 上同样存在（6114989076，在 17.7.0 的发版提交 `4e4e881427` 上实测，`isolated` 和 `group` 两种模式都有）：\n- **W：**组织 A 的管理员改了一个全环境共享的权限集（例如加上 `manage_users`），组织 B 的成员随即获得这个权限。\n- **W2：**通过安装、升级或卸载带权限目录的 package，达到同样的效果。\n\nmain 上 W 已合入（#22895），W2 正在做，v18 会带上这两个修复。问题是 17.x 怎么办。\n\n**受影响的范围比较窄：**只有多租户隔离模式（`isolated` / `group`），并且运营方把 `manage_metadata`（或装 package 的权限）授给了组织级的人。默认的 `organization_admin` 没有这个权限（6113841670）。单租户（`single`）不受影响。\n\n**为什么要你决定：**你 10 月 6 日在 #15193 上裁过：\n- 「不建议再建立一套 npm 发布流程，我运维太麻烦」（6018081901）；\n- 「cloud 也不需要钉分支」（6018207607）。\n\n所以现在没有 17.x 分支，也没有 17.x 发布通道。要给 17.x 打补丁，就得部分推翻这两条裁定。\n\n三条路：\n- **A 维持裁定，只发安全公告：**说明受影响条件、规避办法（不要把 `manage_metadata` 或装 package 的权限授给组织级的人），以及\"v18 已修复\"。不写代码。\n- **B 一次性 17.7.1：**从 17.7.0 的 tag 拉一个临时分支，把 W 和 W2 移过去，你手工发一次 npm，不建常设流程。\n- **C 恢复 17.x 维护分支：**回到 #21993 原来的方案，常设分支加回移规则，不发 npm。npm 用户拿不到修复，只对按提交钉版本的部署（如 cloud）有用。\n\n**本席推荐 A**，回退 B。选 A、B 还是 C？\n\n## 背景\n\n- **17.7.0 实测**（6114989076）：\n  - W：组织 A 管理员 `PUT /api/v1/meta/permission/w17_shared` 加 `manage_users`，返回 200，组织 B 成员随即获得 `manage_users`；\n  - W2：`install-local` 的升级和卸载，经各组织的副本（17.x 的 #10103 方案 C）改变别的组织的权限；\n  - 对照组：运营方本来就能写；`single` 下只有一个组织，属于预期行为。\n- **前提条件**（6113841670）：需要运营层级以下的人持有 `manage_metadata`。默认 `organization_admin` 没有。能触达的情况有三种：运营方授出的权限集；隔离模式下退役的不限范围的 `admin_full_access`；委派的 `authorEnvironmentSets`（只能到达数据门）。\n- **17.x 和 main 的代码差异大：**17.x 还有各组织副本的目录（#10103 方案 C），main 已经在 ADR-0131 下改成单一注册表。所以 W/W2 移不过去，只能在 17.x 代码上重写（未测量工作量）。\n- **发布机制：**`release.yml` 只在推到 main 时运行，main 处于 `pre` / `next` 模式。17.7.1 只能由你手工发布（AGENTS.md Prime Directive #15）。\n- **cloud：**cloud 按提交钉框架版本（`.objectstack-sha`）。cloud 用不用隔离模式、有没有给组织级的人授 `manage_metadata`，本席看不到（cloud 仓不在本会话范围）。\n\n## Governing text\n\n- **#15193，6018081901：**「不建议再建立一套 npm 发布流程，我运维太麻烦」，以及 \"No npm publish from it: there is no second release pipeline to operate. npm's 17.x line ends at what `main` publishes before the cut.\"\n- **#15193，6018207607：**「cloud 也不需要钉分支」，以及 \"no `release/17.x` at all\"。\n- **objectstack AGENTS.md Prime Directive #15：**\"A version release is performed by the maintainer, by hand — no AI seat publishes, tags, cuts a Release, or triggers a release workflow\"。\n- **ADR-0131 D3：**\"the server refuses anyway\"（W 和 W2 实现的就是这条）。\n\n## 前提（每条带复核命令）\n\n- 没有 17.x 分支：`git ls-remote --heads origin 'release/*'`，应为空。\n- 17.7.0 的 tag：`git ls-remote --tags origin '*@17.7.0'`，指向 `4e4e881427`。\n- 发布只走 main：`git show origin/main:.github/workflows/release.yml | sed -n '/^on:/,/^jobs:/p'`。\n\n## 选项 × 真实代价\n\n| 选项 | 做什么 | 能感知的后果 | 工作量 |\n|---|---|---|---|\n| **A 只发公告** | 本席起草安全公告：受影响条件、规避配置、\"v18 修复\"；你在 GitHub Security Advisory 发布 | 17.x 隔离模式用户按规避说明收紧授权；代码不变，漏洞要到升级 v18 才消失 | 本席约 1 小时出文本，你发布；无先例 |\n| **B 一次性 17.7.1** | 从 tag `4e4e881427` 拉临时分支，在 17.x 代码上重写 W/W2 的拒绝逻辑，加测试，你手工发一次 npm | 17.x 用户升小版本即可修复 | 2 个 PR，在 17.x 上重写（main 上 W 是 +1,108 行，17.x 的结构不同，未测量），外加一次手工发布；部分推翻 6018081901 |\n| **C 恢复维护分支** | 恢复 #21993 原方案：`release/17.x` 加回移规则，不发 npm | 只有按提交钉版本的部署（如 cloud）受益；npm 用户拿不到 | 1 个流程 PR 加 B 的两个回移 PR；推翻 6018207607；常设维护负担 |\n\n## 业务含义直译\n\n- **A：**像很多厂商对旧大版本的做法：\"这个问题只在新版修复，旧版请按以下方式配置规避。\"\n- **B：**给旧版打一个安全补丁，只打这一次。\n- **C：**旧版进入长期维护。\n\n## 四轴（从业务看）\n\n- **项目长远合理性（领起）：**v18 是这次重构的终点，17.x 结构已经不同，在旧结构上重写安全逻辑，等于维护两套。主流开源项目对\"即将被大版本取代、触发条件窄\"的问题，通常只发公告加规避说明。A 与你在 #15193 的方向一致。\n- **实际业务拉动：**受影响面要同时满足隔离模式，以及运营方把 `manage_metadata` 授给组织级的人。今天谁撞上，本席看不到，cloud 是唯一可能的大户。\n- **防 AI 犯错（出错时谁看到什么）：**\n  - A：漏洞在 17.x 上一直存在，靠运营方读公告自查，属于静默风险。\n  - B 和 C：服务端会响亮拒绝。\n  - 这一轴 B/C 胜，和其他轴冲突，取舍交你。\n- **创业阶段不扩散：**A 不增加任何流程；B 增加一次性工作；C 增加常设义务，正是你当初拒绝的。\n\n<!-- os-decision-facets -->\nos-decision-facets\n- ① 项目长远合理性：v18 是终点，17.x 结构不同；A 与 #15193 方向一致，B 是一次性偏离，C 恢复你拒绝过的常设维护。\n- ② 实际业务拉动：触发要同时满足隔离模式和给组织级的人授 manage_metadata，默认管理员没有；谁在用本席看不到，cloud 是关键未知。\n- ③ 防 AI 犯错：A 依赖运营方读公告，静默；B、C 由服务端响亮拒绝。\n- ④ 创业阶段不扩散：A < B < C。\n\nPrior rulings read: `17.x`, `release/17.x`, `npm publish lane`, `backport` on #15193, #21993 and AGENTS.md → 6018081901, 6018207607 (both on #15193), Prime Directive #15; threads: #15193, #21993.\n\n## 推荐\n\n**推荐 A**，回退 B。\n- 只看①选 A；②③④ 是否翻转：否。③上 B/C 更强，但只调时序，不翻字母。\n- 工作量：A 约 1 小时；B 至少 2 个 PR 加一次手工发布，A 和 B 差距超过 3 倍，在此点名。\n- **置信缺口：**\n  - cloud 是否运行隔离模式，并给组织级的人授了 `manage_metadata`。如果是，cloud 是实际受害者，建议改选 B，或让 cloud 席位先测一次；\n  - 17.x 上重写 W/W2 的确切工作量未测量；\n  - 没有统计 npm 上 17.x 隔离模式的安装量。\n\n## 裁后执行\n\n- **裁 A：**本席起草安全公告文本（英文，含受影响条件、规避配置、修复版本）贴在本卡，你在 GitHub Security Advisory 发布。#15204 上记录\"17.x 只发公告\"。\n- **裁 B：**本席先派开发在 tag `4e4e881427` 上测量重写工作量，报回后派 2 个回移 PR（W、W2），合到临时分支，你手工发布 `17.7.1`。不建常设流程。\n- **裁 C：**本席派 1 个流程 PR 恢复 #21993 的方案，加上 B 的两个回移 PR。\n- 不论裁哪一项，你只需回一个字母。\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_\n"
+}

@@ -1,0 +1,38 @@
+{
+  "number": 22949,
+  "kind": "issue",
+  "title": "ci: merge-queue `Test Core` reds on the new suite-duration ceiling — `@objectstack/cloud-connection` measured 177.5 s and 200.3 s vs its 163.89 s ceiling, in two groups of PRs that do not touch it (live since `1bd612bd6`)",
+  "state": "closed",
+  "state_reason": "completed",
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "area:devpath",
+    "bug",
+    "domain:devx",
+    "priority:p1",
+    "tooling"
+  ],
+  "assignees": [
+    "os-warren"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-12T04:48:15Z",
+  "updated_at": "2026-10-12T08:35:18Z",
+  "closed_at": "2026-10-12T08:33:52Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": null,
+  "comments": 20,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/22949",
+  "body": "Unblocks: #22902\nRuled: 6119186511 · letter C2 (both timing steps) + an absolute floor · 2026-10-12T06:45Z\nFiling gate **①**: a defect with a named landing point and a measured cost. **Class (a):** a queue red that is no PR's, and it ejects PRs and rebuilds the queue behind them. `reach:` named real producer: merge-queue runs `38202924710` and `38203387941`, which ejected PR #22931 and PR #22936's group.\n\nFiled by `domain:spec` seat 1 (#6017) · `os-warren` · session `session_019G5ZnRrTMiwcHG6iZM19zf`, from the queue-ejection triage on PR #22931 (`6117898114`). ~~⛔ Not a claim.~~ Lane and grade are triage's. Under the main-red convention ② this card anchors this failing check, and later sightings comment here.\n\n**Reader who acts:** triage grades it and names the lane. The gate is `scripts/check-test-suite-ceilings.mjs` (#16468, letter A), and the table is the `ceilings` field `scripts/measure-test-shard-timings.mjs` writes into `scripts/test-shard-timings.json`. A ceiling rises only through `RULED_CEILING_RAISES` (`check-test-suite-ceilings.mjs:135`, empty today), which needs a ruling's comment URL. So the remedy is not a seat's to pick (header: \"a ceiling rises only by a ruling\").\n\n## What is measured\n\n- **The table went live today.** The refresh `1bd612bd6` (#22923, merged 2026-10-12T03:58Z) is the first dataset carrying a `ceilings` field. The previous one, `040184752`, has none, which the gate reads as NOT MEASURED and exits 0. Its landing record on #22917 says so: \"this is the first refresh to write the suite-duration ceiling table\".\n- **Two queue builds after it, both red on one package:**\n  - `38202924710` (group `pr-22931`, base `51b43a8dc4`): `Test Core` → \"Check the per-package suite-duration ceilings\" → `@objectstack/cloud-connection: 177.53s, over its 163.89s ceiling. Slowest file: src/marketplace-install-local-seed-lookup.test.ts 7.79s.`\n  - `38203387941` (group `pr-22936` stacked on it): the same step → `@objectstack/cloud-connection: 200.33s, over its 163.89s ceiling. Slowest file: src/marketplace-install-local-state-machine-exempt.test.ts 10.70s.`\n  - Read through `scripts/pm/ci-failure.mjs --run N` (check-run annotations; the job log host is unreachable from an agent container).\n- **Neither PR touches the package.** PR #22931 is `packages/spec` only (one collector in `defineStack`); PR #22936 is `packages/lint` hint text only. `packages/cloud-connection` has not changed on `main` since `bfc15d275` (10-11).\n- **The table's own numbers:** `@objectstack/cloud-connection` weighs 81.68 s with a ceiling of 163.89 s (the window's slowest run × 1.25, so about 131 s at most in the window). The queue builds ran it at 2.2× and 2.5× its weight.\n- **CONTROL, so it is load and not a constant:** PR #22931's own `Test Core` on its head `70c36c1151` (a `packages/spec` change puts every dependent, `cloud-connection` included, in the affected set) concluded `success`, ceiling step included. `main`'s push `CI` on `e357a441c6`, after the table went live, concluded `success`, and queue groups have landed since (`e357a441c6`, `51b43a8dc4`).\n\n## Why (as read)\n\n- The window behind the ceiling is the refresh's 12 hourly `schedule` runs of CI (per #22923's review record). The gate is enforced on every `Test Core`, merge-queue builds included, which run the full suite on loaded runners. A package whose queue-load time sits near 2× its window time crosses `max × 1.25` on some builds and not others.\n- So the ratchet ejects PRs on a measurement of runner load, which is the failure shape #22917 recorded for `shard-timing-drift`.\n\n## Not measured\n\n- Whether other packages sit as close to their ceilings under queue load. Only `cloud-connection` has crossed so far.\n- Whether the next queue builds of PR #22931 (re-armed once, `6117898114`) and PR #22936 (re-grouped) pass.\n\n## Direction (not a ruling)\n\nThe options are the maintainer's, because `RULED_CEILING_RAISES` needs a ruling URL. They are listed only so the grade can be priced:\n- (a) a ruled raise for `@objectstack/cloud-connection`;\n- (b) the ceiling's window includes queue-load runs, or the ceiling step reads a queue build at a different factor;\n- (c) `cloud-connection`'s slowest files (7–11 s each) get faster.\n\n⛔ Not a hand edit of `scripts/test-shard-timings.json`.\n\n## Dedupe\n\nMCP `search_issues` on this repo, closed included: `suite-duration ceilings queue failure cloud-connection over ceiling refresh dataset ceilings first table` → 0 hits. Read by number: #22917 (closed, `shard-timing-drift`, a different step; its landing record says a red after the refresh \"files fresh\"), #16468 (closed, the ratchet itself). REST list of every card created since 2026-10-12T03:00Z: none on this signature.\n\nDedupe words: suite-duration ceiling; check-test-suite-ceilings; cloud-connection over its ceiling; merge queue Test Core ceiling red; RULED_CEILING_RAISES.\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_\n"
+}

@@ -1,0 +1,36 @@
+{
+  "number": 22927,
+  "kind": "issue",
+  "title": "[Decision] isSystem 提权清单页（system-context.mdx）：保留「每处提权都要登记」，正文统计数字删掉（B）、挪进生成文件（B'）、维持（A），还是整页删（C）",
+  "state": "closed",
+  "state_reason": "completed",
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "domain:devx",
+    "priority:p2",
+    "tooling"
+  ],
+  "assignees": [
+    "os-warren"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-12T03:31:43Z",
+  "updated_at": "2026-10-12T06:55:11Z",
+  "closed_at": "2026-10-12T06:51:17Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": null,
+  "comments": 5,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/22927",
+  "body": "Unblocks: #15204\nRuled: 6117410296 · letter B · 2026-10-12T03:50Z\nFiling gate ②：只有维护者能做的决定。这是文档和 CI 治理的取舍：一份由 CI 强制维护的安全清单，值不值它带来的合并成本；能不能删一道已有裁定撑着的检查。立卡：epic PM `session_01Rerax7QTjKMPCUZxQUtPFR`（`marchtian`），席位 `epic:#15194`。维护者在本席会话中要求立此卡。\n\n**锚点：** 无自然锚点。同类前卡 #15921（「system-context.mdx 冲突比一轮验证还快」）已关，它的修复是把行号锚点改成符号锚点，统计数字留了下来。所以单开本卡。\n\n**查重：** 搜 objectstack 卡，关键词 system-context / census / isSystem page / conflict，命中 4 张：#22890、#16612、#15921、#15783，全部已关，没有开着的同题卡或决策卡。\n\n**动手的读者：** 裁后由本席派一个开发执行，1 个 PR，不在 #15194 epic 的范围内。\n\n## 维护者速读\n\n`content/docs/permissions/system-context.mdx` 是一份清单：代码里每一处读取 `ExecutionContext.isSystem`（平台唯一的提权开关）的位置，各占一行，写明这处提权跳过了什么。CI 脚本 `check-system-context-census.mjs` 在每个 PR 上重新扫描代码，强制两件事：\n1. **每处新读取都必须在页面上有一行。**这是它的核心价值：任何新增的提权位点，评审都看得见。\n2. **正文里的统计数字必须和代码一致。**例如「20 个包里的 125 处」「125 处中的 17 处」，以及「维护本表」一节的统计表，共 12 处数字。\n\n**成本全部来自第 2 条。**两个同时在途、都改了 `isSystem` 的 PR，在数字行上必然冲突。数字一样的话，git 会静默合并出错误的数字（#16919），合并队列里的复检再把它踢出去。这个文件一半自动生成、一半手写，所以 git 的自动重新生成机制处理不了它（`.gitattributes` 有记录）。\n\n**本 epic 里实测到的成本：**\n- #22895（stage W，安全修复）两小时内两次因这个文件被踢出合并队列（01:11Z、02:30Z），每次约 30–60 分钟；\n- #22881 合并时把冲突标记留在了这个文件里，文档构建变红，多了一轮补丁；\n- 10 月 5 日以来，main 的 444 个提交里有 19 个改了这个文件。\n\n四条路：\n- **A 维持现状：**价值全留，冲突照旧。\n- **B 删掉 CI 校验的统计数字，保留「每处必登记」：**正文改用不带精确数字的说法，脚本删掉数字比对这一部分。冲突只剩两个 PR 往同一处加行。\n- **B' 数字挪到一个整份自动生成的文件：**由 git 的自动重新生成机制处理，正文引用它。数字保留，冲突基本消除，但要多一套嵌入机制。\n- **C 整页连同检查删掉：**没有冲突，也不再有提权清单和强制登记。\n\n**本席推荐 B**，回退 B'。选 A、B、B' 还是 C？\n\n## 背景（实测：objectstack `origin/main` `85b4ac634e`）\n\n- **页面：**478 行，6 节，正文表格每行一个提权位点，锚点形如 `packages/…/file.ts#symbol`。\n- **检查：**`check:system-context-census`，即 `--self-test` 加正式检查，属于必需检查 `Lint & Repo Gates`。脚本 2,983 行，配套的 `scripts/isystem-census.mjs` 520 行。数字由 `DECLARED_COUNTS` 声明，共 12 项，例如 `headline-sites`、`headline-packages`；`pnpm gen:system-context-census`（`--fix`）负责重写这些数字。\n- **价值有实测：**加这道检查之前，页面写完 19 天内 111 个锚点里有 101 个已失效，代码里多了 28 处新提权、删了 2 处，而标题还写着 80 处（脚本头注释）。「每处必登记」就是为这个加的。\n- **冲突的形状：**本次 #22895 的四个冲突块全是生成的数字行，没有一行手写说明冲突（seat note 6117127086）。\n- **数字在正文里的作用：**第 13 行标题（「125 处，20 个包」）、第 146 行（plugin-sharing 占 17 处）、「不拆分」裁定一节（「125 处……拆分是跨 20 个包的破坏性变更」），以及「维护本表」的统计表。前三处是论证用的修辞；统计表是给维护者看的。\n\n## Governing text\n\n- **#4707**（本页起源）：「`isSystem: true` has at least three distinct, undocumented side effects across three packages — each one has cost an app-side bug」。\n- **页面自述：**「This page is **the authority** for what that flag actually does」，以及「The table's value is exhaustiveness, so it is built by census, not by recall」。\n- **#16919（数字改为生成）：**「Two branches each independently … bumping the same sentence to the same number is exactly how this page once went silently wrong」。\n- **#15921：**「`system-context.mdx` re-conflicts faster than one verification lap」，已关，修复为符号锚点。\n- **`.gitattributes`（本页的特殊路由）：**「It re-derives no PROSE, because prose is derived from nothing, and this page is the one routed path that carries both」。\n- **ADR：**检索 `system-context` / `census`，0092、0094、0099、0131 只把 system-context 当概念用，没有任何 ADR 规定这份页面或它的数字。none found for the page itself。\n\n## 前提（每条带复核命令）\n\n- 数字由 CI 强制：`git show origin/main:scripts/check-system-context-census.mjs | grep -n \"export const DECLARED_COUNTS\"`，应命中 1 次。\n- 它在必需检查里：`git grep -n \"check:system-context-census\" origin/main -- package.json .github/workflows`。\n- 本次冲突只在数字行：在 #22895 上比对 `git diff 7de0265fc7 a33c037719` 与 `git diff 018b077fbf b1f2335b29` 两个补丁中的 `content/docs/permissions/system-context.mdx`，差异只在数字行。\n- 改动频率：`git log --since=2026-10-05 --oneline origin/main -- content/docs/permissions/system-context.mdx | wc -l` 得 19。\n\n## 选项 × 真实代价\n\n| 选项 | 做什么 | 能感知的后果 | 工作量 |\n|---|---|---|---|\n| **A 维持现状** | 不改 | 每两个同时改 `isSystem` 的 PR 就冲突一次，每次 30–60 分钟重同步加排队；偶尔冲突标记漏网 | 0 |\n| **B 删数字、留登记** | 删掉正文中 CI 校验的数字，改写成不带精确数字的说法；去掉 `DECLARED_COUNTS` 和 `--fix` 的写数字部分；保留「每处必登记」和「锚点必须存在」两项检查；调整 `.gitattributes` 的说明 | 页面不再报精确总数（要数可以跑 `node scripts/isystem-census.mjs`）；新提权位点照样必须登记；数字冲突消失 | 1 个 PR，以删除为主，估计 −200 到 −400 行（未实测脚本里数字部分的确切行数）；无具名先例 |\n| **B' 数字挪到生成文件** | 把统计数字写进一个整份生成的文件，走 `merge=os-regen` 自动重算，正文嵌入它 | 数字保留，冲突基本消除 | 1 个 PR，约 300 行，外加确认文档站支持嵌入生成片段（**未实测**）；多一个要维护的机制 |\n| **C 整页删除** | 删页面、两个脚本、`.gitattributes` 路由行和相关 package 脚本 | 没有冲突；也不再有提权清单，新提权位点不再强制登记，回到 #4707 之前的状态 | 1 个 PR，约 −4,000 行 |\n\n（排除项 D「留页面、删检查」：有实测前例，19 天里 101/111 个锚点失效，页面会重新变成过时文档。）\n\n## 业务含义直译\n\n- **A：**一本精确到个位数的库存账，每次两人同时入库都要对账。\n- **B：**库存账照记，每件货必须登记，但不再在封面写「共 125 件」；要数随时去数。\n- **B'：**封面数字交给机器打印，人不碰。\n- **C：**不记账了，靠评审自己发现提权。\n\n## 四轴（从业务看）\n\n- **项目长远合理性（领起）：**两年后该有的样子，是每个提权位点都有登记、有评审，派生出来的数字在读取时现算，不存在文档里。主流做法也一样：Rust 生态用 `cargo-geiger` 现场统计 `unsafe`，GitHub 用 CODEOWNERS 盯敏感路径，都是逐项登记，总数实时算。B 最贴近这个终态。B' 也能到，但多一套机制。A 一直在为派生数据付合并成本。C 退回到 #4707 的问题。\n- **实际业务拉动：**今天被撞的是并行开发，本 epic 一天就撞了 3 次。精确总数只在两处论证里当修辞用，没有任何流程读取它。「每处必登记」有真实拉动：#4707 起源于 app 侧的真实 bug。\n- **防 AI 犯错（出错时谁看到什么）：**\n  - A、B、B' 在新增提权漏登记时都是响亮的 CI 红。\n  - C 是静默的：新增提权没人看见，直到 app 侧出 bug。\n  - 数字本身写错时，A 和 B' 都有 CI 兜底；B 不再有数字可写错。\n- **创业阶段不扩散：**B 是删除，C 删得更多，但删掉了真实价值；B' 新增一个机制，A 维持一个高摩擦的已声明义务。\n\n<!-- os-decision-facets -->\nos-decision-facets\n- ① 项目长远合理性：B 保留逐项登记、去掉存进文档的派生数字，最接近终态；B' 同向但多一套机制；A 持续付合并成本；C 退回 #4707 之前。\n- ② 实际业务拉动：数字冲突一天撞 3 次（#22895 两次、#22881 一次）；精确总数没有读者；「每处必登记」有 #4707 的真实 bug 拉动。\n- ③ 防 AI 犯错：A、B、B' 对漏登记都是响亮的 CI 红；C 静默；B 去掉了「数字写错」这一类错。\n- ④ 创业阶段不扩散：B 删除优先且保住价值；B' 新增机制；A 维持高摩擦义务；C 删除过度。\n\nPrior rulings read: `system-context`, `census`, `isSystem page`, `DECLARED_COUNTS` in `docs/adr/` and AGENTS.md → 4 ADR hits (0092, 0094, 0099, 0131), all about the concept, none about this page; threads: #4707, #16919, #15921, #16612.\n\n## 推荐\n\n**推荐 B**，回退 B'。\n- 只看①选 B；②③④ 是否翻转：否。②③ 支持 B；④ 上 C 删得更多，但 ① 已排除 C。\n- 工作量：B、B'、C 都是 1 个 PR，没有 ≥3× 的差距。\n- **置信缺口：**\n  - 没有实测脚本里数字比对部分的确切行数；\n  - 没有实测文档站是否支持嵌入生成片段（只影响 B'）；\n  - 冲突频率只有本 epic 一天的样本（3 次），没有统计全仓历史。\n  - 「不拆分」裁定一节用数字论证（「125 处……」），B 要改写这句。改写只换措辞（例如「一百多处、横跨二十个包」，或引用 `isystem-census.mjs` 的现算结果），不改裁定。\n\n## 裁后执行\n\n- **裁 B：**本席派 1 个开发、1 个 PR：\n  - 删 `DECLARED_COUNTS` 和 `--fix` 的写数字部分，保留人口和锚点两项检查；\n  - 改写正文 4 处数字句和「维护本表」统计表的说明；\n  - 更新 `.gitattributes` 注释；\n  - `Clause-②: no`，非受管面。\n\n  落地后，正在进行中的 #22895 / W2 / 阶段 8 不再被这个文件踢出队列。\n- **裁 B'：**同上，先实测文档站能否嵌入生成片段；不能的话报回，改走 B 或 A。\n- **裁 A：**不动，本卡关闭。\n- **裁 C：**本席派 1 个 PR 删页面、两个脚本、路由行和 package 脚本，正文指向 #4707 作为历史。\n- 不论裁哪一项，你只需回一个字母。\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_\n"
+}

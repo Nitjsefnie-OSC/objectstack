@@ -1,0 +1,35 @@
+{
+  "number": 22939,
+  "kind": "pull_request",
+  "title": "feat(plugin-security,platform-objects): grant forms pick a position or permission set by name from the catalog (#15204 B2)",
+  "state": "open",
+  "state_reason": null,
+  "draft": false,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "documentation",
+    "protocol:data",
+    "protocol:ui",
+    "size/m",
+    "tests",
+    "tooling"
+  ],
+  "assignees": [
+    "marchtian"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-12T04:06:33Z",
+  "updated_at": "2026-10-12T08:20:15Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 6,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/pull/22939",
+  "body": "Part of #15204\nClause-②: no\n\n**B2, objectstack half (objectui#7611 names it).** Setup's user page grants a position or a permission set by picking its NAME from the security catalog, instead of an `add` picker that listed `sys_position` / `sys_permission_set` rows (ADR-0131 D3/D4). This PR is one of the pair that gates #22900 (the boot stops writing `sys_permission_set` rows): once #22900 lands, a fresh database holds no such row, and the old pickers would offer nothing.\n\n## What changes\n\n| Surface | Before | Now |\n|:--|:--|:--|\n| `sys-user.page.ts` Positions / Permission Sets lists | \"Assign position\" / \"Grant permission set\" `add` pickers over `sys_position` / `sys_permission_set` rows, beside **New** | the two `add` blocks are deleted. **New** opens the grant form. Remove is the host's row delete (`RelatedRecordActionsBridge`), unchanged. The Business Units list keeps its `add` |\n| `sys_user_position.position` | a text input (type `text`) | `widget: 'position-ref'`: the form lists `GET /api/v1/meta/position` and stores the chosen name |\n| `sys_user_permission_set.permission_set` | a text input | `widget: 'permission-ref'`: the form lists `GET /api/v1/meta/permission` and stores the chosen name |\n| `sys_user_permission_set.permission_set_id` (\"Permission Set (legacy id)\") | an editable lookup on the grant form, though it grants nothing | `hidden: true`, so it is off the create and edit forms (maintainer, 2026-10-12, 「legacy id 字段隐藏，同意」). The column stays until ADR-0131 C7b drops its data |\n\n**Until the console pin moves, the two fields render as text inputs** (the type renderer: a text box for the name). `position-ref` / `permission-ref` ship in objectui#12175 (PR-5, merged as `088e0f705520`), and this repo's `.objectui-sha` still pins `4997995022f8`. An unregistered widget falls back to the `text` renderer, so nothing breaks. **The pin follows #22874:** `.objectui-sha` is that PR's single-writer path, and objectui from `e5311165` on reads `allowEnvironmentOverlay` only, which `main`'s server sends once #22874 lands. A follow-up PR then moves the pin to `088e0f705` (or later), re-measuring only that hop. `main` is unreleased, so no released build shows the gap.\n\nThis branch briefly carried that pin move (`e486abb9c`), reverted by `7de0f00c9`. The net diff is phase 2 only: 9 files, tree-identical to `d4c22c8fe`.\n\n## Measured before the build (phase 1, #15204 6116275825)\n\nOn a booted showcase, as the admin:\n- both grant lists already offered **New**;\n- with the two `add` blocks deleted, every row still offers **Delete**, and a delete was exercised end to end (UI 4 → 3 rows; the API shows the row gone).\n\nThe renderer's `onRowDelete` prefers the host's `onDelete`; the `add`-based remove is only its fallback when no host bridge is mounted.\n\n## Pins\n\n- `packages/qa/dogfood/test/grant-name-pickers.dogfood.test.ts` reads the SERVED `GET /meta/object/<name>` on a booted showcase:\n  - `position` carries `position-ref`;\n  - `permission_set` carries `permission-ref`;\n  - `permission_set_id` is `hidden`, with `permission_set` not hidden as the control.\n  - Ablation: stripping the two hints and `hidden` from the objects, then rebuilding, turned all 3 cases red (`expected undefined to be 'position-ref'`, …); restoring turned them green.\n- `sys-user-permission-set-window-columns.test.ts` asserts that neither grant list carries `add`, with the Business Units list's `add` as the control. Ablation: re-adding an `add` to the Permission Sets list turned that case red.\n- `format.server-ready-dev-admin-audience.test.ts`: the CLI banner's \"grant it a permission set\" pin is re-anchored on the Permission Sets list (its New), since the \"Grant permission set\" label is gone.\n- `platform-page-i18n-parity.test.ts`: the anti-vacuity floor of inline locale maps is 44 (was 45), because the two `add` labels went with their blocks.\n\n## Browser check against the widget (objectui#12175 head `8237a1cd886d`, built locally before it merged; the merge `088e0f705520` carries the same widget files)\n\n- The **Position** and **Permission Set** fields render as registry comboboxes (`registry-ref-position` / `registry-ref-permission`), listing 16 positions and 17 permission sets.\n- Picking `auditor` and `mcp_agent_data_read`, then pressing Create, wrote both grant rows (verified through the data API).\n- \"Permission Set (legacy id)\" is gone from the form, and both list headers show only **New**.\n\n## Verification (local, at this head)\n\n- dogfood in full: 253 files passed, 1 skipped; 2,039 tests passed;\n- plugin-security: 197 files, 4,045 passed;\n- platform-objects: 69 files, 1,086 passed;\n- cli unit tier: 282 files, all passed after the floor fix (`platform-page-i18n-parity` 27/27);\n- typecheck green: platform-objects, plugin-security, cli, dogfood;\n- `dispatch-gates --ran`: 72 derived families, all recorded with exit 0.\n\n## Changeset\n\n`@objectstack/platform-objects` and `@objectstack/plugin-security` **patch**, `Clause-②: no`. This changes shipped metadata only; no key anyone authors moves.\n\n## Acceptance notes\n\n- **objectui finding (carrier: none yet; the seat routes it):** the `position-ref` picker lists the `everyone` audience anchor among positions, and the server refuses it as a grant target. Not filtered here.\n- Tier: no governed surface. #22900 waits for this PR and for the pin PR that follows #22874.\n\n---\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nhttps://claude.ai/code/session_013XKtmoR5QCUSTMjiQ3os49\n"
+}

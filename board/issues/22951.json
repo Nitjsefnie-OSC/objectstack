@@ -1,0 +1,37 @@
+{
+  "number": 22951,
+  "kind": "issue",
+  "title": "docs(site): give the core narrative a front door on the home page — a Why link in the hero, a '00 · The idea' section reusing the architecture figure, a Why entry in the top nav, the closing card trimmed",
+  "state": "closed",
+  "state_reason": "completed",
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "area:devpath",
+    "documentation",
+    "domain:devx",
+    "priority:p2"
+  ],
+  "assignees": [
+    "hotlong"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-12T05:00:21Z",
+  "updated_at": "2026-10-12T07:59:26Z",
+  "closed_at": "2026-10-12T07:57:53Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": null,
+  "comments": 6,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/22951",
+  "body": "Blocked-by: #22948\n\n立卡门类别 ③ — 维护者直派的任务 (maintainer-directed task).\n\n## Maintainer ruling (verbatim, untranslated)\n\n> 那核心叙事博客是否应该在首页更明显的位置或者段落？\n\n> 前一条同意\n\nGiven in session https://claude.ai/code/session_011hRnra93sK5Q2gTYYTbdJR on 2026-10-12. The seat proposed three changes to the home page and a trimmed closing card, with the new section reusing the architecture figure that #22948 is drawing; asked which card \"前一条\" meant, the maintainer answered \"首页三处\" (the home page, blocked on #22948, dispatched after the figures land).\n\n## Why\n\nThe home page puts the slogan in the most visible place and the argument in the least: \"The ontology is the software.\" is the hero title, and the essay that makes the case is linked once, at the very bottom of the page, as one 14 px muted line (\"Read the long form\") after three full sections. A visitor who arrives asking \"why\" does not get there. The README and the docs now point at the essay, the compare page and the when-to-use page; the home page should open the same door.\n\n## What lands\n\nAll in `apps/docs/app/[lang]/page.tsx` unless stated; line numbers are main's at filing.\n\n1. **Hero link.** Under the four-promise paragraph (the `p` after the `h1`, about line 220) and above the button row: one text link, \"Why the ontology is the software\", arrow icon as the other inline links use, to `/blog/the-ontology-is-the-software`. Not a fifth button; the four buttons stay as they are. It mirrors the README's \"Read why\".\n2. **A new section `00 · The idea`** between the hero and `01 · The loop` (the loop starts about line 309), in the same section shape (eyebrow in `--l-mono`, `h2` in `--l-display`, `border-t`): one figure, three sentences, one link.\n   - The figure: the architecture figure component that #22948 adds (the ontology in the middle; a large model writes it; people define and approve it; the runtime runs it, every call permission-checked and audited; agents call it; database, API, UI and the tools agents call derive from it). Reuse that component as it lands; do not draw a second one. Its caption on the home page: one line, the essay's register.\n   - The three sentences, verbatim: \"An enterprise is definition plus execution. When execution is nearly free, it is its definition.\" / \"What the model lacks is not intelligence: a world, hands, and a fence.\" / \"An ontology written clearly enough is software. Models change; the ontology stays.\"\n   - The link: \"Read the essay\" to the essay, in the style of \"Browse the full vocabulary in the docs\" (about line 443).\n   - The existing sections keep their numbers; the new one is `00`.\n3. **Top nav.** `apps/docs/lib/layout.shared.tsx` line 28 carries `links: [{ text: 'Blog', url: '/blog', active: 'nested-url' }]`. Add a `Why` entry before `Blog`, `url: '/blog/the-ontology-is-the-software'`, `active: 'url'` so it does not light up for other posts.\n4. **Closing card** (about line 451): drop the \"Read the long form\" sentence and its link, since that job moves to the hero and section 00; keep the slogan sentence and the ObjectOS line as they are.\n\n`HOME_TITLE`, `HOME_DESCRIPTION` and the metadata blocks do not change. Nothing on the page is rewritten beyond the four items.\n\n## Mechanism, with what was measured\n\n- The home page is a React page, not MDX: the links are site routes in TSX, outside the lychee lane's `content/**` glob, so root-relative routes are fine here.\n- Theme: the page already uses the fumadocs tokens (`text-fd-muted-foreground`, `border-fd-border`, `bg-fd-card`); the figure component from #22948 is built to read under the `next-themes` toggle, and section 00 uses the same tokens as 01 to 03.\n- The figure component's export name and props are whatever PR for #22948 lands; read that PR's diff first and import from it, never copy it.\n- `apps/docs/app/sitemap.ts` lists `/blog` and the posts already; the nav entry needs no sitemap change.\n\n## Guardrails for the author\n\n- File surface: `apps/docs/app/[lang]/page.tsx` and `apps/docs/lib/layout.shared.tsx`. No `content/**`, no `README.md`, no `packages/**`, no `apps/docs/public/**`, no new components (the figure is imported from #22948's).\n- English only. No model identifiers anywhere. No new claims, no numbers.\n- Build the docs app and open the home page in both themes with the preinstalled Chromium (never `playwright install`): report the hero link, section 00 and the nav entry at 1280 px and 390 px, and confirm the closing card no longer carries the long-form link.\n- Gates derived with `scripts/pm/dispatch-gates.mjs` from the real change set, every one run; the docs build under `scripts/pm/os-verify-lock.sh` must pass.\n- Changeset: nothing publishes; `skip-changeset` once `packages/**` is confirmed untouched.\n- Serial constraint: this card waits for #22948 to merge (its figure component); branch from the main that carries it. PR #22942 (deck PDF) touches `apps/docs/public/decks/` only.\n\n## Non-goals\n\n- A dedicated narrative page (decided against for now).\n- README changes (a separate card if the maintainer asks).\n- The Chinese site.\n\n## Who acts\n\ndomain:devx lane, this seat, one os-dev dispatch at the default tier once #22948 is merged, one draft PR. Precedent on this file: #21586 (home title, cover and alt) and #21838 (the Blog nav entry and the closing card's link).\n\n## Duplicate check (2026-10-12, open and closed)\n\n- Query \"home page hero link to the essay Why section nav entry the ontology is the software landing page\": 5 hits — #22948 (the figures, in flight, the dependency), #21838 (added the Blog nav entry and the closing link this card moves), #22172, #21574, #21586 (earlier positioning work, closed). None adds a hero link, a Why section or a Why nav entry.\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_"
+}

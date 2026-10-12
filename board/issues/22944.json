@@ -1,0 +1,38 @@
+{
+  "number": 22944,
+  "kind": "issue",
+  "title": "runtime: on a kernel-resolver host (cloud), every record-bound POST /actions answers 404 RECORD_NOT_FOUND — resolveService asks the host kernel first, and its singleton protocol has none of the environment's objects",
+  "state": "closed",
+  "state_reason": "completed",
+  "draft": null,
+  "author": {
+    "login": "hotlong",
+    "id": 50353452,
+    "type": "User"
+  },
+  "labels": [
+    "area:workflow",
+    "bug",
+    "domain:cli",
+    "pm:dispatched",
+    "priority:p1",
+    "repo:cloud",
+    "security"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-12T04:24:41Z",
+  "updated_at": "2026-10-12T07:51:12Z",
+  "closed_at": "2026-10-12T07:10:16Z",
+  "closed_by": {
+    "login": "hotlong",
+    "id": 50353452,
+    "type": "User"
+  },
+  "merged_at": null,
+  "comments": 2,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/22944",
+  "body": "Filing gate ①: a reproduced product defect with a named landing site. It surfaced as objectstack-ai/hotcrm#2065: Convert Lead on the hosted environment `jack` answers \"Record <id> not found in crm_lead\". It was reproduced and root-caused on a local hosted-shape rig whose pins equal cloud's production release v1.36.0. Reader: the seat that owns `@objectstack/runtime` (triage routes it). The consumer, hotcrm#2065, unlocks when cloud's framework pin carries the fix.\nDedupe: `repo:objectstack-ai/objectstack is:issue resolveService defaultKernel` → 2 hits, all states (this card and #5155, the request-kernel parameter, which is a different seam). `… kernel-resolver actions RECORD_NOT_FOUND` → 3 (this card; #22938 and #6015 are unrelated). Nearest: #10988 (REST double kernel waiter), which is a different defect.\n\n## Defect\n\n- **Landing site:** `packages/runtime/src/http-dispatcher.ts`, `HttpDispatcher.resolveService` (line 2386 on `main` today). Given a `scopeId`, it asks `this.defaultKernel.getServiceAsync(name, scopeId)` **first** and returns any non-null answer. Only after that does it consult the request's own kernel (`context.kernel`).\n- **On a `kernel-resolver` host (cloud's objectos), that order picks the wrong kernel.** The request is routed to its environment kernel. The host kernel, however, holds its own **singleton** `protocol` / `metadata` / `objectql`, and a singleton answers `getServiceAsync(name, scopeId)` whatever the scope. So every dispatcher-served door that passes `context.environmentId` as the scope gets the **host's** data plane.\n- **What the user sees:** `POST /api/v1/actions/:object/:action` with a `recordId`.\n  1. `loadActionSubjectRecord` → `callData('get')` → the host protocol's `getData` → `assertObjectRegistered` throws `OBJECT_NOT_FOUND: Object 'crm_lead' not found`.\n  2. The catch in `loadActionSubjectRecord` swallows it and sets `recordLoadDenied`.\n  3. `refuseDeniedSubjectLoad` (#16854) answers **404 `RECORD_NOT_FOUND` \"Record <id> not found in <object>\"**, for a row the caller can read.\n- **Why `GET /api/v1/data/:object/:id` still works on the same host:** that route is REST-owned. `RestServer.resolveProtocol` takes `kernel.getServiceAsync('protocol')` from the **environment's own kernel** (`rest-server.ts` ~2209).\n- **A standalone deployment never sees this.** `context.kernel` is absent, so `requestKernel()` falls back to `defaultKernel`, and both legs read one kernel. This is why hotcrm#2065 \"does not reproduce on 17.7.0 locally\" (the hotcrm seat measured a standalone stack).\n\n## Measured\n\nRig: cloud `main` f8ed1efd (two-process `run-stack.sh --prod-like --with-ui`), framework `56bf27affb`, objectui `d758f2f20d`. These are cloud v1.36.0's pins, the release now serving production. HotCRM 3.1.0 was installed from the local marketplace and then upgraded in place to 4.0.1, the path `jack` took.\n\n**Instrumented swallowed error** (a probe in the rig's `runtime/dist` catch):\n```\n[probe] subject load threw crm_lead GTS2jcGfJc2tHdxh OBJECT_NOT_FOUND 404 Object 'crm_lead' not found\n  at assertObjectRegistered (metadata-protocol) ← getData ← callData ← loadActionSubjectRecord ← handleActionsRequest ← HttpDispatcher.dispatch\n[probe] protocol via defaultKernel scoped <envId> reqKernelIsDefault=false hasCrmLead=false reqKernelProtoHasCrmLead=true\n```\n\n**Reach, same session, same lead:**\n\n| request | answer |\n|:--|:--|\n| `GET /api/v1/data/crm_lead/GTS2jcGfJc2tHdxh` | 200 |\n| `POST /api/v1/actions/crm_lead/convert_lead` (console click, flow) | **404 RECORD_NOT_FOUND** |\n| `POST /api/v1/actions/crm_lead/schedule_followup` (flow) | **404 RECORD_NOT_FOUND** |\n| `POST /api/v1/actions/crm_knowledge_article/mark_article_helpful` (script) | **404 RECORD_NOT_FOUND** |\n| `POST /api/v1/automation/lead_conversion/trigger` (old console door) | 200, paused at `screen_1` |\n\n**Timeline:**\n- **Script actions:** every record-bound script action on a hosted environment has answered 404 since cloud's pin carried #16854 (2026-09-08).\n- **Flow actions:** flow buttons joined them when objectui#12046 moved the console's flow launch onto the action door. That console reached production with cloud v1.36.0 (deployed 2026-10-11).\n- **HotCRM's exposure:** 4.0.1 declares 30 record-bound actions (23 script, 7 flow).\n- **Inferred, not measured separately:** `callData`'s API-exposure gate reads `metadata.getObject` from the same wrong kernel. On this door it therefore finds no definition and falls open to schema defaults.\n\n## Prototype fix, verified on the same rig\n\nThe change was patched into the rig's `runtime/dist`: when the request carries its own kernel (`kernel !== this.defaultKernel`), resolve on that kernel first (`kernel.getServiceAsync(name, scopeId)`). The host kernel's scoped lookup is the fallback. A standalone host (`kernel === defaultKernel`) keeps today's order exactly.\n\n- Services whose answer flipped, logged once per name: `objectql`, `metadata`, `protocol`. Nothing else.\n- Convert Lead, end to end in the console: the action door answers 200, the screen opens, Submit resumes with 200, and the lead reads `converted` with its account, contact and opportunity (amount 50000) created.\n- Script `mark_article_helpful` and `mark_primary` answer 200. Flows `schedule_followup`, `claim_case` and `generate_quote` answer 200 and pause.\n- `log_call` without its required params answers 400 `VALIDATION_ERROR`, unchanged.\n- A nonexistent `recordId` still answers **404 `RECORD_NOT_FOUND`**. The #16854 refusal still holds.\n\n`resolveServiceOrLoud` / `classifyService` (the `tenancy` read of the identity step, and the `/keys` and activation gates) keep the same scoped-first order. Whether they should follow is a separate question, because it changes which kernel's `tenancy` answers identity on a hosted request. This card does not ask for it, and the prototype did not change it.\n\n## Acceptance\n\n1. On a kernel-resolver host whose host kernel holds a singleton `protocol` without the object, `POST /api/v1/actions/<object>/<action>` with a readable `recordId` loads the row from the request's environment kernel. Pin it with a test on that shape (two kernels, `context.kernel` ≠ `defaultKernel`).\n2. The same test proves a nonexistent id still answers 404 `RECORD_NOT_FOUND`.\n3. A host with no `kernel-resolver` (standalone, and SharedProjectPlugin scoped factories) resolves exactly as before. Pin it with a test.\n4. Downstream, owned by cloud and not this card: cloud bumps its framework pin past the fix and re-measures Convert Lead on a hosted environment (hotcrm#2065).\n\n---\n🤖 Generated with [Claude Code](https://claude.com/claude-code)"
+}

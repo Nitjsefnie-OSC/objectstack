@@ -1,0 +1,34 @@
+{
+  "number": 22961,
+  "kind": "issue",
+  "title": "plugin-audit: a user's own sys_user_preference writes (ui.recent) come back to them as \"Updated User Preference 'ui.recent'\" inbox notifications — the console bell shows six of them and nothing else",
+  "state": "open",
+  "state_reason": null,
+  "draft": null,
+  "author": {
+    "login": "hotlong",
+    "id": 50353452,
+    "type": "User"
+  },
+  "labels": [
+    "area:records",
+    "bug",
+    "domain:services",
+    "pm:dispatched",
+    "priority:p2"
+  ],
+  "assignees": [
+    "os-warren"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-12T05:30:10Z",
+  "updated_at": "2026-10-12T08:40:26Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 4,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/22961",
+  "body": "Item 5 of objectstack-ai/cloud#2772. Filed from the cloud maintainer's session with the maintainer's agreement on 2026-10-12 (「同意」). ⛔ Not a claim.\n\n## Source\n\n2026-10-12 staging walk-through of the cloud console: `cloud.objectos.app`, org 「2531 hotcrm 验收」, owner account; cloud `63ea887f`, objectui pin `d758f2f2`, framework pin as cloud `.objectstack-sha` at that commit.\n\n## What the user sees\n\nCloud console, bell icon → 消息中心: six entries 「Updated User Preference 'ui.recent'」, subtitle 「系统通知 · sys_user_preference」, and nothing else. They are the audit trail of the console's own \"Recently accessed\" writes (objectui#11678 made that write happen only when the list changes, so each navigation that changes the list still writes once). A new user opens the bell and reads six machine messages about a table they have never heard of.\n\n![notification center](https://github.com/objectstack-ai/cloud/blob/fdd422db1e94a4190958fb770bd21ad1ae520e63/12-notification-center.jpg?raw=true)\n\n## Mechanism (to confirm)\n\n`packages/plugins/plugin-audit/src/audit-writers.ts` emits the L2 event and the inbox fan-out through the ADR-0030 single ingress for audited writes. Its `SKIP_OBJECTS` list (`audit-writers.ts:166` onward) excludes sessions, jobs, notifications and the inbox itself, but not `sys_user_preference`, so a user's own UI-state write comes back to them as a system notification. Precedent: objectstack#3402 (file-assignment noise notifications).\n\n## Fix direction (recommended)\n\n1. Add `sys_user_preference` (and any other per-user UI-state table) to `SKIP_OBJECTS`, or stop the inbox fan-out for self-authored writes on system tables; keep the audit log row if auditing needs it.\n2. Write the rule down next to the list: a notification is for something another actor did or something that needs the user; the user's own UI-state writes never qualify.\n\n## Acceptance\n\n1. Fresh user, navigate five console pages, open the bell: zero `sys_user_preference` entries.\n2. The audit log still records the write if `sys_user_preference` stays audited, or the card states it is excluded.\n3. Unit test on the writer: a write to `sys_user_preference` produces no `sys_inbox_message`.\n\n## Related\n\nobjectstack#3402 · objectui#11678 · ADR-0030\n"
+}

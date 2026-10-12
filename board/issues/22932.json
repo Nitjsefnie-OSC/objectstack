@@ -1,0 +1,36 @@
+{
+  "number": 22932,
+  "kind": "pull_request",
+  "title": "docs(changeset): drop the retired discard-overlay route from the pending 22719 refusal-sentence note",
+  "state": "closed",
+  "state_reason": null,
+  "draft": false,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "documentation",
+    "size/xs",
+    "tooling"
+  ],
+  "assignees": [
+    "marchtian"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-12T03:41:14Z",
+  "updated_at": "2026-10-12T04:17:45Z",
+  "closed_at": "2026-10-12T04:17:43Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": "2026-10-12T04:17:43Z",
+  "comments": 1,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/pull/22932",
+  "body": "Part of #15204\nClause-②: no\n\n**This PR corrects one cell in a pending release note. The maintainer authorized the edit, and the PR changes no shipped code.** It edits the first cell of line 16 in `.changeset/22719-rest-write-hook-refusal-sentence.md`. The maintainer authorized exactly this edit, and the seat recorded the ruling and the claim amendment in comment 6117174845 on #15204 (item (e), point 2).\n\n### The note, and what changed under it\n\n- **The note.** `.changeset/22719-rest-write-hook-refusal-sentence.md` is still pending. `.changeset/pre.json` is `pre` / `next` and lists no consumed changeset, and `packages/rest/CHANGELOG.md` has no entry for it. Line 16 lists `POST /security/permission-sets/:id/discard-overlay` among the routes that now answer a sandboxed hook's refusal with `400 VALIDATION_ERROR` and the hook's own sentence.\n- **What changed under it.** The note landed with #22763 (`9859e4ec`, 2026-10-11T04:22Z), while that route was still live. Then #22776 (`60bcfe72`, 2026-10-11T09:03Z, ADR-0131 cutover stage 7-pre) retired the route. Its own pending changeset, `.changeset/15204-s7pre-overlay-discard-retired.md`, lists the route as removed. If both notes publish unchanged, they contradict each other: one says the route now answers `400`, and the other says the route is gone.\n- **Evidence that no live route serves it on `main`** (`85b4ac63`):\n  - `packages/rest/src/rest-route-ledger.ts:421-425` reads: \"RETIRED (ADR-0131 cutover): `POST /api/v1/security/permission-sets/:id/discard-overlay` left with the \"Discard Overlay\" Setup action. [...] no row, no route.\"\n  - `rest-route-ledger.conformance.test.ts` boots `RestServer` the way production does (`registerRoutes()` plus `mountAndRecordDirectRoutes`). It fails on any mounted route that has no ledger row, and the ledger has no row for this route. Run on this branch: `Test Files 2 passed (2)`, `Tests 584 passed (584)`, together with `rest-write-route-hook-refusal-sentence.ledger.test.ts`. That second test pins \"names exactly the nineteen repaired rows\" and carries the comment \"the overlay-discard row retired with its route\".\n  - Outside markdown, `git grep -i discard-overlay` finds only two places: that ledger comment and the migration entry `packages/spec/src/migrations/entries/semantic/18.security-permission-set-overlay-discard-retired.ts`. The dispatcher's `/security` domain (`packages/runtime/src/domains/security.ts`) serves one route under `permission-sets`, which is `POST /security/permission-sets/:name/clone`, and `packages/runtime/src/route-ledger.ts` has no discard-overlay row.\n\n### The edit\n\nLine 16, first cell only:\n\n- before: `POST /security/suggested-bindings/:id/confirm` and `/dismiss`, `POST /security/permission-sets/:id/discard-overlay`\n- after: `POST /security/suggested-bindings/:id/confirm` and `/dismiss`\n\nThe frontmatter, the rest of the row and every other line of the file are unchanged byte for byte. A line-by-line comparison against the base finds line 16 as the only difference, and the old row with the new cell swapped in equals the new row. This PR adds no changeset and changes no other one. It does not touch `CHANGELOG.md` or `content/docs/releases/`.\n\n### `Check Changeset` stays red, by design\n\nThis PR changes a changeset it did not add. That puts it in the DELIBERATE CORRECTION class of the foreign changeset rule (rule 2 of `scripts/check-empty-changeset.mjs`, #17712). The PR also adds no changeset of its own, so `Require a changeset` (route 0) goes red first. `skip-changeset` is deliberately not applied: that label would declare that this PR releases nothing, but the note it corrects is still a pending release. `Check Changeset` is not a required context.\n\nThis section is the written confirmation that route 0 asks for. It names the note and what changed under it (above), and the authorization is the maintainer's, recorded in comment 6117174845. One difference from the usual shape: the behaviour change that made the sentence false came from an earlier PR (#22776), not from this one.\n\n### Gates (local, at head `02ad7dcc`, merge base `85b4ac63`)\n\nThe set is derived by `node scripts/pm/dispatch-gates.mjs --commands`: 20 commands, all run, and `--ran` reconciles 20 of 20.\n\n| command | exit |\n| --- | --- |\n| `node scripts/check-empty-changeset.mjs --base origin/main` | 1. The foreign changeset rule, DELIBERATE CORRECTION class, red by design. Its empty-frontmatter half prints `✓ No empty-frontmatter changeset introduced by this diff`. |\n| `node scripts/check-empty-changeset.mjs --self-test` | 0 |\n| `pnpm check:nul-bytes` (the control-byte gate) | 0, `OK (scanned 10963 text file(s) [...] no raw ASCII control bytes)` |\n| `node scripts/check-adr-0087-registration.mjs --base origin/main` / `--self-test` | 0 / 0 |\n| `node scripts/check-changeset-no-major.mjs --base origin/main` / `--self-test` | 0 / 0 |\n| `pnpm check:changeset-gate-self-tests` | 0 |\n| `pnpm check:objectui-changeset`, `check:pm-changeset-deadline-census`, `check:published-files`, `check:gitlink-declared`, `check:driver-memory-census`, `check:refd-timer-probe`, `check:watch-hint-literal` | 0 each |\n| `node scripts/check-closing-keyword-parity.mjs` / `--self-test`, `check-comment-mask-corpus.mjs`, `pm/release-rehearsal-clone.mjs --self-test`, `release-pending-publish.mjs --self-test` | 0 each |\n\n### Acceptance notes\n\nThe same retirement made two more fragments of this note inaccurate. The authorization covers one cell, so this PR leaves both unchanged and names them for a decision:\n\n1. **Line 16's before cell** still reads \"`500 SUGGESTION_*_FAILED` / `500 INTERNAL`, the wrapper\". `500 INTERNAL` was the retired route's answer: its handler ended in `handleError(err, res, 'INTERNAL')` (`60bcfe72^:packages/rest/src/rest-server.ts`). The two routes left in the row answer `500 SUGGESTION_CONFIRM_FAILED` and `500 SUGGESTION_DISMISS_FAILED` (`rest-server.ts:12441`, `:12459`), so neither of them produces the `500 INTERNAL` the cell still names.\n2. **The counts.** The title (line 5) says \"twenty more REST write routes\", and line 9 says \"Twenty write routes\" and \"Sixteen of them\". The table now lists nineteen routes, and fifteen of them show a `500` before. The refusal ledger test on `main` already pins nineteen.\n\n---\n_Generated by [Claude Code](https://claude.ai/code/session_01Rerax7QTjKMPCUZxQUtPFR)_"
+}

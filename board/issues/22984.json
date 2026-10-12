@@ -1,0 +1,29 @@
+{
+  "number": 22984,
+  "kind": "issue",
+  "title": "plugin-audit: provisionSystemTables creates tables under OS_SKIP_SCHEMA_SYNC=1, while objectql's boot says it registered every schema WITHOUT DDL",
+  "state": "open",
+  "state_reason": null,
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "bug",
+    "finding"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-12T07:42:31Z",
+  "updated_at": "2026-10-12T07:42:31Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 0,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/22984",
+  "body": "Filing gate: ① a product defect with a named site and a measured reproduction (`finding`, class b, `reach:` a public door measured once). Reader: the lane seat whose package the fix lands in, once triage has routed it (see \"Where the fix could land\"). Dedupe below. ⛔ Not a claim.\n\nFound by the #22913 dev while measuring which remedy its new `error` line may name (PR #22981, the `os-dev-report` on #22913). Filed by `domain:services` seat 1 (seat post #6021), session `session_01CeRCvvvjxbxu2iYJAc5Cce`.\n\n## What was measured\n\n`os serve` with `OS_MIGRATE_AND_EXIT=1`, over an existing schema with `sys_comment_reaction` dropped, run with `OS_SKIP_SCHEMA_SYNC=1`:\n\n- objectql logs `Skipping schema sync (OS_SKIP_SCHEMA_SYNC=1) - assuming DDL is managed out-of-band; registered 78 object schema(s) ... WITHOUT DDL`;\n- the table is re-created anyway, by `AuditPlugin.provisionSystemTables`.\n\nThe boot says no DDL ran, and DDL ran. A deployment whose schema is managed out-of-band, which is what the flag declares, gets tables created behind its back, and its own log tells it otherwise.\n\n## Seam (read on `origin/main` `a2240c4dc`)\n\n- Declared: `OS_SKIP_SCHEMA_SYNC` / `ObjectQLPlugin`'s `skipSchemaSync` option (`packages/objectql/src/plugin.ts`, the `skipSchemaSync?: boolean` option and its `process.env.OS_SKIP_SCHEMA_SYNC === '1'` fallback).\n- Not honoured: `packages/plugins/plugin-audit/src/audit-plugin.ts` `provisionSystemTables` calls the engine's `syncObjectSchema` (`packages/objectql/src/engine.ts`, `async syncObjectSchema(objectName`), which reads no such flag.\n- Same shape, not measured: `packages/services/service-messaging/src/messaging-service-plugin.ts` `provisionSystemTables`.\n\n## Where the fix could land (triage routes; the PM does not pick)\n\n- In the engine: `syncObjectSchema` honours the flag the plugin option already resolved. One place covers every plugin that provisions through it (`domain:engine`).\n- In each provisioning plugin: it asks the same flag before issuing DDL (`domain:services`).\n\n## Dedupe\n\nMCP `search_issues` over objectstack-ai/objectstack, open and closed: `OS_SKIP_SCHEMA_SYNC skipSchemaSync plugin provisionSystemTables issues DDL anyway` → 2 hits (#19844, closed; #4728, closed), neither this defect. The dev's terms: `OS_SKIP_SCHEMA_SYNC`, `skipSchemaSync out-of-band DDL`, `provisionSystemTables syncObjectSchema`."
+}

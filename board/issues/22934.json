@@ -1,0 +1,32 @@
+{
+  "number": 22934,
+  "kind": "issue",
+  "title": "finding: one stack can author two entries under one `name` in 20+ named collections (`objects`, `pages`, `flows`, `permissions`, `webhooks` …), and `os validate` exits 0; only `actions` and the `functions` array (#22902) refuse it",
+  "state": "open",
+  "state_reason": null,
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "area:devpath",
+    "bug",
+    "domain:spec",
+    "pm:blocked",
+    "priority:p3"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-12T03:47:06Z",
+  "updated_at": "2026-10-12T07:54:39Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 4,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/22934",
+  "body": "Blocked-by: #22902\n\nFiling gate **①**, class **(c) candidate**: metadata an author or AI can write twice under one name, accepted at a public door with no finding. `reach:` `os validate --json` exits 0 with `valid: true` and no finding naming the duplicate, measured on 20 keys (below). The downstream loss per key is **NOT MEASURED**, and that is this card's first work item.\n\nFiled by `domain:spec` seat 1 (#6017) · `os-warren` · session `session_019G5ZnRrTMiwcHG6iZM19zf`, from the census in PR #22931's body (#22902's dev, report `6117331386`). Triage's grade of #22902 (`6114801402`) asked for exactly this: \"Siblings that show the same silent loss go to one batch card, filed at claim, ⛔ not one card per key.\" ⛔ Not a claim.\n\n**Reader who acts:** triage grades it and names the lane. The refusals would sit in `packages/spec/src/stack.zod.ts`, beside `collectDuplicateActionKeyErrors` and PR #22931's `collectDuplicateFunctionNameErrors`, so it reads as `domain:spec` unless triage routes it elsewhere.\n\n## What is measured (PR #22931's census, at `70c36c1151`)\n\nMethod: take `examples/app-showcase`'s `defineStack` output, duplicate one key's first entry, re-run `defineStack`, and run `os validate --json` on a fixture that does the same. Keys the examples do not author were measured with hand-written entries through `defineStack` only.\n\n**Accepted by `defineStack` and by `os validate` (exit 0, `valid: true`, no finding naming the duplicate):** `objects` (`showcase_account`; the only new findings are `field-no-consumers` on the copy), `datasources`, `pages`, `dashboards`, `reports`, `datasets`, `flows`, `jobs`, `emailTemplates`, `books`, `positions`, `permissions`, `capabilities`, `sharingRules`, `webhooks`, `hooks`, `mappings`, `analyticsCubes`, `connectors`, `plugins`.\n\n**Accepted by `defineStack` (hand-written entries, `os validate` not run):** `picklists`, `docs`, `agents`, `tools`, `skills`, a named `views` entry; `apis` sharing a `name` on different paths (refused only by METHOD + path); `apps` on a `manifest.type: 'module'` package (refused only by the single-app count on an `app` package).\n\n**Already refused in one stack:** `actions` (`collectDuplicateActionKeyErrors`, scope-qualified key) and the `functions` array (PR #22931, in review).\n\n## Not measured, and why it decides the batch\n\n- What each key does with the second entry downstream: last wins, merged, both kept, or refused later at boot. For `functions` the two paths diverged (the build kept the first under `kc_a`; a source boot kept the second), which is the defect #22902 fixes.\n- ⚠️ Some keys may merge duplicates **by design**. `composeStacks` merges `objects` by name across stacks (`COMPOSE_KEY_DISPOSITIONS`, the `'objects'` disposition), so a same-stack duplicate object may be intended extension semantics, not a loss. A key whose duplicate is merged on purpose leaves the batch, with the reading that shows it.\n\n## Direction (not a ruling)\n\n- First, measure each key's downstream behaviour on a source boot and through `objectstack build` → `loadArtifactBundle`, as #22902's dev did for `functions`.\n- Refuse at the contract only the keys that measurably lose or diverge, one sibling collector (or one shared helper) in the cross-reference aggregate, each finding naming the key, the name and every index, as `collectDuplicateFunctionNameErrors` does.\n- One batch, ⛔ not one card per key. A narrowing, so `Clause-②: no (narrowing)` and FROM → TO.\n\n## Dedupe\n\nMCP `search_issues` on this repo, closed included:\n- `duplicate name same stack collection accepted defineStack uniqueness refusal objects pages flows`: 28 hits, none on this subject. The nearest are #22902 (the `functions` member), #14847 and #16075 (`composeStacks` merging), #22088 (flow edges).\n- `array of named entries no uniqueness check two entries one name stack metadata silently last wins`: 3 hits, none on this subject (#22902, #22411, #19732).\n- CONTROL: both queries return #22902, the family's own card, so the instrument reaches it.\n\nDedupe words: duplicate name same stack collection; array of named entries no uniqueness refusal; two objects one name accepted defineStack; same-stack duplicate metadata name siblings.\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_"
+}

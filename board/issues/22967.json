@@ -1,0 +1,36 @@
+{
+  "number": 22967,
+  "kind": "pull_request",
+  "title": "chore(objectui): move the console pin to 088e0f705520 (objectui#12175 PR-5, #12174 Q3b) (#15204 B2)",
+  "state": "open",
+  "state_reason": null,
+  "draft": false,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "ci/cd",
+    "documentation",
+    "protocol:data",
+    "protocol:ui",
+    "size/l",
+    "tests",
+    "tooling"
+  ],
+  "assignees": [
+    "marchtian"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-12T06:16:42Z",
+  "updated_at": "2026-10-12T08:23:41Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 5,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/pull/22967",
+  "body": "Part of #15204\nClause-②: no\n\n**The console pin hop `e5311165a8d6` → `088e0f705520`** (objectui `main`; the merge of objectui#12175). It is the follow-up #22939 named: #22939 declares `widget: 'position-ref'` / `'permission-ref'` on the two grant name fields of Setup's user page, and this pin brings the console that registers those widgets. Until it lands, those fields render as text inputs. #22900 waits for this PR and #22939.\n\n**Tier:** no governed surface (`GOVERNED_SURFACES` in `scripts/pm/check-governed-merges.mjs`). 20 files plus #22973's ported CI files (`.github/workflows/ci.yml`, `scripts/check-test-suite-ceilings.mjs`, `scripts/partition-test-shards.mjs`).\n\n## The hop: 3 objectui commits, all on objectui `main`\n\n- `088e0f705`, objectui#12175 (objectui#7611 PR-5): a record-form field names one registry item by name (`position-ref` lists `GET /meta/position`, `permission-ref` lists `GET /meta/permission`, and each stores the chosen name);\n- `83b9fade2`, objectui#12174 (objectui#7611 Q3b): a position approver is read through the spec's registry binding `{ source: 'registry', type }`;\n- `2498a0753`, objectui#12110: the rich-text editor draws no hint lines.\n\n## The pin round, as #22874's\n\n**Console Pin Gate steps, run locally** (each exited 0):\n1. Client build: `turbo run build --filter=@objectstack/client...`.\n2. `scripts/build-console.sh` at the pin.\n3. `check:console-sha`: \"Console dist matches the objectui pin (objectui@088e0f705520)\".\n4. `check:console-injection --require-stamp`.\n\n**Artefacts that travel with the pin:**\n- **Console changeset.** `scripts/bump-objectui.sh` generated `.changeset/console-088e0f705520.md`: `@objectstack/console` **minor**, the level #22874's pin move used. It has 3 releasing entries, 0 breaking, so there is no ADR-0087 placeholder, and it carries `Clause-②: no`. `check:objectui-changeset` passes.\n- **SDUI manifest.** `node scripts/gen-sdui-manifest-node.mjs`: `sdui.manifest.json` is byte-identical across the hop (107 components), and `scripts/sdui-manifest.record.json` is re-recorded at the pin. `check-sdui-manifest` passes.\n- **Lockstep record.** `pnpm gen:sdui-lockstep` re-records `packages/sdui-parser/objectui-lockstep.json` at `088e0f705520`. `check:sdui-lockstep` passes, so the save gate's parser and the renderer's copy agree and no port is owed.\n- **Pin citations, re-measured for this hop only** (re-measure, never find-and-replace):\n  - files that three records cite changed on the hop, all for objectui#12175, and every cited line held or moved byte-identical:\n    - `form.tsx` (+3, registering the two widget hints): `spanLadderFor` held at `:275-302`, and its call site moved `:3326` → `:3329` unchanged, so the `FormField.span` describe's claim holds (re-pointed, with `content/docs/references/ui/view.mdx` regenerated);\n    - `data-objectstack/src/index.ts` (+33 at `:5335`, the adapter's `listMetadataItems`): below both reads the curated-public-blocks record cites, so `serializeOrderBy` `869-895` and the `translateFilterArray` arm `5066-5077` are unmoved;\n    - the `en` / `zh` / `de` packs (`fields.registryRef` keys, +4 each): the calendar record's `calendar.configRequired` strings moved +4 and did not change;\n  - every other record cites only files that are byte-identical across the hop (`git diff --quiet`, checked file by file), and each gains a hop sentence saying so. The first version of this PR said two of the three changed files were byte-identical; the contract review caught it, and `378004003` corrects both records and the changeset;\n  - the six migration entries were recounted with `git grep -o -F`, which reproduces every `e5311165a8d6` figure exactly. The corpus is 8519 files, and every retired name still reads 0;\n  - `check:objectui-pin-citations --verify-anchors`: 55 asserting citations match `088e0f705`, and the 13 quoted anchors verify against objectui at the pin;\n  - changeset `.changeset/objectui-pin-citations-088e0f705520.md`: `@objectstack/spec` patch, `Clause-②: no`.\n\n## Browser check, against this branch's built dist\n\n`examples/app-showcase` was booted `--fresh` with this branch's console dist and #22939's object metadata temporarily merged in, uncommitted; #22939 is not on `main` yet. As the admin on Setup's user page:\n- the **Position** and **Permission Set** fields render as registry pickers (`registry-ref-position` / `registry-ref-permission`), listing 16 positions and 17 permission sets;\n- picking `auditor` and `mcp_agent_data_read`, then pressing Create, wrote both grant rows (verified through the data API);\n- **`everyone` is still listed** among the positions (the open objectui finding: the server refuses it as a grant target).\n\n## Verification (local, at this head)\n\n- full `turbo run build` green;\n- spec typecheck green, spec suite 706 files / 20,387 passed. This was run with the docs build's git-ignored `content/docs/protocol-upgrade/` moved aside: that generated guide reds four tree-scan pins in any checkout where the docs app was built, as recorded on #22939;\n- `dispatch-gates --ran`: 125 derived families, all recorded with exit 0.\n\n## Acceptance notes\n\n- CI `Test Core` red on `6ef50e894` only on the suite-duration ceiling step (`service-analytics`, `knowledge-ragflow`), which is #22949's class and not this diff's. This branch now carries #22973's two commits, cherry-picked in order (`e6c7a6ce6` → `598bb69c1`, `ef3d0764b` → `55535f501`); both scripts' `--self-test`s pass.\n- objectui finding, carried over (carrier: none yet): the `position-ref` picker lists the `everyone` audience anchor.\n\n---\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nhttps://claude.ai/code/session_013XKtmoR5QCUSTMjiQ3os49\n"
+}

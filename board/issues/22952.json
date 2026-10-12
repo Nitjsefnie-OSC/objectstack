@@ -1,0 +1,35 @@
+{
+  "number": 22952,
+  "kind": "issue",
+  "title": "docs(readme): three entry points to the positioning — a Why / How it compares / When to use it line under the demo, two pointer sentences in the ontology section, the deck beside Read why",
+  "state": "closed",
+  "state_reason": "completed",
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "documentation",
+    "domain:devx"
+  ],
+  "assignees": [
+    "hotlong"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-12T05:01:51Z",
+  "updated_at": "2026-10-12T06:29:25Z",
+  "closed_at": "2026-10-12T06:27:47Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": null,
+  "comments": 4,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/22952",
+  "body": "立卡门类别 ③ — 维护者直派的任务 (maintainer-directed task).\n\n## Maintainer ruling (verbatim, untranslated)\n\n> github readme 需要修改吗\n\n> README 也派\n\nGiven in session https://claude.ai/code/session_011hRnra93sK5Q2gTYYTbdJR on 2026-10-12. The seat's answer to the first line was \"yes, three small edits, no rewrite\"; the second line dispatches it.\n\n## Why\n\nThe README already opens on the demo GIF and is structured on the four promises, and its \"Agents are the first users\" section carries the narrative. What it lacks is the door: the essay is linked once, at line 210 inside \"You own it\", as \"Read why\"; the compare page and the when-to-use page, live on the site since 2026-10-08, are not linked anywhere in the README; the deck is not linked either. A GitHub visitor's three first questions (why does this exist, how is it different, is it for me) have answers on the site and no entry from the README.\n\n## What lands\n\nThree edits to `README.md`, nothing else in the file; line numbers are main's at filing.\n\n1. **Entry line under the demo.** Inside the centred block that holds the GIF (lines 18 to 24), after the \"Watch: ObjectStack in 90 Seconds\" line and before the block closes: one more `sub` line, three links separated by the same `&nbsp;·&nbsp;` the caption uses: \"Why it exists\" to https://objectstack.ai/blog/the-ontology-is-the-software, \"How it compares\" to https://objectstack.ai/docs/concepts/compare, \"When to use it\" to https://objectstack.ai/docs/concepts/when-to-use. Absolute URLs, like every other site link in the README.\n2. **Two pointer sentences in \"What we mean by ontology\"** (the section at lines 77 to 90, which today ends on the Business Ontology and glossary links): one sentence naming where it sits beside knowledge ontologies, semantic layers, operational ontologies, metadata platforms and AI code generation, linking \"How it compares\"; one sentence on fit, linking \"When to use it\". The existing sentences do not change.\n3. **The deck beside \"Read why\"** in the quote block at lines 207 to 210: after the \"Read why\" link, in the same line, \"· the talk as a deck (PDF)\" linking https://objectstack.ai/decks/the-ontology-is-the-software.pdf.\n\nNet change: at most eight added lines, no removed prose. Everything else in the README, including the architecture image, \"Try it in five minutes\", the four promise sections, \"Ship it\", \"Hack on the framework\", the package directory and Community, stays byte-identical.\n\n## Mechanism, with what was measured\n\n- The README is rendered on GitHub and inside the published packages that ship it; `pnpm check:published-readme-links` checks every relative target in published markdown and leaves absolute URLs alone (measured on PR #22241: 144 of 144 relative targets found). The three pages and the PDF exist on main: `content/docs/concepts/compare.mdx`, `content/docs/concepts/when-to-use.mdx` (PR #22247), `content/blog/the-ontology-is-the-software.mdx` (PR #21838), `apps/docs/public/decks/the-ontology-is-the-software.pdf` (PR #22254; PR #22942 refreshes the file at the same path).\n- The HTML block the GIF lives in is plain GitHub-flavoured markdown HTML; a `sub` line with three anchors matches the caption line above it.\n- Repository topics and the About line are settings-page values, not files; they are not this card's (the About line already reads the four-promise sentence; the topics are the maintainer's click).\n\n## Guardrails for the author\n\n- File surface: `README.md` only, the three hunks above. No `packages/**`, no `content/**`, no `apps/docs/**`, no `docs/screenshots/**`, no CHANGELOG.\n- English only. No model identifiers anywhere. No new claims, no numbers, no superlatives; link text as given.\n- Gates derived with `scripts/pm/dispatch-gates.mjs` from the real change set (README.md), every one run, `pnpm check:published-readme-links` among them; exit codes captured before any pipe.\n- Changeset: nothing publishes; `skip-changeset` once `packages/**` is confirmed untouched.\n- Serial constraint: branch from `origin/main`; before the final push, list open PRs that touch `README.md` (three `copilot/update-readme-*` heads exist on origin; whether any has an open PR is to be read from GitHub, not assumed) and, if one does, confirm the hunks do not overlap; if they overlap, stop and report.\n\n## Non-goals\n\n- Rewriting any README prose or section; shortening the package directory; a Chinese README.\n- Topics and About (maintainer's clicks). The home page (#22951) and the blog figures (#22948) are separate cards.\n\n## Who acts\n\ndomain:devx lane, this seat, one os-dev dispatch at the default tier, one draft PR. Precedent on this file: #22232 via PR #22241 (the demo GIF block this card extends) and #21586 (the four-promise restructure).\n\n## Duplicate check (2026-10-12, open and closed)\n\n- Query \"README entry links compare page when to use page deck PDF Read why top block positioning\": 2 hits — #22263 (the deck link in the essay, closed) and #22948 (the figures, in flight). Neither touches the README.\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_"
+}

@@ -2,8 +2,8 @@
   "number": 22914,
   "kind": "issue",
   "title": "finding(pm): `dispatch-gates` never derives `check:verify-stand-in` for a change to `packages/verify/src` exports, so a new `@objectstack/verify` export passes every local gate and reds CI (PR #22907)",
-  "state": "open",
-  "state_reason": null,
+  "state": "closed",
+  "state_reason": "not_planned",
   "draft": null,
   "author": {
     "login": "objectstack-fleet[bot]",
@@ -11,17 +11,21 @@
     "type": "Bot"
   },
   "labels": [
-    "finding"
+    "tooling"
   ],
   "assignees": [],
   "milestone": null,
   "type": null,
   "created_at": "2026-10-12T01:23:34Z",
-  "updated_at": "2026-10-12T01:23:34Z",
-  "closed_at": null,
-  "closed_by": null,
+  "updated_at": "2026-10-12T02:57:35Z",
+  "closed_at": "2026-10-12T02:57:35Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
   "merged_at": null,
-  "comments": 0,
+  "comments": 1,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/22914",
   "body": "Filing gate **①**: a defect with a named landing point and a measured cost. **Class (a):** the instrument a dev's local sweep is built from reads green where CI reds. `reach:` named real producer: PR #22907 (#15953 slice 1), whose CI went red on this gate after a local sweep that never ran it.\n\nFiled by `domain:cli` seat 2 (#22648) · `os-steve` · session `session_01VoSxBQujKLZKPwK2u5ehQ6`, from #15953's dev (`os-dev-report` `6115950326`, out-of-scope finding 1). The contract review on PR #22907 (`6116059950`) also escalated it as owed. ⛔ Not a claim. Lane and grade are triage's.\n\n**Reader who acts:** triage grades it. The gate is `scripts/check-verify-stand-in-erasure.mjs`, with its population record in `scripts/pm/bare-root-worklist.mjs`. Both are `scripts/` gate tooling, so `domain:spec` under the anchoring rule unless triage routes it elsewhere.\n\n## What is measured\n\nOn `origin/main` `7de0265fc7`:\n- `node scripts/pm/dispatch-gates.mjs --commands --repo objectstack-ai/objectstack packages/verify/src/reference-shape.ts packages/verify/src/index.ts` prints **0** lines matching `verify-stand-in`.\n- CONTROL: the same command with `scripts/check-verify-stand-in-erasure.mjs` prints `pnpm check:verify-stand-in`, so the deriver knows the family but has no watch reaching the exports it judges.\n- PR #22907 at `777263207d`: CI `Lint & Repo Gates` step 14 (`@objectstack/verify stand-in erasure guard`) exited 1 with `CLASSIFIED: packages/verify exports runReferenceShapeProofs(x: VerifyStack) … formatReferenceShapeReport(x: ReferenceShapeReport)`. The dev's derived local sweep (65 families) never included it, so the red cost one CI cycle and a patch round.\n\n## Why\n\n- The script's header (about `:72`) records `dispatch-gates: wide-population` as REFUSE-WIDE in `scripts/pm/bare-root-worklist.mjs` \"on both halves\". It refuses to declare `packages` and `examples` because the call-site census walks them, and declaring only the smaller root \"would read as a claim about where the stand-ins land\".\n- The leg that redded is a different population. The `CLASSIFIED` / `DISCOVERED` / `RECONCILED` checks read only `packages/verify/src`'s exports (`:116`, `:139`, `:292`–`:337`). That population is exact and small, and a new export there is exactly what reds it.\n- Seam: `scripts/check-verify-stand-in-erasure.mjs` population declaration → `scripts/pm/dispatch-gates.mjs` watch-hint extraction.\n\n## Related, same instrument (noted, not a separate card)\n\n`@objectstack/core`'s `repo` test project holds whole-tree pins, such as `second-object-read-exposure.pin.test.ts`, which reds on any new reference-target arbiter caller under `packages/`. The derivation names `check:*` families, not another package's test project, so a dev learns of those from CI as well. PR #22907 redded on it too.\n\n## Not measured\n\nWhether other gates that refuse a wide population also carry a narrow leg the derivation could watch.\n\n## Direction (not a ruling)\n\n- Declare the classification leg's own population (`packages/verify/src`) as a watch, separately from the call-site census that stays REFUSE-WIDE. A change to that package's exports then derives `pnpm check:verify-stand-in`.\n- Pin: the derive command above names the gate. CONTROL: a change outside `packages/verify` does not.\n\n## Family and dedupe\n\nThe `dispatch-gates` derivation-gap family, all closed: #22680 (`check:liveness`), #22320 (`check:error-status-conformance`, a bare `SCAN_ROOT`), #21697 (symbol-anchor sweeps), #21011 (`check:i18n-coverage`), #20278 (diff-scope issue citations), #16447 (watch hints opening with a glob).\n\nMCP `search_issues` on this repo, closed included:\n- `dispatch-gates derivation misses gate verify-stand-in packages/verify watch hint not derived`: 130 hits, none on this gate. The 10 read are the closed family above.\n- `dispatch-gates does not name repo-project whole-tree pin test outside the touched package, learned from CI`: 189 hits, none open on this subject.\n- CONTROL: both queries return the closed `dispatch-gates` family, so the instrument reaches it.\n\nDedupe words: dispatch-gates watch hint verify-stand-in; derivation misses check:verify-stand-in; packages/verify exports stand-in gate not derived; REFUSE-WIDE narrow leg.\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_"

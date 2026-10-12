@@ -1,0 +1,36 @@
+{
+  "number": 22955,
+  "kind": "pull_request",
+  "title": "docs(readme): link the essay, the compare page, the when-to-use page and the deck",
+  "state": "closed",
+  "state_reason": null,
+  "draft": false,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "documentation",
+    "size/xs",
+    "skip-changeset"
+  ],
+  "assignees": [
+    "hotlong"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-12T05:14:52Z",
+  "updated_at": "2026-10-12T06:27:47Z",
+  "closed_at": "2026-10-12T06:27:45Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": "2026-10-12T06:27:45Z",
+  "comments": 0,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/pull/22955",
+  "body": "Fixes #22952\nClause-②: no\n\nThree additions to `README.md`; no other file, and nothing else in the file. Diff: 8 insertions, 1 deletion. The one modified line is the \"Read why\" line: its text stays the same and it gets a second link.\n\n## What changed\n\n1. **Entry line under the demo.** Inside the centred block that holds the GIF, after the \"Watch: ObjectStack in 90 Seconds\" line: a line break, then one more `sub` line. It holds three links separated by the caption's own `&nbsp;·&nbsp;`: \"Why it exists\" (the essay), \"How it compares\" (the compare page) and \"When to use it\" (the when-to-use page).\n2. **Two pointer sentences closing \"What we mean by ontology\".** They go in a new paragraph after the existing one, which is byte-identical. \"How it compares\" sets ObjectStack beside knowledge ontologies, semantic layers, operational ontologies, metadata platforms, and AI code generation. \"When to use it\" says where it fits today and where it does not. Both sentences restate the target pages' own frontmatter descriptions, with no new claim, number or superlative.\n3. **The deck beside \"Read why\".** In the \"You own it\" quote block, the same line now reads \"Read why · the talk as a deck (PDF)\", and the second link goes to the PDF.\n\nAll four destinations are absolute URLs, like the README's other site links:\n\n- https://objectstack.ai/blog/the-ontology-is-the-software\n- https://objectstack.ai/docs/concepts/compare\n- https://objectstack.ai/docs/concepts/when-to-use\n- https://objectstack.ai/decks/the-ontology-is-the-software.pdf\n\n## The targets exist on main\n\nMeasured at base `51b43a8d`:\n\n- `content/docs/concepts/compare.mdx` and `content/docs/concepts/when-to-use.mdx` are present (`git cat-file -e`). The docs-site resolver that `check:published-readme-links` uses (`pageCandidates` from `scripts/check-docs-redirects.mjs`) maps `/docs/concepts/compare` and `/docs/concepts/when-to-use` to those two files. The negative control `/docs/concepts/no-such-page-control` maps to no page. Both pages are listed in `content/docs/concepts/meta.json`.\n- `content/blog/the-ontology-is-the-software.mdx` is present, and the README already linked its URL (\"Read why\").\n- `apps/docs/public/decks/the-ontology-is-the-software.pdf` is present, and the essay already links the same absolute URL.\n\nGitHub's own rendering of the branch README carries the new anchors. The read was `GET /repos/objectstack-ai/objectstack/readme` at this branch with the html media type, so the sanitizer is included. Anchor counts: compare 2, when-to-use 2, essay 2 (the existing \"Read why\" plus the new entry line), deck 1. The `sub` line renders with its three links. Control: the same read against `main` carries 0 compare anchors.\n\n## Gates\n\n`node scripts/pm/dispatch-gates.mjs --commands --repo objectstack-ai/objectstack` derived 9 gates from the merge base (1 path: `README.md`). Every one ran at `6fec6e55`, with the exit code captured before any pipe:\n\n| command | exit | gate's own verdict |\n|---|---|---|\n| `node scripts/check-closing-keyword-parity.mjs` | 0 | OK (3 parsers agree on all 9 keywords) |\n| `node scripts/check-closing-keyword-parity.mjs --self-test` | 0 | 40 assertions, 5 mutations driven to red |\n| `node scripts/check-comment-mask-corpus.mjs` | 0 | 8819 files, 0 disagree, 0 unparseable |\n| `pnpm check:doc-anchors` | 0 | 484 internal fragment links all resolve |\n| `pnpm check:driver-memory-census` | 0 | OK |\n| `pnpm check:gitlink-declared` | 0 | OK, 0 gitlinks |\n| `pnpm check:nul-bytes` | 0 | OK, no raw ASCII control bytes |\n| `pnpm check:refd-timer-probe` | 0 | OK |\n| `pnpm check:watch-hint-literal` | 0 | 72 declarations, all admitted |\n| `pnpm check:published-readme-links` | 0 | 226 links across 102 published markdown files; 144/144 relative targets found |\n\n`dispatch-gates --ran` reconciliation: 9 derived, 9 run, 0 NOT-MEASURED, 0 UNRUN. This is a derived zero: all 9 recorded an exit code. `check:published-readme-links` is outside the derivation and was run because the dispatch named it. See the first acceptance note for what its green covers.\n\nNo build or test: the diff touches no package.\n\n## Acceptance notes\n\n- **`check:published-readme-links` green tells us nothing about this diff.** The root `README.md` is not among the 102 published markdown files the gate reads: the root package is private, and no package ships the root README. The gate does resolve absolute `objectstack.ai/docs` URLs against `content/docs`, but only inside that population. That is why the resolver measurement above was taken directly. The card's \"leaves absolute URLs alone\" holds for the network (the gate never requests a URL), not for docs-site resolution.\n- **Nothing in CI resolves the root README's absolute docs-site links.** The `check-links.yml` lychee lane globs `README.md` but runs `--offline`, which leaves absolute URLs out as well. If the compare page or the when-to-use page were renamed, these links would point at a 404 with every gate green. This is an observation, not a current defect, so it is not filed. Carrier: none.\n- **No other open PR touches `README.md`.** All 18 open PRs were read file by file at the time of writing, and none touches it. The three `copilot/update-readme-*` heads on origin belong to PRs that are closed and merged; none is open.\n- **Changeset: none.** `packages/**` is untouched, and the README ships in no published package. Labelled `skip-changeset`.\n- **Not in this PR:** repository topics and the About line (settings-page values, the maintainer's clicks), the home page and the blog figures (separate cards).\n\n---\n_Generated by [Claude Code](https://claude.ai/code/session_011hRnra93sK5Q2gTYYTbdJR)_\n"
+}

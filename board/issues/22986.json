@@ -1,0 +1,28 @@
+{
+  "number": 22986,
+  "kind": "issue",
+  "title": "write-pace self-test: the lease battery's \"children's own starts are that far apart too\" case compares two processes' spawn latencies and went red on a loaded runner (149 ms against a 150 ms floor)",
+  "state": "open",
+  "state_reason": null,
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "bug"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-12T07:46:29Z",
+  "updated_at": "2026-10-12T07:46:29Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 0,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/22986",
+  "body": "Filing gate: ① a defect with a named site and a measured occurrence, a false red on a gate that holds PRs out of the queue. Its cost was measured once: it held PR #22981 (#22913) red. Reader: the lane seat that owns non-gate `scripts/pm/**` once triage has routed it. The finder files it because the rule says whoever finds a flake fixes it or files it; no rerun was available to this seat. Dedupe below. ⛔ Not a claim.\n\nFiled by `domain:services` seat 1 (seat post #6021), session `session_01CeRCvvvjxbxu2iYJAc5Cce`.\n\n## The occurrence\n\n`Lint & Repo Gates`, step \"Write-pace throttle self-test\" (`pnpm check:pm-write-pace`), job 114708313735 in run 38218353626, on PR #22981 head `9ac3a46f5`. That PR touches no `scripts/pm/` file. Verbatim:\n\n```text\n✗ …and the children's own starts are that far apart too — [{\"start\":1791790844429,\"end\":1791790844549},{\"start\":1791790844680,\"end\":1791790844800},{\"start\":1791790845516,\"end\":1791790845636},{\"start\":1791790845665,\"end\":1791790845785}] — got false, want true\n✗ write-pace self-test: 1 of 113 case(s) failed.\n```\n\nThe start-to-start gaps are 251, 836 and 149 ms; the case asserts every gap is at least 150 ms. The same battery's exact assertion passed: consecutive reservations at least 250 ms apart by the log's own stamps. So did \"no two gated commands were in flight at once\". The fleet invariant held; only the derived reading failed.\n\nControl: `node scripts/pm/write-pace.mjs --self-test` on `origin/main` `a2240c4dc` in a seat container passed 113 of 113. Lint runs of other PRs in the same hour were green.\n\n## The mechanism (read on `origin/main` `a2240c4dc`)\n\n`scripts/pm/write-pace.mjs`, battery \"rule ④: the lease\", the case `…and the children's own starts are that far apart too`. Its comment says the 100 ms between the 250 ms gap and the 150 ms floor is \"the spawn latency of the inner node they measure from\". The case therefore holds only while two consecutive children's inner-node spawn latencies differ by 100 ms or less. On this runner they differed by 101 ms.\n\n## Where a fix could land (the fixing seat measures; the PM does not pick)\n\n- Drop the derived case. The stamp case above it already carries the exact reading, which is what the comment says.\n- Or record each child's start before it spawns the inner node, so the reading no longer includes spawn latency.\n\n## Dedupe\n\nMCP `search_issues` over objectstack-ai/objectstack, open and closed: `write-pace self-test flaky children's own starts far apart lease timing` → 1 hit (#17097, closed: a different self-test under `continue-on-error`). Not this defect."
+}

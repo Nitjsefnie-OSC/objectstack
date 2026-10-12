@@ -2,8 +2,8 @@
   "number": 22919,
   "kind": "issue",
   "title": "release(v18): write the `/docs/releases/v18` landing page, the one gate left on the v18 version lane (#22085)",
-  "state": "open",
-  "state_reason": null,
+  "state": "closed",
+  "state_reason": "completed",
   "draft": null,
   "author": {
     "login": "objectstack-fleet[bot]",
@@ -14,19 +14,24 @@
     "area:devpath",
     "documentation",
     "domain:devx",
-    "pm:queue",
     "priority:p1",
     "target:v18"
   ],
-  "assignees": [],
+  "assignees": [
+    "os-warren"
+  ],
   "milestone": null,
   "type": null,
   "created_at": "2026-10-12T02:08:42Z",
-  "updated_at": "2026-10-12T02:08:42Z",
-  "closed_at": null,
-  "closed_by": null,
+  "updated_at": "2026-10-12T04:38:29Z",
+  "closed_at": "2026-10-12T04:37:12Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
   "merged_at": null,
-  "comments": 0,
+  "comments": 4,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/22919",
   "body": "Filing gate ③: a task the maintainer directed, verbatim 「开卡写 v18 发布页」 (2026-10-12, in the triage seat's chat). Unblocks: #22085. This is release-owned channel 1 (`lanes/devx.md`: a completeness gap approved per card, ⛔ not a precedent); the maintainer's word is the approval. Filed and graded by the triage seat (seat post #6015, `session_01AavokzJ5DndAwitDXvKy4U`). ⛔ Not a claim, ⛔ not a dispatch.\n\n**Reader who acts:** the `domain:devx` lane, which holds #22085, claims this card and dispatches one docs-only PR.\n\n## Why this card exists\n\n- Ruling `6049734955` on #22085, Q2 → A: \"The v18 release page exists before the first prerelease. A short landing page at `/docs/releases/v18` (the line's purpose and the rule for its breaking stages), registered in `meta.json`, so the pointer `protocol-version-gap.ts` already sends `@next` installers to has a page behind it; `check:release-notes` keeps its semantics.\"\n- The ruling left \"who writes it\" to the maintainer. The maintainer's answer is this card.\n- **The cost of the gap, as measured:**\n  - Every scheduled `release.yml` run since 2026-10-08T12:14Z fails `Version PR maintenance` at \"Validate the post-version tree\", on `pnpm check:release-notes` alone. The last 12 scheduled runs all failed; the latest is `38188250772` at 2026-10-12T00:30Z.\n  - So #21988 stays at `17.8.0` and the v18 line cannot cut `18.0.0-next.0`.\n  - Red there publishes nothing. No other gate is involved (triage's readings `6087315917` and `6101079499` on #22085).\n\n## What to write\n\n- **Where:** follow v17's shape.\n  - `content/docs/releases/v18/index.mdx` plus `content/docs/releases/v18/meta.json` (`\"pages\": [\"index\"]`).\n  - Add `\"v18\"` at the head of `content/docs/releases/meta.json`'s `pages`.\n  - Add one line in `content/docs/releases/index.mdx` above the v17 line.\n  - `check-release-notes.mjs` accepts `v18.mdx` or `v18/index.mdx`. The folder leaves room for per-release pages later, as v17 has.\n- **What, and no more than the ruling asks:**\n  1. The line's purpose, in a few sentences.\n  2. The rule for its breaking stages: the `next` channel (ADR-0087 D6: every major goes to `next` for at least one RC cycle before `latest`), and how the staged retirements land on it.\n  3. A release-status banner: no v18 release yet; the line publishes on npm's `next` tag; `latest` stays on 17.x; `^17` ranges do not move.\n- **Sources, read rather than invented:**\n  - The pending `.changeset/*.md` that carry a `major` bump.\n  - `scripts/collect-release-notes.sh`.\n  - ADR-0131 and its epic #15194, and the other `target:v18` epics.\n  - The ruling above.\n  - ⛔ The page names no change that has not landed on `main`.\n  - ⛔ It states no release date and no version number beyond `18.0.0-next.N`.\n- ⛔ **Not this card:** per-release notes for 18.0.0. Those are compiled centrally at release time (`AGENTS.md`, Documentation Guardrails).\n\n## Done when\n\n- `node scripts/check-release-notes.mjs` passes on the PR head, and the docs build is green.\n- `https://objectstack.ai/docs/releases/v18`, the URL `packages/cli/src/utils/protocol-version-gap.ts` points `@next` installers at, resolves to the page.\n- After merge, the next scheduled `release.yml` run passes \"Validate the post-version tree\". The holder records that run on #22085.\n\n## Constraints\n\n- A docs-only PR, touching `content/docs/releases/**` only. It follows `SKILL.md`'s path fork for a governed path.\n- `skip-changeset`: docs only.\n- ⛔ No release action. Do not merge #21988, publish, tag or dispatch a release workflow.\n- ⛔ Do not edit `check-release-notes.mjs`. The ruling keeps its semantics.\n\n## Grade (triage)\n\n`documentation` · `priority:p1` (release-first) · `domain:devx` · `target:v18` · `area:devpath` · `pm:queue`. `Clause-②: no`."

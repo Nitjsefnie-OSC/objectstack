@@ -1,0 +1,36 @@
+{
+  "number": 22942,
+  "kind": "pull_request",
+  "title": "docs(site): refresh the English deck PDF under apps/docs/public/decks to the 19-slide version",
+  "state": "closed",
+  "state_reason": null,
+  "draft": false,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "documentation",
+    "size/xs",
+    "skip-changeset"
+  ],
+  "assignees": [
+    "hotlong"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-12T04:13:11Z",
+  "updated_at": "2026-10-12T07:34:23Z",
+  "closed_at": "2026-10-12T07:34:22Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": "2026-10-12T07:34:21Z",
+  "comments": 0,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/pull/22942",
+  "body": "Fixes #22941\nClause-②: no\n\nOne binary replaced in place, nothing else: `apps/docs/public/decks/the-ontology-is-the-software.pdf`, the English deck \"The Ontology Is the Software — How a large model reads an enterprise\", refreshed from 17 to 19 pages. Same path, so the link at the end of the blog essay (PR #22264) keeps working.\n\n## What changed in the deck\n\n| | Before (PR #22254) | Now |\n| :--- | :--- | :--- |\n| Pages | 17 | 19 |\n| Bytes | 768,057 | 777,904 |\n| Opening | cover, then \"What is an enterprise?\" | cover, then two prologue slides: three interfaces and one user that never changed; a company a few years from now, nine in the morning, ending on \"take the people out and switch the systems off, what is left of the enterprise?\" |\n| Repetition | the five-part definition listed four times; \"models change, the ontology stays\", \"one change, four places\" and \"written wrong does not ship\" each said more than once | each said once; the future table's second column now reads \"A few years from now\", answering the prologue |\n\nPrinted by Chromium (`page.pdf`, one 1920 x 1080 page per slide, `printBackground`) from the slide HTML. Vector text, 26 embedded font objects (Inter, IBM Plex Mono), byline \"ObjectStack Team\", no speaker name in the text layer.\n\n## Checks\n\n- Docs-site asset only. No `packages/**`, `content/**`, `README.md`, app code or generated ledger. Nothing publishes: `skip-changeset`.\n- `scripts/check-nul-bytes.mjs` judges binary-ness by content and skips real binaries; the PDF is one.\n- No model identifier in the PDF text, the commit or this body.\n- Seat-executed under the maintainer's instruction quoted on the card (\"open a PR\"); the seat does not merge its own PR, so this stays a draft for the maintainer to land.\n\n---\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nhttps://claude.ai/code/session_011hRnra93sK5Q2gTYYTbdJR\n"
+}

@@ -1,0 +1,38 @@
+{
+  "number": 22964,
+  "kind": "issue",
+  "title": "docs(protocol): the Backward Compatibility page says the launch-window minor rule is \"in force today\", that no major can land, and that the current release is 17.2.0, while main is in pre mode on the v18 major and 17.7.0 has shipped",
+  "state": "closed",
+  "state_reason": "completed",
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "area:devpath",
+    "documentation",
+    "domain:devx",
+    "priority:p1",
+    "target:v18"
+  ],
+  "assignees": [
+    "os-warren"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-12T05:47:33Z",
+  "updated_at": "2026-10-12T08:38:13Z",
+  "closed_at": "2026-10-12T08:36:03Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": null,
+  "comments": 5,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/22964",
+  "body": "Filing gate **①**: a product-docs sentence that is false today, with a named landing point. **reach:** the public page `/docs/protocol/backward-compatibility` (`content/docs/protocol/backward-compatibility.mdx`). The releases index's \"Versioning policy\" warning links to its `#launch-window-minor-releases-can-contain-breaking-changes` section, and PR #22963 keeps that link.\n\n**Reader who acts:** the lane triage routes `content/docs/protocol/**` to, in one docs-only PR. The page is hand-written, not release-owned, so it is an ordinary docs PR, not a release channel. If triage grades it `domain:devx`, seat 1 (`session_012yK1ddAdAqfzwigRHZq3r2`) dispatches it in its next round. Found by the #22933 dev (report `6118491386`, out-of-scope finding) and verified by `domain:devx` seat 1. ⛔ Not a claim. Lane and grade are triage's.\n\n## What is false\n\n`content/docs/protocol/backward-compatibility.mdx` on `origin/main` `da9c2bf2f`:\n\n- `:18`: \"While the launch window is open, a breaking change ships as a MINOR release — not a MAJOR one. … This rule is in force today\".\n- `:115` and `:195`: \"`scripts/check-changeset-no-major.mjs` fails any pull request that declares a `major` bump\".\n- `:188`: \"The current release, **17.2.0**, is a MINOR\".\n- `:207`: \"Until it closes, **this section is the operative rule wherever any part of this page disagrees.**\" This makes the stale rule override the rest of the page.\n\nWhat `main` actually does:\n\n- `.changeset/pre.json` reads `\"mode\": \"pre\"`, `\"tag\": \"next\"`. The v18 line is open (#22080).\n- `scripts/check-changeset-no-major.mjs` carries an **RC EXEMPTION** (`:105`): in pre mode it admits a major.\n- `packages/spec/package.json` is `17.7.0`, and the CHANGELOG's newest heading is `## 17.7.0`, not 17.2.0.\n- The v18 landing page (`/docs/releases/v18`, PR #22928) and, once PR #22963 lands, the releases index both state the v18 regime. This page then contradicts both.\n\n## What it should say (direction, not a ruling)\n\n- The launch-window rule describes the 17.x minors, in the past tense. #22963 does the same. `release.yml` publishes from `main`, which is in pre mode, so no future 17.x release is claimed.\n- The v18 line is a major in prerelease on `next`, and `check-changeset-no-major.mjs` stands aside in pre mode.\n  - Link `/docs/releases/v18#how-a-breaking-stage-lands-on-this-line` rather than restating that page.\n  - ⛔ Do not write \"breaking changes land as major changesets\". The #22933 dev measured 93 of 113 pending `**BREAKING**` changesets declaring no major.\n- Drop the hard-coded \"current release\" number, or make it true.\n- Keep the `#launch-window-minor-releases-can-contain-breaking-changes` anchor resolving, or update every link to it in the same PR.\n- ⛔ Nothing beyond what `main` does today: no date, and no version beyond `18.0.0-next.N`.\n\n## Done when\n\n- Every sentence on the page that states the current versioning regime is true against `origin/main` at the PR's base, in a docs-only PR touching `content/docs/protocol/backward-compatibility.mdx` and, only if the anchor moves, the pages that link to it (`skip-changeset`).\n- ⛔ No release action, and no edit to `check-changeset-no-major.mjs` or `check-release-notes.mjs`. ⛔ No edit under `content/docs/releases/**`: that is #22933's PR.\n\n## Dedupe\n\n- MCP `search_issues` on this repo, closed included: \"backward compatibility page launch window breaking change ships as minor check-changeset-no-major current release 17.2.0\" → 51 hits. None is this page's regime claim.\n  - Nearest is #22933 (open): the same falsehood on the releases index, scoped to that file only.\n  - #13779 (closed `completed`) was this page's 0.x disclaimer, a different sentence.\n  - #22373 (closed `not_planned`) is the gate script's printed verdict line, not a page.\n- Dedupe words: backward compatibility; launch window; in force today; ships as a minor; check-changeset-no-major; current release 17.2.0; pre mode.\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_"
+}

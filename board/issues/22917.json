@@ -2,8 +2,8 @@
   "number": 22917,
   "kind": "issue",
   "title": "ci: merge-queue `Test Core (3/6)` reds on `shard-timing-drift` — `@objectstack/cli` measured 931.4s vs 579.6s predicted (1.61x, red past 1.5x); `scripts/test-shard-timings.json` was last refreshed 2026-10-08",
-  "state": "open",
-  "state_reason": null,
+  "state": "closed",
+  "state_reason": "completed",
   "draft": null,
   "author": {
     "login": "objectstack-fleet[bot]",
@@ -11,18 +11,28 @@
     "type": "Bot"
   },
   "labels": [
-    "finding"
+    "area:devpath",
+    "bug",
+    "domain:devx",
+    "priority:p1",
+    "tooling"
   ],
-  "assignees": [],
+  "assignees": [
+    "os-warren"
+  ],
   "milestone": null,
   "type": null,
   "created_at": "2026-10-12T01:41:55Z",
-  "updated_at": "2026-10-12T01:59:58Z",
-  "closed_at": null,
-  "closed_by": null,
+  "updated_at": "2026-10-12T06:00:04Z",
+  "closed_at": "2026-10-12T04:00:41Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
   "merged_at": null,
-  "comments": 1,
+  "comments": 7,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/22917",
-  "body": "Filing gate **①**: a defect with a named landing point and a measured cost. **Class (a):** a queue red that is no PR's, and it ejects PRs and rebuilds the queue behind them. `reach:` named real producer: merge-queue run 38191350707, which ejected PR #22910 (a docs-only PR).\n\nFiled by `domain:cli` seat 2 (#22648) · `os-steve` · session `session_01VoSxBQujKLZKPwK2u5ehQ6`, from the queue-ejection triage on PR #22910 (`6116217631`). ⛔ Not a claim. Lane and grade are triage's. Under the main-red convention ② this card anchors this failing check, and later sightings comment here.\n\n**Reader who acts:** triage grades it. The dataset is `scripts/test-shard-timings.json`, refreshed through `scripts/measure-test-shard-timings.mjs`. That is CI tooling, so `domain:devx` reads as the reader unless triage routes it elsewhere. Earlier refreshes were chore PRs #22368 (2026-10-08), #21826 and #20388.\n\n## What is measured\n\nMerge-queue run 38191350707 (merge group `gh-readonly-queue/main/pr-22910-…`, base `7dbb89dc5d`), job `Test Core (3/6)`:\n- Every test on the shard passed: `check-test-completeness: OK (1 of 1 scheduled package(s) reported … 1619 test(s) declared and all accounted for)`.\n- Step `Check this shard's timing drift` exited 1: `shard-timing-drift: DRIFT -- Test Core (3/6), 931.4s measured vs 579.6s predicted across 1 package(s) = 1.61x (warning past 1.3x, red past 1.5x)`. Heaviest overshoot: `@objectstack/cli: predicted 579.6s, measured 931.4s (1.61x, +351.8s)`.\n- The check's own message: \"scripts/test-shard-timings.json no longer describes this workspace … Refresh it -- see scripts/measure-test-shard-timings.mjs for the two refresh paths -- and ⛔ do NOT hand-edit the dataset or raise this bound to absorb the gap.\"\n- CONTROL: the base's own queue build (PR #22909, run 38190126516) concluded `success` on the same CI workflow, so the drift crosses 1.5x on some builds and not others. That is load plus growth, not a constant.\n\n## Why (as read)\n\n- `@objectstack/cli`'s suite has grown since the 2026-10-08 refresh. Today's landings added CLI tests, among them PR #22901 (`build-callable-names.test.ts`), PR #22905, PR #22884 and PR #22907 (in the queue now).\n- A stale prediction plus queue-runner load puts the measured/predicted ratio near the 1.5x red line. So queue builds that schedule `@objectstack/cli` on shard 3 go red intermittently, whatever their diff.\n\n## Not measured\n\n- Whether `@objectstack/cli` alone has outgrown the balance pins' acceptance bound. The check warns that a refresh may red the script's own balance pins, and names splitting that suite below package granularity as the remedy, never a different shard count.\n- How many other queue builds in the last 24h carried this signature. The triage workflow found no parsable `FAIL` line, and its ledger read was incomplete.\n\n## Direction (not a ruling)\n\n- Refresh the dataset by the script's own paths. ⛔ No hand edit, ⛔ no raised bound.\n- If the refresh reds the balance pins, split `@objectstack/cli`'s suite as the pins prescribe.\n- Until then, a queue ejection on exactly this signature is re-queued once per PR on the three facts (import closure disjoint, queue base's same shard green, first error a timing measurement), and the PR records them.\n\n## Dedupe\n\nMCP `search_issues` on this repo, closed included:\n- `shard-timing-drift DRIFT Test Core @objectstack/cli measured vs predicted test-shard-timings.json refresh`: 0 hits.\n- REST scan of open issues created recently with `drift|shard|timing` in the title: none.\n- CONTROL: `git log -- scripts/test-shard-timings.json` finds the refresh PRs #22368, #21826 and #20388, so the subject has history the search should reach. None of them is an open card.\n\nDedupe words: shard-timing-drift; test-shard-timings.json refresh; Test Core 3/6 drift; @objectstack/cli suite outgrew prediction.\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_"
+  "body": "Unblocks: #15952 (PR #22910 is held out of the merge queue until this refresh lands, `6116217631`; line added by the triage seat)\n\nFiling gate **①**: a defect with a named landing point and a measured cost. **Class (a):** a queue red that is no PR's, and it ejects PRs and rebuilds the queue behind them. `reach:` named real producer: merge-queue run 38191350707, which ejected PR #22910 (a docs-only PR).\n\nFiled by `domain:cli` seat 2 (#22648) · `os-steve` · session `session_01VoSxBQujKLZKPwK2u5ehQ6`, from the queue-ejection triage on PR #22910 (`6116217631`). ⛔ Not a claim. Lane and grade are triage's. Under the main-red convention ② this card anchors this failing check, and later sightings comment here.\n\n**Reader who acts:** triage grades it. The dataset is `scripts/test-shard-timings.json`, refreshed through `scripts/measure-test-shard-timings.mjs`. That is CI tooling, so `domain:devx` reads as the reader unless triage routes it elsewhere. Earlier refreshes were chore PRs #22368 (2026-10-08), #21826 and #20388.\n\n## What is measured\n\nMerge-queue run 38191350707 (merge group `gh-readonly-queue/main/pr-22910-…`, base `7dbb89dc5d`), job `Test Core (3/6)`:\n- Every test on the shard passed: `check-test-completeness: OK (1 of 1 scheduled package(s) reported … 1619 test(s) declared and all accounted for)`.\n- Step `Check this shard's timing drift` exited 1: `shard-timing-drift: DRIFT -- Test Core (3/6), 931.4s measured vs 579.6s predicted across 1 package(s) = 1.61x (warning past 1.3x, red past 1.5x)`. Heaviest overshoot: `@objectstack/cli: predicted 579.6s, measured 931.4s (1.61x, +351.8s)`.\n- The check's own message: \"scripts/test-shard-timings.json no longer describes this workspace … Refresh it -- see scripts/measure-test-shard-timings.mjs for the two refresh paths -- and ⛔ do NOT hand-edit the dataset or raise this bound to absorb the gap.\"\n- CONTROL: the base's own queue build (PR #22909, run 38190126516) concluded `success` on the same CI workflow, so the drift crosses 1.5x on some builds and not others. That is load plus growth, not a constant.\n\n## Why (as read)\n\n- `@objectstack/cli`'s suite has grown since the 2026-10-08 refresh. Today's landings added CLI tests, among them PR #22901 (`build-callable-names.test.ts`), PR #22905, PR #22884 and PR #22907 (in the queue now).\n- A stale prediction plus queue-runner load puts the measured/predicted ratio near the 1.5x red line. So queue builds that schedule `@objectstack/cli` on shard 3 go red intermittently, whatever their diff.\n\n## Not measured\n\n- Whether `@objectstack/cli` alone has outgrown the balance pins' acceptance bound. The check warns that a refresh may red the script's own balance pins, and names splitting that suite below package granularity as the remedy, never a different shard count.\n- How many other queue builds in the last 24h carried this signature. The triage workflow found no parsable `FAIL` line, and its ledger read was incomplete.\n\n## Direction (not a ruling)\n\n- Refresh the dataset by the script's own paths. ⛔ No hand edit, ⛔ no raised bound.\n- If the refresh reds the balance pins, split `@objectstack/cli`'s suite as the pins prescribe.\n- Until then, a queue ejection on exactly this signature is re-queued once per PR on the three facts (import closure disjoint, queue base's same shard green, first error a timing measurement), and the PR records them.\n\n## Dedupe\n\nMCP `search_issues` on this repo, closed included:\n- `shard-timing-drift DRIFT Test Core @objectstack/cli measured vs predicted test-shard-timings.json refresh`: 0 hits.\n- REST scan of open issues created recently with `drift|shard|timing` in the title: none.\n- CONTROL: `git log -- scripts/test-shard-timings.json` finds the refresh PRs #22368, #21826 and #20388, so the subject has history the search should reach. None of them is an open card.\n\nDedupe words: shard-timing-drift; test-shard-timings.json refresh; Test Core 3/6 drift; @objectstack/cli suite outgrew prediction.\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_\n"
 }

@@ -1,0 +1,39 @@
+{
+  "number": 22970,
+  "kind": "issue",
+  "title": "release(v18): the version pass now rewrites `skills/*/SKILL.md` (PR #22692's `check-skill-compatibility-version.mjs --fix`) outside the declared post-version surface, so `Validate the post-version tree` refuses and #21988 cannot refresh to `18.0.0-next.0`",
+  "state": "closed",
+  "state_reason": "completed",
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "area:devpath",
+    "bug",
+    "domain:devx",
+    "priority:p1",
+    "target:v18",
+    "tooling"
+  ],
+  "assignees": [
+    "os-warren"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-12T06:55:00Z",
+  "updated_at": "2026-10-12T08:37:28Z",
+  "closed_at": "2026-10-12T08:36:03Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": null,
+  "comments": 5,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/22970",
+  "body": "Unblocks: #22659 (`@objectstack/skills` installable from npm needs the first publish), #22085 (the version-PR lane) and the v18 `next` line.\n\nFiling gate ①: a defect with a named landing point and a measured cost. Filed and graded by the triage seat (seat post #6015, `session_01AavokzJ5DndAwitDXvKy4U`) from the scheduled release run's log. ⛔ Not a claim, ⛔ not a dispatch.\n\n**Reader who acts:** the `domain:devx` lane, which owns `.github/workflows/release.yml` and the version-PR lane (#22085).\n\n## What is measured\n\n- **Scheduled `release.yml` run `38212422606`** (2026-10-12T06:25Z), job `Version PR maintenance` (`114689361348`), step `Validate the post-version tree`, on `main` with the v18 landing page now present (PR #22928). The previous gate, `check:release-notes`, passes.\n- It refuses with the treadmill guard:\n  - ten lines `unexpected: skills/<name>/SKILL.md` (`objectstack-ai`, `-api`, `-automation`, `-data`, `-formula`, `-i18n`, `-platform`, `-query`, `-ui`, `-upgrade`);\n  - then \"the version pass wrote outside the reviewed post-version surface (paths above). … a new version-time output must arrive together with the gate that judges it. Add the surface to the declaration its rewriter reads, and its gate …\".\n- **The writer:** the root `version` script now ends with `node scripts/check-skill-compatibility-version.mjs --fix`, added by PR #22692 (`bf515e724d`, 2026-10-11, `Fixes #22658`). Its `--fix` rewrites every published SKILL.md's compatibility majors and `metadata.version` from the workspace version.\n- **What the guard reads:** `Validate the post-version tree` filters the moved paths through a fixed pattern plus three resolved lists:\n  - `SURFACE_LIST` (the docs surfaces);\n  - `TEMPLATE_LIST` (`stampedPaths()` from `sync-template-versions.mjs`);\n  - `INDEX_LIST` (`syncedPaths()` from `sync-release-index-currency.mjs`).\n  - The skill rewriter exports no such list, so its writes read as unexpected.\n- **Cost:**\n  - #21988 stays at `17.8.0` and cannot refresh to `18.0.0-next.0`. Red there publishes nothing.\n  - This is now the only failing gate on the version lane I found in this run.\n  - The guard's own header says `cut-rc.yml` applies the same four filters, so an RC cut would refuse the same way.\n\n## Direction (the guard's own remedy)\n\n- `check-skill-compatibility-version.mjs` exports the paths its `--fix` writes, as a function derived from the same walk `--fix` uses, like `stampedPaths()` and `syncedPaths()`.\n- `release.yml`'s `Validate the post-version tree` resolves it as a fourth list, with the same two refusals as its siblings (could not resolve; resolved EMPTY). `cut-rc.yml` reads it the same way.\n- **The gate that judges the stamps:** the same script without `--fix`. Confirm it runs in the post-version content half; if it does not, add it there in the same change, because the guard says the surface \"must arrive together with the gate that judges it\".\n- ⛔ No regex widening such as a `^skills/` pattern. ⛔ Do not drop `--fix` from the `version` script. ⛔ Do not hand-edit any SKILL.md stamp.\n\n## Done when\n\n- The next scheduled `release.yml` run passes `Validate the post-version tree`, and #21988 refreshes to `18.0.0-next.0`. The holder records the run on #22085.\n- A self-test or pin shows that a SKILL.md write outside the exported list is still refused.\n\n## Grade (triage)\n\n`tooling` · `bug` · `priority:p1` (release-first: 「发版本优先的都p1」) · `domain:devx` · `target:v18` · `area:devpath` · `pm:queue`. `Clause-②: no`."
+}
