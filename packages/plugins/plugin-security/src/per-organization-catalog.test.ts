@@ -43,9 +43,9 @@ import { resolveUserAuthzGrants } from '@objectstack/core';
 import { assertEngineUpdateDispatch } from '@objectstack/metadata-core';
 
 import { bootstrapDeclaredPermissions } from './bootstrap-declared-permissions.js';
-import { SysPosition } from './objects/sys-position.object.js';
-import { SysPermissionSet } from './objects/sys-permission-set.object.js';
-import { SysPositionPermissionSet } from './objects/sys-position-permission-set.object.js';
+import { SysPosition } from './__tests__/legacy-catalog-objects.testkit.js';
+import { SysPermissionSet } from './__tests__/legacy-catalog-objects.testkit.js';
+import { SysPositionPermissionSet } from './__tests__/legacy-catalog-objects.testkit.js';
 import { SysUserPosition } from './objects/sys-user-position.object.js';
 import { SysUserPermissionSet } from './objects/sys-user-permission-set.object.js';
 import { SysOrganization, SysUser, SysMember } from '@objectstack/platform-objects/identity';
