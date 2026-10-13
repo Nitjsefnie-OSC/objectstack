@@ -1124,6 +1124,44 @@ function authoredLockFamilyRefusal(
 }
 
 /**
+ * [#23165, ADR-0048] The save door's refusal of a direct save that names no
+ * package, of an item whose active rows are bound to two or more packages.
+ *
+ * A `sys_metadata` row is keyed `(org, type, name, package_id)`, so such a
+ * save has no one row to write. Before this refusal it wrote a package-less
+ * row beside the packages' rows and answered `200`, for a row the item read
+ * does not serve. Choosing one of the packages instead would be the
+ * package-agnostic `findOne`'s driver-order coin toss (#8907). The remedy is
+ * the request's: name the package, which is the address every other door of
+ * the item already takes (`?package=`, ADR-0048).
+ *
+ * `RESOURCE_CONFLICT` / 409, no code minted: the standard catalog's member for
+ * a refusal that comes from environment state rather than the body (the same
+ * body is accepted once the request names its package), and the code this
+ * package already answers when a name is held by more than one owner
+ * (`importUnmanagedPackage`). The prescription first, because a 4xx message
+ * crosses the REST boundary bounded at 500 characters with its tail
+ * truncated; the candidates follow, sorted, so the message is the same on
+ * every driver.
+ */
+function packagelessSaveAmbiguityRefusal(
+    type: string,
+    name: string,
+    packageIds: readonly string[],
+): Error & { code: 'RESOURCE_CONFLICT'; status: 409 } {
+    const shown = packageIds.slice(0, 5).map((id) => `'${id}'`).join(', ');
+    const more = packageIds.length > 5 ? ` and ${packageIds.length - 5} more` : '';
+    const err = new Error(
+        `Name the package this save is for, then send it again: on the REST door add ?package= with the package id, `
+        + `in process pass packageId. Nothing was written. ${type} '${name}' belongs to ${packageIds.length} packages `
+        + `(${shown}${more}), and a save that names none has no single row to write.`,
+    ) as Error & { code: 'RESOURCE_CONFLICT'; status: 409 };
+    err.code = 'RESOURCE_CONFLICT';
+    err.status = 409;
+    return err;
+}
+
+/**
  * One entry of the `422 INVALID_METADATA` envelope's `issues[]` — the shape
  * Studio's designer keys on to highlight the offending form control.
  *
@@ -18498,6 +18536,11 @@ export class ObjectStackProtocolImplementation implements
      * token of the draft a package-less draft save overwrites, which is the
      * draft bound to the package of the item's active row when there is one
      * (#11087) — the address the save resolves, not the key it was handed.
+     * [#23165] The active read that names no package likewise serves the token
+     * of the row a direct save naming none writes: the one package's row the
+     * item is bound to ({@link packagelessSaveAddress}). For an item several
+     * packages hold, that save is refused whatever it carries, and the token
+     * stays the package-unbound row's.
      */
     private async readVersionToken(
         /** [#22877] `member` — the bundle member the read addressed; omitted, the canonical one. */
@@ -18510,8 +18553,49 @@ export class ObjectStackProtocolImplementation implements
             name: request.name,
             org: 'env',
         } as Parameters<typeof repo.headAt>[0];
-        const stored = await this.storedHeadAt(repo, ref, state, request.packageId ?? null, request.member);
+        const packageId = request.packageId === undefined && state === 'active'
+            ? (await this.packagelessSaveAddress(repo, ref, request.member)).packageId
+            : request.packageId ?? null;
+        const stored = await this.storedHeadAt(repo, ref, state, packageId, request.member);
         return stored === null ? null : this.receiptVersion(stored);
+    }
+
+    /**
+     * [#23165, ADR-0048] Where a DIRECT (active) save that names no package
+     * writes: the item's own package when its active rows at the address are
+     * bound to exactly one, else the package-unbound row. `candidates` is every
+     * binding ({@link SysMetadataRepository.activeBindingsAt}); two or more is
+     * a name several packages hold, which {@link saveMetaItem} refuses
+     * ({@link packagelessSaveAmbiguityRefusal}) and for which `packageId` is
+     * `null`.
+     *
+     * The one resolution its two readers take, so they cannot disagree: the
+     * save door, which then writes as a save naming that package does, and
+     * {@link readVersionToken}, whose `version` a save at the same address
+     * accepts.
+     *
+     * Why the package's row: a save writes exactly one
+     * `(org, type, name, package_id)` row, and the item read serves the
+     * package's row whenever it is the item's only row. A save that wrote the
+     * package-unbound row instead minted a second row beside it and answered
+     * `200` for a write that read never served. The draft save has resolved
+     * its address this way since #11087 (`SysMetadataRepository.resolveWriteHead`);
+     * the direct save did not, and this is that half.
+     *
+     * Bindings only: a package-less row beside the package's row (minted by
+     * that defect before this resolution) is not a second package, and stays
+     * as it is. An item with no binding keeps the package-unbound row, as
+     * before. A failed read propagates — guessing the binding would choose the
+     * row the save lands in.
+     */
+    private async packagelessSaveAddress(
+        repo: SysMetadataRepository,
+        ref: Parameters<SysMetadataRepository['headAt']>[0],
+        /** [#22877] The bundle member the save addresses (its body's); omitted, the canonical one. */
+        member?: string,
+    ): Promise<{ packageId: string | null; candidates: readonly string[] }> {
+        const candidates = await repo.activeBindingsAt(ref, { member });
+        return { packageId: candidates.length === 1 ? candidates[0] ?? null : null, candidates };
     }
 
     /**
@@ -20877,6 +20961,51 @@ export class ObjectStackProtocolImplementation implements
             if (lockErr) throw lockErr;
         }
 
+        // [#23165, ADR-0048] THE WRITE ADDRESS of a direct save that names no
+        // package: the item's own package when its active rows are bound to
+        // exactly one ({@link packagelessSaveAddress}). It used to be the
+        // package-unbound row, always, so a save of a package's item minted a
+        // second row beside the package's and answered `200` while the item
+        // read kept serving the package's row. The draft save already resolved
+        // its address this way (#11087, `SysMetadataRepository.resolveWriteHead`).
+        //
+        // Resolved ONCE, here, and from here on the save IS a save naming that
+        // package: every gate below that asks about the row this save writes
+        // (the D9.9 object check, the stored lock family, the runtime
+        // authoring gate, ADR-0070 D1's writable-base check, the lock parent,
+        // the credential carry-forward, `repo.put`, the registry write-through
+        // and the receipt) reads the same `packageId`, so no two of them can
+        // judge different rows. A package that is read-only answers here what
+        // `?package=` naming it answers.
+        //
+        // Below the authorization refusals on purpose: the code-only refusal,
+        // the package door and the `_lock` gate judge the item, not its row,
+        // and they answer before this store read, as #22220 ordered.
+        //
+        // Not asked of: a save that names a package (ADR-0048, its address is
+        // its own) or the package-unbound row (`packageId: null`, which the
+        // stored-metadata migration and the stored flow-credential move pass
+        // for a package-less row they rewrite); a draft save, whose binding the
+        // repository resolves (#11087).
+        //
+        // Several bindings is a name more than one package holds, and a save
+        // naming none of them is refused, not guessed.
+        if (mode === 'publish' && request.packageId === undefined) {
+            const address = await this.packagelessSaveAddress(
+                this.getOverlayRepo(),
+                {
+                    type: PLURAL_TO_SINGULAR[request.type] ?? request.type,
+                    name: request.name,
+                    org: 'env',
+                } as Parameters<SysMetadataRepository['headAt']>[0],
+                itemDiscriminator(PLURAL_TO_SINGULAR[request.type] ?? request.type, request.item),
+            );
+            if (address.candidates.length > 1) {
+                throw packagelessSaveAmbiguityRefusal(request.type, request.name, address.candidates);
+            }
+            if (address.packageId !== null) request = { ...request, packageId: address.packageId };
+        }
+
         const singularType = PLURAL_TO_SINGULAR[request.type] ?? request.type;
 
         // [ADR-0029 D9.9 / #6995] The refusal that is about REPRESENTABILITY
@@ -21749,6 +21878,9 @@ export class ObjectStackProtocolImplementation implements
                 // [#22877] The saved body's member — the row this save wrote.
                 ...mutationEventMemberOfBody(singularTypeForRepo, request.item),
             });
+            const receiptPackage = typeof request.packageId === 'string' && request.packageId !== ''
+                ? `, package=${request.packageId}`
+                : '';
             return {
                 success: true,
                 // [#21207] The version token: the keyed form of the stored
@@ -21804,9 +21936,15 @@ export class ObjectStackProtocolImplementation implements
                 // claim for another. Distinguishing it honestly needs a read
                 // this path does not already make, and a receipt is not worth
                 // a query — so the verb stays the neutral, true "Saved".
+                //
+                // [#23165] …and it names the package whose row this save wrote,
+                // when the save's address names one: the package the caller
+                // named, or the one a direct save naming none resolved to
+                // ({@link packagelessSaveAddress}). A save into the
+                // package-unbound row reads exactly as it did.
                 message: artifactBacked
-                    ? `Saved customization overlay (env-wide, state=${mode === 'draft' ? 'draft' : 'active'}) — type=${request.type}, name=${request.name} [seq=${result.seq}]`
-                    : `Saved ${singularTypeForRepo} '${request.name}' (env-wide, state=${mode === 'draft' ? 'draft' : 'active'}) [seq=${result.seq}]`,
+                    ? `Saved customization overlay (env-wide${receiptPackage}, state=${mode === 'draft' ? 'draft' : 'active'}) — type=${request.type}, name=${request.name} [seq=${result.seq}]`
+                    : `Saved ${singularTypeForRepo} '${request.name}' (env-wide${receiptPackage}, state=${mode === 'draft' ? 'draft' : 'active'}) [seq=${result.seq}]`,
             };
         } catch (err: any) {
             if (err instanceof ConflictError) throw await this.saveConflict(err, request, writeSource);

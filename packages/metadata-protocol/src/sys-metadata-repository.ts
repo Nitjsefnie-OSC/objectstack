@@ -752,27 +752,11 @@ export class SysMetadataRepository implements MetadataRepository {
     let targetPackageId: string | null = packageId ?? null;
     if (state === 'draft' && packageId == null) {
       // The overlaid base is resolved with the SAME two-scope reach the draft
-      // list applies (`listDrafts`' $or contract): an org-scoped caller's
-      // active row usually lives ENV-WIDE (`organization_id IS NULL`) — the
-      // ADR-0005 overlay order — so a same-org-only lookup here found nothing
-      // for exactly the console-session saves this inheritance exists for
-      // (measured live: an org-scoped view draft stayed `package_id NULL`
-      // over an env-wide active row bound to `app.k9qk`).
-      const activeWhere: Record<string, unknown> = {
-        type: ref.type,
-        name: ref.name,
-        state: 'active',
-      };
-      if (member !== undefined) activeWhere[OVERLAY_MEMBER_COLUMN] = member;
-      if (this.organizationId != null) {
-        activeWhere.$or = [
-          { organization_id: this.organizationId },
-          { organization_id: null },
-        ];
-      } else {
-        activeWhere.organization_id = null;
-      }
-      const activeRow = await this.engine.findOne('sys_metadata', { where: activeWhere, context });
+      // list applies (`listDrafts`' $or contract) — see {@link activeBaseWhere}.
+      const activeRow = await this.engine.findOne('sys_metadata', {
+        where: this.activeBaseWhere(ref, member),
+        context,
+      });
       const activePkg = (activeRow as { package_id?: string | null } | null)?.package_id ?? null;
       if (activePkg) targetPackageId = activePkg;
     }
@@ -793,6 +777,78 @@ export class SysMetadataRepository implements MetadataRepository {
       });
     }
     return { row: row ?? null, targetPackageId };
+  }
+
+  /**
+   * [#11087, #23165] The `where` of the item's ACTIVE rows at one address —
+   * the published base a package-less save sits over — with the two-scope
+   * reach the draft list applies (`listDrafts`' $or contract): an org-scoped
+   * caller's active row usually lives ENV-WIDE (`organization_id IS NULL`),
+   * the ADR-0005 overlay order, so a same-org-only lookup found nothing for
+   * exactly the console-session saves the draft inheritance exists for
+   * (measured live: an org-scoped view draft stayed `package_id NULL` over an
+   * env-wide active row bound to `app.k9qk`). No package predicate: every
+   * binding at the address is in it.
+   *
+   * ONE builder for its two readers, {@link resolveWriteHead}'s draft
+   * inheritance and {@link activeBindingsAt}, so the two cannot reach
+   * different rows.
+   */
+  private activeBaseWhere(ref: Pick<MetaRef, 'type' | 'name'>, member?: string | null): Record<string, unknown> {
+    const activeWhere: Record<string, unknown> = {
+      type: ref.type,
+      name: ref.name,
+      state: 'active',
+    };
+    if (member !== undefined) activeWhere[OVERLAY_MEMBER_COLUMN] = member;
+    if (this.organizationId != null) {
+      activeWhere.$or = [
+        { organization_id: this.organizationId },
+        { organization_id: null },
+      ];
+    } else {
+      activeWhere.organization_id = null;
+    }
+    return activeWhere;
+  }
+
+  /**
+   * [#23165] The packages the item's ACTIVE rows at one address are bound
+   * to: each distinct non-null `package_id`, sorted. A package-less row
+   * contributes nothing, so `[]` answers "no binding", whether the address
+   * holds no row or only package-less ones.
+   *
+   * The fact a save that names NO package resolves its write address from
+   * (`saveMetaItem`'s direct save, and the item read's `version` token for
+   * the same address): one binding is the package whose row the item read
+   * serves, so the save writes that row; several is a name more than one
+   * package holds, which a save naming none cannot address. A `sys_metadata`
+   * row is keyed `(org, type, name, package_id)`, and #8907 measured the
+   * package-agnostic `findOne` such a save would otherwise lean on as a
+   * driver-order coin toss — so the bindings are read in full, never sampled.
+   *
+   * The reach is the draft inheritance's ({@link activeBaseWhere}); `member`
+   * is the bundle member the save addresses, as {@link headAt} takes it.
+   * ⛔ Not a write-address default: {@link put} and {@link headAt} keep
+   * `PutOptions.packageId`'s documented one (omitted = the package-unbound
+   * row), so a caller that states the unbound row (`promoteDraft` and
+   * `restoreVersion` of a package-less row, the stored-metadata migration)
+   * keeps it. A failed read propagates.
+   */
+  async activeBindingsAt(
+    ref: Pick<MetaRef, 'type' | 'name'>,
+    opts: { member?: string | null } = {},
+  ): Promise<string[]> {
+    this.assertOpen();
+    const rows = await this.engine.find('sys_metadata', {
+      where: this.activeBaseWhere(ref, overlayMemberValue(ref.type, opts.member)),
+      context: { isSystem: true },
+    });
+    const bindings = new Set<string>();
+    for (const row of (rows ?? []) as Array<{ package_id?: unknown }>) {
+      if (typeof row?.package_id === 'string' && row.package_id !== '') bindings.add(row.package_id);
+    }
+    return [...bindings].sort();
   }
 
   /**
