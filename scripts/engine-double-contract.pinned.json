@@ -3192,6 +3192,16 @@
       "pinned": 1
     },
     {
+      "file": "packages/plugins/plugin-security/src/everyone-rederivation-on-permission-mutation.test.ts",
+      "verb": "findOne",
+      "pinned": 1
+    },
+    {
+      "file": "packages/plugins/plugin-security/src/everyone-rederivation-on-permission-mutation.test.ts",
+      "verb": "update",
+      "pinned": 1
+    },
+    {
       "file": "packages/plugins/plugin-security/src/explain-dependency-fault.test.ts",
       "verb": "findOne",
       "pinned": 1
