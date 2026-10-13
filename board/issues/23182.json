@@ -21,11 +21,11 @@
   "milestone": null,
   "type": null,
   "created_at": "2026-10-13T05:55:32Z",
-  "updated_at": "2026-10-13T14:07:13Z",
+  "updated_at": "2026-10-13T16:06:37Z",
   "closed_at": null,
   "closed_by": null,
   "merged_at": null,
-  "comments": 11,
+  "comments": 12,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/23182",
   "body": "Filing gate **③**, a maintainer-ruled duty: #22949 ruling E item 3 (`6125775640`) and #22998's test-budget rule, \"a test file over 10 s of wall is a card for the owning lane\". This is one lane's share of #23151, which asks triage to split its reading per owning lane.\n\nFiled by the triage seat (seat post #6015) · `session_01AavokzJ5DndAwitDXvKy4U`. ⛔ Not a claim. Part of #23151.\n\n**Reader who acts:** the `domain:engine` seat. The packages below are this lane's in the pm-dispatch domain table.\n\n## The reading\n\nFrom #23151, which takes it from the refresh run `38340176409` (`measure-test-shard-timings --diff`) over 20 hourly full-battery runs. Each row gives the file's slowest executed run in that window. Re-check: the next refresh PR's own list.\n\n| package | files | slowest | file → seconds (run) |\n|:--|--:|--:|:--|\n| `@objectstack/metadata-protocol` | 1 | 113.2 s | `src/protocol.lock-one-resolution.test.ts` 113.2 s (`38228297391`) |\n| `@objectstack/driver-turso` | 1 | 29.3 s | `src/turso-remote-autonumber-concurrency.test.ts` 29.3 s (`38228297391`) |\n| `@objectstack/metadata` | 1 | 25.1 s | `src/serializers/typescript-serializer-annotation.test.ts` 25.1 s (`38228297391`) |\n| `@objectstack/metadata-fs` | 1 | 24.3 s | `test/external-write-resync.test.ts` 24.3 s (`38217670691`) |\n| `@objectstack/objectql` | 1 | 16.1 s | `src/bulk-write-per-row-hooks.test.ts (local)` 16.1 s (`38325245250`) |\n| `@objectstack/driver-sql` | 1 | 10.5 s | `src/sql-driver-connect-bound.test.ts` 10.5 s (`38228297391`) |\n\n## What done looks like\n\n- Each file named above runs under 10 s of wall. The fix is to the test, or to what it waits on.\n- ⛔ No deletion without a named duplicate (#22998). ⛔ No timeout raise. ⛔ No move to a slower or skipped project to hide it.\n- Pin: the next refresh PR's list no longer names the file.\n- One PR per file or one per package, whichever the seat measures smaller. Each PR says which rows it closes.\n\n## Grade (triage)\n\n`tooling` · `priority:p3` · `domain:engine` · `area:devpath`, into `pm:queue`. It is maintainer-directed (#22949 ruling E), so the product-only queue rule's exemption applies."

@@ -2,8 +2,8 @@
   "number": 23275,
   "kind": "issue",
   "title": "docs(skills install): the end state after create-objectstack installs @objectstack/skills — one pinned spelling with --copy, one next.0 exception, and the 17→18 skills step in the upgrade guide (ruling A on #22649, second docs pass)",
-  "state": "open",
-  "state_reason": null,
+  "state": "closed",
+  "state_reason": "completed",
   "draft": null,
   "author": {
     "login": "objectstack-fleet[bot]",
@@ -14,7 +14,6 @@
     "area:devpath",
     "documentation",
     "domain:devx",
-    "pm:dispatched",
     "priority:p2"
   ],
   "assignees": [
@@ -23,11 +22,15 @@
   "milestone": null,
   "type": null,
   "created_at": "2026-10-13T13:39:27Z",
-  "updated_at": "2026-10-13T14:21:38Z",
-  "closed_at": null,
-  "closed_by": null,
+  "updated_at": "2026-10-13T15:37:42Z",
+  "closed_at": "2026-10-13T15:36:07Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
   "merged_at": null,
-  "comments": 2,
+  "comments": 5,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/23275",
   "body": "Blocked-by: #22659\nUnlock-action: re-check PR #23248\n\nFiling gate **③ a task the maintainer directed.** The maintainer, in the skills seat's session chat on 2026-10-13: 「评估升级到 v18 之后 ,skills 官方应该从 npm 安装,模版项目的 skills 安装流程,文档相关的说明应该如何修正」, and on the seat's evaluation: 「评估里两张卡同意立」. Filed by `domain:skills` seat 1 (seat post #7623, `session_013zGKMG1cRedVzWtqGGGZW9`, huangyiirene). Ruling-ref: 6096124407 (ruling A on #22649, the direction this card completes; the first docs pass was #22668). Triage may re-grade on first touch. ⛔ Not a claim.\n\n**Reader who acts:** the `domain:devx` seat, once PR #23248 (#22659 — `create-objectstack` installs the catalog from `@objectstack/skills`) is on `main`; the docs must not describe that scaffolder before it ships. **Surface:** `content/docs/getting-started/build-with-claude-code.mdx` (lines 60–67 and 425–434), `content/docs/getting-started/your-first-project.mdx` (47–54 and 357–359), `content/docs/ai/skills-reference.mdx` (17–41), `content/docs/ai/skills.mdx` (29–36), `content/docs/upgrading.mdx`, `content/docs/releases/v18/index.mdx`. ⛔ No `skills/**` and no `packages/**` — the two package READMEs and the upgrade skill are the skills lane's sibling card, filed in the same act.\n\n## Why (measured on `origin/main` `afbf960c`, 2026-10-13)\n\n- Three transitional passages — `build-with-claude-code.mdx:60-67`, `your-first-project.mdx:47-54`, `skills-reference.mdx:39` — say that through `18.0.0-next.0` the scaffolder takes the skills from the repository's unreleased `main` and tell the reader to replace them with the package. PR #23248 makes the scaffolder install the package itself (template `devDependencies` gain `@objectstack/skills` at the spec's version; it runs `npx -y skills@1.7.2 experimental_sync --agent claude-code --copy -y`), so from the next prerelease these passages describe a scaffolder that no longer exists.\n- The pages teach the linked sync (`npx skills experimental_sync --agent claude-code -y`, no `--copy`). PR #23248 measured that shape in a committed project: the links point into the gitignored `node_modules`, so a clone gets dangling links and zero `SKILL.md`. The scaffolder uses `--copy`, and the `AGENTS.md` it writes says to keep it. Two spellings of one command, and the documented one breaks on clone.\n- The pages run an unpinned `npx skills`; the scaffolder pins `skills@1.7.2` because `experimental_sync` is that tool's unstable interface. A third spelling.\n- `content/docs/upgrading.mdx` and `content/docs/releases/v18/index.mdx` say nothing about the skills (`grep -n -iE 'skill' content/docs/upgrading.mdx` → 0 lines; the positive control `grep -c 'os migrate meta' content/docs/upgrading.mdx` → 6). A 17.x project's skills were installed by `skills add` from GitHub `main`; its `skills-lock.json` records `sourceType: github`, and `experimental_sync` skips those (`Skipped … installed with skills add`, exit 0 — PR #23248's measurement). An upgrader who bumps only the packages keeps the 17.x-era skill text.\n\n## What done looks like\n\n- The three transitional passages are rewritten to the end state: the scaffolder installs the catalog from `@objectstack/skills` at the project's `@objectstack/spec` version, copied into `.claude/skills/`. The `18.0.0-next.0` exception (that one scaffolder still read `main`; remove its skills with `npx skills remove`, then run the two steps) lives in exactly one sentence, in `skills-reference.mdx`'s \"Which versions exist\"; the other two pages link there. ⛔ No staged wording and no second transitional paragraph.\n- One install spelling across the pages, equal to the scaffolder's: the `npm install --save-dev \"@objectstack/skills@$(node -p \"require('@objectstack/spec/package.json').version\")\"` step, then `npx skills@1.7.2 experimental_sync --agent claude-code --copy -y`. The linked (no `--copy`) form is dropped, or kept as one sentence for a project that does not commit its skills. The pinned CLI version is read from `packages/create-objectstack/src/skills-install.ts` on the tree at dispatch, never recalled.\n- `content/docs/upgrading.mdx` (the cross-major checklist) and `content/docs/releases/v18/index.mdx` gain one skills step for 17.x → 18: `npx skills remove objectstack-ai objectstack-api objectstack-automation objectstack-data objectstack-formula objectstack-i18n objectstack-platform objectstack-query objectstack-ui objectstack-upgrade` (or `npx skills remove --all` when only this catalog was installed), then the two install steps above, and the rule that the catalog moves only with the `@objectstack/*` packages.\n- `check:doc-route-spelling`, `check:corpus-claim-drift`, `check:doc-authoring` and the docs link check green; `skip-changeset` (docs only — `content/docs/**` ships in no package).\n- ⛔ No new gate: the spelling is held by prose review (`contract-review.md` routes `content/docs/**` to the dispatching seat's ACCEPT, sentence by sentence against the diff).\n\n**Workload:** S; precedent PR #23220 (the first docs pass over the same pages).\n\n## 四维(业务立场)\n\n- 长远合理性:技能随版本装是 contract-first 的自然延伸;文档只写终态、一处例外,两年后读者看到的是「装哪版用哪版」一句话。\n- 实际业务拉动:`next.1` 起 `npm create objectstack@next` 产出的 AGENTS.md 与官网文档互相矛盾;17.x 升 18 的用户技能被 `experimental_sync` 静默跳过(PR #23248 实测)。\n- 防 AI 犯错:一种命令、一处例外、`--copy`(无悬空链接)、先 remove 再 sync(无静默跳过)——把两种读法收成一种。\n- 创业阶段不扩散:删过渡段、删链接式拼写;不加门禁、不加脚本。\n\nDedupe: REST listing `labels=domain:devx&state=all&since=2026-09-20` (278 cards) and `labels=domain:skills&state=all&since=2026-09-20` (252 cards), grepped for `--copy|experimental_sync|skills install|upgrade skill|objectstack-upgrade|upgrading.mdx|install the catalog|skills add` → 9 and 17 hits; #22668 (closed; PRs #23220 and #23232) is the first pass this card follows, #17870 (closed) corrected the scaffold-e2e comment; none is this second pass or the upgrade step. Dedupe words: skills docs second pass · experimental_sync --copy · skills@1.7.2 pin · upgrading.mdx skills step · next.0 exception.\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_"

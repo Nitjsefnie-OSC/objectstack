@@ -2,8 +2,8 @@
   "number": 23178,
   "kind": "issue",
   "title": "services: route families mounted straight on the HTTP server never consult the ADR-0069 authentication-policy gate, so a session held by enforced MFA or password expiry may still reach them",
-  "state": "open",
-  "state_reason": null,
+  "state": "closed",
+  "state_reason": "completed",
   "draft": null,
   "author": {
     "login": "objectstack-fleet[bot]",
@@ -14,7 +14,6 @@
     "area:access",
     "bug",
     "domain:spec",
-    "pm:dispatched",
     "priority:p1",
     "security"
   ],
@@ -24,11 +23,15 @@
   "milestone": null,
   "type": null,
   "created_at": "2026-10-13T05:42:24Z",
-  "updated_at": "2026-10-13T14:21:46Z",
-  "closed_at": null,
-  "closed_by": null,
+  "updated_at": "2026-10-13T15:05:36Z",
+  "closed_at": "2026-10-13T15:04:04Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
   "merged_at": null,
-  "comments": 13,
+  "comments": 15,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/23178",
   "body": "Filing gate **① a product defect with a named landing**. `reach:` exception: security, because a session that ADR-0069 holds out of protected resources may still read or write through these families. Not measured at route level: the first acceptance item measures it. ⛔ Any reproduction stays off public surfaces under the `domain:services` lane's disclosure rule; this card stays at function level. Found by the contract review of PR #23171 (record `6139053386`, ③ out-of-scope 3) and re-read by the seat on `origin/main`. Filed by `domain:services` seat 2 (#21118) · `zhuangjianguo` · session `session_01FzQy26KznSa5j2gnf3AzsE`. ⛔ Not a claim; grade and lane are triage's.\n\n**Reader who acts:** triage grades it. The fix lands in `domain:services` files, so the `domain:services` seat claims it next. One row (`plugin-sharing`) sits in seat 1's region (#6021, section 3) and declares there first.\n\n## What happens\n\nADR-0069 computes an authentication-policy posture once per session (`user.authGate`, in the auth `customSession` enrichment). Each transport seam must then call `evaluateAuthGate` (`packages/core/src/security/auth-gate.ts`), or read `context.authGate`, to refuse a held session. The seams that do so are the REST server's `enforceAuth`, the runtime `http-dispatcher.ts`, the MCP plugin, `plugin-auth`'s admin endpoints and `plugin-hono-server`'s current-user endpoints.\n\nRoute families that register their handlers straight on the host `IHttpServer` resolve their own caller context and never read the gate. A session the policy holds (an un-enrolled user under enforced MFA, or an expired password) is therefore answered by these families as an ordinary signed-in caller.\n\n## Governing text\n\n- `docs/adr/0069-enterprise-authentication-hardening.md`, `mfa_required` row: a session for a user without two-factor \"is marked **un-stepped-up** and gated out of all protected resources until enrollment + verification\".\n- Same ADR: \"Gate at the session-validation seam so a half-authenticated (password-only) session cannot read data.\"\n- `auth-gate.ts` header: the gate blocks \"an authenticated user from PROTECTED RESOURCES until they remediate\", and \"the transport seams … then call `evaluateAuthGate`\".\n\n`Seam: spec:ExecutionContext.authGate → runtime: each raw-host family's caller-context resolver (none reads it)`.\n\n## Families (single-pattern census on `origin/main`)\n\nThe census lists `src` directories that register a route on the host server (`server` / `httpServer` / `http` / `app` followed by a verb method) and reference neither `authGate` nor `evaluateAuthGate`, excluding tests:\n\n| Package | Route registrar files | Gate references |\n|---|---|---|\n| `packages/services/service-settings` | 1 | 0 |\n| `packages/services/service-storage` | 1 | 0 |\n| `packages/services/service-i18n` | 1 | 0 |\n| `packages/services/service-datasource` | 1 | 0 |\n| `packages/plugins/plugin-sharing` | 1 | 0 |\n\nControl: `packages/plugins/plugin-hono-server` matches the same registrar pattern and carries its gate reference (1). The pattern cannot see a registrar that names its server differently. The fixing dev re-runs the census with a wider scanner and keeps that positive control.\n\n## Acceptance\n\n- **Measure reachability first,** on a booted composition served the way a deployment serves it. For each family, check whether a policy-held session gets the family's protected answer. A family the composition already gates in front (a fronting middleware, or the dispatcher) is dropped from the fix, with the measurement as its evidence.\n- Each reached family refuses a held session with the answer the REST seam gives: the gate's status and `code`, honouring `isAuthGateAllowlisted` as `enforceAuth` does. Prefer one shared door in `@objectstack/core`, alongside the anonymous floor's `shouldDenyAnonymous`, over per-family copies. ⛔ No new copy of the allow-list rule.\n- One pin per family covers three cases: a held session is refused, an un-held signed-in session gets an unchanged answer, and a CORS preflight is unchanged.\n\n## Dedupe\n\nMCP `search_issues` on objectstack-ai/objectstack, closed included:\n- `ADR-0069 auth policy gate evaluateAuthGate raw http-server mounted route families not covered`: 30 hits; the first 8 were read. They are #23142 (open; the settings anonymous floor, whose review found this), #22577 (closed; an allow-list entry), #16839 (closed; the allow-list's unanchored match), #22438 / #22578 (closed; approvals action-page mount), #21046 (closed; discovery), #20679 (closed) and #7432 (closed; REST `enforceAuth` with no path). None covers families that never consult the gate.\n- `ADR-0069 auth policy (MFA enrollment, password expiry) not enforced on routes mounted on the raw http server outside the dispatcher`: 3 hits. They are #10699, #8049 and #7432, all closed, and none is this.\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_"

@@ -1,0 +1,35 @@
+{
+  "number": 23308,
+  "kind": "issue",
+  "title": "fix(plugin-security): an environment kernel's security catalog serves permission sets and positions saved through the metadata door again (S8 regression)",
+  "state": "open",
+  "state_reason": null,
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "area:access",
+    "bug",
+    "domain:engine",
+    "pm:dispatched",
+    "priority:p1",
+    "target:v18"
+  ],
+  "assignees": [
+    "os-steve"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-13T17:15:38Z",
+  "updated_at": "2026-10-13T17:17:48Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 2,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/23308",
+  "body": "**The regression.** On an environment kernel, a permission set written through the metadata door is missing from the security catalog. That holds whether the set is published into a runtime package or saved into no package. A user granted the set is refused, because the grant names a set the catalog cannot resolve, and no `everyone` suggestion is recorded. It is fail-closed, but the workflow is broken for hosted tenants, whose stacks run environment kernels. Host kernels are unaffected.\n\n**The cause.** S8 (#23056, PR #23222 → `66949b7729`) stopped `SecurityPlugin` registering the permission-set projector. The projector had two halves:\n- the `sys_permission_set` row write, which nothing reads, so retiring it was right;\n- the echo, `syncEvaluatorRegistry`, which was load-bearing.\n\nOn an environment kernel the protocol hydrates no stored row into the engine registry: `applyRegistryWriteThrough` returns when the kernel has an `environmentId`. So the catalog reads the kernel's metadata service, and the echo was the only thing that registered an env-wide overlay there (`registerInMemory`, carrying `_provenance: 'org'` and `_packageId`). It also re-echoed every stored overlay at boot (`reconcilePermissionSetProjection`). #23258's pins stayed green after S8 because the suite registers the projector itself.\n\n**Measured** in report 6151042307 on #22975: a booted environment kernel built in the shape of cloud's per-project assembly, with the real metadata service and `SecurityPlugin`, compared against a host kernel.\n\n| Tree | Environment kernel, runtime-package set | Environment kernel, no-package set | Host kernel |\n|:--|:--|:--|:--|\n| `main` `9c7cfbf0a9` (S8 in) | catalog: unresolved; read after the grant: 403; suggestions: none | unresolved; 403 | resolved; read granted |\n| S8's parent `99e944daf2` | catalog: `metadata`, owner `app.probe_23233`; read granted; one pending `everyone` suggestion | resolved; granted | the same as on `main` |\n\nA position saved through the metadata door is unresolved on an environment kernel on both trees. It is the same mechanism, but older than S8: only the permission echo ever filled the gap.\n\n**The fix (A2: a `SecurityPlugin` metadata hook that keeps only the echo).**\n- A new module in `packages/plugins/plugin-security/src/` registers `protocol.registerMutationProjector` for `permission` and `position`. It takes over from `permission-set-projection.ts` the echo, `readServedPackageBinding` (generalised to the type) and the decoration stripping.\n- On a save, it reads the layered overlay. It skips when there is none, and for a `permission` it skips unless `classifyPackagedPermissionSet` answers `org`. Otherwise it registers the body in the kernel's metadata service, with `_provenance: 'org'`, `_packageId` and `ENV_PROJECTION_MARKER`.\n- On a delete, it heals or drops the echo.\n- A `kernel:ready` pass registers every active env-wide overlay of the two types.\n- It writes to no table and decides nothing about authorization. The catalog, the resolver and the suggestion collector are untouched.\n- ⛔ The `sys_permission_set` row write does not come back.\n- The alternative A1 puts the rule in the metadata door itself (`applyRegistryWriteThrough` on an environment kernel). It is not taken here: it changes a deliberate protocol topology rule, beside a region another seat holds. A1 stays open to the protocol's owners as a later fold-in.\n\n**Acceptance.**\n- A boot-level pin is committed: the measured composition, an environment kernel and a host kernel. It asserts, on the environment kernel:\n  - the runtime-package set resolves with source `metadata` and its owner;\n  - the user's read is granted after the grant;\n  - one pending `everyone` suggestion;\n  - the no-package set resolves;\n  - a position resolves.\n  \n  The host-kernel legs are controls.\n- An ablation unregisters the hook and turns the environment legs red.\n- A restart of an environment kernel over stored overlays still resolves them, through the boot pass.\n- All six cases of `permission-set-echo-package-owner.test.ts` move onto the new module. The echo-stamp cases of `permission-set-projection.test.ts` (`_provenance: 'org'` only on an `org` verdict) are re-homed beside them.\n\n**Order.** This lands first, as its own PR off `main`. Then #22975's 7a deletes the projector and the old suites, and names this card.\n\nPart of the ADR-0131 epic chain (#15194): a regression from #23056, raised by #22975's 7a re-cut.\n"
+}

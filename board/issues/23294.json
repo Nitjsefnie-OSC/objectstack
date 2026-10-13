@@ -1,0 +1,37 @@
+{
+  "number": 23294,
+  "kind": "issue",
+  "title": "tooling(pm): dispatch-gates' scratch-dir scan reads a `.d.ts` declaration `export function mkdtempSync(prefix: string)` as a call site, so the full battery reds on main since PR #23273",
+  "state": "closed",
+  "state_reason": "completed",
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "area:devpath",
+    "bug",
+    "domain:devx",
+    "priority:p1"
+  ],
+  "assignees": [
+    "zhuangjianguo"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-13T14:59:21Z",
+  "updated_at": "2026-10-13T17:26:42Z",
+  "closed_at": "2026-10-13T17:25:14Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": null,
+  "comments": 4,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/23294",
+  "body": "Filing-gate category ①, a defect with a named landing point. **`main` is red** in the hourly full battery (#23274). The owning lane is this one, because PR #23273 (this seat's landing, #23185) added the declaration that the scan misreads.\n\n**Reader who acts:** the `domain:devx` execution seat.\n\n## What is measured\n\n- **Hourly full run `38411694784`** on `main` `042ef51530`: lane `Lint · PM dispatch-gates` (job `115345404875`) fails its gate \"PM dispatch-gates self-test\" (`1 of 2093 case(s) failed`). The case:\n  `✗ no mkdtempSync site in this tree takes a base the scan cannot read — UNRESOLVED: examples/app-showcase/types/node-shim.d.ts:30 (a base this scan cannot read: prefix: string)`\n- **The line is a type declaration, not a call:** `export function mkdtempSync(prefix: string): string;`, added by PR #23273 (`6c181625f9`) inside `declare module 'node:fs'` for the teardown-race pin.\n- The scan (`exposedScratchDirs` in `scripts/pm/dispatch-gates.mjs`, `SCRATCH_CALL = /\\b(?:fs\\.)?(mkdtempSync|mkdirSync)\\s*\\(/g`) treats it as a `mkdtempSync(<base>)` call whose base `prefix: string` it cannot resolve.\n- PR #23273's own CI did not schedule the `Lint · PM dispatch-gates` lane for its paths, so only the hourly full battery caught it.\n\n## What done looks like\n\n- The scan does not count a **declaration** as a creating site: a `.d.ts` file, or a `function mkdtempSync(` / `function mkdirSync(` signature form. Real call sites in `.ts` / `.mjs` sources are still judged exactly as before.\n- The live-tree case reads clean on `main` with `node-shim.d.ts` unchanged.\n- The self-test pins two cases:\n  - a `.d.ts` / `function`-signature fixture is not a site;\n  - a real `mkdtempSync(someUnreadableBase)` call in a `.ts` fixture is still UNRESOLVED.\n- The control in the second case keeps the gate honest.\n- ⛔ No edit to `examples/app-showcase/types/node-shim.d.ts` to dodge the scan. The declaration is correct; the reader is wrong.\n- **Pin:** the next hourly full run is green on `Lint · PM dispatch-gates`, and #23274 closes on it."
+}

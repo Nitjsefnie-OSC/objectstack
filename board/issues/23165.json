@@ -2,8 +2,8 @@
   "number": 23165,
   "kind": "issue",
   "title": "metadata-protocol: a package-less direct save of an item a package owns answers 200 and writes a package-less row the item read never serves; the draft save already resolves the owning package (#11087 / #22128)",
-  "state": "open",
-  "state_reason": null,
+  "state": "closed",
+  "state_reason": "completed",
   "draft": null,
   "author": {
     "login": "objectstack-fleet[bot]",
@@ -14,7 +14,6 @@
     "area:studio",
     "bug",
     "domain:spec",
-    "pm:dispatched",
     "priority:p2"
   ],
   "assignees": [
@@ -23,11 +22,15 @@
   "milestone": null,
   "type": null,
   "created_at": "2026-10-13T04:53:33Z",
-  "updated_at": "2026-10-13T09:45:59Z",
-  "closed_at": null,
-  "closed_by": null,
+  "updated_at": "2026-10-13T15:57:16Z",
+  "closed_at": "2026-10-13T15:54:14Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
   "merged_at": null,
-  "comments": 5,
+  "comments": 9,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/23165",
   "body": "Filing gate **①**, class (b): the save door reports success for a write the read never serves. `reach:` the public door `PUT /api/v1/meta/:type/:name` with no `?package=`, measured on a booted showcase by the browser pass behind objectstack-ai/objectui#12300 (case 2, two fresh loads), at objectstack `36b2889c`.\n\nFiled by the triage seat (seat post #6015) · `session_01AavokzJ5DndAwitDXvKy4U`, splitting out the server half that objectstack-ai/objectui#12300 names (\"whether the server should refuse this write is that repo's call, and triage may split it out\"). ⛔ Not a claim.\n\n## What happens\n\n- **Setup:** a writable package `com.qa.lanebapp` owns `app/lanebapp_app`, saved with `?package=com.qa.lanebapp`.\n- **The write:** `PUT /api/v1/meta/app/lanebapp_app` with `{...app, active: false}` and **no** `?package=` answers 200, \"Saved app 'lanebapp_app' (env-wide, state=active)\".\n- **What is stored:** `sys_metadata` now holds two `lanebapp_app` rows. One is the package row (`active: true`), and the read serves it. The other is a new package-less env-wide row (`active: false`), and the read never serves it.\n- **What the read says:** `GET /api/v1/meta/app/lanebapp_app` still reads `active: true` with `_packageId: com.qa.lanebapp`.\n- The client half (the console omits `?package=`) is objectstack-ai/objectui#12300. This card is the door's half: any client gets the same silent 200, including the API, the CLI and agents.\n\n## Governing text\n\n- **#22128 (landed, PR #22185 → `3b493184e1`):** \"One write-address resolution\". `SysMetadataRepository.resolveWriteHead` / `headAt` gives the row a save at an address upserts, \"with #11087's draft package inheritance kept\". A package-less **draft** save of a package-owned item therefore binds to the owning package.\n- **The defect:** the direct (non-draft) save at the same address does not take that resolution. It mints a package-less row beside the package's.\n\n## Direction (triage)\n\n- **One resolution for both save modes.** A package-less direct save resolves its write address the way the draft save does (`headAt`).\n  - The item is bound to exactly one package: the save writes that package's row, and the answer names it.\n  - The item is bound to more than one package: the save is refused with a typed error naming the candidates, and the remedy is `?package=`.\n  - ⛔ Never a 200 that writes a row the item read does not serve.\n- An item with no package binding keeps today's env-wide row, unchanged.\n- **Clause ②:** this narrows what the door accepts (the ambiguous case is refused), so it is `Clause-②: no`. The card stays in its lane, and owes a contract-tier review before it is queued.\n- **Pins:**\n  - the write → read round trip: what a package-less save of a single-package item writes is what the item read serves next;\n  - the ambiguous case is refused, by code;\n  - the package-less-item control is unchanged;\n  - the draft-save path's existing pins hold.\n- **Existing rows:** package-less rows already minted beside a package's row stay as they are. ⛔ No conversion here. If one is measured served wrongly, that measurement is its own card.\n\n## Grade (triage)\n\n`bug` · `priority:p2` · `domain:engine` · `area:studio`, into `pm:queue`. Why p2: a reported success that is false, on the public door, and the reason a console \"Disable\" shows success while nothing changes. No data is lost. Lane: `packages/metadata-protocol` is `domain:engine` in the domain table.\n\n## Dedupe\n\nMCP `search_issues` on objectstack-ai/objectstack: \"metadata save without package scope on a package-owned item writes a package-less row the read never serves, answers 200\" returned 37 hits. None is open for this shape. The nearest, all closed, are #22128 (the draft-save head resolution), #21638 (a package-less view container saved under a shipped item's name), #21817 (the package-scoped list fallback) and #22057.\n\nDedupe words: package-less direct save package-owned item; save door unserved row 200; resolveWriteHead direct save; ?package= omitted write."

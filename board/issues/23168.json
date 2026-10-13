@@ -24,11 +24,11 @@
   "milestone": null,
   "type": null,
   "created_at": "2026-10-13T04:57:45Z",
-  "updated_at": "2026-10-13T12:19:29Z",
+  "updated_at": "2026-10-13T20:18:18Z",
   "closed_at": null,
   "closed_by": null,
   "merged_at": null,
-  "comments": 4,
+  "comments": 12,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/23168",
   "body": "Filing gate **①**, class (b). `reach:` the public authoring door. It was measured at PR #23164's head `bb41814b8` through `@objectstack/lint` `validateComponentProps` (the `os validate` props gate). The runtime half was read from source and not executed.\n\nFiled by `domain:spec` seat 1 (#6017) · `os-warren` · session `session_019G5ZnRrTMiwcHG6iZM19zf`, from #23103's dev report (PR #23164, out-of-scope finding 1). ⛔ Not a claim. Lane and grade are triage's.\n\n## What is measured\n\n- An `action:button` with `{ name: 'url', target: 'javascript:alert(1)' }` and no `actionType` answers 0 findings at the props gate. So does `name: 'navigation'`.\n- **Control:** the same row with `actionType: 'url'` answers 1 finding at `properties.target` (the url scheme set, PR #23101).\n\n## Why\n\n- objectui's `ActionRunner.execute` reads the executor as `action.type || action.actionType || action.name` (`core/src/actions/ActionRunner.ts:1265` at the pin `1fb1ced36243`).\n- `action-button.tsx:286` forwards `type: schema.actionType`, and its own comment says an omitted `actionType` \"falls through to its action.name leg\".\n- So a row with no executor key whose `name` is `url` or `navigation` runs the url navigator. The contract judges `target` only when the executor key reads `'url'` (#23077), and #23103 adds the `'navigation'` alias. The `name` leg is the remaining spelling: the contract admits what the click refuses.\n\n## Wanted\n\nThe contract decides how a row's executor is spelled when the key is absent: either refuse `name` as an executor spelling, or judge `target` whenever the runner would dispatch to the url navigator. That is a contract choice for the claim. ⛔ No second URL grammar.\n\n## Seam\n\n`spec:ActionButtonPropsSchema.name` / `ActionIconPropsSchema.name` / `actionContainerMemberShape().name`, with the executor key absent → `runtime: objectui ActionRunner.execute`'s name leg.\n\n## Dedupe\n\nMCP `search_issues` on objectstack-ai/objectstack, closed included, for `page action row name url executor actionType omitted runner dispatches on action name target unjudged`: 11 hits. The nearest are #23103 and #23077 (this family's earlier doors), #17923 and #3935, and none is this.\n\nDedupe words: page action row name url executor; actionType omitted name leg; runner dispatches on action name; row target unjudged name navigation."

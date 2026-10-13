@@ -2,8 +2,8 @@
   "number": 23247,
   "kind": "issue",
   "title": "[Decision] 测试预算：metadata 的 tsc 注解测试在 CI 满载下约 13–15 秒，压不到 10 秒——记为具名例外（A+E），还是拆成 4 个文件、多花约 60% 编译 CPU（A+C）",
-  "state": "open",
-  "state_reason": null,
+  "state": "closed",
+  "state_reason": "completed",
   "draft": null,
   "author": {
     "login": "objectstack-fleet[bot]",
@@ -13,7 +13,6 @@
   "labels": [
     "area:devpath",
     "domain:engine",
-    "pm:dispatched",
     "priority:p3",
     "tooling"
   ],
@@ -23,11 +22,15 @@
   "milestone": null,
   "type": null,
   "created_at": "2026-10-13T11:32:07Z",
-  "updated_at": "2026-10-13T13:23:34Z",
-  "closed_at": null,
-  "closed_by": null,
+  "updated_at": "2026-10-13T16:09:08Z",
+  "closed_at": "2026-10-13T16:08:28Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
   "merged_at": null,
-  "comments": 2,
+  "comments": 5,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/23247",
   "body": "Ruled: 6145292016 · letter A+E · 2026-10-13T12:14Z · the file is a ruled exception to the per-file budget; the speed-up lands from `7fc872a4ad`; pointers on #23182 row 3 and #23151 after landing\n本卡承 #23182 第 3 行（`@objectstack/metadata` 的 `src/serializers/typescript-serializer-annotation.test.ts`）的路线裁决；父卡 #23182 留第 1、4–6 行。Part of #23182\n\nFiling gate **②**: only the maintainer can decide this. Option E is an exception to the maintainer's own test-budget rule (#22998, ruling E item 3 on #22949), and neither text provides an exception path. Filed by `domain:engine` seat 1 (#6367) · `os-support-ai` · `session_01P88ehrZ6hM19hBzdpsQTTo`, from the row-3 dev's `needs_decision` report 6144535841.\n\n**Reader who acts:** `domain:engine` seat 1. On a ruling it dispatches a dev from the branch below, whichever letter is chosen. **Resume point:** `claude/issue-23182-metadata-serializer-test-budget` at `7fc872a4ad`, which is option A, already built and pushed with no PR.\n\n## 维护者速读\n\n- **改了什么 / 卡在哪：** #23182 要求每个测试文件在 CI 全量电池里 ≤10 秒。第 3 行这个文件用真 `tsc` 编译 30 个元数据类型的注解，逐个核对三件事：类型等同、合法正文零诊断、多一个未声明键恰报 TS2353。它是 `FilesystemLoader.save()` 写注解文件的唯一守卫。\n- **为什么压不下来：** 开发实测，这个文件**已经**只用一个编译程序。不可再省的那一次编译单跑约 4.4–4.9 秒，在 CI 的 2 倍超订下约 13–15 秒。CI 实读 25.1 秒，7 次里 7 次超 10 秒。\n- **风险与代价：**\n  - A+E：文件仍然慢，但每项检查都在；记一条具名例外，不加门禁。\n  - A+C：拆成 4 个文件，每个约 7–8 秒，但每次全量电池多花约 60% 编译 CPU，花在预算本来要保护的那台机器上。\n  - 回滚：两者都只动测试文件。\n- **席位意见：** 推荐 A+E。\n- **你要做的：** 回一个字母：`A+E` 或 `A+C`（或 `A`：只落提速，不记例外，文件留在超时清单上）。\n\n## Governing text\n\n- **#22998, \"Tests: budgets, not deletions\":** \"A slow test file is fixed, not deleted: a file over 10 s of wall is a card for the owning lane\". It also says \"A test is deleted only with a named duplicate\".\n- **Ruling E on #22949 (6125775640), item 3:** \"The per-file budget (a test file over 10 s of wall is a card for the owning lane, #22998) reads the per-file durations the dataset already carries\".\n- **#23182's \"What done looks like\":** \"Each file named above runs under 10 s of wall. The fix is to the test, or to what it waits on.\" and \"⛔ No deletion without a named duplicate (#22998). ⛔ No timeout raise. ⛔ No move to a slower or skipped project to hide it.\"\n- **No exception path:** neither text names an exception for a file whose floor exceeds the budget. That is why E needs the maintainer.\n\n## Premises, each with a re-check\n\n1. **The file already compiles every case in one `ts.Program`** (59 virtual files: 29 valid bodies, 29 undeclared-key bodies, one identity file).\n   - Re-check: `git grep -n \"createProgram\" origin/main -- packages/metadata/src/serializers/typescript-serializer-annotation.test.ts`.\n   - Positive control, same file: `git grep -c \"TS2353\\|2353\" origin/main -- packages/metadata/src/serializers/typescript-serializer-annotation.test.ts`.\n   - **Unverified by this seat; the dev's reading (6144535841).**\n2. **The cost is type resolution, not the case count.** Parse 2088–2203 ms, bind 665–754 ms, check 2613–2688 ms over 208 declaration files (13.8 MB). Whichever file touches the spec types first pays about 2.6 s; every later file pays 1–26 ms. Dev-measured, unverified here.\n3. **CI reading:** 25.12 s slowest, 7 of 7 executed runs over 10 s (refresh PR #23141, run `38228297391`). Under local 2× oversubscription the tsc test inflates 3.0×. Dev-measured; this seat has not read the CI artefact.\n4. **Option A is behaviour-neutral.** The diagnostics are identical (29 TS2353, plus the one TS2322 Book control). The ablations go red both ways: dropping the undeclared key, and `Agent = unknown`. Re-check by reading the branch diff: `git diff origin/main...origin/claude/issue-23182-metadata-serializer-test-budget`.\n\n## 选项 × 真实代价 × 工作量\n\n| 选项 | 做什么 | 客户/车队可感知后果 | 工作量 |\n|:--|:--|:--|:--|\n| **A** | 只落 `7fc872a4ad`（按 tsc CLI 的方式解析） | 单跑 8.7/8.7/10.1 → 7.8/8.1/8.2 秒；CI 估约 20–23 秒，下一次刷新仍点名该文件 | engine · 1 PR · +6/−2（实测） |\n| **A+E** | A，加一条维护者裁定：该文件是编译下限超预算的具名例外 | 同 A；刷新清单把它读作已裁例外，不再立卡 | engine · 1 PR + 一条裁定 · 同 A |\n| **A+C** | A，加按 spec 子路径拆成 K 个测试文件 + 一条「每个注解类型恰落一组」的归属钉 | K=4：最慢一组单跑约 2.6 秒、CI 估 7–8 秒；编译 CPU 约 +60%，每次全量电池都付 | engine · 1 PR · 3–4 个新测试文件 + 归属钉 · 无先例 |\n| ~~B~~ | 只按关注点拆：运行时用例留下，tsc 用例单独一个文件 | 超时读数只是换了个文件名，第 3 行不关 | 不推荐 |\n| ~~D~~ | 编译放进 worker 线程，与收集阶段重叠 | 把成本藏到仪器量不到的地方；CI 满载下无空闲核，墙钟不降 | 否决 |\n\n**业务含义直译：**\n- A：把这条检查的跑法做成和 `tsc` 命令行一样，省 1 秒左右，账面仍超。\n- A+E：承认「编一次 TypeScript 就要这么久」是这条检查的物理下限，像给一台必须预热的设备单独记录预热时间。\n- A+C：为了让每个文件的计时好看，把一次编译拆成四次，总工作量变多。\n\n## 四维分析（业务立场）\n\n- **① 项目长远合理性（权重 ≥50%）：** 两年后，这条检查应该仍是「一个编译、一份契约」的单点守卫，和 `tsc` 命令行自身的单程序编译模型一致。A 正是 tsc CLI 同口径。C 把一条契约检查拆到 K 个文件，要靠归属钉维持完整，而且每次运行永久多付 32–60% 编译 CPU：为一个按文件计的读数买单，是迁就仪器的形态。E 是一条有出处的裁定，不是门禁，不增零件。\n- **② 实际业务拉动：** 这条检查守的是真实生产者：`FilesystemLoader.save()` 写带类型注解的 typescript 格式文件。预算服务的是 CI 墙钟；`@objectstack/metadata` 整包在 CI 跑 82–147 秒，这个文件不在关键路径上。C 降的是单文件读数，却给全量电池加 CPU。\n- **③ 防 AI 犯错：** A、A+E、A+C 都保留全部三项检查，含 Book 对照行（证明「等同」仍是等同而非互相可赋值）。C 额外给每个新增注解类型加一条「放进哪一组」的义务，漏放即静默少测，归属钉能抓住但多一个零件。D 把成本藏起来，是最差的形态。\n- **④ 创业阶段不扩散：** A 是 6 行，E 是一条裁定，C 是 3–4 个新文件加一条钉，B 和 D 不推荐。\n\nos-decision-facets\n- ① 项目长远合理性：A+E 保持单程序、单契约检查，与 tsc CLI 同口径；A+C 为单文件读数永久多付 32–60% 编译 CPU 并加归属钉。\n- ② 实际业务拉动：守的是 `FilesystemLoader.save()` 写注解文件这一真实生产者；该文件不在包的 CI 关键路径上。\n- ③ 防 AI 犯错：三个选项都保留全部检查；C 给每个新注解类型多一条归属义务，D 把成本藏出仪器。\n- ④ 创业阶段不扩散：A 6 行、E 一条裁定零门禁；C 增 3–4 个文件与一条钉。\nPrior rulings read: test budget,10 s,per-file,wall,exception,exempt → 22 hits; none governs a per-file budget exception; #22998 (budgets, not deletions), #22949 ruling E item 3 (6125775640); thread: 6144535841.\n\n## 推荐 + 回退 + 置信缺口\n\n- **推荐：A+E。**\n- **回退：A+C，K=4。** 若 10 秒必须对这个文件也是绝对线，这是唯一实测过、又保留全部检查的路线。\n- **置信缺口：**\n  - CI 上 A 之后的读数未实测：job 日志在本容器不可达，「CI 约 20–23 秒」是按本地 2.5–2.9× 倍率估的；\n  - 该倍率只来自一个刷新窗口。\n- **自检：** 只看①选 A+E；②③④ 是否翻转：否。\n\n## 裁后执行\n\n- **A+E：**\n  1. 本席从 `7fc872a4ad` 派一个开发，开 `Part of #23182 (row 3)` 的 PR；\n  2. 落地后在 #23182 第 3 行与 #23151 记裁定指针，让刷新车道把这个文件读作已裁例外；\n  3. 本卡关闭。⛔ 不加门禁、不改测试计时脚本。\n- **A+C：** 本席从 `7fc872a4ad` 派一个开发，按 K=4 拆分并加归属钉，PR 关闭第 3 行；本卡关闭。\n- **A：** 只做 A+E 的第 1 步；第 3 行留在 #23182 上，等下一次重估。\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_\n"
