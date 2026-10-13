@@ -18554,7 +18554,7 @@ export class ObjectStackProtocolImplementation implements
             org: 'env',
         } as Parameters<typeof repo.headAt>[0];
         const packageId = request.packageId === undefined && state === 'active'
-            ? (await this.packagelessSaveAddress(repo, ref, request.member)).packageId
+            ? (await this.packagelessSaveAddress(ref.type, ref.name, request.member)).packageId
             : request.packageId ?? null;
         const stored = await this.storedHeadAt(repo, ref, state, packageId, request.member);
         return stored === null ? null : this.receiptVersion(stored);
@@ -18562,12 +18562,11 @@ export class ObjectStackProtocolImplementation implements
 
     /**
      * [#23165, ADR-0048] Where a DIRECT (active) save that names no package
-     * writes: the item's own package when its active rows at the address are
-     * bound to exactly one, else the package-unbound row. `candidates` is every
-     * binding ({@link SysMetadataRepository.activeBindingsAt}); two or more is
-     * a name several packages hold, which {@link saveMetaItem} refuses
-     * ({@link packagelessSaveAmbiguityRefusal}) and for which `packageId` is
-     * `null`.
+     * writes: the item's own package when its active rows are bound to exactly
+     * one, else the package-unbound row. `candidates` is every distinct
+     * binding, sorted; two or more is a name several packages hold, which
+     * {@link saveMetaItem} refuses ({@link packagelessSaveAmbiguityRefusal})
+     * and for which `packageId` is `null`.
      *
      * The one resolution its two readers take, so they cannot disagree: the
      * save door, which then writes as a save naming that package does, and
@@ -18575,26 +18574,55 @@ export class ObjectStackProtocolImplementation implements
      * accepts.
      *
      * Why the package's row: a save writes exactly one
-     * `(org, type, name, package_id)` row, and the item read serves the
-     * package's row whenever it is the item's only row. A save that wrote the
-     * package-unbound row instead minted a second row beside it and answered
-     * `200` for a write that read never served. The draft save has resolved
-     * its address this way since #11087 (`SysMetadataRepository.resolveWriteHead`);
-     * the direct save did not, and this is that half.
+     * `(org, type, name, package_id)` row, and the item read that names no
+     * package serves the package's row whenever it is the item's only row. A
+     * save that wrote the package-unbound row instead minted a second row
+     * beside it and answered `200` for a write that read never served. The
+     * draft save has resolved its address from the item's active row since
+     * #11087 (`SysMetadataRepository.resolveWriteHead`); the direct save did
+     * not, and this is that half.
      *
-     * Bindings only: a package-less row beside the package's row (minted by
-     * that defect before this resolution) is not a second package, and stays
-     * as it is. An item with no binding keeps the package-unbound row, as
-     * before. A failed read propagates — guessing the binding would choose the
-     * row the save lands in.
+     * The rows are the ones the item read chooses among
+     * ({@link findServedOverlayRow}): the environment's (ADR-0131 D6), the
+     * active state, the canonical type the save writes under, the bundle
+     * member the save addresses (#22877), and no package predicate. They are
+     * read in full, never sampled: with two packages' rows at one address a
+     * package-agnostic `findOne` is a driver-order coin toss (#8907). A
+     * package-less row beside the package's row (minted by the defect this
+     * fixes) is not a second package, and stays as it is. An item with no
+     * binding keeps the package-unbound row, as before. An unprovisioned store
+     * holds no row; any other failed read propagates (#5532), because guessing
+     * the binding would choose the row the save lands in.
+     *
+     * ⛔ Not the repository's write-address default: `put` and `headAt` keep
+     * `PutOptions.packageId`'s documented one (omitted = the package-unbound
+     * row), because a caller that names the unbound row (`promoteDraft` and
+     * `restoreVersion` of a package-less row, the stored-metadata migration)
+     * means it. The save door resolves, then names the package.
      */
     private async packagelessSaveAddress(
-        repo: SysMetadataRepository,
-        ref: Parameters<SysMetadataRepository['headAt']>[0],
+        type: string,
+        name: string,
         /** [#22877] The bundle member the save addresses (its body's); omitted, the canonical one. */
         member?: string,
     ): Promise<{ packageId: string | null; candidates: readonly string[] }> {
-        const candidates = await repo.activeBindingsAt(ref, { member });
+        let rows: Array<{ package_id?: unknown }> | null | undefined;
+        try {
+            // [#21911] The explicit system opt-in — see findServedOverlayRow.
+            rows = await this.engine.find('sys_metadata', {
+                where: { type, name, state: 'active', organization_id: null, ...overlayMemberWhere(type, member) },
+                context: { isSystem: true },
+            });
+        } catch (error) {
+            // [#5532] An unprovisioned store holds no row, so no binding; any
+            // other failure is a read that did not happen, never "no binding".
+            this.rethrowUnlessMetadataStoreUnprovisioned(error, 'sys_metadata');
+        }
+        const bindings = new Set<string>();
+        for (const row of rows ?? []) {
+            if (typeof row?.package_id === 'string' && row.package_id !== '') bindings.add(row.package_id);
+        }
+        const candidates = [...bindings].sort();
         return { packageId: candidates.length === 1 ? candidates[0] ?? null : null, candidates };
     }
 
@@ -20991,14 +21019,9 @@ export class ObjectStackProtocolImplementation implements
         // Several bindings is a name more than one package holds, and a save
         // naming none of them is refused, not guessed.
         if (mode === 'publish' && request.packageId === undefined) {
+            const writeType = PLURAL_TO_SINGULAR[request.type] ?? request.type;
             const address = await this.packagelessSaveAddress(
-                this.getOverlayRepo(),
-                {
-                    type: PLURAL_TO_SINGULAR[request.type] ?? request.type,
-                    name: request.name,
-                    org: 'env',
-                } as Parameters<SysMetadataRepository['headAt']>[0],
-                itemDiscriminator(PLURAL_TO_SINGULAR[request.type] ?? request.type, request.item),
+                writeType, request.name, itemDiscriminator(writeType, request.item),
             );
             if (address.candidates.length > 1) {
                 throw packagelessSaveAmbiguityRefusal(request.type, request.name, address.candidates);
