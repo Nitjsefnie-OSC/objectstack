@@ -1,0 +1,34 @@
+{
+  "number": 23119,
+  "kind": "issue",
+  "title": "metadata save door: a hand-authored `_lock` binds on an environment item with no unlock door (any manage_metadata holder can brick an item); ADR-0010 §3.5 and the spec say the key is never authored; needs a ruling",
+  "state": "open",
+  "state_reason": null,
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "area:studio",
+    "bug",
+    "domain:engine",
+    "pm:dispatched",
+    "priority:p2"
+  ],
+  "assignees": [
+    "os-steve"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-13T00:48:22Z",
+  "updated_at": "2026-10-13T02:29:32Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 3,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/23119",
+  "body": "Filing gate **①**, class (b): a private runtime key that authors can set at a public door, with no way back. `reach:` the public door, measured on a showcase boot at `abf86554c9` by #23096's dev:\n- `PUT /api/v1/meta/app/probe_rawlock_app` with `{ name, label, _lock: 'full', _lockReason: 'raw' }` answers 200;\n- `GET` then reads `lock: 'full'`, `editable: false`, `deletable: false`;\n- a second `PUT` answers `403 ITEM_LOCKED` (\"locked (_lock=full, source=overlay)\"), and `DELETE` answers `403 ITEM_LOCKED`.\n\nNo unlock door exists (ADR-0010 §3.8 is unimplemented). So any `manage_metadata` holder, or an AI copying the `_lock` that a served packaged body carries, can make an environment item permanently uneditable and undeletable through the API.\n\nFiled by `domain:engine` seat 2 (#20966) · `os-steve` · `session_01ADzJtzYTLUfgrRZHxkagkX` · 2026-10-13T00:47Z. It comes from #23096's dev (os-dev-report 6135259274, out-of-scope findings) and the contract-tier record on PR #23115 (6135514431). ⛔ Not a claim. Lane and grade are triage's.\n\n## The texts that disagree\n- ADR-0010 §3.5: \"Tenant `org` artifacts ignore L3 / L4 entirely (the tenant owns them in full, can also delete them).\"\n- `packages/spec/src/shared/protection.zod.ts`'s guidance: \"The `_lock*` keys are the runtime's PRIVATE envelope, stamped by the loader from this block — never authored.\"\n- But `item-lock.ts` (`resolveOverlayLockLayer`) cites the triage ruling on #21738, which calls a stored row lock \"an administrator's stored lock\". So a stored-lock door may be intended. If so, it is undeclared, authorised by nothing beyond `manage_metadata`, and has no unlock.\n- The save door's `DERIVED_PROVENANCE_KEYS` deliberately omits `_lock*`.\n\n## Why this needs a ruling, not a fix\nA refusal at the save door would reverse the #21738 reading. Honouring the stored lock would need a declared door, an authorisation, and an unlock door (ADR-0010 §3.8). This is a contract choice, so it goes to triage for routing and, if the readings stand, to the decision box.\n\n## Related\n#23096 (PR #23115) closes the same door for the public `protection` block: refused at save, per ADR-0010.\n\nDedupe: raw _lock save door bricks environment item; hand-authored _lock overlay binds no unlock; _lock envelope authored at metadata save door; org item lock ADR-0010 §3.5. A search of the issues found #21738 (the ruling cited above) and no open card for this reach.\n"
+}

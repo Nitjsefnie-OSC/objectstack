@@ -2,9 +2,9 @@
   "number": 22897,
   "kind": "pull_request",
   "title": "test(plugin-security): retire the declared-permission seeder suites (#15204 stage 6b-2, T1)",
-  "state": "open",
+  "state": "closed",
   "state_reason": null,
-  "draft": true,
+  "draft": false,
   "author": {
     "login": "objectstack-fleet[bot]",
     "id": 332303061,
@@ -21,11 +21,15 @@
   "milestone": null,
   "type": null,
   "created_at": "2026-10-11T21:38:23Z",
-  "updated_at": "2026-10-12T10:31:40Z",
-  "closed_at": null,
-  "closed_by": null,
-  "merged_at": null,
-  "comments": 1,
+  "updated_at": "2026-10-12T22:53:47Z",
+  "closed_at": "2026-10-12T22:53:46Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": "2026-10-12T22:53:45Z",
+  "comments": 2,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/pull/22897",
   "body": "Part of #15204\nClause-②: no\n\n**T1 of stage 6b-2**: tests only. It deletes the suites that pin the declared-permission seeder, drift, the `managed_by` normalizer and the seed-refusal diagnostics, and trims the cases in shared suites that pin them. It is split off the 6b-2 code PR (#22900) so that PR falls under 3,000 changed lines (the ruling: tests land inside or before their code PR). No production file changes. The modules these suites pinned are deleted by #22900.\n\n**Landing, as sequenced by the seat:** T1, T2 and the 6b-2 code PR (#22900) stay drafts until #22900's own gates clear (the #22865 pickers and objectui PR-4), then land back to back, **T1 → T2 → #22900**. That way the publish materializer and the seeders are never live on `main` with their pins gone. 6b-2a (#22899) is independent and goes to the maintainer separately.\n\n## Deleted (whole files)\n\n- `bootstrap-declared-permissions.test.ts`\n- `walled-platform-bucket-diagnostic.test.ts`\n- `permission-set-drift.test.ts`\n- `bootstrap-seed-round-trips.test.ts`\n- `declared-permission-reload-projection.test.ts`\n- `normalize-managed-by.test.ts`\n\n## Trimmed (only the cases that pin a deleted module)\n\n- `per-organization-catalog.test.ts`: case 6 (resolver bleed) is kept.\n- `permission-set-name-collision.test.ts`: the shared-derivation describe is kept.\n- `read-fault-distinguishability.test.ts`: reading 1 goes.\n- `engine-find-bare-array.pin.test.ts`: blocks 3 and 6 go.\n- `seed-name-lookup-degradation-audible.test.ts`: the lit control reports through `seed-refusal-sink` directly, not through the retiring diagnostics module.\n- `builtin-capabilities.boot.test.ts`: the platform-name-refusal constant goes.\n- `objects/rbac-objects.test.ts`: the `drift_status` pin goes (the field leaves in 6b-2).\n\n## Re-pinned here\n\nThe #11451 fence (a caller that passes no predicate emits only the `where` key `name`) rode `bootstrap-seed-round-trips.test.ts`, but the behaviour it pins outlives the seeder: `permission-set-projection.ts`' overlay pass calls `buildExistingByName` with no predicate. It is now pinned at the function in `seed-name-lookup-degradation-audible.test.ts`, on both the batched read and the per-item degradation read, with a predicate-carrying positive control. Ablation: making both reads spread `{ managed_by: undefined }` turned both fences red (\"expected [ 'name', 'managed_by' ] to deeply equal [ 'name' ]\"), the control stayed green, and restoring the file (same sha) brought 8/8 back.\n\n## Gate ledgers\n\nThe double-contract ledgers (`engine-double-contract.{baseline,pinned}.json`, `objectql-double-limit.baseline.json`) drop the deleted suites' entries.\n\n## Size\n\n16 files, +86 / −2,749 (2,835 changed lines).\n\n## Verification\n\nOn this branch: `check:engine-double-contract` and `check:objectql-double-limit` green. The 7 trimmed suites: 7 files, 60 passed; with the new fence, `seed-name-lookup-degradation-audible` is 8 passed. `check:where-matcher` green. plugin-security typecheck green. `check:adr-0087-registration`, `check:changeset-no-major`, `check:cli-command-ids`, `check:nul-bytes` green. **Not covered after this PR:** no retained test imports `bootstrap-declared-permissions`, `permission-set-drift`, `normalize-managed-by` or `seed-refusal-diagnostics`. Only the boot-level suites exercise them in passing. They run unpinned until #22900 removes them, which is why the seat lands this PR directly before #22900.\n\n**Merge note:** this PR and #22899 delete adjacent entries in `scripts/engine-double-contract.baseline.json` and `scripts/objectql-double-limit.baseline.json`, so whichever lands second meets a textual conflict there. The resolution is to drop both entries.\n\nTest-only: `skip-changeset`.\n\n---\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nhttps://claude.ai/code/session_013XKtmoR5QCUSTMjiQ3os49\n"

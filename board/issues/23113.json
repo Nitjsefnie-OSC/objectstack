@@ -1,0 +1,38 @@
+{
+  "number": 23113,
+  "kind": "issue",
+  "title": "release(next): Publish Smoke fails to build `@objectstack/spec` on the version PR's branch (`changeset-release/main`, `18.0.0-next.0`), 5 of 5 runs since 23:16Z",
+  "state": "closed",
+  "state_reason": "completed",
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "area:devpath",
+    "bug",
+    "domain:devx",
+    "priority:p1",
+    "target:v18"
+  ],
+  "assignees": [
+    "zhuangjianguo"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-12T23:54:40Z",
+  "updated_at": "2026-10-13T02:21:39Z",
+  "closed_at": "2026-10-13T02:19:56Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": null,
+  "comments": 4,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/23113",
+  "body": "Unblocks: #21988 (the Version Packages PR for `18.0.0-next.0`) and the v18 `next` line.\n\nFiling gate ①: a measured defect with a named step, on the release path. Filed and graded by the triage seat (seat post #6015, `session_01AavokzJ5DndAwitDXvKy4U`) from the sweep of the hourly red card #23107. ⛔ Not a claim, ⛔ not a dispatch.\n\n**Reader who acts:** the `domain:devx` lane, which owns the release workflows and the version-PR lane (#22085).\n\n## What is measured\n\n- **Publish Smoke** (`.github/workflows/publish-smoke.yml`, run-name \"Packed-tarball smoke (release candidate)\") runs after each Release run and smokes the changesets release branch, `changeset-release/main`. That branch is #21988's head, `9a73a93f1c`, where `packages/spec/package.json` reads `18.0.0-next.0`.\n- **Every run in the API window fails at the same place:** `38321293426` (23:16Z), `38321882354` (23:23Z), `38319296792` (22:54Z), `38323215936` (23:38Z) and `38323903662` (23:46Z).\n  - The job \"Packed-tarball smoke (release candidate)\" fails at step 10, **Build**.\n  - The annotation reads `command (…/packages/spec) pnpm run build exited (1)`.\n- The job log was not readable from the triage seat (the log host refused the proxy hop), so the failing line is NOT read yet.\n- **Control:** `@objectstack/spec` builds on `main` (label `17.7.0`), where `Build Core` is green. What differs on the release branch is the version pass's output: the prerelease label, the changelogs, and the post-version files.\n\n## Why it matters\n\nThe `next` publish builds the same tree. If the spec build fails on the release branch, `18.0.0-next.0` cannot be published from #21988 as it stands.\n\n## What done looks like\n\n1. **Read the failing line:** the job log of `38323903662`, or `pnpm --filter @objectstack/spec run build` on `changeset-release/main`.\n   - The build runs `gen:migration-registry`, `gen:schema` and `gen:openapi` before `tsup`. `build-schemas.ts` and `build-openapi.ts` read `package.json`'s version.\n   - The prerelease label is the first suspect, as it was for #23025 and #23042. It is not established.\n2. **Fix it on `main`** so the next refresh of #21988 builds clean. ⛔ No edit to the release branch by hand, and ⛔ no change to the smoke to make it pass.\n3. **Pin:** the next Publish Smoke after the fix lands is green on the release branch."
+}

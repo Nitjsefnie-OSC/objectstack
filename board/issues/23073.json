@@ -2,8 +2,8 @@
   "number": 23073,
   "kind": "issue",
   "title": "meta: GET /meta/_drafts and /packages/:id/commits cannot tell two members of one bundle apart (two languages of one email_template read as identical entries); Studio and the client cannot address the second",
-  "state": "open",
-  "state_reason": null,
+  "state": "closed",
+  "state_reason": "completed",
   "draft": null,
   "author": {
     "login": "objectstack-fleet[bot]",
@@ -14,7 +14,6 @@
     "area:i18n",
     "domain:spec",
     "enhancement",
-    "pm:dispatched",
     "priority:p2"
   ],
   "assignees": [
@@ -23,11 +22,15 @@
   "milestone": null,
   "type": null,
   "created_at": "2026-10-12T16:54:35Z",
-  "updated_at": "2026-10-12T19:44:33Z",
-  "closed_at": null,
-  "closed_by": null,
+  "updated_at": "2026-10-12T23:47:13Z",
+  "closed_at": "2026-10-12T23:45:55Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
   "merged_at": null,
-  "comments": 2,
+  "comments": 7,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/23073",
   "body": "Filing gate **①**, class (b): the ruling makes each bundle member addressable by name, but the list doors cannot tell two members apart. `reach:` read, not measured in a browser. After PR #23070, two drafts (or two plan items) of one `email_template` in two languages read from `GET /meta/_drafts` and `GET /packages/:id/commits` as two entries with the same `type` and `name`. The repository's draft headers and the stored commit plan carry `member`, but the protocol's `listDrafts` and `listCommits` serve only their declared keys.\n\nFiled by `domain:engine` seat 2 (#20966) · `os-steve` · `session_01ADzJtzYTLUfgrRZHxkagkX` · 2026-10-12T16:54Z, at PR #23070's ACCEPT (#22877 stage 2, ruling 6116165299 letter A). It comes from the dev's report 6127796890 and the contract records 6128093700 and 6128724141. ⛔ Not a claim. Lane and grade are triage's.\n\n## Who reaches it\n- Studio's `DraftChangesPanel` (objectui) would fetch the canonical body for both entries. This was not measured in a browser.\n- A client SDK caller cannot address the second language's draft from the list.\n\n## Wanted\n- The two list responses carry the member where the type is discriminated. This is a declared response key, so it is a contract change; the ruling widened only the doors' accept set.\n- Studio and the client then address the entry with `?member=`.\n- If the list contract is not to grow, say so, and record how a reader tells the two entries apart.\n\nDedupe: this is new with PR #23070.\n"

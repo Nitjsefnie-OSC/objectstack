@@ -1,0 +1,37 @@
+{
+  "number": 23095,
+  "kind": "pull_request",
+  "title": "docs(spec): branding.logo is the app's one square icon (1:1, SVG preferred, at least 64 px)",
+  "state": "closed",
+  "state_reason": null,
+  "draft": false,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "documentation",
+    "protocol:ui",
+    "size/s",
+    "tooling"
+  ],
+  "assignees": [
+    "zhuangjianguo"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-12T20:30:46Z",
+  "updated_at": "2026-10-12T21:32:57Z",
+  "closed_at": "2026-10-12T21:32:55Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": "2026-10-12T21:32:55Z",
+  "comments": 2,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/pull/23095",
+  "body": "Fixes #23000\n\nClause-②: no\n\n`branding.logo` now says what the one asset is: a 1:1 square app icon, SVG preferred, at least 64 px. Description text only. The key stays an optional string, the accept set is byte-identical, and nothing refuses a non-square value.\n\n## What changed\n\n- `packages/spec/src/ui/app.zod.ts`, the `logo` member of `AppBrandingSchema`. Before: `Custom logo URL for this app`. After: `Custom logo URL for this app: a 1:1 square app icon, SVG preferred, at least 64 px. It is the app's one logo asset — each surface scales it to the size it needs, and there is no second size or wordmark slot.`\n- `content/docs/references/ui/app.mdx`, the two generated rows that carry it (the `App.branding` nested shape and `AppBranding`). Regenerated with `check:generated --fix`, which proved `check:docs` the only stale artifact; no other generated shard moves (`json-schema.manifest/ui.json` does not carry descriptions).\n- `.changeset/23000-branding-logo-describe.md`, `@objectstack/spec` patch.\n\n## Why\n\nThe maintainer's ruling on objectstack-ai/objectui#12201 (2026-10-12), verbatim: 「应用 logo 建议只需要一个尺寸，放在顶部导航的应用名称左侧」, then 「同意」 on the mock. The rider on that card, verbatim: \"the `@objectstack/spec` doc on `branding.logo` says \"1:1 square app icon, SVG preferred, at least 64 px\"; refuse a non-square value if the schema can express it, otherwise doc only.\" Triage on this card: \"⛔ No refusal of a non-square value. A URL string does not carry its ratio, and a refusal would be a new validation gate, which defaults to no.\"\n\nThe schema cannot express it: the value is a URL string and carries no ratio, so this is doc only and no refusal was added.\n\n## Measured\n\n- Every other `logo` in `packages/spec/src` (case-insensitive grep). Updated: `ui/app.zod.ts` `AppBrandingSchema.logo`, the only description of this key. A different key, left alone: `identity/organization.zod.ts` `OrganizationSchema.logo` (the organization column), `kernel/plugin-registry.zod.ts` `media.logo` (a plugin registry entry), `marketplace/marketplace.zod.ts` `logoUrl` (publisher) and `iconUrl` (package). The same key with no description to update: the `logourl` alias in the branding block's alias table, and the app-level `logo` near-miss that points authors at `branding` (both in `ui/app.zod.ts`). `ui/app.form.ts` names \"logo\" in the Studio Branding section's copy but states no shape.\n- \"Each surface scales it\" holds at the pinned console. objectui at `.objectui-sha` (7578323a5) draws `branding.logo` as one image through `AppMark` (`packages/app-shell/src/layout/AppMark.tsx`): 22 px in the top-bar pill and the switcher rows, 26 px in the phone drawer, `object-contain`. There is no second asset field and no wordmark slot there either.\n- The gate reads this text. Before regeneration, `check:generated` exited 1 naming `check:docs` stale; after `--fix` it is green. No ablation file is kept.\n\n## Verification, at head `ee37bc3c6`\n\n- `pnpm --filter @objectstack/spec build`: exit 0. After the merge of `origin/main` through `scripts/pm/os-regen-merge.sh`, the whole-repo `turbo run build` also exited 0 (73 tasks).\n- `pnpm --filter @objectstack/spec check:generated`: exit 0 (the first run, before `--fix`, exited 1 on `check:docs` alone).\n- `node scripts/pm/dispatch-gates.mjs --commands --repo objectstack-ai/objectstack`, no paths: 103 families, each run, each exit 0. `--ran` reconciles it: 103 derived, 103 run, 0 NOT-MEASURED, 0 UNRUN. In the first pass six families exited 3, PREREQUISITE NOT MET (unbuilt `@objectstack/lint`, `formula`, `client-react`, `objectql`, and the whole-repo build `check:dual-build-cjs-loads` reads); they were built and re-run, and none of those is a failure reading.\n- `pnpm --filter @objectstack/spec test` and `pnpm --filter @objectstack/spec typecheck`, one locked call: 657 test files and 19866 tests passed, typecheck passed, verdict command-exit 0.\n\n## Acceptance notes\n\n- `packages/spec/liveness/app.json` still gives `branding.logo` the verdict `planned` (\"RENDERED BY NOTHING THAT SHIPS\", measured at an older pin), while `AppMark` renders it at the current pin. The description above is accurate; the ledger row is stale and owes its own flip to `live`. It is hand-edited evidence outside this card's surface, so this PR leaves it.\n- `ui/app.form.ts` tells the Studio Branding section's author \"Primary/secondary colors, logo, theme\", but the branding block has `primaryColor`, `accentColor`, `logo` and `favicon` (a `secondaryColor` or `theme` key is refused). Not reproduced in a running Studio, so noted and not filed.\n\n---\n_Generated by [Claude Code](https://claude.ai/code/session_01GZSPSQ5ArPjSJdxxuqwGoZ)_\n"
+}

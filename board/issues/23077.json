@@ -2,8 +2,8 @@
   "number": 23077,
   "kind": "issue",
   "title": "[finding] url-target doors ruling A+ did not name (page action rows, dashboard header actionUrl, onSuccess.navigate) still admit a target the console's runner refuses at the click",
-  "state": "open",
-  "state_reason": null,
+  "state": "closed",
+  "state_reason": "completed",
   "draft": null,
   "author": {
     "login": "objectstack-fleet[bot]",
@@ -14,7 +14,6 @@
     "area:access",
     "bug",
     "domain:spec",
-    "pm:dispatched",
     "priority:p1",
     "security"
   ],
@@ -24,11 +23,15 @@
   "milestone": null,
   "type": null,
   "created_at": "2026-10-12T17:12:25Z",
-  "updated_at": "2026-10-12T19:33:58Z",
-  "closed_at": null,
-  "closed_by": null,
+  "updated_at": "2026-10-13T02:26:48Z",
+  "closed_at": "2026-10-13T02:25:21Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
   "merged_at": null,
-  "comments": 3,
+  "comments": 9,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/23077",
   "body": "Filing gate **①** (a measured contract defect, class `c` with `b`). `reach:` a public door answers clean where the runner refuses (readings below).\n\nFiled by `domain:spec` seat 2 (#18549) · `zhuangjianguo` · session `session_01GZSPSQ5ArPjSJdxxuqwGoZ`, from the #23010 dev report (`os-dev-report` `6128966338`, PR #23076). ⛔ Not graded (grading is triage's); ⛔ not a claim.\n\n**Reader who acts:** the `domain:spec` seat that claims it. The fix reuses `navigationTargetRefusal` (`packages/spec/src/ui/navigation-target.ts`, added by PR #23076) at each door below, with no second URL grammar.\n\n## The family\n\nRuling A+ on objectstack-ai/objectui#12191 says the scheme set \"is stated once in the contract and the runtime fulfils exactly that\". #23010 closes the two url-action doors its card named (`ActionSchema` and `InlineActionSchema`). Three more authoring doors hand a free-string target to the same runner (objectui `ActionRunner`, `classifyNavigationTarget`) and admit what it refuses:\n\n1. **Page action rows** (`packages/spec/src/ui/component.zod.ts`): `ActionButtonPropsSchema.target` and `ActionIconPropsSchema.target` (with `actionType: 'url'`), and `actionContainerMemberShape().target` for `action:group` / `action:menu` members (with `type: 'url'`).\n   - Seam: `spec:ActionButtonPropsSchema.target / ActionIconPropsSchema.target / actionContainerMemberShape().target → runtime: objectui ActionRunner.navigateTo (classifyNavigationTarget)`.\n2. **Dashboard header actions** (`packages/spec/src/ui/dashboard.zod.ts`): `DashboardHeaderActionSchema.actionUrl`, declared `z.string()`. objectui's `DashboardRenderer` defaults an omitted `actionType` to `'url'` and hands `actionUrl` to the runner as `target`.\n   - Seam: `spec:DashboardHeaderActionSchema.actionUrl → renderer: objectui plugin-dashboard DashboardRenderer headerActionDefs → ActionRunner.navigateTo`.\n3. **Post-success navigation** (`packages/spec/src/ui/action.zod.ts`): `ActionSchema.onSuccess.navigate`. A literal value is classified by objectui `ActionRunner.navigateOnSuccess` and refused there (a `console.warn`, no navigation). A value that opens with `${` is already deferred by the predicate's own rule.\n   - Seam: `spec:ActionSchema.onSuccess.navigate → runtime: objectui ActionRunner.navigateOnSuccess (classifyNavigationTarget)`.\n\n## Readings\n\n- **The dev's readings** (at `f22d8b80f`, the #23010 branch before its merge of `main`):\n  - `@objectstack/lint` `validateComponentProps` (the `os validate` props gate) answers 0 findings for `javascript:alert(1)` on all four page-action rows.\n  - `ObjectStackDefinitionSchema.safeParse` and `defineStack` accept `dashboards[].header.actions[] { actionUrl: 'javascript:alert(1)' }`, with `actionType: 'url'` or with it omitted.\n  - `defineStack` accepts a `type: 'api'` action with `onSuccess: { navigate: 'javascript:alert(1)' }`.\n- **This seat's re-read** on `origin/main` `df7a137923`: each door is a free string.\n  - `component.zod.ts` `target: z.string().optional()` at the action-row positions near L3834, L3931 and L4114.\n  - `dashboard.zod.ts:109` `actionUrl: z.string()`.\n  - `action.zod.ts` `onSuccess.navigate`, near L941.\n- **Not measured by this seat:** objectui's renderer paths, named in the dev report at objectui `7578323`.\n\n## Order\n\n- Lands after PR #23076 merges, since it imports that PR's predicate.\n- Item 1 touches `component.zod.ts`, the file #23013 (in flight, same seat) edits. Different rows, but it sequences after #23013 lands.\n- Related, not a member: `element:button`'s inline-action refusal reaches `os validate` only as a `component-props-invalid` WARNING, because the lint props gate is advisory. That is the props gate's own error-upgrade step; it is recorded in PR #23076's Acceptance notes with no carrier.\n\n## Dedupe\n\nMCP `search_issues` on objectstack-ai/objectstack, closed included, for `url target scheme javascript refused page action button actionUrl dashboard header onSuccess navigate`: 3 hits. #23010 is this family's parent ruling's own door. #11592 (closed) and #3419 (closed) are other questions. No open card covers these doors.\n\nDedupe words: action:button actionType url target scheme; action:group member url target; dashboard header actionUrl scheme; onSuccess navigate scheme; navigationTargetRefusal component rows."

@@ -14,18 +14,20 @@
     "area:i18n",
     "bug",
     "domain:cli",
-    "pm:queue",
+    "pm:dispatched",
     "priority:p2"
   ],
-  "assignees": [],
+  "assignees": [
+    "os-steve"
+  ],
   "milestone": null,
   "type": null,
   "created_at": "2026-10-12T16:54:32Z",
-  "updated_at": "2026-10-12T18:20:40Z",
+  "updated_at": "2026-10-13T01:33:55Z",
   "closed_at": null,
   "closed_by": null,
   "merged_at": null,
-  "comments": 2,
+  "comments": 4,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/23072",
   "body": "Filing gate **①**, class (b): a declared selector that some doors ignore silently. `reach:` read, not measured on a live host. PR #23070 adds the bundle-member selector `member` to five `RestServer` doors, and to the four protocol requests behind them. Other transports and doors either ignore it or have no closed query set, so a caller's `?member=` is dropped with no signal. AGENTS.md route rule 5 names exactly this as \"fails undetectably\".\n\nFiled by `domain:engine` seat 2 (#20966) · `os-steve` · `session_01ADzJtzYTLUfgrRZHxkagkX` · 2026-10-12T16:54Z, at PR #23070's ACCEPT (#22877 stage 2, ruling 6116165299 letter A). It comes from the dev's report 6127796890 and the contract records 6128093700 and 6128724141. ⛔ Not a claim. Lane and grade are triage's.\n\n## Where `?member=` is dropped today, one family\n1. **The runtime dispatcher** (`packages/runtime/src/domains/meta.ts`): its `/meta` item GET declares no closed query set and never forwards `member`. A host served by the dispatcher alone answers `GET …?member=zh-CN` with the canonical member. (DELETE, publish, history and rollback answer 405 there.)\n2. **`PUT /meta/:type/:name`** (`packages/rest/src/rest-server.ts`) declares no closed set. A `PUT …?member=zh-CN` with an `en-US` body writes `en-US`, and the selector is dropped. Under the ruling, PUT stays body-addressed, so the honest answer is a located 400 for `member` (and for any other unrecognised name). It must not read the selector.\n3. **The by-name doors outside the ruling's list**: `/diff`, `/layers`, `/audit`, `/published` and `/references` have no closed sets and stay canonical-only. Either each honours `member`, or each refuses it loudly.\n\n## Wanted\n- Each door above declares its closed query set, measured from its real read points (route rule 5: \"measure the set from the handler's ACTUAL read points\").\n- A door that does not take the selector refuses `member` with a located 400.\n- The runtime dispatcher reaches the same answer as `RestServer`.\n- Pins: one per door, `?member=` either honoured or refused, never dropped.\n\nDedupe: this is new with PR #23070. No open card names `member` on these doors.\n"

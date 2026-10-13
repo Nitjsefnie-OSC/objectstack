@@ -1,0 +1,34 @@
+{
+  "number": 23122,
+  "kind": "issue",
+  "title": "service-messaging on Postgres: `sys_notification_delivery.claimed_at` is a `real` (binary32) column, so every `ack()` fails the claim check and the inbox row is re-delivered every 131 s forever",
+  "state": "open",
+  "state_reason": null,
+  "draft": null,
+  "author": {
+    "login": "baozhoutao",
+    "id": 6194462,
+    "type": "User"
+  },
+  "labels": [
+    "area:workflow",
+    "bug",
+    "domain:services",
+    "pm:dispatched",
+    "priority:p1"
+  ],
+  "assignees": [
+    "zhuangjianguo"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-13T01:18:45Z",
+  "updated_at": "2026-10-13T02:03:03Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 2,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/23122",
+  "body": "## Summary\n\nOn a Postgres database whose `sys_notification_delivery` table was created by `@objectstack/driver-sql` ≤ the release that still mapped `number` → `table.float()` (verified on **17.3.0**), the epoch-ms columns `claimed_at`, `next_attempt_at`, `last_attempted_at` are physical `real` (IEEE-754 binary32).\n\nA 13-digit epoch-ms value cannot be represented in binary32. Around today's timestamps the spacing between adjacent representable values is **131 072 ms**, so whatever `claim()` writes into `claimed_at` reads back rounded to a multiple of ~131 s.\n\n`SqlNotificationOutbox.ack()` then compares the stored value with the in-memory claim credential using strict equality:\n\n```ts\nif (current.claimed_by !== claimed.claimedBy || current.claimed_at !== claimed.claimedAt) {\n  throw new NotificationAckError(notificationAckLostClaimMessage(...), 'DELIVERY_NOT_ELIGIBLE');\n}\n```\n\nThat comparison can never succeed, so **every ack is refused as a \"lost claim\"**. `NotificationDispatcher.ackAttempt()` swallows `DELIVERY_NOT_ELIGIBLE` with a warn, so:\n\n1. the inbox channel has already inserted the `sys_inbox_message` row (the send succeeded),\n2. the delivery row stays `in_flight` with `attempts = 0` (ack never writes, so it never reaches `dead`),\n3. the visibility-timeout reap (`claimed_at < now - claimTtlMs`) also runs on the quantized column, so it releases the row once per 131 072 ms step,\n4. the row is claimed and sent again → another `sys_inbox_message` row → back to 2.\n\nEach stuck notification is re-delivered **≈ 659 times per day** (86 400 s ÷ 131.072 s), indefinitely.\n\n## Production evidence (PostgreSQL 16, platform 17.3.0, 3 app replicas)\n\n- `information_schema.columns` for `sys_notification_delivery`: `claimed_at`, `next_attempt_at`, `last_attempted_at`, `attempts`, `partition_key` are all `real`.\n- `sys_notification_delivery` status distribution: `in_flight / inbox = 301` with `max(attempts) = 0`; `success / inbox = 1097`.\n- Write interval of one notification into `sys_inbox_message`: 2:10.79 – 2:11.32, stable.\n- Top-10 notifications in the last 24 h: **659 rows each**. Oldest stuck notifications (created 2026-09-16): ~17 550 inbox rows each.\n- `sys_inbox_message` grew to ~3.6 M rows / ~1.8 GB in a month, ~180 k rows/day, while the producing business table received a few thousand rows total. `n_tup_del = 0`, i.e. nothing is rolled back or deleted — it is pure re-delivery.\n- The only DB clients are the app replicas; no external writer.\n\nQuick numeric check of the quantization:\n\n```js\nconst t = Date.parse('2026-10-12T13:00:00Z'); // 1791810000000\nMath.fround(t);                                // 1791809945600  (Δ = -54 400 ms)\n// spacing between neighbouring binary32 values at this magnitude: 131 072 ms\n```\n\n## What is already fixed upstream, and what is not\n\n- #16318 changed the `number` arm of `createColumn` to `numericColumnFor()` → `numeric(65,30)`, so **new** tables are fine (confirmed in 17.7.0 dist).\n- **Existing** tables keep their `real` columns: `detectManagedDrift()` has no numeric/base-type check for this family, and there is no `os migrate …` command for it (cf. the #11700 ruling: warn + operator-run migration). A deployment that created its schema on an affected release stays in the infinite re-delivery loop after upgrading, silently.\n- `ack()` still compares `claimed_at` with strict `!==` (current `packages/services/service-messaging/src/sql-outbox.ts`), and the claim-verification `find` uses `claimed_at: now` as an equality predicate — both are only correct if the column round-trips epoch-ms exactly.\n\n## Suggested fixes\n\n1. **Detection / migration for existing `real` columns** of the `NUMERIC_VALUE_TYPES` family (at minimum the platform's own epoch-ms columns on `sys_notification_delivery` and `sys_http_delivery`): a boot warning from drift detection plus an operator-run `os migrate` step (`ALTER COLUMN … TYPE numeric(65,30)`), consistent with the #11700 policy.\n2. **Make the claim credential robust to the column**: e.g. use a random claim token (text) instead of `claimed_at` for the CAS, or compare after a round-trip read of the value written by `claim()` rather than against the in-memory `now`.\n3. **Never let a refused ack loop silently forever**: a delivery that has been reaped N times without a recorded attempt should be surfaced (error log / metric) or moved to `dead`, instead of re-sending with `attempts = 0` indefinitely.\n4. Consider checking `sys_http_delivery` for the same pattern (its time columns are `number` too).\n\n## Workaround we are applying\n\n```sql\nALTER TABLE sys_notification_delivery\n  ALTER COLUMN claimed_at        TYPE numeric(65,30),\n  ALTER COLUMN next_attempt_at   TYPE numeric(65,30),\n  ALTER COLUMN last_attempted_at TYPE numeric(65,30);\nUPDATE sys_notification_delivery\n   SET status = 'success', claimed_by = NULL, claimed_at = NULL, attempts = 1\n WHERE status = 'in_flight';\n```\n\n(17.3.0's read path already coerces `numeric` strings back to JS numbers via `numericFields`, and its drift detector does not flag the type change.) Followed by de-duplicating `sys_inbox_message` per `(notification_id, user_id)`."
+}

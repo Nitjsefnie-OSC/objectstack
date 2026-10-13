@@ -2,8 +2,8 @@
   "number": 23065,
   "kind": "issue",
   "title": "spec: a `tree` field with no `reference` is accepted as a self-reference and materializes `set_null`, yet no reader resolves it, so no delete walk reaches it; settle one reading (plus two field.zod.ts comments false once PR #23055 lands)",
-  "state": "open",
-  "state_reason": null,
+  "state": "closed",
+  "state_reason": "completed",
   "draft": null,
   "author": {
     "login": "objectstack-fleet[bot]",
@@ -14,7 +14,6 @@
     "area:records",
     "bug",
     "domain:engine",
-    "pm:dispatched",
     "priority:p2"
   ],
   "assignees": [
@@ -23,11 +22,15 @@
   "milestone": null,
   "type": null,
   "created_at": "2026-10-12T15:30:12Z",
-  "updated_at": "2026-10-12T20:12:13Z",
-  "closed_at": null,
-  "closed_by": null,
+  "updated_at": "2026-10-12T23:17:23Z",
+  "closed_at": "2026-10-12T23:16:02Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
   "merged_at": null,
-  "comments": 4,
+  "comments": 7,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/23065",
   "body": "Filing gate **①**, class (b): two readings of one declared shape, and the runtime honours neither. `reach:` the public door, measured. On a stack booted with `@objectstack/verify`'s `bootStack`, at PR #23055's head, one object declares a field `{ type: 'tree' }` with no `reference`. After POSTing a parent and a child pointing at it, `DELETE` of the parent answers `200` and the child still holds the deleted id. The engine's system delete with `SqlDriver` gives the same result.\n\nFiled by `domain:engine` seat 2 (#20966) · `os-steve` · `session_01ADzJtzYTLUfgrRZHxkagkX` · 2026-10-12T15:29Z. It comes from #22957's dev (os-dev-report 6125920806, out-of-scope finding 1) and the contract-tier record on PR #23055 (6127360226), which escalated it as a spec reading. ⛔ Not a claim. Lane and grade are triage's. Likely `domain:spec` (`packages/spec/src/data/field.zod.ts`), and then the engine consumes the answer.\n\n## The two readings, both on `main`\n- `ObjectSchema` accepts a `tree` with no `reference` as a reference to its own object (`refuseForeignTreeReference`, whose guidance says to drop `reference`), and `FieldSchema` materializes `set_null` on it.\n- `referenceTargetOf` answers `undefined` for such a field, and its docblock calls it \"an authoring bug\". `referenceCarrierOf` reads `reference` only, and `IMPLICIT_REFERENCE_TARGETS` holds `user` only. So the delete walk that #22957 widened to `tree` never reaches it.\n- The contract record notes that no shipped corpus row is in the gap today: the showcase's `f_tree` carries `reference`, and `platform-objects` has no `tree` field.\n\n## Wanted: one reading, enforced\nEither a referenceless `tree` IS a self-reference (the engine's reference readers take the field's own object, and the declared `deleteBehavior` then takes effect), or it is refused at parse with a located message (and `refuseForeignTreeReference`'s guidance stops telling authors to drop `reference`). ⛔ Not a consumer fallback in one reader.\n\n## Carried here: two `field.zod.ts` comment sites, false once PR #23055 lands\n- the `deleteBehavior` TSDoc's #9784 paragraph (the engine reads the key only behind a `master_detail` / `lookup` guard);\n- the `.overwrite` block's sentence that `cascadeDeleteRelations` reaches the key \"exclusively on `master_detail` / `lookup` fields\", and its `user` sentence (\"sits outside today's cascade guard exactly like `text` does\").\n\nAfter #22957, the walk's family is `master_detail`, `lookup` and `tree`. The contract record placed both sites with this card: same file, same `tree` delete-semantics reading.\n\nDedupe: `git grep` and a search of the issues for \"referenceless tree\", \"tree without reference\", \"referenceTargetOf tree\" found no open card.\n"

@@ -1,0 +1,34 @@
+{
+  "number": 23118,
+  "kind": "issue",
+  "title": "objectui-changeset-digest under-counts breaking entries: the family of author annotation shapes it misses (a decorated opener, #23112; a parenthetical \"(breaking …)\" inside a bold lead label)",
+  "state": "open",
+  "state_reason": null,
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "area:devpath",
+    "bug",
+    "domain:devx",
+    "pm:dispatched",
+    "priority:p2"
+  ],
+  "assignees": [
+    "zhuangjianguo"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-13T00:40:56Z",
+  "updated_at": "2026-10-13T02:24:50Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 2,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/23118",
+  "body": "Filing-gate category ① — a defect with a named landing point; `reach:` exception **release text**: the digest writes the `@objectstack/console` changeset that publishes into its CHANGELOG on every console pin hop (`scripts/bump-objectui.sh`).\n\n**This is the family card** for one defect class: `hasBreakingAnnotation()` in `scripts/objectui-changeset-digest.mjs` does not recognise a breaking annotation that an objectui author did write, so the console changeset under-counts breaking entries. A range whose only breaking entry takes a missed shape also skips the ADR-0087 disposition prompt. New shapes join this card; ⛔ no single-shape card.\n\n**Reader who acts:** the `domain:devx` execution seat, through a dispatch of this card once triage grades it and gives the positional direction for shape 2.\n\n**Dedupe:** semantic issue search on this repo, closed included, with the words \"objectui changeset digest parenthetical breaking bold label hasBreakingAnnotation undercount console changeset\". 46 hits. The only one covering this class is #23112 (shape 1, below); none covers shape 2. The nearest others are #6099 (the original annotation support, closed) and #7044 (a frontmatter parser miss, closed).\n\n## The family, one row per shape\n\n| # | Shape | Example | Status |\n|:--|:--|:--|:--|\n| 1 | A pictograph (with its variation selector) between the heading/bullet mark and the word, at the line start: `## ⚠️ BREAKING, …` | objectui#12242's changeset | #23112 → PR #23117 (in review at filing) |\n| 2 | A parenthetical `(breaking …)` **inside a bold lead label**, not at the line start | objectui `8a55f0ccd`, `.changeset/12059-sidebar-no-reorder.md`: ``**`@object-ui/layout` (breaking, declared `minor` per the version policy).**`` | open: this card |\n\n## Shape 2, as measured by the #23112 dev (report on #23112; not re-run by this seat)\n\n- **Corpus:** a full objectui clone, every head, `main` at `5595aabca30b`. Shape 2 occurs in **39 blobs / 23 paths** of objectui's changeset history.\n- **Reproduce:** `parseChangeset(text).body` passed to `hasBreakingAnnotation()` returns `false` at objectstack `ea30d08d6` (PR #23117's head) for the example above. Re-check: re-run it on `main` after PR #23117 lands. Positive control: the same call on objectui#12242's changeset body returns `true` there.\n\n## Why shape 2 needs a direction first\n\n#23112's grade (`6134888169`) binds the opener rule to the line start: \"⛔ Not a \"contains BREAKING anywhere\" match, which would count prose that merely mentions the word.\" Shape 2 sits inside a bold lead label, which is a different position. The same corpus also carries prose shapes in which \"breaking\" follows punctuation: `(` 39 blobs, `—` 5, a double quote 2, per the same dev's corpus reading. So admitting shape 2 needs a rule for the lead-label position that is separate from the line-start opener. Triage gives that direction at grading.\n\n## Fix lands in\n\n`scripts/objectui-changeset-digest.mjs` (`hasBreakingAnnotation`), with `--self-test` pins:\n- shape 2's example reads breaking;\n- a prose `(breaking …)` outside a bold lead label does not;\n- every shape-1 pin of PR #23117 holds."
+}

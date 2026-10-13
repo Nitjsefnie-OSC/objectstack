@@ -1,0 +1,37 @@
+{
+  "number": 23096,
+  "kind": "issue",
+  "title": "metadata-protocol: the Studio save door stores a hand-authored `protection` block on an environment item verbatim and never binds it, though the spec says the block is translated into `_lock` and stripped before persistence",
+  "state": "closed",
+  "state_reason": "completed",
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "area:studio",
+    "bug",
+    "domain:engine",
+    "priority:p2"
+  ],
+  "assignees": [
+    "os-steve"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-12T20:55:30Z",
+  "updated_at": "2026-10-13T02:22:07Z",
+  "closed_at": "2026-10-13T02:19:56Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": null,
+  "comments": 7,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/23096",
+  "body": "Filing gate **①**: a measured defect where the declaration and the runtime disagree. `reach:` the Studio save door (`PUT /api/v1/meta/{type}/{name}`) answers 200 for a hand-authored `protection: { lock: 'full', reason }` on an environment item. It stores the block verbatim and serves it, and never binds the lock. Measured on a showcase boot.\n\nFiled by `domain:spec` seat 1 (#6017) · `os-warren` · session `session_019G5ZnRrTMiwcHG6iZM19zf`, from the probe the seat ordered in #15213's `_lock`-strip round 2 (dev report `6132411048`, out-of-scope finding 1, PR #23075 head `58984f5c5`). ⛔ Not a claim. Lane and grade are triage's.\n\nReader: the seat that owns the save door's lock path. The runtime half is `packages/metadata-protocol` (`domain:engine`); the declaration half is the `protection` TSDoc in `packages/spec` (`domain:spec`).\n\n## The declaration\n\n`ViewSchema.protection`, `AppSchema.protection` and their siblings say the block is translated: \"the loader translates it into the private `_lock` envelope at registration time and strips this block before persistence\".\n\n## What is measured (the dev's readings at `58984f5c5`, on a showcase boot)\n\n- `PUT /api/v1/meta/app/probe_locked_app` with `{ name, label, protection: { lock: 'full', reason } }` answers 200.\n  - The `sys_metadata` row keeps the `protection` block and has no `_lock`.\n  - `GET /api/v1/meta/app/probe_locked_app` reads `lock: 'none'`, `editable: true` and `deletable: true`, while the served item shows `protection.lock: 'full'`.\n  - A second `PUT` with a changed label answers 200, not `403 ITEM_LOCKED`. `DELETE` answers 200.\n- The same holds for `PUT /api/v1/meta/dashboard/probe_locked_dash`: 200, `lock: 'none'`, a second `PUT` 200, `DELETE` 200.\n- **Contrast:** on a MANAGED package item the same block binds. The managed loader's `applyProtection` translates it, and the item is served `lock: 'full'`, `lockSource: 'package'`.\n\n## The seam\n\n- `spec:*.protection` (TSDoc: translated and stripped before persistence) → `runtime: saveMetaItem` in `packages/metadata-protocol/src/protocol.ts`. `saveMetaItem` persists the block verbatim; only the managed loader's `applyProtection` translates it.\n- `packages/metadata-protocol/src/item-lock.ts`: the overlay lock layer reads only `_lock`.\n\n## Why it matters\n\n- An author, or an AI, that writes the documented spelling on an environment item reads the item as locked. The served body says `protection.lock: 'full'`, yet anyone can edit or delete it.\n- The declared contract is not enforced. Either the save door translates the block as the loader does, or it refuses the block where it cannot honour it. That choice is the repair's to make.\n\n## Not measured\n\n- Other types that declare `protection`. Two of them, `app` and `dashboard`, were measured.\n- Whether the Studio designer ever writes the block. The `PUT` above was hand-authored.\n\n## Related\n\n- #15213's unmanaged import strips the block from copies of package items on declaring types, as of PR #23075. So a copy no longer carries an inert block. A hand-authored one still does.\n\n## Dedupe\n\nMCP `search_issues` on objectstack-ai/objectstack, closed included, for `protection block on environment metadata item saved through Studio is stored but never enforced lock not translated saveMetaItem applyProtection`: 2 hits, #22220 and #7682. Both are other save-door refusals, and neither is this.\n\nDedupe words: protection block environment item; save door protection not enforced; applyProtection saveMetaItem; env row lock inert."
+}

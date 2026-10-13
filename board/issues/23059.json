@@ -2,8 +2,8 @@
   "number": 23059,
   "kind": "issue",
   "title": "ci(refresh lane): each test-timing refresh diffs the window's per-package weights against the previous dataset — a package up 25 % or more, or a file over the 10 s budget, is a filed card for its lane, never a red build (#22949 ruling E, items 2–3)",
-  "state": "open",
-  "state_reason": null,
+  "state": "closed",
+  "state_reason": "completed",
   "draft": null,
   "author": {
     "login": "objectstack-fleet[bot]",
@@ -13,21 +13,22 @@
   "labels": [
     "area:devpath",
     "domain:devx",
-    "pm:dispatched",
     "priority:p2",
     "tooling"
   ],
-  "assignees": [
-    "os-zhuang"
-  ],
+  "assignees": [],
   "milestone": null,
   "type": null,
   "created_at": "2026-10-12T14:21:26Z",
-  "updated_at": "2026-10-12T15:39:23Z",
-  "closed_at": null,
-  "closed_by": null,
+  "updated_at": "2026-10-12T21:59:15Z",
+  "closed_at": "2026-10-12T21:56:50Z",
+  "closed_by": {
+    "login": "os-zhuang",
+    "id": 277994282,
+    "type": "User"
+  },
   "merged_at": null,
-  "comments": 3,
+  "comments": 4,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/23059",
   "body": "Protects: the only regression detector the test suite has once the wall ceiling stops grading (#22949 ruling E): the refresh dataset's own history, read in the same density window to window.\n\nFiled by the director seat (summon #37, `session_01LqNgdPZB2Jnr5HpGbaqLeB`) on the maintainer's word 「22949 同意」 (2026-10-12) to this seat's letter E on #22949 (items 2 and 3 of the ruling, its newest `Ruling:` comment). Filing gate ③: maintainer-directed. ⛔ Not a claim. Lands after E1 (the report-only card) or in parallel on disjoint files (`scripts/measure-test-shard-timings.mjs`, the refresh workflow, the refresh PR body template); the dev states which.\n\n## What to build\n1. **The diff:** `scripts/measure-test-shard-timings.mjs` (or a sibling the refresh workflow calls) compares the new window's per-package weight with the previous dataset's (`scripts/test-shard-timings.json` on `main` before the refresh): packages up by 25 % or more (the ceiling's own factor) are listed in the refresh PR's body with both numbers, the window's density reading (how many packages executed per run, replays excluded) and the slowest file of each; packages down are listed as a one-line summary.\n2. **Density guard:** the diff compares like with like: the window's runs are tagged by executed-package count, and a package whose rise is explained by density alone (its share of the run's executed total unchanged within the factor) is not a finding; the first diff after this ruling baselines on the first window of comparable density and says so.\n3. **The per-file budget:** the refresh PR body lists every test file over 10 s of wall in the window (objectstack#22998's rule), with its package and its slowest run; the dataset already carries the `Slowest file:` reading, so this is a read, not a new measurement.\n4. **Card filing:** the refresh lane's seat files one card per package named by the diff (the owning lane's `domain:*`, `Protects:` line naming the package and the numbers), never a red build; the filing is the seat's act after the refresh PR lands, written into the refresh lane's instructions (its runbook or the workflow's header), not automated by the bot.\n5. ⛔ Not touched: the ceiling table's formula, the floor, `RULED_CEILING_RAISES`, the two timing steps (E1).\n\n## Acceptance\n- The first refresh after landing carries the three lists in its PR body (rises, files over budget, density per run); its self-test covers a density-only rise (not a finding) and a code rise (a finding); the refresh lane's instructions say who files what.\n\nRelated: #22949 (ruling E) · E1 · #22998 (test budgets) · #16468 · #22923 (the first dataset with ceilings) · `scripts/measure-test-shard-timings.mjs` · `scripts/test-shard-timings.json`."
