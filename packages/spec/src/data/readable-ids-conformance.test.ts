@@ -31,6 +31,10 @@ import {
 
 type Row = Record<string, unknown>;
 
+/** The fixture, as rows the evaluator reads by column name. */
+const PARENTS: readonly Row[] = READABLE_IDS_PARENT_ROWS.map((row) => ({ ...row }));
+const CHILDREN: readonly Row[] = READABLE_IDS_CHILD_ROWS.map((row) => ({ ...row }));
+
 /** The ways a driver can get the composed leaf wrong — `faithful` is the declared semantics. */
 type Reading = 'faithful' | 'leaf-as-no-restriction' | 'scope-ignored' | 'subquery-unwalled';
 
@@ -48,7 +52,7 @@ class UncomposedLeafRefusal extends Error {
 function readableParentIds(leaf: ComposedReadableIds, ctx: EvalContext): Set<unknown> {
   const walled = ctx.tenantId !== undefined && ctx.reading !== 'subquery-unwalled';
   const ids = new Set<unknown>();
-  for (const parent of READABLE_IDS_PARENT_ROWS as readonly Row[]) {
+  for (const parent of PARENTS) {
     if (walled && parent.organization_id !== ctx.tenantId) continue;
     if (leaf.scope !== undefined && ctx.reading !== 'scope-ignored' && !matches(parent, leaf.scope, ctx)) continue;
     ids.add(parent.id);
@@ -93,7 +97,7 @@ function matches(row: Row, where: FilterCondition, ctx: EvalContext): boolean {
 function answer(c: ReadableIdsMatchesCase, reading: Reading): string[] {
   const ctx: EvalContext = { tenantId: c.options?.tenantId, reading };
   const where = c.where();
-  return (READABLE_IDS_CHILD_ROWS as readonly Row[])
+  return CHILDREN
     // The OUTER read's tenant wall, which every driver already applies.
     .filter((row) => ctx.tenantId === undefined || row.organization_id === ctx.tenantId)
     .filter((row) => matches(row, where, ctx))
@@ -124,7 +128,7 @@ describe('READABLE_IDS_CASES — the table agrees with the declared semantics', 
       const where = c.where();
       let refusal: unknown;
       try {
-        (READABLE_IDS_CHILD_ROWS as readonly Row[]).forEach((row) => matches(row, where, { reading: 'faithful' }));
+        CHILDREN.forEach((row) => matches(row, where, { reading: 'faithful' }));
       } catch (e) {
         refusal = e;
       }
