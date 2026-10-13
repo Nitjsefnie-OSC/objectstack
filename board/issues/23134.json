@@ -1,0 +1,33 @@
+{
+  "number": 23134,
+  "kind": "issue",
+  "title": "spec(page): `record:related_list` declares its parent record with a binding key of its own, beside the child-row `dataSource` — the spec half of objectstack-ai/objectui#12294's related-list leg (ruled B on objectstack-ai/objectui#12296)",
+  "state": "open",
+  "state_reason": null,
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "domain:spec",
+    "enhancement",
+    "pm:dispatched",
+    "priority:p1"
+  ],
+  "assignees": [
+    "os-justin"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-13T03:01:11Z",
+  "updated_at": "2026-10-13T05:21:45Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 1,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/23134",
+  "body": "Filing gate **③ maintainer-directed**: the execution card for the director seat's ruling on objectstack-ai/objectui#12296 (batch #335, letter **B**, the maintainer's word 「同意」, ruling comment 6137226306). Filed by the director seat (seat post #12708, summon #40, `session_01TJKP6W6UDYEBHtccVdpVoz`). It lives here because the fix lands in `@objectstack/spec` (cross-repo rule 1). ⛔ Not a claim.\n\n**Reader who acts:** the `domain:spec` seat. The objectui half (the related-list leg of objectstack-ai/objectui#12294) waits on the spec release that carries this key, then lands on that parent card.\n\n## The ruling, as recorded\n\n> **B — `record:related_list` gains a parent-record binding key of its own.** `@objectstack/spec` adds one key on the `record:related_list` component (name and shape proposed by the spec seat after measurement; the shape is `dataSource`'s, read by the single-record rule: the first row, and a loud absence when no row answers, the same rule the other three record blocks take under objectui#12294). `dataSource` keeps its published meaning, the child rows (objectstack#6953). Every record block therefore declares its own binding and the platform has one binding mechanism; the related list is the one block with two bindings.\n\nGoverning text: objectstack-ai/cloud#2839 Q1 D (per-block bindings, as objectstack-ai/objectui#12294 quotes it); #4444 (no self-fetching record scope on react pages; its flip conditions are not declared met); the `ELEMENT_DATA_SOURCE_INPUT` contract in `@object-ui/core` (\"per-element data binding\"). ⛔ No new `validate` finding for a parent binding that differs from a sibling details block (a new gate defaults to no; none was named).\n\n## What to build (one PR, `domain:spec`)\n\n1. **The key.** On the `record:related_list` component props (`packages/spec/src/ui/page.zod.ts`, the `ComponentPropsMap` door that already declares this block's `filter`), one key that names the parent record: the shape of `PageComponentSchema.dataSource` (object, view, filter, sort, limit), read by the single-record rule (the first row; no row ⇒ the block renders a loud absence, never an empty list). The spec seat proposes the name after measuring what the three sibling record blocks read under objectstack-ai/objectui#12294 (`dataSource` on those blocks), so the two spellings read as one family. The description states: `dataSource` on this block is the child rows (objectstack#6953); this key is the parent record; a record page's record context remains the fallback when the key is absent.\n2. **Clause-②: yes (widening).** A `minor` changeset on `@objectstack/spec` stating the new key, its single-record rule and the fallback; the contract review at `CONTRACT_REVIEW_TIER` before the queue.\n3. **Pins:** the key parses with `dataSource`'s shape; it is refused on every other component (the `ComponentPropsMap` door's own refusal shape); `dataSource` on this block is unchanged (CONTROL, the #6953 pins); the generated reference page and the skill references follow (`check:generated`).\n4. **Not this PR:** objectui's reader (the related-list leg of objectstack-ai/objectui#12294, after the release); any record-scope component (#4444 stands); any `validate` consistency finding.\n\n## Acceptance\n\n- `ComponentPropsMap['record:related_list']` carries the new key with the stated description; `dataSource` on the block is byte-for-byte unchanged.\n- The changeset names the key, the single-record rule and the fallback; the contract review record is on the PR.\n- When the spec release carrying this key is installable in objectui, the `domain:ui` @ objectui seat executes the related-list leg on objectstack-ai/objectui#12294 (the cross-repo unlock rule: installable, not merged).\n\n## Fork clause\n\n`dataSource` on `record:related_list` is read by objectui as the child binding and by no reader as the parent. If the spec seat finds a reader that already treats it as the parent, or a shape the single-record rule cannot carry, it reports the fork on this card and stops; ⛔ no silent re-reading of `dataSource` (option C).\n\nRelated: objectstack-ai/objectui#12296 (the decision card) · objectstack-ai/objectui#12294 (the parent) · #6953 · #4444 · #5576 · objectstack-ai/cloud#2839."
+}

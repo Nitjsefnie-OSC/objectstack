@@ -1,0 +1,37 @@
+{
+  "number": 23135,
+  "kind": "issue",
+  "title": "release(next): the Version Packages PR #21988 (18.0.0-next.0) is red in CI — check-future-spec-major and two metadata forward-conversion tests are not major-roll aware; fix on main, never on the generated branch",
+  "state": "closed",
+  "state_reason": "completed",
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "area:devpath",
+    "bug",
+    "domain:devx",
+    "priority:p1"
+  ],
+  "assignees": [
+    "zhuangjianguo"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-13T03:02:10Z",
+  "updated_at": "2026-10-13T05:40:21Z",
+  "closed_at": "2026-10-13T05:23:57Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": null,
+  "comments": 5,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/23135",
+  "body": "Filing gate ③ — a maintainer-directed task. The maintainer, in this seat's session (`session_012zwsLMxQBwHUYJgPyrpEvx`) on 2026-10-13, verbatim: 「21988 ci报错，你负责立卡并派发解决。」 and 「21988 是生成的，要修main 哦」.\n\n**Reader who acts:** the `domain:devx` execution seat 1, which claims and dispatches this card. The fix lands on `main`, so the next refresh of #21988 is green. ⛔ No edit to `changeset-release/main` or #21988 by hand. ⛔ No change to a gate's or test's expectation just to make it pass. ⛔ No release action.\n\n**Dedupe:** a semantic issue search on this repo, closed cards included, words \"version PR 18.0.0-next.0 red check-future-spec-major plugin-artifact-forward-conversion current spec version major roll\": 22 hits, none for these two sites. Related, not duplicates:\n- #23113 (closed; the same class in the spec build's default-change ratchet, fixed by PR #23123);\n- #23025 (closed);\n- #23042 (open; the pre-mode `retiredAfter` guidance).\n\n## Readings: #21988 head `63eb607ad1`, read 2026-10-13 around 03:00Z\n\nThe head carries `main` through `0d43004100`. 42 check runs; at reading time, 2 failed and 7 were still running (`Test Core (2/6)` to `(6/6)`, `Type Check · workspace`).\n\n1. **`Type Check · source gates`**: job `115105083441`, run `38338685898`, step \"Check no prose dates a change to an unreleased `@objectstack/spec` major\". The step reports `✗ check-future-spec-major: 3 problem(s)`, after its own self-test passes (29 cases):\n   - `scripts/check-future-spec-major.mjs holds 10 citation(s) above the published major, below the floor of 12`;\n   - `QUOTATION_EXEMPTIONS entry 0 (docs/adr/0087-metadata-protocol-upgrade-contract.md, major 18) matched NOTHING`;\n   - `QUOTATION_EXEMPTIONS entry 1 (docs/v17-docs-sweep.md, major 18) matched NOTHING`.\n   - Seat reading, not established: on this tree the gate takes 18 as the \"published major\". Its own self-test says \"the class is DERIVED — the same corpus is green once the tree reaches 18\". So the floor and the two major-18 exemptions stop matching at the roll. Whether `18.0.0-next.0` should count as published is the first question for the fix.\n2. **`Test Core (1/6)`**: job `115105339463`, run `38338686006`. In `@objectstack/metadata`, `Tests 2 failed | 878 passed (880)`, both in `src/plugin-artifact-forward-conversion.test.ts`, suite \"artifact door — the conversion is versioned, not a blanket amnesty (#12772)\":\n   - \"an artifact claiming the CURRENT spec version with a NON-default retired-key value still refuses with the tombstone\": `AssertionError: expected 'expected \"the strict parse must refus…' to contain 'allowRestore'`;\n   - \"an artifact claiming the CURRENT spec version whose retired keys carry only the emitted default parses clean — the #12845 residue tolerance…\": `AssertionError: expected [ Array(1) ] to have a length of +0 but got 1`.\n   - In the same job, `@objectstack/spec:test:repo` and `@objectstack/service-settings:test` end `ELIFECYCLE` with no failing test of their own in the log. The seat reads them as turbo's collateral stop; that is to be confirmed.\n3. **Still running at filing:** any further red check on this head joins this card.\n\n## What done looks like\n\n1. Reproduce every red check on the generated tree: a fresh depth-1 clone of `changeset-release/main` at #21988's current head, the way #23113's dev did. Read the failing lines yourself.\n2. Fix each on `main`, at its producer, so the gate or test is right on both sides of the roll. `main` (17.x) stays green, and the `18.0.0-next.N` tree goes green.\n3. Pin: after #21988 next refreshes from a `main` carrying the fix, every check on its head is green or an expected skip. The seat reads that run."
+}

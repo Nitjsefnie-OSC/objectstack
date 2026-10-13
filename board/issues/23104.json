@@ -2,8 +2,8 @@
   "number": 23104,
   "kind": "issue",
   "title": "chore(objectui): move the console pin to objectui main (1fb1ced36243 at filing), then run every surface:browser and surface:mixed checklist item against the console built from the new pin",
-  "state": "open",
-  "state_reason": null,
+  "state": "closed",
+  "state_reason": "completed",
   "draft": null,
   "author": {
     "login": "objectstack-fleet[bot]",
@@ -13,7 +13,6 @@
   "labels": [
     "area:devpath",
     "domain:devx",
-    "pm:dispatched",
     "priority:p2"
   ],
   "assignees": [
@@ -22,11 +21,15 @@
   "milestone": null,
   "type": null,
   "created_at": "2026-10-12T22:16:43Z",
-  "updated_at": "2026-10-13T02:12:35Z",
-  "closed_at": null,
-  "closed_by": null,
+  "updated_at": "2026-10-13T05:06:58Z",
+  "closed_at": "2026-10-13T05:06:58Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
   "merged_at": null,
-  "comments": 6,
+  "comments": 8,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/23104",
   "body": "**Maintainer-directed (direct dispatch channel).** The maintainer, in Claude Code session `session_016JB93R2KcQP4GgKaUnseVF` on 2026-10-12, verbatim:\n\n> objectui pin 更新到最新版，并使用浏览器对前端界面进行完整的测试\n\nThis card carries both halves of that order: the pin hop, and a full browser pass of the console at the new pin.\n\n## Readings (2026-10-12T22:15Z)\n\n- `.objectui-sha` on `objectstack-ai/objectstack` `main` @ `abf86554` = `7578323a544e31d574804ae931b595e8f9f92c21` (set by #23061).\n- `objectstack-ai/objectui` `main` tip = `1fb1ced36243c325acc801bdde26bd096a15f5f5`; the pin is **11 commits** behind it (`git rev-list --count 7578323a544e..origin/main` in an objectui checkout fetched at that time; 116 paths). The hop carries objectui#12242 (field metadata members FieldSchema refuses retire as never), objectui#12228, objectui#12238, objectui#12243, objectui#12248, objectui#12254, objectui#12244, objectui#12249, objectui#12268, and two CI commits (objectui#12222, objectui#12208 / objectui#12256).\n- No open PR or open card moves the pin today (open-PR list of this repo and a title search over pin-bump cards, closed included; newest pin card #22476 is closed).\n- Checklist population (`node scripts/checklist-select.mjs all --json` on `abf86554`): 65 runnable `surface:browser` items and 90 runnable `surface:mixed` items.\n\n## Half 1 — the pin hop\n\nMove `.objectui-sha` to the objectui `main` tip **at the moment the work starts** (`1fb1ced36243` at filing; if `main` moved since, take the new tip and say which in the PR) through the dedicated bump script, with the full second half of the pin procedure (`AGENTS.md` → Frontend; `docs/releases-maintenance.md`): the console changeset the script derives, the regenerated `sdui.manifest.json` + `scripts/sdui-manifest.record.json`, the pin-citation re-measure, the sdui-parser lockstep, and the Console Pin Gate steps run locally. Precedent shape: #23061 / #23018.\n\n## Half 2 — the browser pass\n\nEvery runnable `surface:browser` and `surface:mixed` item in `docs/qa/platform-checklist/`, driven in a real browser against the hop's PR head with the console built from the new pin, per `docs/qa/platform-checklist/RUNNER.md`. One `qa-run` record per selector (`surface:browser`, `surface:mixed`), text only. Every product defect a run finds is extracted to its own card in the repository its fix lands in (console defects go to `objectstack-ai/objectui`), with a `QA-source:` line. Precedent: #21710 (hop), then #21782 and #21784 (the two records).\n\nA failing clause whose cause lies inside the hop's objectui commits is a **regression of this hop**: the pin PR does not land until it is fixed upstream or the pin target is moved off it, and the record names it.\n\n## Acceptance\n\n- The pin PR's checks are green, including `check:sdui-manifest` and `check:console-sha`, and the PR states the exact objectui sha it pins.\n- Both `qa-run` records exist and are linked from a comment on this card, each with every runnable item judged or listed as not-run in a handoff list; every fail carries one of the four dispositions.\n- No hop regression is open against the PR when it lands."

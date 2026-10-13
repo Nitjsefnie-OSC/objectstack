@@ -1,0 +1,37 @@
+{
+  "number": 23176,
+  "kind": "issue",
+  "title": "release(next): #21988 reds on the skills token ratchet at 18.0.0-next.0 (the prerelease version stamp adds 7 bytes to two SKILL.md files with 0 and 1 token of headroom)",
+  "state": "closed",
+  "state_reason": "completed",
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "area:devpath",
+    "bug",
+    "domain:devx",
+    "priority:p1"
+  ],
+  "assignees": [
+    "zhuangjianguo"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-13T05:29:27Z",
+  "updated_at": "2026-10-13T07:14:13Z",
+  "closed_at": "2026-10-13T06:31:33Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": null,
+  "comments": 6,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/23176",
+  "body": "Maintainer-directed: 「21988 ci报错，你负责立卡并派发解决。」 / 「21988 是生成的，要修main 哦」 / 「我等着发版本，相关任务都是高优先级」 (this seat's session, 2026-10-13). Filing-gate category ①, a defect with a named landing point. It is the red that was hidden behind #23135's two roots.\n\n**Reader who acts:** the `domain:devx` execution seat. It dispatches the fix once the maintainer picks the route below (the route needs the maintainer's word: the gate marks the loosening direction ⛔ MAINTAINER-ONLY).\n\n**Dedupe:** issue search on this repo, closed included, with the words \"skills token ratchet prerelease version stamp next SKILL.md ceiling\". No hit for this class.\n\n## What is measured\n\nMeasured by this seat's read-only probe on `63eb607ad1` (#21988's head) with PR #23155's two files overlaid; the main figures were re-read by the seat on `origin/main`.\n\n- `Type Check · source gates` step 35 (`check:future-spec-major`) failed on #21988, so steps 36–41 were **skipped** and never ran on the v18 tree. With PR #23155 (now merged as `31a872d4e3`) step 35 is green, and step 37, `node scripts/check-skills-token-ratchet.mjs`, is **red**:\n\n```\n✗ check-skills-token-ratchet: skills/objectstack-automation/SKILL.md is 5786 tokens; the ratchet ceiling is 5785 (over by 1). …\n✗ check-skills-token-ratchet: skills/objectstack-data/SKILL.md is 6129 tokens; the ratchet ceiling is 6128 (over by 1). …\n✗ check-skills-token-ratchet: 2 of 64 published bundle file(s) failed their check.\n```\n\n- **Cause:** the version commit rewrites each SKILL.md frontmatter stamp from `version: \"17.7.0\"` to `version: \"18.0.0-next.0\"`, +7 bytes. The gate counts `ceil(utf8 bytes / 4)`.\n\n| file | `main` bytes → tokens | ceiling (`scripts/check-skills-token-ratchet.mjs`) | headroom on `main` | at `18.0.0-next.0` |\n|:--|:--|:--|:--|:--|\n| `skills/objectstack-automation/SKILL.md` | 23135 → 5784 | 5785 (`:323`) | 1 | 5786, red |\n| `skills/objectstack-data/SKILL.md` | 24509 → 6128 | 6128 (`:341`) | 0 | 6129, red |\n\n- The other SKILL.md files take the same 7 bytes with at least 6 tokens of headroom. A plain `18.0.0` stamp is the length of `17.7.0`, so the red lives only on the prerelease line; `-next.10` and above add 8 bytes.\n- Steps 36, 38–41 and the five Test Core packages turbo never started on #21988 (`http-conformance`, `plugin-dev`, `plugin-pinyin-search`, `service-sms`, `knowledge-ragflow`) are green on the same tree.\n\n## What done looks like\n\n- #21988, refreshed from a `main` carrying the fix, has `Type Check · source gates` green (step 37 included) and every other check green or an expected skip.\n- `main`'s own ratchet reading is unchanged or stricter; the route below says which."
+}

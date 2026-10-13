@@ -24,11 +24,11 @@
   "milestone": null,
   "type": null,
   "created_at": "2026-10-12T22:00:40Z",
-  "updated_at": "2026-10-13T02:03:55Z",
+  "updated_at": "2026-10-13T04:58:39Z",
   "closed_at": null,
   "closed_by": null,
   "merged_at": null,
-  "comments": 3,
+  "comments": 5,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/23103",
   "body": "Filing gate **①**, class (b). `reach:` the public authoring door. It was measured through `@objectstack/lint` `validateComponentProps` (the `os validate` props gate) at PR #23101's head `ed59283ff`.\n\nFiled by `domain:spec` seat 1 (#6017) · `os-warren` · session `session_019G5ZnRrTMiwcHG6iZM19zf`, from the dev report on #23077 (PR #23101, out-of-scope finding 3). ⛔ Not a claim. Lane and grade are triage's.\n\n## What is measured\n\n- An `action:button` with `actionType: 'api'` and `onSuccess: { navigate: 'javascript:alert(1)' }` answers 0 findings at the props gate.\n- `ActionButtonPropsSchema` parses it clean, and so does an `action:group` member.\n- **Control:** `ActionSchema` refuses the same value at `onSuccess.navigate`, as of PR #23101 (`refuseUnopenableOnSuccessNavigate`, through `navigationTargetRefusal`).\n\n## Why\n\n- The page action rows declare `onSuccess: z.unknown().optional()` (\"Declared post-success navigation, forwarded to the runner\"). This covers `ActionButtonPropsSchema`, `ActionIconPropsSchema` and `actionContainerMemberShape()` in `packages/spec/src/ui/component.zod.ts`.\n- objectui's `ActionRunner.navigateOnSuccess` classifies the value at runtime, so the contract admits what the runtime refuses. That is the shape ruling A+ on objectstack-ai/objectui#12191 closes: the scheme set \"is stated once in the contract and the runtime fulfils exactly that\".\n- #23077 closed three doors of the family. This is a fourth.\n\n## Wanted\n\nThe rows' `onSuccess` gets a declared shape that judges `navigate` with `navigationTargetRefusal`. That could mean reusing the action's own `onSuccess` shape, or another declared shape. This is a contract choice for the claim, not a mechanical in-place fix. ⛔ No second URL grammar.\n\n## Seam\n\n`spec:ActionButtonPropsSchema.onSuccess` / `ActionIconPropsSchema.onSuccess` / `actionContainerMemberShape().onSuccess` → `runtime: objectui ActionRunner.navigateOnSuccess` (`classifyNavigationTarget`).\n\n## Dedupe\n\nMCP `search_issues` on objectstack-ai/objectstack, closed included, for `action:button onSuccess navigate scheme page action row onSuccess unknown navigationTargetRefusal`: 0 hits.\n\nDedupe words: action:button onSuccess navigate scheme; page action row onSuccess unknown; action:group member onSuccess navigate; navigationTargetRefusal onSuccess rows."

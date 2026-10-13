@@ -1,0 +1,30 @@
+{
+  "number": 23177,
+  "kind": "issue",
+  "title": "[Decision] 门禁过严拖慢发版:一轮 CI 暴露全部红、成本型棘轮加容差带、门禁瘦身审计",
+  "state": "open",
+  "state_reason": null,
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "area:devpath",
+    "domain:devx",
+    "priority:p1"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-13T05:36:50Z",
+  "updated_at": "2026-10-13T07:01:07Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 4,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/23177",
+  "body": "Maintainer-directed: 「还有门禁也不需要这么严格，会不会太浪费时间，可以立决策卡」(`domain:devx` seat 1 的会话,2026-10-13)。前文:「我等着发版本，相关任务都是高优先级」。\n\n**一句话问题:** 发一个版本要等好几轮 CI。原因有二:一处红会把它后面的检查全挡住,修完一个才看见下一个;还有一些检查对一两个字节的变化就整体拒绝。\n\n## 背景(本班实测)\n\n- **#21988(`18.0.0-next.0` Version PR)第一轮只暴露了两个红**(→ #23135 / PR #23155)。\n  - `Type Check · source gates` 第 35 步红后,第 36–41 步全部 `skipped`。\n  - Test Core 第 1 片被 turbo 在第一个失败处停下,5 个包没跑。\n  - 第三个红(skills token ratchet,#23176)是本席另派只读探针补跑才发现的。没有探针,要再等一轮 Version PR 刷新(定时 6 小时一次,或手动)加一轮 CI。\n- **skills token ratchet** 把上限钉在当前读数:`objectstack-data` 余量 0,`objectstack-automation` 余量 1。\n  - 发布机器人把版本戳改成 `-next.0`,多 7 字节,两个文件各超 1 token,发版即被拦。\n  - 本次走裁决 A 修掉(PR 进行中),但\"余量为 0\"这一设计本身没变。\n- **一次 12 行的 changeset 文字更正**(#23136 / PR #23173)按 DELIBERATE CORRECTION 规则要:一个按设计红的检查、一份席位 ACCEPT、另起一个达档子代理写同形复核记录。三步走完才能入队。\n- 已有放宽先例:ruling E(#22949,「22949 同意」)把两个计时步改为 report-only,落地 PR #23063(+375 / −295)。\n\n## Governing text\n\n- `.github/workflows/lint.yml:151-159`:\"GATE ORDER IS DELIBERATE … (#13690, maintainer ruling 2026-09-03): … runs its gates sequentially and aborts at the first non-zero exit\"。\n- `lint.yml:502-503`:\"⛔ The fix is NOT to make the skipped gates run: that would undo the adjudicated fail-fast order. ⛔ Nor is it `continue-on-error`, which trades a red for silence.\"\n- `scripts/check-skills-token-ratchet.mjs:697`:\"these ceilings are shrink-only. The other direction lands only in a PR whose body quotes a maintainer ruling authorizing it. ⛔ MAINTAINER-ONLY\"。\n- `.claude/skills/pm-dispatch/references/landing-operations.md:15-16`(DELIBERATE CORRECTION 的同 head 达档复核)。\n- 四轴框架原文:\"**新增门禁默认否**:门禁是只减不增的零件\"。\n- 协议声明:本卡不改 spec 契约。A1 改 #13690 的执行方式;A2 改一条 MAINTAINER-ONLY 棘轮的口径;B 退役门禁。三者都需你裁定。\n\n## 前提(带复核命令)\n\n- 门禁规模:`node scripts/pm/dispatch-gates.mjs --repo objectstack-ai/objectstack <paths>`。它列出 55 个 artifact-roster 族、11 个 WIDE 族、4 个 type-check lane 和 always-runs 尾。`.github/workflows/lint.yml` 现有 344 个 `- name:` 步。\n- 一处红挡住后续:`gh api repos/objectstack-ai/objectstack/actions/jobs/115105083441 --jq '.steps[] | select(.number>=35) | \"\\(.number) \\(.conclusion)\"'`(35 failure,36–41 skipped)。\n\n## 选项 × 真实代价 × 工作量\n\n| 选项 | 做什么 | 客户/团队可感知后果 | 工作量 |\n|:--|:--|:--|:--|\n| **A 定点放宽** | **A1** 一轮暴露全部红:source gates 各 lane 与 Test Core 分片里每一步都跑完,最后汇总判红;判定一条不放宽,红照样红。**A2** 成本型棘轮加固定容差带:超上限但在容差内(例如 +1%)只打警告,超出才红;上限仍只减不增 | 发版从\"修一个、等一轮、再看下一个\"变成一轮看全;红的 CI 多跑几分钟 runner,绿的 CI 不变 | devx 车道 · 2 个 PR:A1 改 `.github/workflows/**`(受管面,需你批准合并),先例 PR #23063(+375 / −295);A2 改一个脚本,无先例 |\n| **B A + 门禁瘦身审计** | 先做 A。v18 `next` 发出后,再盘点全部门禁族:按近 30 天拦截次数与耗时排序,把零拦截且非安全、非契约、非权限类的门禁退役;同时把 DELIBERATE CORRECTION 的\"另起达档子代理\"简化为席位 ACCEPT 即确认 | 长期最省时间,门禁变少变快;退役的检查以后不再拦 | devx 车道 · 1 张审计卡加 N 个退役 PR;无先例,需先实测拦截数据 |\n| C 只做 A1 | 只改\"一轮暴露全部红\",不碰任何判定 | 解决最大的耗时(串行发现红),棘轮照样卡 1 token | 1 个受管面 PR,先例 PR #23063 |\n| D 维持现状 | 保持 #13690 fail-fast 与零余量棘轮 | 每个大版本发版都可能多等几轮 CI | 0 |\n\n**业务含义直译:**\n- A:质检线不减一道工序,但每道都检完再出报告,不再查到第一个问题就停线。\n- B:在 A 的基础上,把多年没拦住过任何东西的工序拆掉。\n- C:只改\"检完再出报告\"。\n- D:照旧。\n\n## 四轴(业务立场)\n\n- **项目长远合理性(领起):** 门禁是只减不增的零件,这是创业阶段的方向。A 只改执行方式与容差,不增门禁;B 让门禁总量下降,两年后应是\"少而快、红即真问题\"的样子。主流平台(GitHub、GitLab 的大型 monorepo)的常见形态,也是在一次流水线里汇总全部失败,而不是首红即停。\n- **实际业务需求:** 今天实测撞上:你在等发版,#21988 至少多等了一轮刷新加一轮 CI;ratchet 因发布机器人写的 7 字节拦住发版。拉动是实测的,不是投机。\n- **防 AI 犯错:** A1 不放宽任何判定,AI 写错照样响亮地红,只是一次全报。A2 的容差带让 AI 最多多写 1% 文字而不被拦,这是代价,但仍有硬上限并打警告,不是静默容忍。B 退役门禁要逐个证明零拦截,⛔ 不碰安全、权限、契约类。\n- **创业阶段不扩散:** A 不新增门禁;B 直接减少门禁;D 维持一个随大版本反复付费的现状。\n\n## 推荐\n\n**推荐 B**(先做 A,v18 `next` 发出后做瘦身审计)。\n\n- 回退:A(只定点放宽,不审计)。\n- 置信缺口:各门禁近 30 天的拦截次数本席没有实测,B 的退役清单要审计卡先量出来;A1 会让红的 CI 多花多少 runner 分钟,也未实测。\n- 自检:只看①选 B;②③④ 是否翻转:否。\n\n## 裁后执行\n\n- 裁 A 或 B:本席立 A1、A2 两张执行卡(devx),A1 的 PR 带 `.github/workflows/**`,需你批准合并;A2 走普通队列。\n- 裁 B:v18 `next` 发出后,本席再立审计卡,产出\"门禁 × 拦截次数 × 耗时\"表,逐条呈你裁退役。\n- 裁 C 或 D:相应只立 A1,或关卡。\n\n## 相关单与 PR\n\n#21988、#23135 / PR #23155、#23176、#23136 / PR #23173、#22949(ruling E)/ PR #23063、#13690(fail-fast 顺序裁决)。\n\nos-decision-facets\n- ① 项目长远合理性:A 缩小特例(不增门禁,只改执行与容差);B 减少门禁总量,不增契约。\n- ② 实际业务拉动:今天撞上的是维护者等发版;#21988 因串行发现红至少多一轮,ratchet 因 7 字节拦发版。\n- ③ 防 AI 犯错:A1 判定不变、一次全报(响亮);A2 容差内只警告,有硬上限;B 不退安全、权限、契约类门禁。\n- ④ 创业阶段不扩散:A 不新增门禁;B 退役零拦截门禁,remove 优于 maintain。\n\nPrior rulings read: \"fail-fast\" \"GATE ORDER\" \"ratchet ceiling\" → #13690 (maintainer ruling 2026-09-03, gate order); ruling E on #22949 (timing steps report-only); ADR none; thread: none"
+}

@@ -1,0 +1,37 @@
+{
+  "number": 23192,
+  "kind": "issue",
+  "title": "ci(skills-ratchet): exclude the whole release-bot `version:` stamp line from the token count and re-pin the ceilings so headroom stays 0 and 1 (#23177 ruling B, item A2′)",
+  "state": "closed",
+  "state_reason": "completed",
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "area:devpath",
+    "domain:devx",
+    "priority:p1",
+    "tooling"
+  ],
+  "assignees": [
+    "zhuangjianguo"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-13T06:59:15Z",
+  "updated_at": "2026-10-13T08:22:28Z",
+  "closed_at": "2026-10-13T08:21:09Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": null,
+  "comments": 4,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/23192",
+  "body": "Filing-gate category ③, a maintainer-ruled duty: #23177, ruling **B** (`6139629628`, the maintainer's 「同意」), item 2 (**A2′**, which replaces A2).\n\n**Reader who acts:** the `domain:devx` execution seat. It lands in `scripts/check-skills-token-ratchet.mjs`, which is not a governed path, so it goes through the ordinary queue.\n\n## What the ruling binds (quoted from `6139629628`, item 2)\n\n> **A2′ (replaces A2): no tolerance band.** `scripts/check-skills-token-ratchet.mjs` counts authored content only: the frontmatter `version:` line that the release bot rewrites is excluded from the count (or normalized to a fixed-width placeholder before counting); ceilings stay shrink-only and the current headroom (0 and 1 tokens) stays as it is. This is also #23176's structural fix; whatever one-token trim is in flight there is the stop-gap, not the route.\n\n## Where `main` stands (so the dev starts from the landed state)\n\n- #23176 did not land a one-token trim. It landed route **A** (`6138951701`) as PR #23187 → `8814211948`. The gate prices the stamp's **prerelease segment** (`-next.N`) at zero, through `pricedTokens()` / `stampPrerelease()`, reading the stamp with `extractMetadataVersion` from `scripts/check-skill-compatibility-version.mjs`.\n- What A2′ adds beyond that: the **stable** part of the stamp still counts today. For example, `18.10.0` is one byte longer than `18.9.0`, so a zero-headroom file can still go red on a version number no author wrote.\n\n## What done looks like\n\n- For the files the version script stamps (`stampedSkillPaths()`), the whole frontmatter `metadata.version` line is excluded from the count, or normalized to one fixed-width placeholder. The count no longer moves with any version value.\n- Every `CEILINGS` row for a stamped file is re-pinned by exactly the bytes taken out, so each file's headroom on `main` is unchanged (`objectstack-data` 0, `objectstack-automation` 1, and the others as they are). It is shrink-only: no ceiling minus its count grows.\n- The header's counting-convention section and the hand-audit sentence say what now holds. The route-A prerelease-only code is replaced, not kept alongside.\n- The self-test pins: a stamp change of any width (`17.7.0` → `18.10.0-next.12`) moves no count; one authored byte over a zero-headroom ceiling is red; a version-shaped string outside the stamp is priced; and the per-file headroom before equals after on the real bundle."
+}

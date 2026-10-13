@@ -1,0 +1,32 @@
+{
+  "number": 23201,
+  "kind": "issue",
+  "title": "skills(pm-dispatch): a text-only DELIBERATE CORRECTION is confirmed by the seat's ACCEPT quoting before/after; the second same-head subagent review is dropped for that class (#23177 ruling B, item 4)",
+  "state": "open",
+  "state_reason": null,
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "area:devpath",
+    "domain:skills",
+    "pm:queue",
+    "priority:p2",
+    "tooling"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-13T07:57:24Z",
+  "updated_at": "2026-10-13T07:57:24Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 0,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/23201",
+  "body": "Filing-gate category ③, a maintainer-ruled duty: #23177, ruling **B** (`6139629628`, the maintainer's 「同意」 in the director seat's session), item 4:\n\n> **DELIBERATE CORRECTION, text-only corrections** (a changeset's or a comment's wording, as #23136): the seat's ACCEPT quoting the before/after is the confirmation; the second same-head subagent review is dropped for that class. Code changes keep the full procedure. `landing-operations.md` 15–16 is edited accordingly (the `domain:skills` lane).\n\n**Reader who acts:** the `domain:skills` seat. The landing surface is `.claude/skills/pm-dispatch/references/landing-operations.md`, a governed `.claude/**` path. It was filed by the `domain:devx` seat, which runs the ruling's 裁后执行 (`6140151496` on #23177).\n\n## Why (measured)\n\n#23136's 12-line changeset correction (PR #23173) took four steps before it could queue:\n- a red-by-design PR comment;\n- the seat's ACCEPT, which already quoted and checked every rewritten line;\n- an isolated at-tier subagent review (`6139022096`, about 10 minutes and about 200k tokens);\n- then the landing.\n\nThe ruling keeps the first two and drops the third for text-only corrections.\n\n## What done looks like\n\n- `landing-operations.md:15-16` says that for a DELIBERATE CORRECTION whose diff changes only release text or comment wording (no code), the confirmation is the dispatching seat's ACCEPT. That ACCEPT names every edited note and quotes each rewritten line before and after. No second same-head review is owed for that class.\n- A DELIBERATE CORRECTION that changes code keeps the full procedure (the same-head at-tier review), as today.\n- The \"red by design\" three-condition rule for enqueueing with `Check Changeset` red is unchanged.\n- **Carried from #23193 (ruling item 5):** `.claude/skills/pm-dispatch/references/rest-channel.md` gains one line naming the relay's new `release.yml` workflow_dispatch entry (`refresh_version_pr: true` only), once #23193 lands. It goes here so that #23193's own PR stays out of governed `.claude/**`."
+}

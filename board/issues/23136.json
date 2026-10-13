@@ -1,0 +1,39 @@
+{
+  "number": 23136,
+  "kind": "issue",
+  "title": "release text: two pending @objectstack/console changesets on main (console-20c6d351ad74.md, console-f0268ad78485.md) under-count their breaking entries (6 of 10, 4 of 10) — the old digest wrote them; correct in place before the release",
+  "state": "closed",
+  "state_reason": "completed",
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "area:devpath",
+    "documentation",
+    "domain:devx",
+    "pm:retriage",
+    "priority:p1",
+    "target:v18"
+  ],
+  "assignees": [
+    "zhuangjianguo"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-13T03:05:02Z",
+  "updated_at": "2026-10-13T05:58:28Z",
+  "closed_at": "2026-10-13T05:56:12Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": null,
+  "comments": 5,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/23136",
+  "body": "Filing-gate category ①, a defect with a named landing point. `reach:` exception **release text**: these pending changesets publish into `@objectstack/console`'s CHANGELOG at the next `changeset version`, and the v18 `next` line is being cut now (#21988).\n\n**Reader who acts:** the `domain:devx` execution seat. It dispatches a changeset-only PR once triage grades this card.\n\n**Dedupe:** semantic issue search on this repo, closed included, with the words \"pending console changeset breaking undercount 20c6d351ad74 f0268ad78485 count line hand correct\". 37 hits, none for these two files. The precedent for the route is #22586 (closed): pending changesets were corrected in place through `check-empty-changeset`'s DELIBERATE CORRECTION path before the release.\n\n## What is measured\n\nMeasured by #23118's dev, from its report on #23118. Not re-run by this seat. Re-check: run `scripts/objectui-changeset-digest.mjs` over each range on `main` after PR #23131 lands.\n\n| pending changeset on `main` | its count line | the fixed digest over the same hop | entries unmarked today |\n|:--|:--|:--|:--|\n| `.changeset/console-20c6d351ad74.md` (`:43`) | \"⚠️ 6 of these carry a breaking change\" | 10, over `47b1f0bb7174..20c6d351ad74` | objectui `8a55f0ccd`, `c7b30bd66`, `025341692`, `3fd862510` |\n| `.changeset/console-f0268ad78485.md` (`:111`) | \"⚠️ 4 of these carry\" | 10, over `a58626c88dc8..f0268ad78485` | objectui `5d77c099b`, `cf62edf68`, `b13ea3c67`, `1473757bf`, `d7e9e9ab6`, `d73d98770` |\n\n- Cause: both changesets were written by the digest before #23112 (PR #23117) and #23118 (PR #23131) taught it the decorated opener and the bold lead label. The other 9 pending console changesets read the same under both rules.\n- Route constraint, from the same report: do not regenerate them. A re-run of the bump rewrites their hand-answered ADR-0087 dispositions. Hand-correct the two count lines, stamp the named entries `**BREAKING**`, and keep every disposition byte-identical.\n\n## What done looks like\n\n- One changeset-only PR (`.changeset/console-20c6d351ad74.md`, `.changeset/console-f0268ad78485.md`) through the DELIBERATE CORRECTION path:\n  - the two count lines read 10;\n  - the 10 named entries carry the marker;\n  - the ADR-0087 dispositions are unchanged.\n- The PR body names, per entry, the objectui changeset line that declares it breaking.\n- Lands after PR #23131 (#23118), whose digest is the measuring instrument."
+}

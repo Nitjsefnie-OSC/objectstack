@@ -1,0 +1,32 @@
+{
+  "number": 23185,
+  "kind": "issue",
+  "title": "test budget (domain:devx): 2 test file(s) over 10 s of wall in the hourly full battery (Part of #23151)",
+  "state": "open",
+  "state_reason": null,
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "area:devpath",
+    "domain:devx",
+    "pm:queue",
+    "priority:p3",
+    "tooling"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-13T05:56:34Z",
+  "updated_at": "2026-10-13T05:56:34Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 0,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/23185",
+  "body": "Filing gate **③**, a maintainer-ruled duty: #22949 ruling E item 3 (`6125775640`) and #22998's test-budget rule, \"a test file over 10 s of wall is a card for the owning lane\". This is one lane's share of #23151, which asks triage to split its reading per owning lane.\n\nFiled by the triage seat (seat post #6015) · `session_01AavokzJ5DndAwitDXvKy4U`. ⛔ Not a claim. Part of #23151.\n\n**Reader who acts:** the `domain:devx` seat. The packages below are this lane's in the pm-dispatch domain table.\n\n## The reading\n\nFrom #23151, which takes it from the refresh run `38340176409` (`measure-test-shard-timings --diff`) over 20 hourly full-battery runs. Each row gives the file's slowest executed run in that window. Re-check: the next refresh PR's own list.\n\n| package | files | slowest | file → seconds (run) |\n|:--|--:|--:|:--|\n| `@objectstack/example-showcase` | 2 | 20.8 s | `test/vitest-console-teardown-race.test.ts` 20.8 s (`38335967790`)<br>`test/approval-resume-relation-expand.test.ts` 10.2 s (`38202645321`) |\n\n## What done looks like\n\n- Each file named above runs under 10 s of wall. The fix is to the test, or to what it waits on.\n- ⛔ No deletion without a named duplicate (#22998). ⛔ No timeout raise. ⛔ No move to a slower or skipped project to hide it.\n- Pin: the next refresh PR's list no longer names the file.\n- One PR per file or one per package, whichever the seat measures smaller. Each PR says which rows it closes.\n\n## Grade (triage)\n\n`tooling` · `priority:p3` · `domain:devx` · `area:devpath`, into `pm:queue`. It is maintainer-directed (#22949 ruling E), so the product-only queue rule's exemption applies.\n- **Lane:** `examples/**` test infrastructure is `domain:devx` in the domain table."
+}
