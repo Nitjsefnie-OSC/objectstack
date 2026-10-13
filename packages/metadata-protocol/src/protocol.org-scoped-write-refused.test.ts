@@ -751,9 +751,9 @@ describe('each package\'s copy of a view container expands into its own package\
     }
 
     /** An env-wide copy of the container, stored for `packageId` (package-less when undefined). */
-    async function saveCopy(protocol: any, packageId: string | undefined, allowAnonymous: boolean, title: string) {
+    async function saveCopy(protocol: any, packageId: string | null | undefined, allowAnonymous: boolean, title: string) {
         expect((await protocol.saveMetaItem({
-            type: 'view', name: 'task', item: container(allowAnonymous, title), ...(packageId ? { packageId } : {}),
+            type: 'view', name: 'task', item: container(allowAnonymous, title), ...(packageId !== undefined ? { packageId } : {}),
         })).success).toBe(true);
     }
 
@@ -839,8 +839,16 @@ describe('each package\'s copy of a view container expands into its own package\
                 it(`${kernel}, ${order[0] ?? 'the package-less'} copy saved first: a package's own copy serves that package's slot ahead of the package-less copy`, async () => {
                     const { protocol } = harness([['pkg_a', container(true)], ['pkg_b', container(true)]], environmentId);
                     await restoreOpenOverlay(protocol);
+                    // [#23165] The package-less copy is written NAMING the
+                    // package-unbound row (`packageId: null`). A save naming no
+                    // package now writes the row of the one package the item is
+                    // bound to, so after pkg_b's copy it would update that copy
+                    // instead of standing a package-less one beside it. Named,
+                    // the row lands where it did before in both orders — the
+                    // shape a copy saved before #23165 left — which is what
+                    // this pin reads.
                     for (const pkg of order) {
-                        await saveCopy(protocol, pkg, pkg === undefined, pkg ? `Intake (${pkg} copy)` : 'Intake (env-wide copy)');
+                        await saveCopy(protocol, pkg ?? null, pkg === undefined, pkg ? `Intake (${pkg} copy)` : 'Intake (env-wide copy)');
                     }
 
                     expect(await envWideBodies(protocol)).toEqual([
