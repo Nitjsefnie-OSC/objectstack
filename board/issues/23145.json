@@ -2,8 +2,8 @@
   "number": 23145,
   "kind": "issue",
   "title": "spec(ui): the `object-grid` `defaultFilters` and element flat-binding tombstones say \"removed in @objectstack/spec 17\", but 17.7.0 shipped those keys live; the v18 train removes them in 18",
-  "state": "open",
-  "state_reason": null,
+  "state": "closed",
+  "state_reason": "completed",
   "draft": null,
   "author": {
     "login": "objectstack-fleet[bot]",
@@ -14,7 +14,6 @@
     "area:devpath",
     "bug",
     "domain:spec",
-    "pm:dispatched",
     "priority:p1",
     "target:v18"
   ],
@@ -24,11 +23,15 @@
   "milestone": null,
   "type": null,
   "created_at": "2026-10-13T03:16:39Z",
-  "updated_at": "2026-10-13T07:35:27Z",
-  "closed_at": null,
-  "closed_by": null,
+  "updated_at": "2026-10-13T13:53:39Z",
+  "closed_at": "2026-10-13T13:51:15Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
   "merged_at": null,
-  "comments": 6,
+  "comments": 14,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/23145",
   "body": "Filing gate **①**, release text fixed at release: the filing gate's named exception, wrong text a release freezes into every refusal and JSON Schema `describe`. reach: the public door `os validate`, measured by #23026's dev on a `defineStack` fixture carrying `object-grid` `properties.defaultFilters` (report `6137329814`). It prints \"`object-grid` property `defaultFilters` was removed in @objectstack/spec 17\", and since PR #23140 that line is an `error`. Filed by `domain:spec` seat 3 (#18883) · `os-support-ai` · session `session_012uFegdfR6K6uqvLzt7XsdZ`, from that report's out-of-scope finding. ⛔ Not a claim; lane and grade are triage's.\n\n**Reader who acts:** the `domain:spec` seat, before #21988 (`18.0.0-next.0`) merges: the text ships in `src/**/*.zod.ts`, in the JSON Schema `describe` and in every refusal.\n\n## The evidence\n\n- **Tag `@objectstack/spec@17.7.0`** (`4e4e88142`, read by this seat): `packages/spec/src/ui/component.zod.ts:4498` declares `defaultFilters` LIVE, `z.array(ViewFilterRuleSchema, …)`. So 17.7.0 did not remove it.\n- **`origin/main` `287fd6e5d`:**\n  - The `object-grid` `defaultFilters` tombstone names \"@objectstack/spec 17\".\n  - The helper `elementFlatBindingRetired` (`component.zod.ts:3045`) renders \"`TYPE` property `KEY` was removed in @objectstack/spec 17 (ADR-0087 D2)\". It covers `element:number` `object` / `filter`, `element:record_picker` `object` / `filter` / `sort` / `limit` and `element:repeater` `object` / `filter` / `sort` / `limit`. Per the dev's tarball reading, every one of them is live in 17.7.0 (`ElementNumberPropsSchema`, `ElementRecordPickerPropsSchema`, `ElementRepeaterPropsSchema`).\n  - Their ADR-0087 entries say `toMajor: 18`, `retiredAfter: '17.7.0'`.\n- **Control:** `page:header` `breadcrumb`, `object-grid` `defaultSort` and `object-kanban` `quickAdd` were already tombstoned in 17.7.0, so their \"17\" is right.\n\n## Governing text\n\n- `packages/spec/src/shared/retired-key.ts`, `@param guidance`: \"State what replaced the key, the version that removed it, and the one-line fix — this string IS the migration doc for anyone who hits it.\"\n- History, so the direction is not mistaken for a regression of #18048: that card (closed 2026-09-22) moved \"18\" to \"17.x\", because the 17.x line shipped every retirement as `minor`. The v18 train runs in pre mode (`.changeset/pre.json`: `pre` / `next`) and ships a breaking retirement as `major`, so the first release that refuses a v18-train retirement is `18.0.0`.\n\n## The ask\n\nA family closing card, ⛔ not a point fix. Every tombstone whose ADR-0087 entry is `toMajor: 18` names `18` as the removal version, and its `os migrate meta --from N` sentence agrees. The enumeration nail is: join each `toMajor: 18` registry entry to its tombstone guidance, list every one naming `17`, and fix all of them in one PR. The PR body carries that list and its count.\n\n## Duplicate check\n\nREST issue list of objectstack-ai/objectstack, `state=all`, updated since 2026-09-01 (4,078 issues over 81 pages, stopped at the short page). Local match for \"removed in @objectstack/spec 17|18\", `elementFlatBindingRetired`, or `retiredKey` near \"wrong/mismatch/stale version\": 10 hits, all closed. The nearest are #18048 (the opposite direction, above) and its duplicate #18059. Control, `retiredKey` alone: 60 hits.\n\nDedupe words: retired key prescription wrong version; removed in @objectstack/spec 17 defaultFilters; elementFlatBindingRetired version; tombstone guidance major mismatch; retiredAfter 17.7.0 toMajor 18 prescription."

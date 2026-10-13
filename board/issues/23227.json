@@ -1,0 +1,35 @@
+{
+  "number": 23227,
+  "kind": "issue",
+  "title": "[Decision] 阶段 7a 之前，包发布的权限集在 sys_permission_set 里多出一行标成「管理员」的记录：现在另开小 PR 给投影器加判断挡掉（A），还是等 7a 整个删掉投影器（B）",
+  "state": "closed",
+  "state_reason": "completed",
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "area:access",
+    "domain:engine",
+    "priority:p2",
+    "target:v18"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-13T10:15:26Z",
+  "updated_at": "2026-10-13T12:10:19Z",
+  "closed_at": "2026-10-13T12:10:19Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": null,
+  "comments": 2,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/23227",
+  "body": "Ruled: 6145047801 · letter B · no guard; the projector goes with stage 7a (#22975 zero-row acceptance); this card closes · 2026-10-13T12:04Z\nPart of #15204\nFiling gate ②：只有维护者能做的决定。选 A 等于为批次规则 4「只删不修」（6094179271）开一个例外，规则是维护者定的。也算 ③：维护者在本席会话中要求「补这 4 张决策卡」。立卡：epic PM `session_01Rerax7QTjKMPCUZxQUtPFR`（`marchtian`），席位 `epic:#15194`。\nPrior rulings on this card: none（新卡）。相关记录：D 的维护者速读 6130417182「过渡期的一处行为」，7a 卡上的验收 6129253247，engine 车道的采纳 6129999436。\n\n**锚点：** 这个问题原本挂在 #22900（阶段 6b-2 D）的维护者速读里，借那个 PR 的 `needs-user-decision` 标签。D 已于 2026-10-13 02:19Z 合入，标签已摘，问题没有了归处。自然锚点 #22975（7a 的卡）正由 `domain:engine` 车道推进，给它挂决策标签会让它退出活动队列，所以单开本卡。\n\n**查重：** 用语义检索搜 objectstack 卡，关键词 permission set projection / admin row / package publish / projector guard / stage 7a，命中 1 张：#22975（7a 本身，open，不是决策卡）。没有同题的开着的卡或决策卡。\n\n**动手的读者：** 裁 B，没有人要动手，本卡关闭。裁 A，本席把一张执行卡交给 `domain:engine` 车道（os-steve），1 个 PR，在 7a 之前合入。\n\n## 维护者速读\n\n**事情：** D 删掉了包发布时的物化器，但 ADR-0094 投影器要到阶段 7a 才删。所以从 D 合入起，到 7a 合入之前：\n- 通过包入口发布某个包的权限集，`sys_permission_set` 表里会多出一行，标成「管理员」（`managed_by: 'admin'`），不带包名。\n- 这一行在 `main` 上，也在已发布的 `18.0.0-next.0` 里，已知限制第 3 条（6139333945）写明了。\n\n**D 的开发实测过：**\n- 权限判定不读这一行；\n- 卸载包时这一行会被删掉；\n- 在数据页面编辑这一行，结果和 D 之前一样；\n- 在数据页面删除这一行，会连同 base 存的元数据和目录里的权限集一起删掉。这个权限集上的授权会留下并失效。墙内只有平台运营者能做这个删除。\n\n**7a 什么时候删它：** 7a 的验收已写明「发布后零行」，engine 车道已采纳（6129999436）。7a 要等阶段 8 合入才开 PR。阶段 8 的测试半 S8-T（#22962）已于 2026-10-13 08:50Z 合入，阶段 8 本身是 #23222，目前还是草稿。v18 正式版的发布条件 (c) 要求阶段 7 合入，所以这一行不会进正式版，只会出现在 `next` 预发布里。\n\n两个选项：\n- **A：** 现在另开一个小 PR，给投影器加约 15 行判断，不为包的权限集建行，连测试约 +90 行（D 开发的估计，未实测）。投影器在 `permission-set-projection.ts` 里，批次规则 4 规定这个文件只删不修，所以选 A 就是你为规则 4 开一个例外。7a 合入时这段判断随投影器一起删掉。\n- **B：** 不动，等 7a。\n\n**本席推荐 B。** 选 A 还是 B？\n\n## 背景（实测：objectstack `origin/main` `8024e1243a`，2026-10-13T09:25Z）\n\n- **投影器还在写：** `packages/plugins/plugin-security/src/permission-set-projection.ts:571` 的 `upsertEnvPermissionSet`。`projectPermissionMutation`（`:835`）在每次 `permission` 发布或保存时调用它；启动时 `reconcilePermissionSetProjection` 会把已发布的权限集重新投影。\n- **D 之前和之后的差别（增量审查 6129112138，D 的开发实测）：**\n  - D 之前，物化器先写一行 `managed_by: 'package'` 加 `package_id`。\n  - D 之后，只剩投影器写，写的是 `managed_by: 'admin'`、没有 `package_id`。\n  - 可写 base 直接发布时，`main` 上本来就写「管理员」行。\n  - 这一行被删后，下次启动时投影器的对账会把它重建出来（开发用文件数据库重启实测过）。\n- **7a 的位置：** #22975，`domain:engine`，`pm:dispatched`。认领 6120370976 写明「no PR opens before S8 is on `main`」。\n\n## Governing text\n\n- **批次规则 4（6094179271，#310 批次的三条规则之一）：** 「a defect in the seven seeders, in `permission-set-projection.ts` or in `per-organization-catalog.ts` is closed `not_planned` with the note \"retired by C3 (#15204)\", not fixed; no PR touches those modules except to delete them. One exception: a defect that is user-reachable on the current `main` AND lives outside the retired code is a normal card.」\n  - 本例在退役代码里面，不符合例外条件。\n- **ADR-0131 D3：** 「a definition lives only in the environment registry … the projected row no longer exists either」。D13 让 `sys_permission_set` 退役。\n- **ADR-0094 D1：** 「The metadata layer is the only authoritative store for definitions」。投影行从来不是权威来源。\n- **发布条件 (c)（6102862135）：** 「C9 (objectui#7611) with stage 7」，在 v18 正式版之前必须满足。\n\n## 前提（每条带复核命令）\n\n- 投影器还在：`git grep -n \"export async function upsertEnvPermissionSet\" origin/main -- packages/plugins/plugin-security/src/permission-set-projection.ts`，应命中 1 次。\n- D 已合入：`git merge-base --is-ancestor c8a9783eca origin/main && echo merged`。\n- 7a 的零行验收已被车道采纳：`gh api repos/objectstack-ai/objectstack/issues/comments/6129999436 --jq .body | grep -c \"zero\"`，应 ≥1。\n- 7a 不早于阶段 8：`gh api repos/objectstack-ai/objectstack/issues/comments/6120370976 --jq .body | grep -c \"no PR opens before S8\"`，应为 1。\n- 阶段 8 还没合入：`gh api repos/objectstack-ai/objectstack/pulls/23222 --jq .merged`，应为 `false`。\n\n## 选项 × 真实代价\n\n| 选项 | 做什么 | 能感知的后果 | 工作量 |\n|---|---|---|---|\n| **A 现在加判断** | 给 `upsertEnvPermissionSet` 加判断，不为包的权限集建行；加测试和消融；为规则 4 记一个例外 | 7a 之前的 `next` 预发布里不再出现这一行；数据页面无从编辑或删除包的权限集 | `domain:engine` 车道 1 个 PR，约 +90 行（D 开发的估计，未实测），要过契约审查；无具名先例；7a 合入时这段代码删掉 |\n| **B 等 7a** | 不动 | 直到 7a 合入，`next` 预发布里包发布的权限集会多一行「管理员」记录；不影响权限判定；正式版不受影响 | 0（7a 的验收已含零行） |\n\n## 业务含义直译\n\n- **A：** 仓库明天整栋拆除，今天先给一扇贴错门牌的门换门牌。\n- **B：** 门牌错一天，贴告示（已知限制第 3 条），明天整栋拆。\n\n## 四轴（从业务看）\n\n- **项目长远合理性（领起）：**\n  - 两年后的样子：权限集只存在于注册表，表里没有任何投影行（ADR-0131 D3/D13，完成 ADR-0094 D1）。\n  - 参照主流做法：Salesforce 的托管包权限集只以包元数据存在，Setup 里显示为属于包，没有另一份「管理员」副本。\n  - B 直接走向这个终态。A 给一段注定删除的代码加逻辑，寿命只到 7a。\n- **实际业务拉动：** 今天没有用户报告撞上它。会看到它的只有在 `next` 预发布里打开 `sys_permission_set` 数据页的人，权限判定不受影响。零实测拉动。\n- **防 AI 犯错（出错时谁看到什么）：**\n  - B：7a 之前，一个读 `sys_permission_set` 的 AI 或管理员会看到一行写着「管理员」的记录，误以为这个权限集是管理员自己建的、可以随意改。这是静默的误标。\n  - A：这一行不出现。\n  - 但这张表在阶段 8 后就退役，读它本身就是旧路径。\n- **创业阶段不扩散：** B 不写代码。A 新增一段会被删掉的代码，还要为规则 4 开例外。\n\n<!-- os-decision-facets -->\nos-decision-facets\n- ① 项目长远合理性：B 直达「零投影行」的终态；A 给待删代码加逻辑，寿命只到 7a。\n- ② 实际业务拉动：零实测拉动；只在 `next` 预发布里、只在数据页上看得到，不影响权限判定。\n- ③ 防 AI 犯错：A 略优，去掉 7a 之前的一行静默误标；B 靠已知限制第 3 条明说。\n- ④ 创业阶段不扩散：B 零代码；A 新增待删代码并为规则 4 开例外。\n\nPrior rulings read: projection, projector, managed_by, upsertEnvPermissionSet → 19 hits; ADR-0094 D1, ADR-0131 D13 (others incidental: ADR-0005 §1, ADR-0029 D9.7, ADR-0057 D7/D12, ADR-0061 D5, ADR-0068 D2/D3, ADR-0082 §2); thread: #22900 (6129112138, 6130417182), #22975 (6129253247, 6129999436), #15204 (6094179271).\n\n## 推荐\n\n**推荐 B**，回退 A。\n- 只看①选 B；②③④ 是否翻转：否。③ 在 7a 之前略偏 A，但这一行只在 `next` 预发布里出现，发布条件 (c) 保证 7a 先于正式版合入。\n- 工作量：A 约 +90 行，B 为 0。\n- **置信缺口：**\n  - +90 行是 D 开发的估计，没有实测；\n  - 7a 的日期取决于阶段 8（#23222）的审查和 Tier H 批准，本席看不到；\n  - 不知道有没有 `next` 预发布的用户会去翻这张表。\n- **什么情况下该改选 A：** 如果阶段 8 或 7a 在 v18 正式版之前被推迟、拆出，或发布条件 (c) 被改写成不要求阶段 7，这一行就可能进正式版。那时 A 才值得做。\n\n## 裁后执行\n\n- **裁 B：** 不动，本卡关闭，回链 #22975 的零行验收。已知限制第 3 条保留到 7a 合入。\n- **裁 A：** 本席在 #22975 旁边为 `domain:engine` 车道立 1 张执行卡，写明规则 4 的例外和维护者的裁定。车道做 1 个 PR：投影器判断、测试与消融、`Clause-②: no`。7a 的验收不变，仍是零行。本席不写代码。\n- 不论裁哪一项，你只需回一个字母。\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_\n"
+}

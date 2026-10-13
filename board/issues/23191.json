@@ -2,8 +2,8 @@
   "number": 23191,
   "kind": "issue",
   "title": "ci(gates): every Lint and Type Check gate step runs after a red and each lane ends in one verdict step; Test Core continues past a failed package (#23177 ruling B, item A1)",
-  "state": "open",
-  "state_reason": null,
+  "state": "closed",
+  "state_reason": "completed",
   "draft": null,
   "author": {
     "login": "objectstack-fleet[bot]",
@@ -13,7 +13,6 @@
   "labels": [
     "area:devpath",
     "domain:devx",
-    "pm:dispatched",
     "priority:p1",
     "tooling"
   ],
@@ -23,11 +22,15 @@
   "milestone": null,
   "type": null,
   "created_at": "2026-10-13T06:58:39Z",
-  "updated_at": "2026-10-13T08:00:09Z",
-  "closed_at": null,
-  "closed_by": null,
+  "updated_at": "2026-10-13T10:24:28Z",
+  "closed_at": "2026-10-13T10:11:18Z",
+  "closed_by": {
+    "login": "os-zhuang",
+    "id": 277994282,
+    "type": "User"
+  },
   "merged_at": null,
-  "comments": 1,
+  "comments": 5,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/23191",
   "body": "Filing-gate category ③, a maintainer-ruled duty: #23177, ruling **B** (`6139629628`, the maintainer's 「同意」 in the director seat's session), item 1 (**A1**).\n\n**Reader who acts:** the `domain:devx` execution seat. The landing surface is `.github/workflows/**`, a governed surface (Tier H), so the PR stays a draft until the maintainer approves it.\n\n## What the ruling binds (quoted from `6139629628`, item 1)\n\n> every gate step of a `Lint · *` lane and of `Type Check · *` keeps running after a red (`continue-on-error: true` on the gate steps only; setup, install and build steps that later steps depend on stay fail-fast), and each lane ends with one verdict step that reads every gate's conclusion, prints the names of the red ones and exits 1 — the job's conclusion is still red, never silent. Test Core runs `turbo run test … --continue=dependencies-successful` so one package's red does not stop the others; its verdict stays red. The #13690 ordering text (`lint.yml` 151–159) and the \"⛔ not continue-on-error\" note (502–503) are rewritten in the same PR to say what now holds: the order no longer shortens a red run, the verdict step is what keeps the red. Governed surface: draft until the maintainer approves.\n\n## Why (measured)\n\nOn #21988 (`63eb607ad1`), `Type Check · source gates` failed at step 35, so steps 36–41 were `skipped`. Turbo stopped Test Core (1/6) at `@objectstack/metadata#test`, so 5 packages never ran. The third red (#23176, step 37) surfaced only through a separate probe. Each hidden red costs one more Version PR refresh and one more CI cycle.\n\n## What done looks like\n\n- In `.github/workflows/lint.yml` (and wherever the `Type Check · *` lanes live), every gate step of every `Lint · *` and `Type Check · *` lane has `continue-on-error: true`. Setup, install and build steps do not.\n- Each lane ends with one verdict step. It reads every gate step's outcome, prints the red ones by name and exits 1. A lane with a red gate still concludes `failure`, and the `Lint & Repo Gates` / `TypeScript Type Check` aggregators still go red.\n- Test Core's shard step runs turbo with `--continue=dependencies-successful`, and a red package still fails the shard.\n- `lint.yml:151-159` (#13690 ordering) and `:502-503` (the \"⛔ Nor is it `continue-on-error`\" note) are rewritten to say what now holds.\n- A proof on the PR: a deliberately red gate early in one lane leaves every later gate in that lane executed (step conclusions read from the jobs API), and the lane and its aggregator conclude `failure`."

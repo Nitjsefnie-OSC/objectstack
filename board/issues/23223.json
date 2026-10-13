@@ -1,0 +1,37 @@
+{
+  "number": 23223,
+  "kind": "issue",
+  "title": "tooling(pm): ci-failure.mjs resolves a red lane's failed step to `Lane verdict` since A1; resolve the red gate names from the verdict's annotations instead",
+  "state": "closed",
+  "state_reason": "completed",
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "area:devpath",
+    "domain:devx",
+    "priority:p2",
+    "tooling"
+  ],
+  "assignees": [
+    "zhuangjianguo"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-13T10:13:29Z",
+  "updated_at": "2026-10-13T11:55:55Z",
+  "closed_at": "2026-10-13T11:53:58Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": null,
+  "comments": 4,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/23223",
+  "body": "Filing-gate category ①, a defect with a named landing point, made live by PR #23212 (#23191, #23177 ruling B item A1), which merged as `7aa82a3dc3`.\n\n**Reader who acts:** the `domain:devx` execution seat.\n\n## What is measured (by #23191's dev, on PR #23212's proof head `5301220aa`)\n\n- Under `continue-on-error: true`, a red gate step's `conclusion` reads `success`, both in the steps context and in the jobs API `steps[].conclusion`. Only the steps-context `outcome` reads `failure`. That was job `115214618941`, step #8, \"Docs anchors resolve to real headings\".\n- So the only failed step of a red lane is now `Lane verdict`.\n- `node scripts/pm/ci-failure.mjs` on that head reports \"failed step #68 Lane verdict\". Its `substitute` block resolves that name 12 times, once per lane, to `node scripts/ci/lane-verdict.mjs`, which exits 3 when run locally.\n- The failing gate's own command (`pnpm check:doc-anchors`) appears only in the annotation text: \"gate step \\\"NAME\\\" (id ID) failed\".\n- The tool's docblock contract (`stepBodies`) reads: \"the step name the jobs API returns resolves to the command that reproduces the failure locally\". That no longer holds for a red lane.\n- The log half still works: `extractLogAssertion` finds the gate's stdout above its own `##[error]Process completed with exit code 1.`\n\n## What done looks like\n\n- When the failed step is `Lane verdict`, `ci-failure.mjs` takes the red gate names from that step's annotations and resolves each name through `stepBodies` to its own `run:` command. The `substitute` block then prints the red gates' commands, not `lane-verdict.mjs`.\n- The self-test pins three things:\n  - a Lane-verdict failure with N red gates resolves to N gate commands;\n  - an all-success lane with a red verdict (a roster mismatch) says so, and does not resolve to nothing;\n  - a pre-A1 head (a gate step with conclusion `failure`) still resolves as before.\n- `references/platform-readings.md` gains the platform reading above, through the skills lane, under the governed `.claude/**` path. That part is optional here; it can ride #23201 or its own skills card."
+}

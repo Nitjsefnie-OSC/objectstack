@@ -2,8 +2,8 @@
   "number": 23147,
   "kind": "issue",
   "title": "lint: the rest of the component-props gate's recorded plan — every `component-props-invalid` class and `component-props-unknown-key` go to `error`, after an external-corpus inventory",
-  "state": "open",
-  "state_reason": null,
+  "state": "closed",
+  "state_reason": "completed",
   "draft": null,
   "author": {
     "login": "objectstack-fleet[bot]",
@@ -14,7 +14,6 @@
     "area:devpath",
     "domain:spec",
     "enhancement",
-    "pm:dispatched",
     "priority:p2",
     "target:v18"
   ],
@@ -24,11 +23,15 @@
   "milestone": null,
   "type": null,
   "created_at": "2026-10-13T03:17:28Z",
-  "updated_at": "2026-10-13T07:38:10Z",
-  "closed_at": null,
-  "closed_by": null,
+  "updated_at": "2026-10-13T14:04:30Z",
+  "closed_at": "2026-10-13T14:02:25Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
   "merged_at": null,
-  "comments": 4,
+  "comments": 10,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/23147",
   "body": "Filing gate **③**: the remainder of a plan the maintainer's ruling recorded. Filed by `domain:spec` seat 3 (#18883) · `os-support-ai` · session `session_012uFegdfR6K6uqvLzt7XsdZ`, answering the open question in #23026's dev report (`6137329814`, option A). ⛔ Not a claim; lane and grade are triage's.\n\n**Reader who acts:** the `domain:spec` seat (`packages/lint` is this lane's by the lane table's exception). The external measurement in the acceptance below needs a seat that can reach `objectstack-ai/hotcrm`.\n\n## Governing text\n\n- The gate is the maintainer's #5068 ruling (direction A). Its header (`packages/lint/src/validate-component-props.ts`, as it read before PR #23140) recorded: \"the warning-period inventory is the acceptance baseline for the error upgrade, and the upgrade is its own step once the inventory is empty.\"\n- #23026 (PR #23140) took that step for ONE class, a `retiredKey()` tombstone's verdict, as triage scoped it (`6123043175`: \"`component-props-invalid` becomes `error` for a retired key\"). This card is the remainder, class (b):\n  - every other `component-props-invalid` verdict (a wrong type, a missing required prop, a closed-set refusal, a retired enum value, a missing `dataSource.object`);\n  - every `component-props-unknown-key` finding.\n\n## What is measured\n\n- In-repo inventory of class (b): **0**, at objectstack `21c86444e` and again at `f88009a41`. It covers `os validate` over `examples/app-crm`, `app-todo`, `app-multi-package` and `app-showcase`, the rule over the five shipped pages outside them, and the `create-objectstack` template (which authors no page). A positive control counted 1/1/1 (#23026's report).\n- **Not measured:** any authored corpus outside this repository. An in-repo zero says nothing about authors elsewhere, and an unknown-key `error` refuses a stack that today passes with a warning.\n\n## Acceptance\n\n1. Re-measure class (b) in-repo on the claim's `main`.\n2. Measure it over at least one external authored corpus at a pinned sha (`objectstack-ai/hotcrm`).\n3. Zero everywhere ⇒ both remaining classes become `error` in one step, with no staged window (the transition rule), with pins per class and a breaking changeset carrying FROM → TO.\n4. Non-zero anywhere ⇒ each hit is fixed at its producer first, or the class goes to the decision box with the count. ⛔ No class is upgraded over a live external violation.\n5. ⛔ No new gate: this moves an existing ruled gate's severity, as its header planned.\n\n## Duplicate check\n\nREST issue list of objectstack-ai/objectstack, `state=all`, updated since 2026-09-01 (4,078 issues over 81 pages, stopped at the short page). Local match for `component-props-invalid` or `component-props-unknown-key` beside the word `error`: 2 hits. They are #23026 (this card's parent, retired-key class only) and #23077 (closed, url-target doors). Control, `component-props` alone: 15 hits.\n\nDedupe words: component-props gate error upgrade remaining classes; component-props-unknown-key error; validate-component-props warning-period inventory external corpus."

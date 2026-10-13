@@ -1,0 +1,37 @@
+{
+  "number": 23249,
+  "kind": "issue",
+  "title": "tooling(pm): ci-failure.mjs's isRosterJob misses the `Verify every … lane succeeded` aggregator steps, so their substitute prints a heredoc that reproduces nothing",
+  "state": "closed",
+  "state_reason": "completed",
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "area:devpath",
+    "domain:devx",
+    "priority:p3",
+    "tooling"
+  ],
+  "assignees": [
+    "zhuangjianguo"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-13T11:56:30Z",
+  "updated_at": "2026-10-13T12:50:57Z",
+  "closed_at": "2026-10-13T12:49:52Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": null,
+  "comments": 4,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/23249",
+  "body": "Filing-gate category ①, a defect with a named landing point. Found by #23223's dev (report `6144589554`, out-of-scope item 1) and folded out of PR #23246 by the seat (ACCEPT `6144623138`).\n\n**Reader who acts:** the `domain:devx` execution seat.\n\n## What is measured\n\n- `node scripts/pm/ci-failure.mjs --run 38373082677` lists the `Lint & Repo Gates` aggregator row as failed step #2, `Verify every lint lane succeeded`. The row is not ranked as a roster job, and its `substitute` prints the aggregator's own heredoc. That heredoc reads `$OS_NEEDS` and reproduces nothing locally.\n- `isRosterJob`'s pattern `/^Verify .* results$/` matches the shard verifiers (`Verify test shard results`). It does not match `Verify every lint lane succeeded` (`lint.yml:363`) or `Verify every type-check lane succeeded` (`lint.yml:6735`).\n- Its own docblock says such jobs are \"only a roster verdict about OTHER jobs\", ranked last rather than dropped. The answer sits in the red lane's own row of the same walk.\n\n## What done looks like\n\n- Both aggregator steps classify as roster jobs: ranked last, labelled ROSTER JOB, with no log fetched for them. This can be a widened pattern or, preferably, names read from the workflow's aggregator roster.\n- Their `substitute` no longer prints the `$OS_NEEDS` heredoc as the reproduction. It points at the lane rows above.\n- The self-test pins both aggregator names, plus a control: a non-aggregator `Verify …` step that is not a roster job stays unclassified."
+}

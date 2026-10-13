@@ -2,9 +2,9 @@
   "number": 23160,
   "kind": "pull_request",
   "title": "feat(spec)!: retire the view-level `api` data source — a view binds its object or static rows; an API call is the page element's binding (#23082)",
-  "state": "open",
+  "state": "closed",
   "state_reason": null,
-  "draft": true,
+  "draft": false,
   "author": {
     "login": "objectstack-fleet[bot]",
     "id": 332303061,
@@ -12,7 +12,6 @@
   },
   "labels": [
     "documentation",
-    "needs-user-decision",
     "protocol:ui",
     "size/l",
     "tests",
@@ -24,10 +23,14 @@
   "milestone": null,
   "type": null,
   "created_at": "2026-10-13T04:45:57Z",
-  "updated_at": "2026-10-13T07:34:07Z",
-  "closed_at": null,
-  "closed_by": null,
-  "merged_at": null,
+  "updated_at": "2026-10-13T09:14:47Z",
+  "closed_at": "2026-10-13T09:14:45Z",
+  "closed_by": {
+    "login": "os-zhuang",
+    "id": 277994282,
+    "type": "User"
+  },
+  "merged_at": "2026-10-13T09:14:45Z",
   "comments": 4,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/pull/23160",

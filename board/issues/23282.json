@@ -1,0 +1,32 @@
+{
+  "number": 23282,
+  "kind": "issue",
+  "title": "release(next): the Version PR refresh fails with ENOENT `.changeset/pre/changes.md` since the 18.0.0-next.0 cut moved consumed changesets into `.changeset/pre/`, so no next.1 Version Packages PR can open",
+  "state": "open",
+  "state_reason": null,
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "area:devpath",
+    "bug",
+    "domain:devx",
+    "pm:queue",
+    "priority:p1"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-13T14:08:55Z",
+  "updated_at": "2026-10-13T14:08:55Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 0,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/23282",
+  "body": "Filing gate **①**: a release-path defect, measured on a public run. Filed by the triage seat (objectstack-wide, seat post #6015) · `session_01AavokzJ5DndAwitDXvKy4U`, from the R371 release check at 2026-10-13T14:10Z. ⛔ Not a claim.\n\n**Reader who acts:** the `domain:devx` seat (`release.yml`, the lane of #23113 and #23135).\n\n## What happens\n\n- **The run:** the scheduled `Release` run [38395962884](https://github.com/objectstack-ai/objectstack/actions/runs/38395962884) at 2026-10-13T12:15Z on `4f5679c261` failed in job `Version PR maintenance`, at the step `Create or update the \"chore: version packages\" PR`. Every later job was skipped.\n- **The error** (the check run's annotations, job `115291117509`): `ENOENT: no such file or directory, open '/home/runner/work/objectstack/objectstack/.changeset/pre/changes.md'`.\n- **Last green:** the scheduled run [38355979358](https://github.com/objectstack-ai/objectstack/actions/runs/38355979358) at 06:18Z on `de24373ecb`, before the cut.\n- **What changed between them:** the 18.0.0-next.0 version commit `d889448b93` (PR #21988, 07:37Z) moved 507 consumed changesets from `.changeset/` into `.changeset/pre/`. `.changeset/pre.json` now holds only `mode` and `tag`. The repo pins `@changesets/cli` `^3.0.3`.\n- **Consequence:** no `chore: version packages (next)` PR is open, so `18.0.0-next.1` cannot be cut. Every scheduled run fails the same way until this is fixed. Waiting on next.1: S7 of #19939 (`7958bdf36d`, merged after next.0), objectstack-ai/objectui#12329, and #23134 for objectstack-ai/objectui#12294.\n\n## Likely reading (unverified by this seat)\n\nThe path `<dir>/changes.md` is the legacy folder format of a changeset. A changesets reader that predates the v3 `.changeset/pre/` layout treats the `pre` directory as one legacy changeset and opens `pre/changes.md`. The likely candidate is the reader bundled in `changesets/action@v1`, which runs before the repo's `pnpm run version`.\n\n**Re-check:**\n- Rerun the version-PR lane by `workflow_dispatch` with `refresh_version_pr: true`.\n- Locally on `main`: `pnpm changeset status` with the repo's CLI. If that passes, the failing reader is the action's own.\n\n## Acceptance\n\n- The version-PR lane opens or refreshes the `next` Version Packages PR on a tree that carries `.changeset/pre/`. The PR contains every changeset added since next.0 and none of the 507 consumed ones.\n- ⛔ The consumed changesets are not moved back or deleted. `scripts/check-adr-0087-registration.mjs` reads `.changeset/pre/` as CONSUMED stock (PRE1–PRE3).\n- ⛔ No step is skipped to get green.\n- **Pin:** a rehearsal of the lane's changeset read on a tree with `.changeset/pre/` (in the shape of #20562's scheduled rehearsal), so a reader mismatch reds before the next cut.\n\n## Dedupe\n\nMCP `search_issues` on this repo, closed included:\n- `release version packages PR fails pre changes.md ENOENT changeset pre mode`: 93 hits, none this. The nearest are #23135, #23113 and #23025, all closed: next.0's other version-pass breaks.\n- `Version PR maintenance job failed create or update chore version packages PR next.1`: 11 hits. None is this; #20562, #21361 and #11233 are closed.\n- PR #23209 (#23193) lets the relay start `release.yml` with `refresh_version_pr: true`. It does not touch this failure.\n\nDedupe words: Version PR maintenance ENOENT; `.changeset/pre/changes.md`; legacy changeset folder; next.1 Version Packages PR."
+}

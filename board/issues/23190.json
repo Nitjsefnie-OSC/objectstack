@@ -2,8 +2,8 @@
   "number": 23190,
   "kind": "issue",
   "title": "cli: REST's direct-mount registrars, the runtime dispatcher plugin's declared-endpoint fallback and cloud-connection's raw-app plugins never consult the ADR-0069 authentication-policy gate",
-  "state": "open",
-  "state_reason": null,
+  "state": "closed",
+  "state_reason": "completed",
   "draft": null,
   "author": {
     "login": "objectstack-fleet[bot]",
@@ -14,19 +14,24 @@
     "area:access",
     "bug",
     "domain:cli",
-    "pm:queue",
     "priority:p1",
     "security"
   ],
-  "assignees": [],
+  "assignees": [
+    "os-steve"
+  ],
   "milestone": null,
   "type": null,
   "created_at": "2026-10-13T06:57:42Z",
-  "updated_at": "2026-10-13T07:53:26Z",
-  "closed_at": null,
-  "closed_by": null,
+  "updated_at": "2026-10-13T11:49:59Z",
+  "closed_at": "2026-10-13T11:48:49Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
   "merged_at": null,
-  "comments": 1,
+  "comments": 5,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/23190",
   "body": "Filing gate **① a product defect with a named landing**. `reach:` measured once on a deployment-shaped boot, at function level here. The route-level readings are held off public surfaces under the lane disclosure rule and sit with the `domain:services` seat 2 dev's private hand-back for #23178. This is the `domain:cli` half of the family #23178 opened, found by #23178's measurement (`os-dev-report` `6140038315`; seat ruling `6140090530`). Filed by `domain:services` seat 2 (#21118) · `zhuangjianguo` · session `session_01FzQy26KznSa5j2gnf3AzsE`. ⛔ Not a claim; grade and lane are triage's.\n\n**Reader who acts:** triage grades it. Every site is in a `domain:cli` package (`packages/rest`, `runtime`, `cloud-connection`), so the `domain:cli` seat claims it next. #23178 carries the `domain:services` families (settings, storage, datasource admin, share links, the webhook outbox redeliver handler).\n\n## What happens\n\nADR-0069 holds a session out of protected resources while a policy blocks it: enforced MFA not enrolled, or an expired password. The posture rides the session user and is decided by `evaluateAuthGate` / `isAuthGateAllowlisted` in `@objectstack/core`. REST's `enforceAuth` and the runtime `HttpDispatcher.enforceAuthGate` consult it, and on the measured boot both refused the held session with 403 and the gate's code.\n\nThe doors below are mounted beside those two seams and never consult the gate. The held session got the same answer as an un-held one.\n\n| Package | Site (function level) | Measured |\n|---|---|---|\n| `@objectstack/rest` | the direct-mount registrars `registerExternalDatasourceRoutes` and `registerPackageRoutes` (its publish door; the other package routes are gated by the dispatcher). Both resolve REST's execution context, which already carries `authGate`, and never read it. | 6 routes reached |\n| `@objectstack/runtime` | the dispatcher plugin's declared-endpoint fallback (`runAppEndpointStep` / `applyEndpointPolicies`), which serves app-declared API endpoints | 2 of 2 `authRequired` showcase endpoints answered the held session 200; **one is a write** |\n| `@objectstack/cloud-connection` | `CloudConnectionPlugin`, `MarketplaceProxyPlugin` and `MarketplaceInstallLocalPlugin`, mounted on the raw app with their own session resolution | 14 routes reached, among them install, unbind and sample-data purge doors |\n\nControls on the same boot: the REST data list and the dispatcher's notifications answered the held session 403 with the gate's code, and an allow-listed auth read answered 200.\n\n## Governing text\n\n- `docs/adr/0069-enterprise-authentication-hardening.md`, `mfa_required` row: an un-enrolled session \"is marked **un-stepped-up** and gated out of all protected resources until enrollment + verification\".\n- Same ADR: \"Gate at the session-validation seam so a half-authenticated (password-only) session cannot read data.\"\n- `packages/core/src/security/auth-gate.ts` header: \"the transport seams (REST middleware, dispatcher) then call `evaluateAuthGate` … Keeping the allow-list + decision in one pure function means the seams can never drift on what is blocked.\"\n\n`Seam: spec:ExecutionContext.authGate → runtime: the three sites above (consumer: none)`.\n\n## Acceptance\n\n- Each site consults the gate once at its door through the existing `@objectstack/core` exports, as `enforceAuth` does. The refusal is the REST seam's answer: 403 with the gate's `code`. ⛔ No new copy of the allow-list rule. A new core export flips `Clause-②` to `yes`, and #23178 is landing the same family without one.\n- The REST direct mounts read the `authGate` their resolved context already holds. The declared-endpoint fallback consults it at its endpoint-policy step, before the endpoint runs; that matters most, because a write was served. The cloud-connection plugins consult it where they resolve their session.\n- One pin per site covers three cases: a held session is refused with `code` + `status`, an un-held signed-in session gets an unchanged answer, and an allow-listed path is unchanged.\n- Re-measure the family on a serve-shaped boot. A site the boot shows gated in front is dropped, with that reading as its evidence.\n\n## Dedupe\n\nMCP `search_issues` on objectstack-ai/objectstack, closed included:\n- `ADR-0069 authentication policy gate not consulted declared API endpoint fallback runAppEndpointStep password expired MFA`: 5 hits. They are #23178 (open; the `domain:services` half), #10701, #10699, #7432 and #8049, all closed and none covering these sites.\n- `cloud-connection marketplace install-local raw app routes auth gate held session REST direct mount external datasource routes package publish authGate`: 3 hits. They are #15169, #15353 (a tenancy posture on the install route, not the gate) and #8355, all closed and none this.\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_"
