@@ -30,9 +30,11 @@
  *    answers;
  *  - CONTROL: an item with no package binding keeps the package-unbound row,
  *    and its receipt reads byte for byte as before;
+ *  - `packageId: null` names no package, as `undefined` does (the request
+ *    contract states both);
  *  - CONTROL: a package-less row minted beside a package's row before the fix
- *    stays as it is, and a save naming the unbound row (`packageId: null`)
- *    still writes it;
+ *    stays as it is, and a server-stated rewrite of that row (the
+ *    stored-metadata migration passes `packageId: null`) still writes it;
  *  - an item a code package ships, with no stored row: the package-less save
  *    writes the package-unbound overlay and the read serves it, as before; with
  *    an overlay row already bound to the code package, it writes that row;
@@ -212,6 +214,15 @@ describe('a package-less direct save of an item ONE package owns writes that pac
         expect((await protocol.getMetaItem({ type: 'app', name, packageId: WRITABLE })).item).toMatchObject({ active: false });
     });
 
+    it('packageId: null names no package too, as the request contract states', async () => {
+        const { protocol, rows } = makeProtocol();
+        const name = 'null_named_app';
+        await protocol.saveMetaItem({ type: 'app', name, item: app(name), packageId: WRITABLE });
+        const saved = await protocol.saveMetaItem({ type: 'app', name, item: app(name, { label: 'Edited' }), packageId: null });
+        expect(saved.message).toContain(`package=${WRITABLE}`);
+        expect(rows('app', name).map((r) => r.package_id ?? null)).toEqual([WRITABLE]);
+    });
+
     it('both author faces resolve the same address', async () => {
         for (const writeFace of ['meta-envelope', 'meta-dispatch'] as const) {
             const { protocol, rows } = makeProtocol();
@@ -355,16 +366,18 @@ describe('CONTROL: what the resolution leaves alone', () => {
         expect(bodies.null).toEqual(app(name, { active: false }));
     });
 
-    it('a save naming the package-unbound row (packageId: null) still writes it', async () => {
+    it('a server-stated rewrite of the package-unbound row (the stored-metadata migration, packageId: null) still writes that row', async () => {
         const { protocol, rows, seedRow } = makeProtocol();
         const name = 'residue_app';
         await protocol.saveMetaItem({ type: 'app', name, item: app(name), packageId: WRITABLE });
         seedRow({ type: 'app', name, package_id: null, metadata: JSON.stringify(app(name)), checksum: 'sha-residue' });
 
-        await protocol.saveMetaItem({ type: 'app', name, item: app(name, { label: 'Unbound' }), packageId: null });
+        await protocol.saveMetaItem({
+            type: 'app', name, item: app(name, { label: 'Rewritten' }), packageId: null, source: 'migrate-stored', force: true,
+        });
 
         const bodies = bodiesByBinding(rows('app', name));
-        expect(bodies.null).toMatchObject({ label: 'Unbound' });
+        expect(bodies.null).toMatchObject({ label: 'Rewritten' });
         expect(bodies[WRITABLE]).toEqual(app(name));
     });
 

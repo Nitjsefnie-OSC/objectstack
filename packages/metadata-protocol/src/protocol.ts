@@ -18553,7 +18553,7 @@ export class ObjectStackProtocolImplementation implements
             name: request.name,
             org: 'env',
         } as Parameters<typeof repo.headAt>[0];
-        const packageId = request.packageId === undefined && state === 'active'
+        const packageId = request.packageId == null && state === 'active'
             ? (await this.packagelessSaveAddress(ref.type, ref.name, request.member)).packageId
             : request.packageId ?? null;
         const stored = await this.storedHeadAt(repo, ref, state, packageId, request.member);
@@ -18596,9 +18596,10 @@ export class ObjectStackProtocolImplementation implements
      *
      * ⛔ Not the repository's write-address default: `put` and `headAt` keep
      * `PutOptions.packageId`'s documented one (omitted = the package-unbound
-     * row), because a caller that names the unbound row (`promoteDraft` and
-     * `restoreVersion` of a package-less row, the stored-metadata migration)
-     * means it. The save door resolves, then names the package.
+     * row), because the callers that reach them with no package
+     * (`promoteDraft` and `restoreVersion` of a package-less row) mean that
+     * row, as do the server-stated rewrites the save door does not resolve
+     * for. The save door resolves, then names the package.
      */
     private async packagelessSaveAddress(
         type: string,
@@ -21010,15 +21011,25 @@ export class ObjectStackProtocolImplementation implements
         // the package door and the `_lock` gate judge the item, not its row,
         // and they answer before this store read, as #22220 ordered.
         //
-        // Not asked of: a save that names a package (ADR-0048, its address is
-        // its own) or the package-unbound row (`packageId: null`, which the
-        // stored-metadata migration and the stored flow-credential move pass
-        // for a package-less row they rewrite); a draft save, whose binding the
-        // repository resolves (#11087).
+        // Asked of a publish-mode AUTHORING save whose `packageId` is absent or
+        // `null`, the two spellings of "no package" the request contract
+        // states. Not asked of: a save that names a package (ADR-0048, its
+        // address is its own); a draft save, whose binding the repository
+        // resolves (#11087); the server-stated rewrites of a row this store
+        // already holds (`source` set: the stored-metadata migration and the
+        // stored flow-credential move, which pass `null` for the
+        // package-unbound row they read and rewrite; `package-duplicate`,
+        // which always names its target), the same two the authoring rules
+        // above exempt.
         //
         // Several bindings is a name more than one package holds, and a save
         // naming none of them is refused, not guessed.
-        if (mode === 'publish' && request.packageId === undefined) {
+        if (
+            mode === 'publish'
+            && request.packageId == null
+            && request.source === undefined
+            && request.writeFace !== 'package-duplicate'
+        ) {
             const writeType = PLURAL_TO_SINGULAR[request.type] ?? request.type;
             const address = await this.packagelessSaveAddress(
                 writeType, request.name, itemDiscriminator(writeType, request.item),
