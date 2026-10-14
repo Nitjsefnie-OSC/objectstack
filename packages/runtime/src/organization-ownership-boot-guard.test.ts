@@ -29,8 +29,9 @@ const OBJECTS = [
   { name: 'crm_deal', fields: { amount: {} } },
 ];
 
-function engine(opts: { client?: string; failRead?: boolean } = {}) {
+function engine(opts: { client?: unknown; dialectName?: string; failRead?: boolean } = {}) {
   const driver = {
+    ...(opts.dialectName ? { dialectName: opts.dialectName } : {}),
     config: { client: opts.client ?? 'better-sqlite3' },
     async execute(sql: string, params: unknown[] = []) {
       if (opts.failRead) throw new Error('SQLITE_BUSY: database is locked');
@@ -126,6 +127,14 @@ describe('the v18 boot refusal (ADR-0131 D10 item 5)', () => {
     const err = await refusalOf(() => assertOrganizationOwnershipMigrated(engine({ failRead: true })));
     expect(isOrganizationOwnershipBootRefusal(err)).toBe(true);
     expect(err.message).toMatch(/could not read whether this database is still in the v17/);
+  });
+
+  it('⭐ a driver whose knex client is a dialect CLASS (SqliteWasmDriver, the default for a served file database) is read by its dialectName, and refused', async () => {
+    v17Shape();
+    class Client_WasmSqlite {}
+    const err = await refusalOf(() => assertOrganizationOwnershipMigrated(engine({ client: Client_WasmSqlite, dialectName: 'sqlite' })));
+    expect(isOrganizationOwnershipBootRefusal(err)).toBe(true);
+    expect(err.tables).toEqual(['sys_job', 'sys_metadata']);
   });
 
   it('a driver with no physical columns (memory, MongoDB) is inert', async () => {

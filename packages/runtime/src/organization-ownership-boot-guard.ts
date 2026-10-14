@@ -79,6 +79,20 @@ export function isOrganizationOwnershipBootRefusal(error: unknown): error is Org
 
 type Dialect = 'sqlite' | 'postgres' | 'mysql';
 
+/**
+ * The driver's dialect. `SqlDriver.dialectName` is the public, structural
+ * answer, and the only one that names a driver whose knex `client` is a
+ * dialect CLASS rather than a string — `SqliteWasmDriver`, the default SQLite
+ * driver of a served file database. Reading `config.client` alone left the
+ * guard inert on exactly that driver. The client string is the fallback for a
+ * driver that exposes no `dialectName`.
+ */
+function dialectOfDriver(driver: { dialectName?: unknown; config?: { client?: unknown } } | undefined): Dialect | null {
+  const named = driver?.dialectName;
+  if (named === 'sqlite' || named === 'postgres' || named === 'mysql') return named;
+  return dialectOf(driver?.config?.client);
+}
+
 function dialectOf(client: unknown): Dialect | null {
   const c = String(client ?? '').toLowerCase();
   if (['sqlite3', 'sqlite', 'better-sqlite3'].includes(c)) return 'sqlite';
@@ -134,9 +148,9 @@ export async function findV17ShapeTables(engine: GuardEngine): Promise<string[]>
     if (typeof name !== 'string' || object.systemFields?.tenant !== false) continue;
     if (object.fields && Object.prototype.hasOwnProperty.call(object.fields, ORG)) continue;
     const driver = engine.getDriverForObject?.(name) as
-      | { config?: { client?: unknown }; execute?: (sql: string, params?: unknown[]) => Promise<unknown> }
+      | { dialectName?: unknown; config?: { client?: unknown }; execute?: (sql: string, params?: unknown[]) => Promise<unknown> }
       | undefined;
-    const dialect = dialectOf(driver?.config?.client);
+    const dialect = dialectOfDriver(driver);
     if (!dialect || typeof driver?.execute !== 'function') continue;
     const columns = rowsOf(await driver.execute(columnListSql(dialect), [name]))
       .map(columnNameOf)
