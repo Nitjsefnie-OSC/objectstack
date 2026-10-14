@@ -2,8 +2,8 @@
   "number": 23323,
   "kind": "issue",
   "title": "docs(permissions): delegated-administration.mdx says `sys_member` is not one of the delegated-admin gate's governed objects, but the gate lists it and the same page's table says membership writes are tenant-admin-only",
-  "state": "open",
-  "state_reason": null,
+  "state": "closed",
+  "state_reason": "completed",
   "draft": null,
   "author": {
     "login": "objectstack-fleet[bot]",
@@ -14,18 +14,23 @@
     "area:devpath",
     "documentation",
     "domain:devx",
-    "pm:queue",
     "priority:p3"
   ],
-  "assignees": [],
+  "assignees": [
+    "zhuangjianguo"
+  ],
   "milestone": null,
   "type": null,
   "created_at": "2026-10-13T19:11:58Z",
-  "updated_at": "2026-10-13T19:11:58Z",
-  "closed_at": null,
-  "closed_by": null,
+  "updated_at": "2026-10-13T22:25:31Z",
+  "closed_at": "2026-10-13T22:24:12Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
   "merged_at": null,
-  "comments": 0,
+  "comments": 4,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/23323",
   "body": "Filing gate ①: a docs defect with a named landing point. Filed by `domain:devx` seat 1 (#6023, `session_012zwsLMxQBwHUYJgPyrpEvx`) from #22976's dev report (`6153108424`) and this seat's review of PR #23322. Triage may re-grade it on first touch. ⛔ Not a claim.\n\n**Reader who acts:** the `domain:devx` execution seat. **Surface:** `content/docs/permissions/delegated-administration.mdx`, the invitation role-cap paragraph (about line 184), and nothing else.\n\n## What was measured (`main` `87e902dcbb`)\n\n- The page says: \"`sys_member` is not one of the gate's governed objects and the acceptance write runs outside the issuer's context, so the cap is the defense on that path.\"\n- The code says otherwise. `GOVERNED_OBJECTS` in `packages/plugins/plugin-security/src/delegated-admin-gate.ts` (about lines 131–149) lists `sys_member`. Its comment explains why: an admin-grade membership row is auto-elevated to `organization_admin`, so writing one mints a tenant admin.\n- The page contradicts itself. Its own gate table has the row \"Membership is not delegable | `sys_member` writes are tenant-admin-only\".\n- The conclusion still holds; only the reason given is wrong. The acceptance write runs under the system context, which the gate does not judge (the comment at the same lines: \"every writer is a better-auth path running under `isSystem`, short-circuited before this gate\"). So the invitation role cap is the defense on the acceptance path.\n\n## What done looks like\n\n- The sentence gives the real reason: `sys_member` is governed, but the acceptance write runs as the system, which the gate does not judge. The cap is therefore the defense on that path.\n- Every claim cites `delegated-admin-gate.ts` at the dispatch head.\n- `check:doc-anchors`, `check:doc-authoring` and the docs link check pass. `skip-changeset`.\n- ⛔ No new gate.\n\n**Workload:** XS.\n\n## 四维(业务立场)\n\n- 长远合理性:文档与门禁代码一致,不给读者留下「成员表不受管」的错误模型。\n- 实际业务拉动:委派管理员与租户管理员按这页理解邀请上限为什么存在;理由错,后续改动容易拆掉真正的防线。\n- 防 AI 犯错:AI 照文档推理时不会得出「`sys_member` 可被委派写」的结论。\n- 创业阶段不扩散:改一句话,不加门禁。\n\nDedupe: open `domain:devx` cards grepped by title for `delegated-administration|sys_member`: 0 hits. PR #23322 (#22976) touches the page but not this paragraph, and its review routes this sentence here. Dedupe words: delegated-administration sys_member governed objects, invitation role cap reason."

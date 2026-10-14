@@ -1,0 +1,37 @@
+{
+  "number": 23339,
+  "kind": "issue",
+  "title": "tooling(pm): ci-failure.mjs's roster banner, job-log line and substitute line say the member rows are 'listed above' when only the aggregator's row is listed",
+  "state": "closed",
+  "state_reason": "completed",
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "area:devpath",
+    "domain:devx",
+    "priority:p3",
+    "tooling"
+  ],
+  "assignees": [
+    "zhuangjianguo"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-13T21:09:50Z",
+  "updated_at": "2026-10-13T22:57:13Z",
+  "closed_at": "2026-10-13T22:55:25Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": null,
+  "comments": 4,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/23339",
+  "body": "Filing gate ①: a defect with a named landing point. Filed by `domain:devx` seat 1 (#6023, `session_012zwsLMxQBwHUYJgPyrpEvx`) from #23305's dev report and this seat's review of PR #23337. Triage may re-grade it on first touch. ⛔ Not a claim.\n\n**Reader who acts:** the `domain:devx` execution seat. **Surface:** `scripts/pm/ci-failure.mjs` (three render sites) and its self-test only.\n\n## What was measured\n\n`node scripts/pm/ci-failure.mjs --run 38411694784` was run at PR #23337's head `e29bf95658`. The only failing row it lists is the aggregator's (`Lint & Repo Gates`, `115353240189`). Three generic sentences still tell the reader the member rows are above:\n\n| Site | Text |\n|---|---|\n| `render()`'s ROSTER JOB banner | \"The answer is in those members' rows, listed above\" |\n| `sayLog`'s roster branch | \"a verdict about the member jobs listed above, whose own rows already carry their assertions\" |\n| `renderSubstitute`'s roster line | \"the member row(s) named above carry the answer, each with its own substitute\" |\n\nThese lines were already false for this run before PR #23337. That PR made the per-lane line correct (\"NOT listed above\", with the check-run id and URL). The generic sentences around it still point to rows that are not printed.\n\n## What done looks like\n\n- Each of the three sentences says \"listed above\" only when at least one member row is listed in the failing list. Otherwise it points to the per-lane lines, which carry the check-run id and URL.\n- One self-test case pins the superseded shape (the #23305 fixture): none of the three sentences claims a row above.\n- A control case pins the shape where a member row IS listed: the sentences keep their current text.\n- ⛔ No new gate.\n\n**Workload:** XS. Same family as #23249, #23223 and #23305, all on the same file.\n\n## 四维(业务立场)\n\n- 长远合理性:报告的每句话与它实际打印的行一致,分诊工具不自相矛盾。\n- 实际业务拉动:main 红时席位第一步就读这份报告;指向不存在的行,等于让席位重新手翻日志。\n- 防 AI 犯错:AI 席位按「listed above」去找行时不会找空。\n- 创业阶段不扩散:三句措辞随条件分支,一条自测;不加门禁。\n\nDedupe: this file's open and closed cards since 2026-10-01 are #23249, #23223 and #23305. None of them is these three sentences. Dedupe words: ci-failure roster banner listed above; member rows not listed superseded; roster substitute each with its own substitute."
+}

@@ -1,0 +1,31 @@
+{
+  "number": 23367,
+  "kind": "issue",
+  "title": "[Decision] API key 的生命周期与存放：到期上限与不活动失效取多长，key 继续放自有 sys_api_key 还是迁到 @better-auth/api-key（#23287 裁决 C′ 的留项）",
+  "state": "open",
+  "state_reason": null,
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "area:access",
+    "domain:spec",
+    "needs-user-decision",
+    "priority:p2"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-14T02:22:48Z",
+  "updated_at": "2026-10-14T02:22:48Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 0,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/23367",
+  "body": "Filing gate: ③ a question left by a ruling. Ruling C′ on #23287 (6159450584, maintainer 「同意」) names two items outside that card and asks for one decision card: the API key's lifecycle policy, and where the key store lives. Filed by the director seat (summon #37, `session_01LqNgdPZB2Jnr5HpGbaqLeB`) under 「立卡你决定，不需要我同意」. ⛔ The seat does not rule this. Reader: the maintainer.\n\n## 一句话问题\n\n个人 API key 今天签了就永久有效：签发口只收 `name` 和可选的 `expires_at`，不填就没有到期；不用的 key 也不会失效，只有手动吊销一条路。要定两件事：key 要不要有到期上限和不活动失效、数字取多长；以及 key 继续放平台自有的 `sys_api_key`，还是迁到 better-auth 官方的 `@better-auth/api-key` 包。\n\n## 背景（本席实测，`origin/main` `6d96721fa`；官方包读 `@better-auth/api-key@1.7.3` 源码）\n\n- **平台今天：** `sys_api_key`（`packages/platform-objects/src/identity/sys-api-key.object.ts`）有 owner、active organization、scopes、`expires_at`（可选）、`last_used_at`（每次调用更新）、`revoked`、哈希。签发口 runtime `/keys`（`packages/runtime/src/domains/keys.ts:94–101`：正文只允许 `name` 和可选 `expires_at`）。验证口 core `resolveApiKeyAdmission`（`packages/core/src/security/api-key.ts:271`，REST 与裸挂面共用）按哈希查行、拒绝已吊销与已到期。\n- **官方包：** `@better-auth/api-key` 是独立包（核心包 1.7.3 不含它）。key 有 `keyExpiration { defaultExpiresIn, minExpiresIn, maxExpiresIn }`、`rateLimit`、`remaining` 与 `refill`、`enabled`、`permissions`、`metadata`。开 `enableSessionForAPIKeys` 后，带 key 的请求由一个前置钩子验证 key 自身生命周期、取出 owner、拼出「owner 的会话替身」并在 `/get-session` 上直接返回；better-auth 的调度器对前置钩子的返回值立即返回（`better-auth@1.7.3` `dist/api/dispatch.mjs:218–223`），后置钩子不跑，平台挂在 `customSession` 上的 `authGate` 因此不会盖到 key 请求上。`references: 'organization'` 的 key 不能当会话用（钩子里 `INVALID_REFERENCE_ID_FROM_API_KEY`）。官方包的哈希与前缀方案是它自己的，平台现有 key 只存哈希、原文不可得，迁表意味着所有集成重新签 key。\n- **主流：** GitHub 细粒度 PAT 必须设到期（上限一年），经典 PAT 一年不用自动失效；Okta API 令牌 30 天不活动失效；AWS 访问密钥不到期，但有密钥年龄报告和轮换策略；Stripe key 不到期，支持滚动。\n\n## Governing text\n\n- ADR-0036 Phase 1a：*\"verify the key (hash match, not revoked, not expired), resolve it to its principal\"*。\n- #23287 裁决 C′（6159450584）第 6 条：生命周期与存放另立一张决策卡。\n- `packages/core/src/security/api-key.ts` docblock：*\"better-auth 1.6.x ships no apiKey plugin, so ObjectStack owns the full lifecycle\"*（对核心包成立，官方插件在独立包）。\n- ADR-0093 第 378 行：机器/服务账号「Out of scope now」。\n\n## 协议声明，以及是否改协议\n\n- A 不改 spec 形状：auth 配置加两个键（到期上限、不活动天数），签发口给默认到期，验证口多读一个 `last_used_at`，存量无到期的 key 给一个带日期的宽限。\n- B 改存放：表从 `sys_api_key` 换到官方 `apikey`，scopes 映射到 `permissions`、active organization 进 `metadata`，验证口改读新表；是迁移，不是协议改动。\n- C 不改。\n\n## 前提（各附 re-check 命令）\n\n1. 签发口不强制到期：`git show origin/main:packages/runtime/src/domains/keys.ts | sed -n '94,101p'`。\n2. `expires_at` 与 `last_used_at` 都是可选字段：`git show origin/main:packages/platform-objects/src/identity/sys-api-key.object.ts | grep -n -E \"expires_at|last_used_at|required\"`。\n3. 官方包的会话替身短路后置钩子：`npm pack @better-auth/api-key@1.7.3 && tar xzf better-auth-api-key-1.7.3.tgz && grep -n '/get-session' package/dist/index.mjs`，再看 `better-auth@1.7.3` 的 `dist/api/dispatch.mjs:218–223`。\n\n## 具体问题\n\n永久有效的个人 key 是泄露后的长期旁路（#23287 裁决 C′ 已让账号状态扣 key，但一把没人记得的 key 仍然永远有效）。要补的是 key 自己的生命周期；而官方包虽然带这些字段，它的会话路径绕过平台的闸门，且迁表要让所有集成重签。\n\n## 选项 × 真实代价 × 工作量\n\n| | 做什么 | 客户可感知后果 | 工作量 |\n|---|---|---|---|\n| **A 自有存放，加生命周期策略** | 保留 `sys_api_key`；auth 配置加到期上限与不活动天数；签发口给默认到期（席位建议默认 90 天、上限 1 年）；验证口按 `last_used_at` 拒绝超过不活动期（席位建议 90 天）的 key，拒绝码定位到原因；存量无到期的 key 自策略落地起给一年宽限并在到期前提醒 | 集成 key 会到期、长期不用会失效，需要轮换；响亮拒绝带指引；现有 key 一年内不受影响 | spec 车道 · 1 个 PR · 先例：验证口家族 PR #23200（+1305/−71）；策略本身无先例，量小 |\n| **B 迁到官方包** | 以 `@better-auth/api-key` 为存放，用它的到期与限流字段，平台验证口改读新表（不用它的会话替身） | 所有客户集成重新签 key（哈希不可迁移）；换来官方维护的限流与余量字段 | spec 车道 · 多 PR 迁移 + 客户通知 · 无先例 |\n| **C 维持现状** | 不加策略 | 永久 key 继续存在 | 零 |\n\n**业务含义直译：** A 像「门禁卡设有效期，长期不刷自动停用，旧卡给一年换卡期」；B 像「换一家门禁供应商，所有人重新办卡」；C 像「卡永远有效」。\n\n## 四轴（业务立场）\n\n- **① 项目长远合理性：** 主流对个人令牌都设寿命（GitHub 上限一年、经典 PAT 一年不用失效，Okta 30 天不活动）。A 把这条写进平台自己的口；B 换存放换来的字段 A 也能有，而官方会话路径与平台闸门不兼容（裁决 C′ 的判定口必须是平台的）；C 留着永久旁路。\n- **② 实际业务拉动：** 今天零事故；但 cloud 的 MCP 与 CI 文档教的是个人 key，永久 key 的数量随客户增长。B 的代价由每个客户承担。\n- **③ 防 AI 犯错：** A 的拒绝定位到原因（到期 / 不活动），AI 作者看到的是「签新 key」的处方；C 下泄露的 key 无人发现；B 的迁移期两套表并存最易错。\n- **④ 创业阶段不扩散：** A 加两个配置键；B 加一个依赖和一次全客户迁移；C 零。\n\n## 推荐 A，回退 C\n\n- 只看①选 A：两年后的平台样子是「个人 key 有寿命，集成走服务主体」（后者归 ADR-0093 的服务账号卡）。②③④ 是否翻转：否。\n- 要您定的数字：默认到期（席位建议 90 天）、上限（建议 1 年）、不活动失效（建议 90 天）、存量宽限（建议 1 年）。\n- 置信缺口：cloud 平台自己的服务 key（`OS_CLOUD_API_KEY`）是否走 `sys_api_key` 未测，A 的 PR 先读它；客户集成里有多少永久 key 看不到。\n\n## 裁后执行\n\n- **裁 A：** 本席把数字写进派发令，席位 2（`domain:spec#2`）认领，一个 PR（配置键、签发默认、验证口不活动判定、存量宽限与提醒、文档），契约复审后入队；cloud 席位收一条指针（文档与提醒文案）。\n- **裁 B：** 另起迁移专题，先出客户通知方案再派。\n- **裁 C：** 关卡，记录「永久 key 是已知旁路」。\n\nos-decision-facets\n- ① 项目长远合理性：A 给个人 key 寿命，与 GitHub/Okta 同向，判定口仍是平台的；B 换存放但官方会话路径绕过闸门；C 留永久旁路。\n- ② 实际业务拉动：今天零事故，永久 key 随 cloud 的 MCP/CI 接入增长；B 的代价落在每个客户。\n- ③ 防 AI 犯错：A 拒绝定位到原因并给处方；C 泄露无人发现；B 迁移期两套表最易错。\n- ④ 创业阶段不扩散：A 两个配置键；B 一个依赖加全客户迁移；C 零。\nPrior rulings read: api key, expiry, inactivity, rotation, sys_api_key → ADR-0036 Phase 1a; ADR-0069 D3 and #23287 ruling C′ (6159450584); ADR-0093:378; thread: none\n\nRelated: #23287 · ADR-0036 · ADR-0069 · ADR-0093 · `@better-auth/api-key@1.7.3`."
+}

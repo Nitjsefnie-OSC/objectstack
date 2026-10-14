@@ -1,0 +1,33 @@
+{
+  "number": 23360,
+  "kind": "pull_request",
+  "title": "fix(plugin-auth)!: the platform-admin actions refuse a session the ADR-0069 authentication policy holds",
+  "state": "open",
+  "state_reason": null,
+  "draft": false,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "documentation",
+    "size/m",
+    "tests",
+    "tooling"
+  ],
+  "assignees": [
+    "os-support-ai"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-14T01:38:10Z",
+  "updated_at": "2026-10-14T02:07:30Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 2,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/pull/23360",
+  "body": "Part of #23335\nClause-②: no (narrowing: a held session is refused on the platform-admin surface, which ADR-0069 D3 already declares gated)\n\n## What changes\n\nADR-0069 D3 holds a session out of every protected resource while its password has expired (or an administrator forced a change) or while enforced MFA is not yet enrolled. The platform-admin actions plugin-auth mounts on the host server are judged by one shared judge, `judgePlatformAdmin`, which read the session and the admin rung but never the posture. The judge now consults the gate's one shared decision, `evaluateAuthGate` (exported from `packages/core/src/security/auth-gate.ts`), pathless, between the identity refusal and the authorization refusal. Every mount the judge guards is covered, and no mount re-implements the decision.\n\n- A held session meets `403` with the gate's own code (`PASSWORD_EXPIRED` / `MFA_REQUIRED`) and message, in the judge's envelope, before the action runs.\n- An anonymous caller still meets `401 UNAUTHENTICATED` first. A held non-admin now reads the posture code instead of `PERMISSION_DENIED` (same 403).\n- Unchanged: an unheld session; sign-in, change-password, two-factor enrollment and sign-out for a held session; the anonymous allow-list (`isAuthGateAllowlisted` and `shouldDenyAnonymous` keep their behaviour; `auth-gate.ts` gains a comment only).\n- Docs: the \"How enforcement works\" callout now says platform administration is not part of the remediation exemption.\n- One changeset, `@objectstack/plugin-auth` minor (BREAKING accept-set narrowing, ADR-0087 `not-required (no-migration-prescription)`).\n\n## Measured first (real boot, `@objectstack/verify` `bootStack`, at `bbb975771`)\n\nA platform admin signed in; a plain member signed up. Then, per held state, the protected data read and a set of platform-admin writes:\n\n| state | protected data read | platform-admin writes (user unlock, manager, ban, unban; membership add) | remediation (change-password, two-factor enable: wrong password) |\n|---|---|---|---|\n| unheld | 200 | 200 | 400 INVALID_PASSWORD (reached the endpoint) |\n| expired password | 403 PASSWORD_EXPIRED | **200, the write landed** | 400 INVALID_PASSWORD |\n| MFA required, not enrolled | 403 MFA_REQUIRED | **200, the write landed** | 400 INVALID_PASSWORD |\n\nAfter this change, at the same boot shape: every write in that column answers `403` with the state's code; the other columns are unchanged.\n\n**Which seam the admin requests take.** With the shared allow-list predicate instrumented (a log line per call, planted in core `src` and `dist`, restored to blob == HEAD), a full run of all three states logged calls ONLY for the REST data and meta reads, and **zero** for any auth-namespace request, platform-admin writes included. These mounts are raw host-app routes under the auth namespace; neither ADR-0069 transport seam (REST server, runtime dispatcher) sees them. So the auth-namespace arm of the allow-list was never what admitted the held admin, and narrowing it would not reach these mounts. The judge, which every mount calls, is where the shared decision has to be consulted. It is consulted pathless, the spelling the other raw route families already use, so the family cannot inherit the auth-namespace exemption.\n\n## Not covered here (reported to the seat)\n\nThe platform-admin actions better-auth serves itself are judged by vendor or vendor-rewired predicates, not by `judgePlatformAdmin`, and are not changed by this PR. One of them was measured admitting a held platform admin; it is reported to the seat with its evidence.\n\n## Tests\n\n- New booted pin, `packages/verify/src/held-session-platform-admin.pin.test.ts` (13 cases): unheld-admin control (the write lands); per held state: the admin write is refused 403 with the code AND the row is unchanged; a held non-admin reads the posture code; two-factor enrollment 200; change-password reaches its own validation; anonymous sign-in 200; sign-out 200. Green, 13/13.\n- New unit file, `packages/plugins/plugin-auth/src/platform-admin-gate.held-session.test.ts` (8 cases). Green.\n- **Ablation** (`scripts/ablation-replace.mjs`, plugin-auth rebuilt, `ablation-dist-preflight` absent): pin 4 failed / 9 passed (exactly the four held refusals red; remediation, anonymous sign-in and the unheld control green); unit 5 failed / 3 passed. Restored: blob == HEAD, `git diff HEAD` empty, rebuilt, marker present in dist, pin 13/13.\n- Suites at `c12ba7bd0` (the merge of `origin/main`): `@objectstack/core` security suites 34 files / 832 passed; `@objectstack/plugin-auth` full suite in 4 shards, 140 files, 2806 passed / 10 skipped; `@objectstack/spec` `test:repo` 103 files / 1576 tests passed, 1 file NOT MEASURED (`scripts/build-schemas-check-mode.test.ts` exceeds the container's foreground cap, exit 124 twice; this diff touches no `packages/spec` file). Typecheck: plugin-auth, verify, core exit 0.\n- Derived gates (`dispatch-gates.mjs --commands`, at `c12ba7bd0`): 97 derived, 97 run, all exit 0 (two first answered exit 3, missing dist, and were re-run green after a real build); `--ran` reconciliation: 0 NOT-MEASURED, 0 UNRUN.\n- Lint, proven narrowing: the 4 changed `.ts` files are inside the config's `**/*.{ts,…}` population; `eslint --no-inline-config --format json` read 4 files, 0 errors, 0 warnings; the config enables no type-aware linting, so the diff cannot move a verdict on an untouched file. The repo-wide run is CI's.\n\n## Acceptance notes\n\n- The has-permission admin read answers a held platform admin with admin answers (it is a permission question, not a write, and refuses no one by design); not changed here.\n- Mechanism hypothesis H1 (one predicate inside the shared decision, not a check at the judge) is falsified by the seam measurement above; the shared decision is unchanged and consulted, not copied.\n\n---\n_Generated by [Claude Code](https://claude.ai/code/session_012uFegdfR6K6uqvLzt7XsdZ)_\n"
+}

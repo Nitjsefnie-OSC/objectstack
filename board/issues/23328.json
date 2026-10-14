@@ -13,18 +13,20 @@
   "labels": [
     "bug",
     "domain:services",
-    "pm:queue",
+    "pm:dispatched",
     "priority:p2"
   ],
-  "assignees": [],
+  "assignees": [
+    "zhuangjianguo"
+  ],
   "milestone": null,
   "type": null,
   "created_at": "2026-10-13T19:53:23Z",
-  "updated_at": "2026-10-13T19:53:23Z",
+  "updated_at": "2026-10-14T01:32:42Z",
   "closed_at": null,
   "closed_by": null,
   "merged_at": null,
-  "comments": 0,
+  "comments": 1,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/23328",
   "body": "Filing gate ①: a defect with a named landing point. Filed by `domain:devx` seat 1 (#6023, `session_012zwsLMxQBwHUYJgPyrpEvx`), from #23169's dev report while that dev re-read the share-link landing page (PR #23327). Triage may re-grade it on first touch. ⛔ This is not a claim.\n\n**Reader who acts:** the `domain:services` seat. `plugin-sharing` is in that lane (`.claude/skills/pm-dispatch/references/lanes/services.md:10`). **Surface:** `packages/plugins/plugin-sharing/src/share-link-routes.ts` (the resolve probe), `packages/plugins/plugin-sharing/src/share-link-service.ts` (`resolveToken`) and the dispatcher twin `packages/runtime/src/domains/share-links.ts`, with their tests.\n\n## What was measured\n\n- **Setup.** The dev minted a link with a password and `audience: 'signed_in'`, then called the public door `GET /api/v1/share-links/:token/resolve` through plugin-sharing's registered resolve route on a real SqlDriver (`:memory:`). The objectui `ShareDialog.tsx` at pin `1fb1ced36243` sends an audience and a password in one create, so the console can produce this link shape.\n\n  | Open | Answer |\n  |---|---|\n  | anonymous, no password | `401 NEEDS_PASSWORD` |\n  | anonymous, wrong password | `401 WRONG_PASSWORD` |\n  | **anonymous, CORRECT password** | **`401 WRONG_PASSWORD`** |\n  | signed in, correct password | `200` |\n\n- **Cause, read on `main` `87e902dcbb`:**\n  1. `resolveToken` refuses on the audience before it checks the password: `share-link-service.ts:799` has `if (row.audience === 'signed_in' && !probe.signedInUserId) return null;`.\n  2. The route's refusal probe then answers from the row, password first. It judges only whether a password was **sent**, not whether it was right: `providedPassword ? 'WRONG_PASSWORD' : 'NEEDS_PASSWORD'`, which comes ahead of the `audience === 'signed_in'` arm (`share-link-routes.ts`, the probe at about `:430–440`).\n  3. The dispatcher twin `runtime/src/domains/share-links.ts` has the same arm order. This was read from source, not run.\n- **What the user sees.** The landing page shows \"Wrong password.\" for the right password, and never reaches the \"Sign in required\" state that PR #23327 now asserts for a signed_in link with no password.\n\n## What done looks like\n\n- An anonymous open of a password-protected `signed_in` link never answers `WRONG_PASSWORD` for the correct password, on both mounts.\n- ⛔ **Choosing the arm order is this lane's call, and it is security-relevant.** Any answer that differs by whether the password was correct, given before sign-in, is an anonymous password oracle. The obvious candidate is to answer `SIGN_IN_REQUIRED` first for a `signed_in` link whenever the caller is anonymous, whatever password was sent; the lane should measure it before adopting it.\n- One shared test pins the table above on both mounts (the plugin route and the dispatcher twin), including the oracle property: an anonymous caller gets the same answer for a correct and an incorrect password.\n- ⛔ No new gate.\n\n## 四维(业务立场)\n\n- 长远合理性:两个挂载点的拒绝顺序一致、由一处规则决定,不再各写一份探针。\n- 实际业务拉动:console 的分享对话框允许同时设置密码与「仅登录用户」;这种链接对匿名访问者总是报「密码错误」,用户无从知道应当登录。\n- 防 AI 犯错:拒绝码与真实原因一致,调用方(含 AI 写的前端)按码分支不会走错门。\n- 创业阶段不扩散:修正判定顺序与一条测试,不加门禁、不加新码。\n\nDedupe: issue and PR titles since 2026-08-15 grepped for `share.?link|plugin-sharing` return 8 rows: #23327, #23326, #23325, #23324, #23321, #23286, #23243 and #23200. None is this arm-order defect: #23243 is the password test budget, #23200 and #23286 are session and anonymous-deny policy, and the rest are guest/ADR-0138. Dedupe words: share link password signed_in WRONG_PASSWORD; correct password answered wrong password; resolve probe password before audience; SIGN_IN_REQUIRED password-protected share link."

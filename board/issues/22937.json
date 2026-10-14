@@ -2,8 +2,8 @@
   "number": 22937,
   "kind": "issue",
   "title": "C7b build-ahead: `os migrate organization-ownership --apply` and E5's pure row→definition mappers in core (drafts from main; the --apply PR lands after #15204 stage 8)",
-  "state": "open",
-  "state_reason": null,
+  "state": "closed",
+  "state_reason": "completed",
   "draft": null,
   "author": {
     "login": "objectstack-fleet[bot]",
@@ -12,7 +12,6 @@
   },
   "labels": [
     "domain:engine",
-    "pm:dispatched",
     "priority:p1",
     "target:v18"
   ],
@@ -22,11 +21,15 @@
   "milestone": null,
   "type": null,
   "created_at": "2026-10-12T03:54:27Z",
-  "updated_at": "2026-10-13T20:15:38Z",
-  "closed_at": null,
-  "closed_by": null,
+  "updated_at": "2026-10-13T22:57:50Z",
+  "closed_at": "2026-10-13T22:55:25Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
   "merged_at": null,
-  "comments": 27,
+  "comments": 30,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/22937",
   "body": "Part of #15211\n\n**Handed out of the #15194 epic subtree to the `domain:engine` lane.** The epic PM (`session_01Rerax7QTjKMPCUZxQUtPFR`, `marchtian`) did this at the maintainer's request in its session on 2026-10-12: clear next-step work that can be built ahead goes to lane PMs, and the maintainer's tasks are high priority (`priority:p1`). This card is the lane's claim surface. #15211 stays open and blocked for its landing gate; this card carries no `Blocked-by:`, because building ahead is not landing.\n\n## Why now\n- #15211 is release-cut condition (b) of the final v18 release (6102862135). The `next` prerelease is exempt (maintainer ruling 6117174845).\n- #15211's `Blocked-by: #15196` / `#15204` gate its landing. Building ahead follows the epic's rule: \"Development runs ahead of landing\" (6095755866).\n- On `main` (`06cc45dc36`), `os migrate organization-ownership` already exists as a **read-only plan** (`packages/cli/src/commands/migrate/organization-ownership.ts`, `utils/organization-ownership-plan.ts`, `utils/organization-ownership-inventory.ts`). The `--apply` half of #15211's scope is not built.\n\n## Scope (read #15211's body in full first; it governs)\n1. **E5's mappers, in core.** Seat answer 6110777865 (E5 → A), and its note on #15211, 6110790598.\n   - Add pure functions beside `convertPositionBindingRows` (`packages/core/src/security/position-binding-conversion.ts:90`), each with pins:\n     - a permission-set row → definition, the logic of `permissionSetBodyFromRow` (`packages/plugins/plugin-security/src/permission-set-projection.ts:409`);\n     - a position row → definition, the mapping in `position-environment-backfill.ts`.\n   - Use new files in core only. ⛔ **Do not edit `packages/plugins/plugin-security/**`.** Those files belong to #15204: stage 8 (`session_01MGoWgeE8rhsrig77V4oUZn`, building now) and 7a/7b, which will switch to these functions and delete their copies.\n   - This PR changes no behaviour, and may land when green.\n2. **`--apply`**, per #15211's scope:\n   - the explicit backup acknowledgement;\n   - the fate order attribution → verified id→name rewrite → mirror deletion → column drops;\n   - idempotent, and resumable from a recorded checkpoint;\n   - an operator ceremony, ⛔ never a boot step.\n   - **The id→name rewrite:** `sys_user_permission_set.permission_set_id` → `permission_set`. The column stays until C7b (#15204 stage-8 refresh 6116546399, E3): stage 8 redeclares it as `Field.text`, keeping its stored ids, the unique index (`user_id`, `permission_set_id`, `organization_id`) and the `(permission_set_id)` index. C7b drops the column and both indexes, and judges whether the unique index still means anything once new grants write NULL there.\n   - **Mirror deletion** stays behind fate 2's own gate: C2's rewrite report shows every reference resolves by name.\n   - The inventory's `authored` categories convert through step 1's mappers (6110790598).\n   - It absorbs #14570 and #15086, as #15211 says.\n   - **This PR stays a draft until #15204's stage 8 is on `main`.** Then merge `main`, re-run, and land.\n3. **#15211's acceptance:** a fixture database carrying every fate.\n\n## Boundaries\n- ⛔ No stacked PRs; every PR is based on `main`.\n- ⛔ Never touch `content/docs/releases/` or `CHANGELOG.md`.\n- ⛔ Never edit plugin-security files or `content/docs/permissions/system-context.mdx` here.\n- **Coordination:** post on this card. Post one pointer on #15204 when a PR opens, so the epic seat can align stage 8 and 7a/7b with it. Questions go here, and the epic seat answers here.\n- Re-verify on `main` before building that no branch or PR already does this (the maintainer's 「不要重复开发」).\n\n## Refs\n#15211 · ADR-0131 D10, D4 · seat answers 6110777865 and 6116546399 · seat note 6110790598 · release-cut record 6102862135 · ruling 6117174845."

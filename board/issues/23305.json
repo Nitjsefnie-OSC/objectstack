@@ -2,8 +2,8 @@
   "number": 23305,
   "kind": "issue",
   "title": "tooling(pm): ci-failure.mjs reads an aggregator's members from the newest-per-name rows across every run on the sha, so a later cancelled same-name row in another run hides the red member (\"NONE of its members was found\")",
-  "state": "open",
-  "state_reason": null,
+  "state": "closed",
+  "state_reason": "completed",
   "draft": null,
   "author": {
     "login": "objectstack-fleet[bot]",
@@ -13,19 +13,24 @@
   "labels": [
     "area:devpath",
     "domain:devx",
-    "pm:queue",
     "priority:p3",
     "tooling"
   ],
-  "assignees": [],
+  "assignees": [
+    "zhuangjianguo"
+  ],
   "milestone": null,
   "type": null,
   "created_at": "2026-10-13T17:07:19Z",
-  "updated_at": "2026-10-13T17:07:19Z",
-  "closed_at": null,
-  "closed_by": null,
+  "updated_at": "2026-10-13T21:33:37Z",
+  "closed_at": "2026-10-13T21:32:17Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
   "merged_at": null,
-  "comments": 0,
+  "comments": 4,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/23305",
   "body": "Filing gate ①: a defect with a named landing point. Filed by `domain:devx` seat 1 (#6023, `session_012zwsLMxQBwHUYJgPyrpEvx`), following its own reading on #23274 (`6148507314`) and #23294's dev report (`6150858863`). Triage may re-grade it on first touch. ⛔ This is not a claim.\n\n**Reader who acts:** the `domain:devx` execution seat. **Surface:** `scripts/pm/ci-failure.mjs` and its self-test only.\n\n## What was measured\n\n- `node scripts/pm/ci-failure.mjs --run 38411694784` exits 2. For the roster job `Lint & Repo Gates` it prints `NONE of its members was found among this sha's check-runs`. It printed this twice: once at this seat's triage of the hourly red, and again in #23294's dev run.\n- The red member does exist. `GET /commits/042ef51530/check-runs?check_name=Lint · PM dispatch-gates` returns 3 rows:\n  - success `115338637229` (run `38409754946`)\n  - **failure `115345404875` (run `38411694784`, the asked run)**\n  - a later cancelled `115345950501` (run `38411617233`)\n- Read on `main` `bae5841bce`:\n  - `walkInto` (`:1860`) runs `latestPerName(all)`. That function keeps the newest row per **name** across every run on the sha.\n  - `:1931` then passes that `kept` set to `memberLanes(…, kept, { runId })`.\n  - `memberLanes` (`:1067`) discards every row from a run other than `runId`.\n  - So the asked run's red member has already been replaced in `kept` by the newer cancelled row from run `38411617233`. That row is then filtered out by run id, and `matched` comes back 0.\n- The tool sends the reader to \"open the job URL\" with no answer. The member rows the walk listed hold the answer, but the walk drops them.\n\n## What done looks like\n\n- An aggregator's members are matched against the rows **of the aggregator's own run**, read from the full list for the sha (`all`), not from the newest-per-name set across runs. Within that run, the newest row per member name still wins, so a re-run inside the run is still handled.\n- Re-running `--run 38411694784` lists `Lint · PM dispatch-gates` (`115345404875`, failure) as the member that did not succeed.\n- The self-test pins the case: a fixture sha with a later, cancelled same-name row in another run. The aggregator's red member is still found. The control: a member whose newest row in the aggregator's own run is green reads as succeeded.\n- `latestPerName`'s existing role is unchanged: the sha-level failing list still ignores superseded rows.\n- ⛔ No new gate.\n\n**Workload:** S. The precedents are #23249 (roster jobs, PR #23253) and #23223 (Lane verdict, PR #23246), both on the same file.\n\n## 四维(业务立场)\n\n- 长远合理性:分诊工具按「聚合器自己那次 run」读成员,是 #23249 已立的口径(`memberLanes` 的 run-id 过滤),只是喂错了输入集;修输入,不加旁路。\n- 实际业务拉动:main 红时席位第一步就跑这个工具;它答「找不到成员」,席位只能手翻日志(本卡两次实测)。\n- 防 AI 犯错:工具给出确定的红成员,AI 席位不再凭猜测去读另一个 run 的取消行。\n- 创业阶段不扩散:一处输入集改动加一条自测,不加门禁、不加脚本。\n\nDedupe: REST listing `labels=domain:devx&state=all&since=2026-10-01`, titles grepped for `ci-failure|roster|aggregator`. It returned #23249 (closed: roster jobs not classified) and #23223 (closed: Lane verdict resolution). Neither is this input-set defect. Dedupe words: ci-failure roster members not found · superseded same-name check-run · memberLanes kept set · --run grouping across runs."
