@@ -30,7 +30,7 @@
 // `column-drops` (the declaration keeps it). The two land together.
 
 import { spawnSync } from 'node:child_process';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { copyFileSync, mkdtempSync, rmSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
@@ -74,6 +74,15 @@ async function boot(file: string): Promise<unknown> {
 describe('[ADR-0131 D10 item 5] a 17.x database upgrades through the boot refusal, never around it', () => {
   const dir = mkdtempSync(join(tmpdir(), 'dogfood-ownership-order-'));
   const file = join(dir, 'showcase.db');
+  /**
+   * The ceremony's output, copied the moment it is verified. An operator's
+   * refused `os serve` process has exited before the ceremony runs; the
+   * refused boot here lives on in this process, its SQLite driver never torn
+   * down (bootstrap failed before any handle came back), and a later boot over
+   * the SAME path met its stale image — measured: the columns back and no
+   * marker. Booting the copied bytes is the operator's sequence.
+   */
+  const migrated = join(dir, 'showcase.migrated.db');
   let refusal: unknown;
 
   afterAll(() => {
@@ -118,9 +127,10 @@ describe('[ADR-0131 D10 item 5] a 17.x database upgrades through the boot refusa
     }
     expect(columnsOf(file, 'sys_migration_journal')).not.toContain('organization_id');
     expect(columnsOf(file, 'sys_metadata')).not.toContain('organization_id');
+    copyFileSync(file, migrated);
   }, 320_000);
 
   it('⭐ 3. the next boot succeeds', async () => {
-    expect(await boot(file)).toBeNull();
+    expect(await boot(migrated)).toBeNull();
   }, 240_000);
 });
