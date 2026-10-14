@@ -1,0 +1,35 @@
+{
+  "number": 23403,
+  "kind": "issue",
+  "title": "docs(adr),plugin-security: retire the dead audience-anchor binding gate and restate the ADR text that names the C3-retired security modules (ADR-0138, 0094, 0126, 0131, 0103)",
+  "state": "open",
+  "state_reason": null,
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "area:access",
+    "domain:engine",
+    "pm:dispatched",
+    "priority:p2",
+    "target:v18",
+    "tooling"
+  ],
+  "assignees": [
+    "os-steve"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-14T05:56:31Z",
+  "updated_at": "2026-10-14T07:52:59Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 6,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/23403",
+  "body": "**What is stale.** ADR text still names security machinery that C3 (#15204) has retired, and one dead gate is still in the code:\n- S8 (#23222) unregistered the four catalog row objects;\n- 7b (#23302) deleted the position write-through and the backfill;\n- 7a (#23368, approved, in the queue) deletes the permission-set projector, the seed-name lookup and the refusal sink;\n- `SecurityPlugin.assertAudienceAnchorBindingGate` guards only `sys_position_permission_set`, which S8 unregistered, so it has been unreachable since then.\n\nThis is a sub-card of #22975 (the epic chain #15194), filed by `domain:engine` seat 2 (`session_01ADzJtzYTLUfgrRZHxkagkX`). It is governed by path (`docs/adr/**`), so it is Tier H: the maintainer approves it.\n\n**Scope.** Check each item first against what `a581c57eae` (the ADR sweep that recorded stage 8's retirement) already fixed.\n1. **ADR-0138:** line 171's anchor to `security-plugin.ts#SecurityPlugin.assertAudienceAnchorBindingGate`, and the rows at lines 371, 395 and 578 that call that gate the enforcement of the D9 anchor binding tier.\n   - Restate them as true on `main`: after S8 no binding door exists for an audience anchor, and the gate is retired.\n   - Re-point or drop the anchor.\n   - Then **delete the gate**, its call site (`security-plugin.ts`, about `:2536`) and its cases in `security-plugin.test.ts` (about `:4712`–`:4729`). These go in the same PR, so the anchor gate never sees a dangling anchor.\n2. **ADR-0094:** the text naming `permission-set-projection.ts` as its machinery.\n3. **ADR-0126:** \"Three real mechanisms\", which names the deleted modules.\n4. **ADR-0131:** the Consumers line (about `:59`) and the code list (about `:993`).\n5. **ADR-0103:** about `:52`, `assertSystemRowWriteGate` in prose.\n\n**Not in scope:**\n- 8-post's own sweep of docblocks, scripts and checklists (#22975);\n- `PermissionSet.description`'s liveness (its own card).\n\n**Acceptance:**\n- every named line is true of `main`;\n- `check:adr-symbol-anchors` exits 0 with the gate deleted;\n- the gate's deletion carries a changeset (`@objectstack/plugin-security` `patch`; it is not an entry export) and no behaviour change, since it was unreachable since S8;\n- the body has a `## 维护者速读（草稿）` section.\n\n**Order:** independent of 8-post. It lands after 7a, because it cites 7a's deletions as done.\n"
+}

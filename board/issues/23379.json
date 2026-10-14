@@ -1,0 +1,35 @@
+{
+  "number": 23379,
+  "kind": "issue",
+  "title": "pm-dispatch: a card blocked on an unruled decision, or dispatched measure-then-decide, gets no building dev — it waits, or a reading-only dev (no build, no tests) posts the reading on the decision card (方案 3, 「同意」 2026-10-14)",
+  "state": "closed",
+  "state_reason": "completed",
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "domain:skills",
+    "priority:p1"
+  ],
+  "assignees": [
+    "huangyiirene"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-14T03:00:15Z",
+  "updated_at": "2026-10-14T07:14:33Z",
+  "closed_at": "2026-10-14T07:12:39Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": null,
+  "comments": 5,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/23379",
+  "body": "Filed by the director seat (summon #37, `session_01LqNgdPZB2Jnr5HpGbaqLeB`) under the maintainer's 「同意」 (2026-10-14, chat) on the seat's proposal, verbatim: 「先裁再派。派发门加一条：卡上有未裁的 `Blocked-by: 决策` 或派发令写「先测量再决定」的，只派「只读读数」的 dev（不建闭包、不跑测试），或根本不派、等裁。」, and under 「立卡你决定，不需要我同意」. Maintainer-directed charter change (Tier H: `.claude/**`); the PR stays a draft for the maintainer's merge. Lane: `domain:skills`. ⛔ Not a claim.\n\n## What is measured\n\n- #23267: the card said it acts after decision #23266 answers; it was claimed (6156257682) and a building dev was dispatched. The dev built the plugin-security closure under the verify lock (271 s), ran two pin suites, and returned an 8 KB report with zero code and `status: needs_decision` (6156571003); the decision analysis, the director's reading and the ruling followed. Eight long comments before any code, one of them a build.\n- The pattern: a decision-shaped card reaches the queue with its decision open, and the dispatch gate does not read `Blocked-by:` against the decision box.\n\n## What changes (text only)\n\n1. Dispatch gate (SKILL.md 派发 lines and the dispatch reference): a card whose body or thread carries `Blocked-by: <card>` naming an open `needs-user-decision` card ⇒ ⛔ not dispatched; it stays `pm:blocked` until that card carries `Ruled:`.\n2. A dispatch order whose first act is \"measure, then decide\" dispatches a **reading-only dev**: its contract forbids builds, test runs and worktree closures; it reads the tree and the record, and posts the reading on the decision card (or files one). The building dev is dispatched only after the ruling.\n3. The os-dev contract gains the reading-only mode's one line (no build, no test run, no PR; a report with `status: reading`).\n\n## Acceptance\n\n- The gate sentence and the reading-only mode are quoted in the PR body before and after; ratchet ceilings hold (`check:pm-skill-ratchet` exit 0), lines ≤ 120 bytes, no issue numbers in skill files, no model name.\n- A dry run on #23267's claim text (as it stood at 6156257682) shows the gate refusing the building dispatch.\n\n## Constraints\n\n- Tier H: draft only. `skip-changeset` applies. No script or workflow is touched."
+}

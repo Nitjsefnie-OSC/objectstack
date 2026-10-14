@@ -14,18 +14,21 @@
     "area:access",
     "bug",
     "domain:spec",
-    "pm:queue",
-    "priority:p3"
+    "pm:dispatched",
+    "priority:p1",
+    "target:v18"
   ],
-  "assignees": [],
+  "assignees": [
+    "huangyiirene"
+  ],
   "milestone": null,
   "type": null,
   "created_at": "2026-10-13T08:53:40Z",
-  "updated_at": "2026-10-13T09:56:32Z",
+  "updated_at": "2026-10-14T07:39:50Z",
   "closed_at": null,
   "closed_by": null,
   "merged_at": null,
-  "comments": 1,
+  "comments": 3,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/23210",
   "body": "Filing gate: **(c) a trap that lets an author, or an AI, write metadata the runtime refuses**. `reach:` the authoring doors `defineStack` and the security-posture rules that `os validate` runs, on the published `objectExtensions` surface (`examples/app-showcase` authors it). Measured by probes against source at PR #23179's head `6582c1f0d` (dev report `6141838120` on #23100, out-of-scope finding 1). No measured producer writes the trap shape today: HotCRM at `0f84c9c` declares no `objectExtensions`, and the showcase's entries add no `master_detail`. Reader who acts: triage, to grade and route (`packages/spec` and `packages/lint` are both `domain:spec`); then the owning seat.\n\nFiled by `domain:spec` seat 2 (#18549) · `os-justin` · session `session_01BRQ9Mp1yH7R1az6MaUM18H`. ⛔ Not a claim.\n\n## What happens\n\nThe stack, in short:\n\n- `objects`: `cbpx_header`, `cbpx_other`, and `cbpx_line` with `sharingModel: 'controlled_by_parent'` and one required `master_detail` field `header` pointing at `cbpx_header`.\n- `objectExtensions`: `[{ extend: 'cbpx_line', fields: { other: { type: 'master_detail', reference: 'cbpx_other', required: true } } }]`.\n\nMeasured at `6582c1f0d`:\n\n- `defineStack` returns clean, and `ObjectStackDefinitionSchema.safeParse` succeeds.\n- `validateSecurityPosture` (`packages/lint`) returns no controlled-by-parent finding.\n- At boot the merge gives `cbpx_line` two required `master_detail` fields. With PR #23179 the runtime derives no master from that shape. Every read is denied, every write answers `422 INVALID_METADATA`, and the only signal is the once-per-object warn.\n- **Control:** the same merged object declared as one object is refused by `defineStack` (`objects.2.fields: … with 2 required master_detail fields (header, other)`) and by the lint (`security-controlled-by-parent-ambiguous-relation`).\n\nSo the extension door carries a shape that both authoring doors refuse when it is written directly. On `main` without PR #23179, the runtime instead picks one of the two by field order, the tier that PR retires. That consequence was read from code, not measured.\n\n## Where\n\n- The merge runs only at boot: `packages/objectql/src/engine.ts` (`:7487`–`:7489` on `origin/main` at `150da61aa`) registers each `manifest.objectExtensions` entry onto its target.\n- `packages/lint/src/validate-security-posture.ts` and `packages/cli/src/commands/validate.ts` never read `objectExtensions` (`git grep -c` on `origin/main`: 0 hits in each).\n- Sibling lint rules already treat extensions as a blind spot by design. `validate-object-references.ts:293` says \"`objectExtensions[].fields` is deliberately NOT walked\", and `validate-field-consumers.ts:167` says object extensions \"are not judged\". An extension usually targets an object another package owns, which the stack in hand cannot see. In this case the target is in the same stack.\n\n## Acceptance\n\n- When an `objectExtensions` entry's target is visible to the door (declared in the same stack, or in a `packages[]` manifest the door already folds), the controlled-by-parent master rule judges the merged field set. A `controlled_by_parent` object that ends up with anything but exactly one required `master_detail` is refused at the same door, with the same issue, as the directly declared shape.\n- A target that the door cannot see stays unjudged, as today. The runtime's fail-closed refusal and its warn remain the backstop.\n- Pins: the probe stack above is refused, and its control is unchanged. A routing alternative is for the extension schema to refuse a `master_detail` field onto any target. That changes the published surface, and triage or the owning seat decides it.\n\n## Dedupe\n\nMCP `search_issues` on objectstack-ai/objectstack, closed included:\n\n- `objectExtensions extension adds second master_detail to controlled_by_parent object, parse and lint do not merge extensions` → 7 hits: #23100 (the carrier PR's card; not this door), #22111, #9139, #9138, #7503 (lint and builder rules on directly declared objects), #8027 and #12680 (extension merge defects at runtime).\n- `objectExtensions merged shape not validated defineStack lint` → 16 hits, none about judging an extension's merged fields.\n- `objectExtensions fields not judged by validation until runtime merge` → #8027 and #12680 only.\n\nNone is this. Control: the queries reach the controlled-by-parent family (#7503, #9139) and the extension-merge family (#8027).\n\nDedupe words: controlled_by_parent objectExtensions second master_detail; extension merged field set sharingModel parse; posture lint objectExtensions blind.\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_"

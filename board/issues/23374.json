@@ -1,0 +1,36 @@
+{
+  "number": 23374,
+  "kind": "issue",
+  "title": "skills(objectstack-automation references): examples-flows.md and state-machines-and-approvals.md still teach the single-brace `{…}` filter spelling the platform refuses; write the CEL envelope and the `{today}` placeholder (sub-issue of #22585)",
+  "state": "closed",
+  "state_reason": "completed",
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "documentation",
+    "domain:skills",
+    "priority:p2"
+  ],
+  "assignees": [
+    "huangyiirene"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-14T02:41:04Z",
+  "updated_at": "2026-10-14T08:02:47Z",
+  "closed_at": "2026-10-14T07:58:51Z",
+  "closed_by": {
+    "login": "os-zhuang",
+    "id": 277994282,
+    "type": "User"
+  },
+  "merged_at": null,
+  "comments": 6,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/23374",
+  "body": "Part of #22585\n\nSub-issue of #22585, filed by `domain:skills` seat 1 (seat post #7623, `session_013zGKMG1cRedVzWtqGGGZW9`, huangyiirene) from the round-1 dev report on that card (6158346331, `out_of_scope_findings`, class a · reach: named producer). Filing gate: a published defect the parent's PR touched the class of but not the files — the parent's claim surface was `skills/objectstack-automation/SKILL.md`, its eval file and `skills/objectstack-query/rules/filters.md`; these two reference files ship in the same `@objectstack/skills` tarball and still teach the spelling the parent removed. ⛔ Not a claim; triage grades on first touch.\n\n**Reader who acts:** this lane's seat, after PR #23355 (#22585) is on `main` — the remedies below are the spellings that PR teaches. **Surface:** `skills/objectstack-automation/references/examples-flows.md` and `skills/objectstack-automation/references/state-machines-and-approvals.md` (published, Tier H). ⛔ No `SKILL.md`, no `packages/**`.\n\n## Why (measured on `origin/main` `18cd410dc4`, 2026-10-14)\n\n- `references/examples-flows.md` still writes the retired single-brace flow token at CRUD filter operands and in prose: line 41 `due_date: { $lt: '{TODAY()}' }`, lines 119–121 `{TODAY() + 7}` … `{TODAY() + 61}` at `end_date` operands, line 126 \"Use `{TODAY() + N}` template tokens\", line 79 \"`{record.*}` interpolation\". The platform refuses every one of them at a filter operand (`expression-invalid`, naming the CEL envelope); `TODAY()` is not a query placeholder (`isKnownFilterToken`, `packages/spec/src/data/context-tokens.zod.ts:332`; the known date macros are the lowercase `DATE_MACRO_TOKENS` of `date-macros.zod.ts:126`, and `context-tokens.zod.ts:209–220` names `{TODAY()}` as the unknown-token example).\n- `references/state-machines-and-approvals.md:120` writes `filter: { id: '{record.id}' }` in an `update_record` example — refused since stage S6 of the retirement.\n- Both files are shipped verbatim to every project that installs `@objectstack/skills`; an AI author copying the example gets a refused node.\n\n## What done looks like\n\n- `examples-flows.md`: the plain macro becomes the query placeholder `'{today}'`; an offset becomes a CEL envelope, `{ dialect: 'cel', source: 'isoDate(daysFromNow(7))' }` (the parent PR's spelling, from `flow-value-slot-template.ts`); the prose sentence at line 126 and the `{record.*}` phrase at line 79 say \"a CEL value envelope\" instead of a template token. `state-machines-and-approvals.md:120`: `filter: { id: { dialect: 'cel', source: 'record.id' } }`.\n- Token ratchet: `examples-flows.md` headroom 10, `state-machines-and-approvals.md` headroom 7 at filing (`node scripts/check-skills-token-ratchet.mjs`); an envelope is longer than a token, so each file pays by deleting a restated sentence in the same file, named with its home in the PR body; ⛔ no ceiling raise.\n- `check:skill-docs`, `check:skill-refs`, `check:skills-token-ratchet`, `check:skill-compatibility` green; `pnpm --filter @objectstack/spec run check:skill-examples` green (the prose examples type-check); changeset `patch` for `@objectstack/skills`.\n- Tier H (`skills/**`): the PR stays draft with the 速读 draft; the seat requests review from the approvers.\n\n**Workload:** S; precedent PR #23355 (the parent).\n\n## 四维(业务立场)\n\n- 长远合理性:参考文件与主文件一种写法,都是平台今天接受的;教被拒的写法是负价值。\n- 实际业务拉动:装了 `@objectstack/skills` 的项目逐字读到这两处示例,照抄即被 `objectstack validate` 拒收。\n- 防 AI 犯错:示例写成信封,AI 无从再写出单花括号;不加门禁,靠文本正确。\n- 创业阶段不扩散:两个文件、几行示例;ratchet 内支付,不抬上限。\n\nDedupe: lane listing `labels=domain:skills&state=all&since=2026-09-20` grepped for `examples-flows|state-machines-and-approvals|single-brace|TODAY()|{record.id}` (100 cards) — hits: the parent #22585 (open; its PR #23355 did not touch these files, the claim's declared surface), #22454 and #22260 (closed; both fixed `SKILL.md` and the eval, not the reference files), #22631 and #20657 (closed; other sentences of the same skill). None covers these two files. Dedupe words: examples-flows TODAY filter envelope · state-machines filter record.id envelope · automation references single-brace.\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_"
+}

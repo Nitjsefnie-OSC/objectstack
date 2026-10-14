@@ -1,0 +1,31 @@
+{
+  "number": 23420,
+  "kind": "issue",
+  "title": "post-stamped --comment: a decision analysis anchored on a card must carry the `os-decision-facets` token, refused without it (follow-up of the handover check's recall)",
+  "state": "open",
+  "state_reason": null,
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "domain:skills",
+    "pm:queue",
+    "priority:p3",
+    "tooling"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-14T07:33:01Z",
+  "updated_at": "2026-10-14T07:33:01Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 0,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/23420",
+  "body": "**The problem in one sentence:** the pre-handover check (`scripts/pm/check-handover.mjs`, PR #23417, ruling 6162084315 on #23396) recognises a pending decision by the `os-decision-facets` token in the seat's analysis comment, but the two analyses that shift actually left outside the inbox (6141962120 on #23193, 6147446653 on #23169) carried no token, so the check as ruled would not have fired on the case it was built for.\n\nFiled by the director seat (summon #37, `session_01LqNgdPZB2Jnr5HpGbaqLeB`) as the carrier of the #23396 dev's open question 2, option C, ruled \"A now, C as a follow-up card\" in the dispatch. ⛔ Not a claim.\n\n## Governing text\n\n- `SKILL.md:230`: a decision is anchored on its card (analysis as a comment, Chinese; `needs-user-decision`, out of the active queue).\n- `references/decision-analysis.md`: the four-facet block (`<!-- os-decision-facets -->` / `os-decision-facets`) is a filing duty of every decision analysis; the director's batch comment is a delta over it.\n- `scripts/pm/post-stamped.mjs`: the write-side refusals (`[mixed]`, the vacant-ledger refusal of PR #23417) are the precedent shape: pure core, offline, pinned by `--self-test`, `EXIT_REFUSED`, nothing written.\n- `scripts/pm/check-handover.mjs` (PR #23417): `decisionOutsideInbox` keys on `hasDecisionFacetMarker`.\n\n## Scope\n\n1. `post-stamped.mjs --comment` refuses a comment that is a decision analysis without the facet token. \"Is a decision analysis\" needs a predicate the dev defines from the live corpus and states in the PR body: candidates are the `## 席位意见` / `## Seat reading` / `## Decision analysis` headings, an options table with the 选项 × 代价 × 工作量 columns, or the 推荐 line; measure the predicate over the last 200 fleet-bot comments on decision cards (`needs-user-decision`, open and closed) and report hits, misses and false positives before choosing.\n2. The refusal names the remedy (append the four-facet block) in the same shape as the other refusals; self-test one refused, one accepted, one non-analysis comment untouched.\n3. `references/decision-analysis.md` gains no new line unless a twin must move (ratchet: net-zero).\n\n## Not in scope\n\n- Re-reading old analyses: the check's recall on history is the filing duty's, not this card's.\n- Any CI workflow; the refusal is local, write-side.\n\n## Acceptance\n\n- The predicate's measured hit/miss table is in the PR body.\n- `node scripts/pm/post-stamped.mjs --self-test` exit 0 with the new cases; `pnpm -s check:pm-skill-ratchet` exit 0.\n- The two measured analyses above, replayed through the predicate, are refused; the director's delta readings (which carry the facet block) pass.\n\n## Dedupe\n\nListed the open `domain:skills` cards (#23410, #23409, #23396, #23381, #23378, #23377, #23374, #23352, #22060, #17161): none is this. The search API is not available to this session, so the listing is the dedupe.\n\nRelated: #23396 · PR #23417 · #23193 · #23169."
+}

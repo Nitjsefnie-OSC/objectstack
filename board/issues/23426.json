@@ -1,0 +1,31 @@
+{
+  "number": 23426,
+  "kind": "issue",
+  "title": "dispatch-gates.mjs: the `CONTRACT_REVIEW_TIER` docblock still keys the contract review by lane (\"the spec and skills lanes' review of every round they deliver\"); restate it by face after PR #23389",
+  "state": "open",
+  "state_reason": null,
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "domain:skills",
+    "pm:queue",
+    "priority:p3",
+    "tooling"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-14T08:03:30Z",
+  "updated_at": "2026-10-14T08:03:30Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 0,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/23426",
+  "body": "**The problem in one sentence:** PR #23389 (#23352, ruling 6159870311, letter B′ with C) made the contract review's tier follow the face that made it owed, and rewrote the `--tier` note, the `CHANGE_KIND_ROWS` docblock and the three charter files to say so; the docblock of `CONTRACT_REVIEW_TIER` itself (`scripts/pm/dispatch-gates.mjs`, the paragraph above the value line, about 11620–11640 on `main` `4f81f3152`) still says the tier is \"both halves of it — the spec and skills lanes' review of every round they deliver\", the lane key retired on 2026-09-21 (#19496 R5) and again by #23389.\n\nFiled by the director seat (summon #37, `session_01LqNgdPZB2Jnr5HpGbaqLeB`) as the carrier named in #23389's ACCEPT (6161026281) and 终稿 (6161021893): the one lane-keyed passage #23389 left, outside its claimed surface. ⛔ Not a claim.\n\n## Scope\n\n1. The first paragraph of the `CONTRACT_REVIEW_TIER` docblock: the constant is the tier of a contract review owed by the published-schema face or the governed-rules-text face (`reviewFace` in `record-recognisers.mjs` holds the mapping); a review owed by the `Clause-②: yes` declaration alone is served at `TIER_DEFAULT` by the lane seat; the sentence on widening vs narrowing and on spec-lane routing stays as the `--tier` note now spells it. No lane names the tier.\n2. Nothing else in the docblock moves: the retirement rule (a tier is retired only by a maintainer ruling that names a retirement; a 429 or a missing authorization is never one) and the quoted rulings stay verbatim.\n3. ⛔ The value line does not move; ⛔ no issue number is added to a skill file; `scripts/pm/**` is not on the governed register (ordinary landing path).\n\n## Acceptance\n\n- The paragraph quoted before → after in the PR body; `node scripts/pm/dispatch-gates.mjs --self-test` fast tier exit 0 (and the full tier if the data file is touched, which it should not be); `pnpm -s check:pm-dispatch-gates` exit 0; `node scripts/pm/record-recognisers.mjs --self-test` exit 0.\n- A grep of `scripts/pm/dispatch-gates.mjs` for \"spec and skills lanes\" finds no hit.\n\n## Note for the seat, not in scope\n\nThe same docblock quotes the maintainer's 2026-09-22 ruling verbatim in a code comment, and the quotation carries a model word. AGENTS.md's rule keeps model identifiers out of code comments; whether a verbatim ruling quotation in the one value-site file is an exception is the maintainer's reading, not this card's.\n\n## Dedupe\n\nOpen `domain:skills` cards read: #23423, #23420, #23410, #23409, #23396, #23381, #23378, #23377, #23374, #22060, #17161; none is this (#23352 closed on #23389's landing). The search API is not available to this session.\n\nRelated: #23352 · PR #23389 · #19496 · 5771798588."
+}

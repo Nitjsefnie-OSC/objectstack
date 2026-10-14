@@ -1,0 +1,31 @@
+{
+  "number": 23423,
+  "kind": "issue",
+  "title": "pm-dispatch twins after PR #23417: os-dev.md's `carrier:` definition (将碰该文件的 PR 或人) and seat-post-protocol.md:29's list of what `post-stamped --body` intercepts restate what the handover PR changed",
+  "state": "open",
+  "state_reason": null,
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "domain:skills",
+    "pm:queue",
+    "priority:p3",
+    "tooling"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-14T07:54:34Z",
+  "updated_at": "2026-10-14T07:54:34Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 0,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/23423",
+  "body": "**The problem in one sentence:** two lines outside PR #23417's claimed surface still say the older rule it changed: `.claude/agents/os-dev.md:53` defines `carrier:` as 「将碰该文件的 PR 或人」, which read loosely is the \"next PR touching X\" that `filing-gate.md` now says is not a carrier (#23396, ruling 6162084315); and `.claude/skills/pm-dispatch/references/seat-post-protocol.md:29` lists what `post-stamped --body` intercepts (unread knocks) without the new vacant-ledger refusal.\n\nFiled by the director seat (summon #37, `session_01LqNgdPZB2Jnr5HpGbaqLeB`) as the carrier of the #23396 dev's two out-of-scope findings (round-1 report 6163195402), under the same ruling's sentence that a follow-up a landed work item owes is filed as a card. ⛔ Not a claim.\n\n## Scope\n\n1. `.claude/agents/os-dev.md:53`: the `carrier:` definition names a card number or a person, never \"the PR that will touch the file\"; one line, net-zero if the file is at its ratchet ceiling.\n2. `seat-post-protocol.md:29`: the intercept list names the vacant-ledger refusal beside the unread-knock interception; the file is at its ceiling (91/91), so the words come out of the same line.\n3. Nothing else; `check:pm-skill-ratchet`, `check:pm-skill-id-lint`, `check:skill-frame-sync` exit 0.\n\n## Acceptance\n\n- Both lines quoted before → after in the PR body; no issue number in either file; ≤ 120 bytes per line.\n- `.claude/**`: governed whole, Tier S, lands on an at-tier review of record and the queue.\n\n## Dedupe\n\nOpen `domain:skills` cards read: #23420, #23410, #23409, #23396, #23381, #23378, #23377, #23374, #23352, #22060, #17161; none is this. The search API is not available to this session.\n\nRelated: #23396 · PR #23417 · #23420."
+}

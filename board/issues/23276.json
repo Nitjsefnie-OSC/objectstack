@@ -2,8 +2,8 @@
   "number": 23276,
   "kind": "issue",
   "title": "skills(objectstack-upgrade, catalog READMEs): the upgrade playbook gains the 17→18 skills step and the two READMEs teach the scaffolder's pinned --copy sync (ruling A on #22649, second pass)",
-  "state": "open",
-  "state_reason": null,
+  "state": "closed",
+  "state_reason": "completed",
   "draft": null,
   "author": {
     "login": "objectstack-fleet[bot]",
@@ -14,7 +14,6 @@
     "area:devpath",
     "documentation",
     "domain:skills",
-    "pm:dispatched",
     "priority:p2"
   ],
   "assignees": [
@@ -23,11 +22,15 @@
   "milestone": null,
   "type": null,
   "created_at": "2026-10-13T13:40:03Z",
-  "updated_at": "2026-10-14T02:21:42Z",
-  "closed_at": null,
-  "closed_by": null,
+  "updated_at": "2026-10-14T02:45:14Z",
+  "closed_at": "2026-10-14T02:43:12Z",
+  "closed_by": {
+    "login": "os-zhuang",
+    "id": 277994282,
+    "type": "User"
+  },
   "merged_at": null,
-  "comments": 5,
+  "comments": 6,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/23276",
   "body": "Filing gate **③ a task the maintainer directed.** The maintainer, in the skills seat's session chat on 2026-10-13: 「评估升级到 v18 之后 ,skills 官方应该从 npm 安装,模版项目的 skills 安装流程,文档相关的说明应该如何修正」, and on the seat's evaluation: 「评估里两张卡同意立」. Filed by `domain:skills` seat 1 (seat post #7623, `session_013zGKMG1cRedVzWtqGGGZW9`, huangyiirene). Ruling-ref: 6096124407 (ruling A on #22649). ⛔ Not a claim.\n\n**Reader who acts:** this lane's seat, once PR #23248 (#22659) is on `main` — the pinned command spelling is that PR's. **Surface:** `skills/objectstack-upgrade/SKILL.md` (published, Tier H; read its token headroom at dispatch with `node scripts/check-skills-token-ratchet.mjs` — an added step is paid under the ratchet, ⛔ no ceiling raise), `skills/README.md` (ships inside `@objectstack/skills`; Tier H), `packages/skills/README.md`. ⛔ No `content/docs/**` — that is the devx lane's sibling card, filed in the same act.\n\n## Why (measured on `origin/main` `afbf960c`, 2026-10-13)\n\n- `skills/objectstack-upgrade/SKILL.md` has no step for the skills themselves: `grep -n -iE 'skills (add|sync|install)|@objectstack/skills|\\.claude/skills' skills/objectstack-upgrade/SKILL.md` → 0 lines (positive control: `grep -c 'os migrate meta' skills/objectstack-upgrade/SKILL.md` → non-zero). An agent running the upgrade playbook moves the metadata and the packages and leaves the 17.x-era skill text in `.claude/skills/`; a 17.x project's skills came from `skills add` (GitHub `main`), their `skills-lock.json` entries read `sourceType: github`, and `experimental_sync` skips them with `Skipped … installed with skills add`, exit 0 (PR #23248's measurement).\n- `skills/README.md:12` and `packages/skills/README.md:31` teach the linked sync (`npx skills experimental_sync --agent claude-code -y`), unpinned and without `--copy`; the scaffolder (PR #23248) runs `npx -y skills@1.7.2 experimental_sync --agent claude-code --copy -y`, and the `AGENTS.md` it writes says to keep `--copy`. In a committed project the linked form leaves dangling links after a clone (PR #23248's measurement: 6 links, 0 `SKILL.md`).\n\n## What done looks like\n\n- The upgrade skill's preflight (or its acceptance section) gains one step for the skills: remove the GitHub-installed catalog (`npx skills remove` of the ten `objectstack-*` skills, or `--all` when only this catalog was installed), install `@objectstack/skills` at the installed spec's version, run the pinned sync with `--copy`; the step says why in one sentence (the lock's `sourceType: github` makes the sync skip them). Lines are paid under the token ratchet; the PR body reports the whole-file and whole-package before/after token readings.\n- Both READMEs give the scaffolder's exact spelling (pinned CLI, `--copy`), read from `packages/create-objectstack/src/skills-install.ts` on the tree at dispatch; the linked form is dropped, or kept as one sentence for a project that does not commit its skills.\n- `check:skill-compatibility`, `check:skill-docs`, `check:skill-refs`, `check:skills-token-ratchet`, `check:published-readme-links`, `check:published-readme-exports` green (the generated index block of `skills/README.md` untouched); changeset `patch` for `@objectstack/skills` (its README and the catalog text ship in the tarball).\n- Tier H (`skills/**`): the PR stays draft with the 速读 draft; the seat requests review from the approvers.\n\n**Workload:** S; precedents PR #23232 (the two READMEs) and PR #22846 (one automation SKILL.md edit within headroom).\n\n## 四维(业务立场)\n\n- 长远合理性:升级手册与安装说明都只写终态——技能是随 `@objectstack/*` 一起装、一起升的包。\n- 实际业务拉动:17.x → 18 的升级者按今天的 upgrade 技能走完,`.claude/skills/` 里仍是 17.x 的技能文本,且 sync 静默跳过(实测)。\n- 防 AI 犯错:先 remove 再 sync,无静默跳过;`--copy` 无悬空链接;README 与 scaffolder 一种拼写。\n- 创业阶段不扩散:一步、一句、一种拼写;不加门禁。\n\nDedupe: REST listing `labels=domain:skills&state=all&since=2026-09-20` (252 cards) and `labels=domain:devx&state=all&since=2026-09-20` (278 cards), grepped for `--copy|experimental_sync|skills install|upgrade skill|objectstack-upgrade|upgrading.mdx|install the catalog|skills add` → 17 and 9 hits; #22123 and #22120 (closed) fixed other upgrade-skill sentences, #22668 (closed) was the first docs pass; none adds the skills step or the `--copy` spelling. Dedupe words: objectstack-upgrade skills step · README --copy · skills@1.7.2 pin · catalog reinstall on a major upgrade.\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_"

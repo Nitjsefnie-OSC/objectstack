@@ -2,7 +2,7 @@
   "number": 23355,
   "kind": "pull_request",
   "title": "skills(automation): value slots take a CEL envelope or a literal; the single-brace dialect leaves the skill text",
-  "state": "open",
+  "state": "closed",
   "state_reason": null,
   "draft": false,
   "author": {
@@ -21,10 +21,14 @@
   "milestone": null,
   "type": null,
   "created_at": "2026-10-14T00:42:50Z",
-  "updated_at": "2026-10-14T02:15:33Z",
-  "closed_at": null,
-  "closed_by": null,
-  "merged_at": null,
+  "updated_at": "2026-10-14T02:37:04Z",
+  "closed_at": "2026-10-14T02:37:02Z",
+  "closed_by": {
+    "login": "os-zhuang",
+    "id": 277994282,
+    "type": "User"
+  },
+  "merged_at": "2026-10-14T02:37:02Z",
   "comments": 2,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/pull/23355",

@@ -1,0 +1,35 @@
+{
+  "number": 23378,
+  "kind": "issue",
+  "title": "os-dev verification: local = the changed packages' typecheck and tests plus the gate families reading changed files; the derived sweep is CI's, read from check-runs; ablations only where a tested behaviour changes (方案 4, 「同意」 2026-10-14)",
+  "state": "closed",
+  "state_reason": "completed",
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "domain:skills",
+    "priority:p1"
+  ],
+  "assignees": [
+    "huangyiirene"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-14T02:59:50Z",
+  "updated_at": "2026-10-14T08:03:08Z",
+  "closed_at": "2026-10-14T07:58:51Z",
+  "closed_by": {
+    "login": "os-zhuang",
+    "id": 277994282,
+    "type": "User"
+  },
+  "merged_at": null,
+  "comments": 5,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/23378",
+  "body": "Filed by the director seat (summon #37, `session_01LqNgdPZB2Jnr5HpGbaqLeB`) under the maintainer's 「同意」 (2026-10-14, chat) on the seat's proposal, verbatim: 「dev 本地验证瘦身，CI 是证据。本地只跑改动包的 typecheck 和测试、以及读到改动文件的门禁族；全量门禁族交给 PR 的 CI check-runs，ACCEPT 读 check-runs（复审员已经这么做）。消融只在「改的是有测试钉住的行为」时做，配置、脚本、文档改动不做。」, and under 「立卡你决定，不需要我同意」. Maintainer-directed charter change (Tier H: `.claude/**`); the PR stays a draft for the maintainer's merge. Lane: `domain:skills`. ⛔ Not a claim.\n\n## What is measured (this summon's dev reports)\n\n- Every dev runs the derived gate sweep locally and reconciles it: 39 to 87 commands per PR (`dispatch-gates --commands` then `--ran`), each output read by the dev; CI runs the same families again on the PR.\n- Ablations are demanded whatever the change: five ablations with proven restores on a reporter script (cloud#2806's dev); ablations on vitest configs (cloud#2820).\n- The same reviewer rule already exists for the at-tier review since #19496 R5 (「只读 diff 与卡片，check 结论取 head 的 check-runs，⛔ 永不本地重跑派生门禁族」): the dev has not got it.\n\n## What changes (text only)\n\n1. `.claude/agents/os-dev.md`: the dev's local evidence = the changed packages' typecheck and tests, plus the gate families whose declared population reads a changed file (the derivation `dispatch-gates --commands` already narrows by diff; the lead list is CI's). The `gates` field of the report cites the PR's check-runs for every family CI runs; `--ran` reconciliation covers the local subset only.\n2. The ablation rule: one ablation per behaviour the diff changes that a test pins; none for configuration, scripts, workflows, docs or prose; the restore proof stays as it is where an ablation is run.\n3. The families that exist only locally (no CI step runs them) are enumerated once in the reference the dev reads, and stay local.\n4. The dispatching seat's ACCEPT reads the PR's check-runs as the gate evidence (the reviewer's R5 shape), not the dev's transcript of a local sweep.\n\n## Acceptance\n\n- The three rule sentences above are quoted in the PR body before and after; `os-dev.md` and the touched references stay within their ratchet ceilings (`pnpm -s check:pm-skill-ratchet` exit 0), lines ≤ 120 bytes, no issue numbers in skill files (`check:pm-skill-id-lint`), no model name anywhere.\n- The local-only family list exists and names each family and why CI cannot run it.\n- A dev report rendered under the new contract (the next dispatched card) shows `gates` citing check-runs and a local subset; the ACCEPT quotes the check-runs.\n\n## Constraints and out of scope\n\n- `scripts/pm/dispatch-gates.mjs` derivation and CI's `select-gate-families` stay as they are; this card changes who runs what, not what exists.\n- Tier H: draft only; no seat readies, queues or approves it. `skip-changeset` applies."
+}

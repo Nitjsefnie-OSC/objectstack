@@ -1,0 +1,35 @@
+{
+  "number": 23380,
+  "kind": "issue",
+  "title": "director: one analysis per decision card — the filing seat's six items are the card; the director's 席位意见 is a delta (premises, 推荐/回退/口径), full 四维 only on dissent; the chat batch keeps six items (方案 2, 「同意」 2026-10-14)",
+  "state": "closed",
+  "state_reason": "completed",
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "domain:skills",
+    "priority:p2"
+  ],
+  "assignees": [
+    "huangyiirene"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-14T03:00:44Z",
+  "updated_at": "2026-10-14T06:25:56Z",
+  "closed_at": "2026-10-14T06:18:47Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": null,
+  "comments": 4,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/23380",
+  "body": "Filed by the director seat (summon #37, `session_01LqNgdPZB2Jnr5HpGbaqLeB`) under the maintainer's 「同意」 (2026-10-14, chat) on the seat's proposal, verbatim: 「决策卡只写一层分析。立卡席位的四维就是卡面；我的席位意见改成「前提复核 + 推荐 + 口径」的增量，只在不同意时才展开四维。」, and under 「立卡你决定，不需要我同意」. Maintainer-directed charter change (Tier H: `.claude/**`); the PR stays a draft for the maintainer's merge. Lane: `domain:skills`. ⛔ Not a claim.\n\n## What is measured\n\n- #23267: triage grade, re-block, unlock, claim, dev report, the spec seat's full decision analysis (six items + 四棱), the director's full reading (四维 again), the ruling: eight long comments. #23268: five. On both, the director's reading restated the seat's 四维 with the same conclusions.\n- The maintainer reads the chat batch (six items per card, 「按照总监决裁格式，详细呈给我」), not the card's duplicate.\n\n## What changes (text only)\n\n1. `references/decision-analysis.md` 常设决裁批流程: the card's analysis is written once, by the filing seat (six items + 四棱, as today). The director's card comment before the batch is a **delta**: the premises re-checked with commands, agreement or dissent per 四棱 line, 推荐 + 回退 + 口径. The full 四维 is written only when the director dissents from the seat's letter.\n2. `references/lanes/director.md`: the chat presentation of a batch keeps the six items per card (the maintainer's instruction), built from the card's analysis plus the delta; the ruling record stays as it is (the fixed first line, `Ruled:` on the body, the workload line).\n3. A length guide for the delta (the file's own line cap applies to the rule, not to comments): the delta names what it re-checked, not what it agrees with.\n\n## Acceptance\n\n- The two rule sentences are quoted in the PR body before and after; ratchet ceilings hold (`check:pm-skill-ratchet` exit 0); lines ≤ 120 bytes; no issue numbers in skill files; no model name.\n- The next decision batch's card comments by the director are deltas, with one dissent (if any) carrying the full 四维.\n\n## Constraints\n\n- Tier H: draft only. `skip-changeset` applies. The 四棱 block, `Prior rulings read:` and the ruling record's shape are unchanged."
+}

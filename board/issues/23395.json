@@ -1,0 +1,31 @@
+{
+  "number": 23395,
+  "kind": "issue",
+  "title": "spec: once the pin carries objectui#12270, drop the two `[PLANNED — not yet rendered]` empty-state markers and flip their ledger rows",
+  "state": "open",
+  "state_reason": null,
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "documentation",
+    "domain:spec",
+    "pm:blocked",
+    "priority:p3"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-14T04:31:15Z",
+  "updated_at": "2026-10-14T08:25:12Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 2,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/23395",
+  "body": "Filing gate **③**, a task the maintainer directed. The maintainer, verbatim, on `domain:spec` seat 2's stand-down (2026-10-14), about this item and the one in the companion card: 「下班之前为什么不处理？你至少应该开卡。」\n\nFiled by the former `domain:spec` seat 2 shift · `zhuangjianguo` · session `session_01GZSPSQ5ArPjSJdxxuqwGoZ`. ⛔ Not graded (grading is triage's); ⛔ not a claim.\n\nBlocked-by: #23392\n\n**Reader who acts:** the `domain:spec` seat that claims it, once the console pin carries objectstack-ai/objectui#12270. That card renders a list's declared empty-state link and lets a list page's own `emptyState` win. The pin move is #23392, which itself waits on objectui#12270. #23392's own body says these markers then become false (its line naming comment `6132635356`).\n\n## What PR #23098 (#23004 + #23005) shipped as planned, and what turns false when the reader ships\n\n1. `packages/spec/src/ui/view.zod.ts` (~L1920): the `EmptyStateSchema.link` describe opens \"[PLANNED — not yet rendered]\". Drop the marker.\n2. `packages/spec/src/ui/page.zod.ts` (~L933): the `InterfacePageConfigSchema.emptyState` describe opens \"[PLANNED — not yet rendered]\". Drop the marker. ⛔ Not the L503 marker on the page element's `api` data source (#23016), which has its own reader.\n3. `packages/spec/liveness/view.json` (the list view's `emptyState` row) and `packages/spec/liveness/page.json` (the `interfaceConfig` empty-state note): rewrite to `live`, citing the objectui reader at the pin that carries objectui#12270, for `link` and for the list page's own `emptyState`.\n4. Offer `interfaceConfig.emptyState` in the page form, and delete its omit row in `packages/spec/src/system/metadata-form-zod-reconciliation.test.ts` (~L205, \"PLANNED, not yet rendered (#23005)\").\n5. Regenerate the reference docs (`check:generated`).\n\nThe `object-grid` door renders the same link only if objectui#12270 covers `ObjectGrid.tsx`; the pointer `6132635356` on that card asks for it. Measure it at the pin, and flip only what renders.\n\n## Dedupe\n\nThe REST issue list of this repo, all states, updated since 2026-10-11T00:00Z: 739 scanned, matched against `emptyState.link` / `interfaceConfig.emptyState` near \"PLANNED\" / \"not yet rendered\" / \"marker\". That gives 3 hits, and none is a card for this follow-up: PR #23098, which shipped the markers; the seat post #18549, whose ledger carries it as a line; and #23392, the pin bump, which notes the markers turn false but is a `domain:devx` card that does not edit spec."
+}

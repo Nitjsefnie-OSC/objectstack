@@ -2,8 +2,8 @@
   "number": 23297,
   "kind": "issue",
   "title": "metadata-protocol: three package-axis gaps PR #23290's review leaves open — the registry heal after a per-package delete, the draft save's storage-order bind with two packages, and the delete `_lock` gate that takes no package",
-  "state": "open",
-  "state_reason": null,
+  "state": "closed",
+  "state_reason": "completed",
   "draft": null,
   "author": {
     "login": "objectstack-fleet[bot]",
@@ -13,18 +13,23 @@
   "labels": [
     "bug",
     "domain:spec",
-    "pm:queue",
     "priority:p2"
   ],
-  "assignees": [],
+  "assignees": [
+    "huangyiirene"
+  ],
   "milestone": null,
   "type": null,
   "created_at": "2026-10-13T15:18:05Z",
-  "updated_at": "2026-10-13T16:09:02Z",
-  "closed_at": null,
-  "closed_by": null,
+  "updated_at": "2026-10-14T08:00:22Z",
+  "closed_at": "2026-10-14T07:58:51Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
   "merged_at": null,
-  "comments": 2,
+  "comments": 6,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/23297",
   "body": "Filing gate: **(a) reachable defects a sibling change leaves open**, one family card per the seat's fold rule (three locations, one package, one shape: a door on the package axis that does not take the package it is handed). `reach:` the metadata delete and draft-save doors (`DELETE` and the draft `PUT` on `/api/v1/meta/TYPE/NAME`, with and without `?package=`). Source: the contract-tier review of PR #23290 (#23165's fix), comment `6148691041`: two acceptance notes it escalated and its item ①.12, read from source at the PR head `b546c5ff2`. Item 1 is **read from source, not measured**: its first acceptance line is the probe. Reader who acts: triage, to grade and route (`packages/metadata-protocol`, `domain:engine`); then the owning seat.\n\nFiled by `domain:spec` seat 2 (#18549) · `os-justin` · session `session_01BRQ9Mp1yH7R1az6MaUM18H`, at PR #23290's contract review. ⛔ Not a claim.\n\n## 1. The registry heal after a per-package delete leaves the store and the registry disagreeing (read, not measured)\n\n- `restoreArtifactRegistryView` in `packages/metadata-protocol/src/protocol.ts` runs after every active delete, whatever rows remain. Its tiers heal the runtime shadow, re-register a packaged artifact, or (on a control-plane kernel only) re-register a MetadataService baseline, and otherwise retire the name. None of them re-registers a `sys_metadata` row that is still stored.\n- So after `DELETE ...?package=P` on a runtime-only item that packages P and Q both hold, the registry retires the entry while the store still holds Q's row. The store-backed doors serve Q (pinned at the PR head: the protocol read and the real `GET`). The registry-backed doors (ObjectQL `getObject` and data CRUD for an `object`, registry lookups) are not pinned, and by the reading above they lose the item until the next hydration or save.\n- The same end state was reachable before #23165 (a package-less delete of a two-package item ran the same heal), so it is not that PR's regression.\n\n## 2. The draft save with two packages binds by storage order\n\n- `resolveWriteHead` in `packages/metadata-protocol/src/sys-metadata-repository.ts` (#11087) resolves a package-less draft save to \"the package the item's active row is bound to\". With one package that is exact. With two, it takes the first row in storage order, the same pick #23165 removed from the direct save and the delete. #23165's triage left the draft door unchanged on purpose; this card carries it.\n\n## 3. The delete door's `_lock` gate takes no package\n\n- `assertLockAllowsDelete` (in `protocol.ts`) calls `getEffectiveLock(type, name)` with no package, while the save gate hands its `packageId` through. With no package, the lock layers read every installed package that ships the name, so a delete naming package P is refused when Q's copy is locked. That is fail-closed: it over-refuses, it never lets a locked row go. The fix is the save gate's parity, handing `request.packageId` to `assertLockAllowsDelete` and on to `getEffectiveLock`.\n\n## Wanted\n\n- Item 1: the probe first, on a real kernel: an `object` that two packages hold, `DELETE ...?package=P`, then the data door and `getObject`. If the registry drops the item, the heal re-registers the remaining served row; if it does not, close item 1 with the measurement.\n- Item 2: a draft save naming no package, of an item two packages hold, is refused 409 with the `?package=` remedy, as the direct save is after #23165, unless measurement shows the draft door can name the one package the author means.\n- Item 3: the delete's lock gate reads the named package's lock; a pin where Q is locked and P is not, and `?package=P` is allowed.\n- Each item has a negative control that fails when the fix is removed.\n\nOrder: after PR #23290 lands, since it changes the same two doors.\n\n## Dedupe\n\nMCP `search_issues` on this repo, closed included: `registry heal after per-package delete restoreArtifactRegistryView remaining sys_metadata row; draft save two packages storage order resolveWriteHead; delete lock gate package` → 10 hits. #22128, #22057 and #22024 (closed) are earlier package-axis defects in the same package; #23291, #23292 and #23293 are #23165's other follow-ups. None is one of these three.\n\nDedupe words: restoreArtifactRegistryView remaining row after delete package; resolveWriteHead draft save two packages storage order; assertLockAllowsDelete getEffectiveLock no packageId.\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_\n"

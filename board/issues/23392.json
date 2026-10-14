@@ -1,0 +1,33 @@
+{
+  "number": 23392,
+  "kind": "issue",
+  "title": "chore(objectui): move the console pin from 1fb1ced36243 to objectui main once objectui#11773 and objectui#12270 land (the hop carries objectui's v18 dependency move)",
+  "state": "open",
+  "state_reason": null,
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "area:devpath",
+    "domain:devx",
+    "pm:dispatched",
+    "priority:p2"
+  ],
+  "assignees": [
+    "os-support-ai"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-14T04:21:27Z",
+  "updated_at": "2026-10-14T08:24:29Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 6,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/23392",
+  "body": "Filing gate **③ a maintainer-directed task (direct dispatch channel).** The maintainer, in Claude Code session `session_01CsyMRsFJBKNEMa4oPY1b5z` on 2026-10-14, verbatim and untranslated, answering this seat's proposal to file one objectstack card for this pin hop:\n\n> 开, 并且你负责派发这张卡，然后再下班\n\nThe order's context, same session, verbatim: 「现在是要升级 objectstack 的版本号，而不是着急发 objectui 的版本」. objectstack's release builds the console at `.objectui-sha` as committed (`docs/releases-maintenance.md`). So the objectui work merged since the pin reaches the v18 release only through this hop, and the hop does not wait on any objectui npm release.\n\n- **Reader (who acts):** the objectui `domain:ui` seat 1 (seat post objectstack-ai/objectui#5560, this session). It claims this card, dispatches one os-dev, reviews the PR and lands it, on the order above. The direct dispatch channel routes it `domain:devx` / `area:devpath` / `priority:p2`, mirroring the last pin card #23104.\n- **Dedupe:**\n  - MCP `search_issues` on this repo, closed included, for `\"move the console pin\" objectui`: 25 hits, all closed. The newest pin card is #23104, which landed as #23110.\n  - An open-only title search for `\"console pin\"`: 0 hits. An open-PR search for `objectui pin`: no pin PR.\n\n## Readings (2026-10-14, at filing)\n\n- `.objectui-sha` on `main` is `1fb1ced36243c325acc801bdde26bd096a15f5f5`. It was set by #23110 (`f451a5964`, merged 2026-10-13T01:29Z), and no later commit touches the file.\n- objectui `main` is `c08c9332a651` at filing, **34 commits** past the pin (MCP `list_commits` since the pin's commit). Among them:\n  - objectstack-ai/objectui#12337: objectui's dependency move to `@objectstack/*` `^18.0.0-next.0` (+1620/−1899, mostly the lockfile);\n  - objectstack-ai/objectui#12336: the flow launcher resolves the record id with core's `resolveServerActionRecordId`;\n  - objectstack-ai/objectui#12340: a report refused for reading shows the localized no-access state;\n  - objectstack-ai/objectui#12347: a `record:details` section heading fills `{{ count }}` from `sections[].count`.\n- Two more are in flight in this seat and land first: objectstack-ai/objectui#11773 (Studio first save) and objectstack-ai/objectui#12270 (a list's declared empty-state link).\n\n## The hop\n\n**Target:** move `.objectui-sha` to the objectui `main` tip **re-read by `git ls-remote` when the work starts, after both objectui#11773 and objectui#12270 have merged**. The claim names the exact target sha.\n\n**Method:** use `scripts/bump-objectui.sh`, with the full pin procedure (`AGENTS.md` → Frontend; `docs/releases-maintenance.md`):\n- the console changeset the script derives;\n- the regenerated `sdui.manifest.json` and `scripts/sdui-manifest.record.json`;\n- the pin-citation re-measure and the sdui-parser lockstep;\n- the Console Pin Gate steps, run locally, and a smoke boot.\n\nThe precedent shape is #23110.\n\n**The v18 dependency move inside the hop:**\n- `scripts/build-console.sh` injects this tree's `@objectstack/spec` and `@objectstack/client` into the console build.\n- The other `@objectstack/*` packages resolve from objectui's lockfile, which is now `18.0.0-next.0`.\n- The Console Pin Gate steps at the new pin are the measure.\n\n**Describe text this hop makes true:**\n- objectui#12347's acceptance (objectstack-ai/objectui#12192, comment `6160494781`) names this change as the carrier of the spec's stale `[EXPERIMENTAL — not enforced]` text on `sections[].count`.\n- If objectui#12270 is inside the hop, the `[PLANNED — not yet rendered]` markers the spec seat named on objectstack-ai/objectui#12270 (comment `6132635356`) become false too.\n- Carry only text whose truth this hop flips, measured on `main`. Anything else stays with the spec seat.\n\n**Not in this hop:**\n- objectstack-ai/objectui#12325 (the view-level `api` provider readers) is on hold until a spec `next` release. Its manifest regeneration rides a later hop.\n- No browser pass was ordered.\n\n## Acceptance\n\n- The pin PR states the exact objectui sha it pins, and its checks are green, `check:sdui-manifest` included.\n- If the diff touches `packages/spec/src/**`, a `## Contract review` PASS at `CONTRACT_REVIEW_TIER` exists on its head.\n- The seat reads the `Console Pin Gate` on the first full-battery `main` run carrying the hop. If that run has not concluded by the seat's clock-out, the clock-out ledger hands the reading over.\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_"
+}
