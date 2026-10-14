@@ -5,6 +5,7 @@ import { declaredHttpStatus } from '@objectstack/types';
 import { Plugin, PluginContext, POSTURE_LADDER, buildEffectiveObjectPermissions, recordNotFoundError, withoutOperationPrivateKeys } from '@objectstack/core';
 import type { EffectiveObjectPermission, PermissionSet, RowLevelSecurityPolicy, TenantLayer0Verdict } from '@objectstack/spec/security';
 import { describeHighPrivilegeBits, PUBLIC_FORM_SERVER_MANAGED_FIELDS } from '@objectstack/spec/security';
+import type { AnchorBindingContext } from '@objectstack/spec/security';
 import { MCP_AGENT_PERMISSION_SET_RESTRICTED } from '@objectstack/spec/ai';
 // [#8220] The read-scope provenance mark: this middleware is one of the two
 // merge boundaries that stamp it (see the RLS injection below).
