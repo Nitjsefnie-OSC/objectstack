@@ -7232,7 +7232,7 @@ export class ObjectStackProtocolImplementation implements
             const read = async (type: string): Promise<Record<string, unknown>[]> => {
                 // [#21911] The explicit system opt-in — see findServedOverlayRow.
                 const rs = await this.engine.find('sys_metadata', {
-                    where: { type, state: 'active', organization_id: null },
+                    where: { type, state: 'active' },
                     context: { isSystem: true },
                 });
                 return (rs ?? []) as Record<string, unknown>[];
@@ -10654,7 +10654,7 @@ export class ObjectStackProtocolImplementation implements
             if (type === undefined) return [];
             // [#21911] The explicit system opt-in — see findServedOverlayRow.
             const rows: StoredOverlayRow[] | null | undefined = await this.engine.find('sys_metadata', {
-                where: { type, name: address.name, state: 'active', organization_id: null },
+                where: { type, name: address.name, state: 'active' },
                 context: { isSystem: true },
             });
             return rows ?? [];
@@ -11694,12 +11694,11 @@ export class ObjectStackProtocolImplementation implements
             return { events: [] };
         }
         try {
-            // The environment's rows: every write stamps
-            // `organization_id: null` (ADR-0131 D6).
+            // Every row is the environment's (ADR-0131 D6; no organization
+            // column since C7b).
             const where: Record<string, unknown> = {
                 type: singular,
                 name: request.name,
-                organization_id: null,
             };
             // `order`, NOT `direction`: the QueryAST sort shape is
             // `SortNodeSchema` = `{ field, order }`, and both drivers normalize
@@ -18479,7 +18478,6 @@ export class ObjectStackProtocolImplementation implements
                 // canonical, and a fold here would make the assert unfalsifiable.
                 type: entry.type,
                 name: entry.name,
-                organization_id: null,
                 operation: entry.operation,
                 outcome: entry.outcome,
                 code: entry.code,
@@ -18864,7 +18862,7 @@ export class ObjectStackProtocolImplementation implements
         try {
             // [#21911] The explicit system opt-in — see findServedOverlayRow.
             rows = await this.engine.find('sys_metadata', {
-                where: { type, name, state, organization_id: null, ...overlayMemberWhere(type, member) },
+                where: { type, name, state, ...overlayMemberWhere(type, member) },
                 context: { isSystem: true },
             });
         } catch (error) {
@@ -23783,7 +23781,7 @@ export class ObjectStackProtocolImplementation implements
                 // engine now refuses it.
                 draftRow = await this.engine.findOne('sys_metadata', {
                     where: {
-                        type: singularType, name: request.name, organization_id: null, state: 'draft',
+                        type: singularType, name: request.name, state: 'draft',
                         // [#22877] The addressed member's draft (the canonical
                         // one when none was named) — the one `repo.get` /
                         // `repo.promoteDraft` below address.
@@ -24843,7 +24841,7 @@ export class ObjectStackProtocolImplementation implements
                 // and the revert plan records the member it describes.
                 const activeRow = (await this.engine.findOne('sys_metadata', {
                     where: {
-                        organization_id: null, type: d.type, name: d.name, state: 'active',
+                        type: d.type, name: d.name, state: 'active',
                         ...overlayMemberWhere(d.type, d.member),
                     },
                     context: { isSystem: true },
@@ -26007,7 +26005,6 @@ export class ObjectStackProtocolImplementation implements
         const where: Record<string, unknown> = {
             package_id: request.sourcePackageId,
             state: 'active',
-            organization_id: null,
         };
         // [#21911] The explicit system opt-in — see findServedOverlayRow.
         const rows = (await this.engine.find('sys_metadata', { where, context: { isSystem: true } })) as any[];
@@ -26456,7 +26453,7 @@ export class ObjectStackProtocolImplementation implements
             for (let at = 0; at < names.length; at += 200) {
                 // [#21911] The explicit system opt-in — see findServedOverlayRow.
                 const rows = (await this.engine.find('sys_metadata', {
-                    where: { organization_id: null, name: { $in: names.slice(at, at + 200) } },
+                    where: { name: { $in: names.slice(at, at + 200) } },
                     context: { isSystem: true },
                 })) as Array<{ type?: unknown; name?: unknown; package_id?: unknown }>;
                 for (const row of rows ?? []) {
@@ -26598,7 +26595,7 @@ export class ObjectStackProtocolImplementation implements
         // it would be an organization-scoped write; the promotion ceremony
         // (ADR-0131 C7) carries it to the environment layer, where a later
         // adoption sees it.
-        const where: Record<string, unknown> = { organization_id: null };
+        const where: Record<string, unknown> = {};
         // [#21911] The explicit system opt-in — see findServedOverlayRow.
         const rows = (await this.engine.find('sys_metadata', { where, context: { isSystem: true } })) as any[];
         const orphans = rows.filter(
@@ -26791,8 +26788,6 @@ export class ObjectStackProtocolImplementation implements
                 ...(args.eventSeqEnd !== undefined ? { event_seq_end: args.eventSeqEnd } : {}),
                 items: JSON.stringify(args.items),
                 item_count: args.items.length,
-                // [ADR-0131 D6/D7] The commit ledger is environment-level.
-                organization_id: null,
                 created_at: new Date().toISOString(),
             });
             return { commitId };
@@ -26928,7 +26923,7 @@ export class ObjectStackProtocolImplementation implements
             // this list) holds exactly the commits whose changes the reads
             // serve, and no organization's history is shown to another
             // organization's operator.
-            const where: Record<string, unknown> = { package_id: request.packageId, organization_id: null };
+            const where: Record<string, unknown> = { package_id: request.packageId };
             // [#21908, ADR-0096 D5] The explicit system opt-in: the commit ledger is a
             // platform store the door already authorized; the protocol scopes the
             // `where` by organization itself. Principal-less, the engine refuses it.

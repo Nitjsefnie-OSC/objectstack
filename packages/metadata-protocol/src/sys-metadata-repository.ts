@@ -10,8 +10,8 @@
  *
  * What this layer DOES (M0 + M1):
  *   - get / put / delete / list against `sys_metadata`
- *   - tenancy scope = `organization_id` (per-org overlays only;
- *     project/branch concepts removed — see ADR-0008 §0 amendment)
+ *   - scope = the environment (ADR-0131 D6: no organization column since
+ *     C7b; project/branch concepts removed — see ADR-0008 §0 amendment)
  *   - hash stamping with `hashSpec` (PR-10a guarantees stability)
  *   - watch() implemented via an in-memory event broadcaster fed by
  *     every successful put/delete on THIS instance; a NUMERIC `since`
@@ -45,7 +45,6 @@
  *   body                  → metadata           (JSON string)
  *   hash (sha256)         → checksum           (text(64))
  *   monotonic version int → version            (number)
- *   org isolation         → organization_id    (lookup)
  *   actor                 → updated_by         (lookup, optional; every write)
  *   first write's actor   → created_by         (lookup, optional; insert only)
  *
@@ -397,13 +396,7 @@ export interface SysMetadataEngine {
 
 export interface SysMetadataRepositoryOptions {
   engine: SysMetadataEngine;
-  /**
-   * Tenancy scope. `null` writes to env-wide overlay rows; a string
-   * scopes to one organization (the supported shared-DB tenant model
-   * — see ADR-0005 amendment).
-   */
-  organizationId?: string | null;
-  /** Org label embedded in returned MetaRefs. Defaults to organizationId or `"system"`. */
+  /** Org label embedded in returned MetaRefs. Defaults to `"system"`. */
   orgLabel?: string;
 }
 
@@ -514,8 +507,9 @@ export function resetEnvWritableMetadataTypes(): void {
  * #7779 each had to repair on one copy at a time — so the revert asks this
  * function, never a `where` of its own.
  *
- * [ADR-0131 D6] The environment's rows only (`organization_id IS NULL`): a
- * legacy organization-scoped row is reported at boot, never read.
+ * [ADR-0131 D6, C7b] Every row is the environment's: the organization column
+ * is retired from `sys_metadata`, and a database still holding legacy
+ * organization rows is refused at boot until the v18 ceremony has run.
  *
  * Deliberately NOT exported from the package entry: it is a shared predicate
  * between this module and `protocol.ts`, not a public read.
@@ -524,7 +518,7 @@ export function packageScopedRowWhere(
   state: 'draft' | 'active',
   filter?: { type?: string; packageId?: string },
 ): Record<string, unknown> {
-  const where: Record<string, unknown> = { state, organization_id: null };
+  const where: Record<string, unknown> = { state };
   if (filter?.type) where.type = filter.type;
   if (filter?.packageId) where.package_id = filter.packageId;
   return where;
@@ -552,7 +546,6 @@ interface WatchSubscription {
 
 export class SysMetadataRepository implements MetadataRepository {
   private readonly engine: SysMetadataEngine;
-  private readonly organizationId: string | null;
   private readonly orgLabel: string;
 
   /**
@@ -586,8 +579,7 @@ export class SysMetadataRepository implements MetadataRepository {
 
   constructor(opts: SysMetadataRepositoryOptions) {
     this.engine = opts.engine;
-    this.organizationId = opts.organizationId ?? null;
-    this.orgLabel = opts.orgLabel ?? (opts.organizationId ?? 'system');
+    this.orgLabel = opts.orgLabel ?? 'system';
   }
 
   /**
@@ -751,11 +743,10 @@ export class SysMetadataRepository implements MetadataRepository {
     const context = { ...ctx, isSystem: true };
     let targetPackageId: string | null = packageId ?? null;
     if (state === 'draft' && packageId == null) {
-      // The overlaid base is resolved with the SAME two-scope reach the draft
-      // list applies (`listDrafts`' $or contract): an org-scoped caller's
-      // active row usually lives ENV-WIDE (`organization_id IS NULL`) — the
-      // ADR-0005 overlay order — so a same-org-only lookup here found nothing
-      // for exactly the console-session saves this inheritance exists for
+      // The overlaid base is the environment's active row, as the draft list
+      // reads it (ADR-0131 D6: every row is the environment's) — a lookup
+      // that missed it found nothing for exactly the console-session saves
+      // this inheritance exists for
       // (measured live: an org-scoped view draft stayed `package_id NULL`
       // over an env-wide active row bound to `app.k9qk`).
       const activeWhere: Record<string, unknown> = {
@@ -764,14 +755,6 @@ export class SysMetadataRepository implements MetadataRepository {
         state: 'active',
       };
       if (member !== undefined) activeWhere[OVERLAY_MEMBER_COLUMN] = member;
-      if (this.organizationId != null) {
-        activeWhere.$or = [
-          { organization_id: this.organizationId },
-          { organization_id: null },
-        ];
-      } else {
-        activeWhere.organization_id = null;
-      }
       const activeRow = await this.engine.findOne('sys_metadata', { where: activeWhere, context });
       const activePkg = (activeRow as { package_id?: string | null } | null)?.package_id ?? null;
       if (activePkg) targetPackageId = activePkg;
@@ -798,8 +781,7 @@ export class SysMetadataRepository implements MetadataRepository {
   /**
    * Resolve a historical version by content hash (ADR-0009).
    *
-   * Looks up `sys_metadata_history` by `(organization_id, type, name,
-   * checksum)`. Returns null if no row matches. `executionPinned` types
+   * Looks up `sys_metadata_history` by `(type, name, checksum)`. Returns null if no row matches. `executionPinned` types
    * are guaranteed to find their body here because history GC skips
    * them.
    */
@@ -809,7 +791,6 @@ export class SysMetadataRepository implements MetadataRepository {
     // [#21908] The explicit system opt-in, as `get` carries — see its note.
     const row = await this.engine.findOne(this.historyTable, {
       where: {
-        organization_id: this.organizationId,
         type: full.type,
         name: full.name,
         checksum: hash,
@@ -915,7 +896,6 @@ export class SysMetadataRepository implements MetadataRepository {
       const parentRowData: Record<string, unknown> = {
         type: ref.type,
         name: ref.name,
-        organization_id: this.organizationId,
         metadata: JSON.stringify(body),
         checksum: hash,
         state,
@@ -978,7 +958,6 @@ export class SysMetadataRepository implements MetadataRepository {
           previous_checksum: existingHash,
           change_note: opts.message,
           source: opts.source ?? 'sys-metadata-repo',
-          organization_id: this.organizationId,
           // #4556 — `recorded_by` is a lookup('sys_user'). A write with no
           // actor stores NULL, never a sentinel string: an id that resolves
           // to no row is a foreign key that lies.
@@ -1113,7 +1092,7 @@ export class SysMetadataRepository implements MetadataRepository {
 
       if (state === 'active') {
         // Tombstone row — metadata/checksum are intentionally null.
-        // Identity is preserved via (organization_id, type, name, version);
+        // Identity is preserved via (type, name, version);
         // the parent row's id is not retained.
         await this.engine.insert(
           this.historyTable,
@@ -1129,7 +1108,6 @@ export class SysMetadataRepository implements MetadataRepository {
             previous_checksum: existingHash,
             change_note: opts.message,
             source: opts.source ?? 'sys-metadata-repo',
-            organization_id: this.organizationId,
             // #4556 — NULL, not a sentinel, when the delete had no actor.
             recorded_by: opts.actor ?? null,
             recorded_at: now,
@@ -1384,7 +1362,6 @@ export class SysMetadataRepository implements MetadataRepository {
     const full = this.fullRef(ref);
     const row = await this.engine.findOne(this.historyTable, {
       where: {
-        organization_id: this.organizationId,
         type: full.type,
         name: full.name,
         version: targetVersion,
@@ -1464,7 +1441,6 @@ export class SysMetadataRepository implements MetadataRepository {
   async *list(filter: ListFilter): AsyncIterable<MetadataItemHeader> {
     this.assertOpen();
     const where: Record<string, unknown> = {
-      organization_id: this.organizationId,
       state: 'active',
     };
     if (filter.type) where.type = filter.type;
@@ -1582,7 +1558,6 @@ export class SysMetadataRepository implements MetadataRepository {
     this.assertOpen();
     const full = this.fullRef(ref);
     const where: Record<string, unknown> = {
-      organization_id: this.organizationId,
       type: full.type,
       name: full.name,
     };
@@ -1667,7 +1642,7 @@ export class SysMetadataRepository implements MetadataRepository {
   ): Promise<MetadataEvent[]> {
     // [#21908] The explicit system opt-in, as `get` carries — see its note.
     const rows = await this.engine.find(this.historyTable, {
-      where: { organization_id: this.organizationId },
+      where: {},
       context: { isSystem: true },
     });
     const out: MetadataEvent[] = [];
@@ -1696,10 +1671,10 @@ export class SysMetadataRepository implements MetadataRepository {
    * replayed out of `sys_metadata_history` before any live event is yielded.
    * `since` used to be nothing but a DROP filter on live events, so an event
    * that had already committed was unreachable through `watch()` however low
-   * `since` was set — the repository held a durable per-org `event_seq` log
-   * and never read it here. It does now, through the same
-   * `find(sys_metadata_history, { organization_id })` query `nextEventSeq()`
-   * issues and the same row→event mapping `history()` uses.
+   * `since` was set — the repository held a durable `event_seq` log and
+   * never read it here. It does now, through the same
+   * `find(sys_metadata_history)` query `nextEventSeq()` issues and the same
+   * row→event mapping `history()` uses.
    *
    * **No `since`**: live events only. Deliberate, and now written into the
    * contract (`repository.ts` invariant 6) rather than left to be inherited
@@ -2276,7 +2251,6 @@ export class SysMetadataRepository implements MetadataRepository {
     const where: Record<string, unknown> = {
       type: ref.type,
       name: ref.name,
-      organization_id: this.organizationId,
       state,
     };
     // ADR-0048 — when the caller scopes by package, the overlay row is keyed by
@@ -2457,10 +2431,10 @@ export class SysMetadataRepository implements MetadataRepository {
   }
 
   /**
-   * Per-org monotonic event sequence. Reads `MAX(event_seq) + 1` from
-   * `sys_metadata_history` scoped by `organization_id`. MUST be called
-   * inside a transaction (the only caller is the put/delete txn body) —
-   * concurrent writers in the same org race otherwise.
+   * The environment's monotonic event sequence. Reads `MAX(event_seq) + 1`
+   * from `sys_metadata_history`. MUST be called inside a transaction (the
+   * only caller is the put/delete txn body) — concurrent writers race
+   * otherwise.
    *
    * #4867 (same shape as #4825 on the legacy `DatabaseLoader` path; rule from
    * #4632) — discriminate by error TYPE. This used to `catch { return 1 }`
@@ -2487,7 +2461,7 @@ export class SysMetadataRepository implements MetadataRepository {
   private async nextEventSeq(ctx: any): Promise<number> {
     try {
       const rows = await this.engine.find(this.historyTable, {
-        where: { organization_id: this.organizationId },
+        where: {},
         context: { ...ctx, isSystem: true },
       });
       let max = 0;
@@ -2501,7 +2475,7 @@ export class SysMetadataRepository implements MetadataRepository {
       return this.historyCounterVerdict(
         error,
         'event_seq',
-        'the per-org history cursor that history ordering and rollback targeting both stand on',
+        'the history cursor that history ordering and rollback targeting both stand on',
       );
     }
   }
@@ -2528,7 +2502,6 @@ export class SysMetadataRepository implements MetadataRepository {
     try {
       const rows = await this.engine.find(this.historyTable, {
         where: {
-          organization_id: this.organizationId,
           type: ref.type,
           name: ref.name,
         },
