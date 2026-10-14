@@ -2,8 +2,8 @@
   "number": 23335,
   "kind": "issue",
   "title": "auth-gate parity: the remediation allow-list exempts the whole auth namespace, and the platform-admin mounts under it judge the caller without the ADR-0069 posture, so a held platform admin may reach user administration (read from source, not yet measured)",
-  "state": "open",
-  "state_reason": null,
+  "state": "closed",
+  "state_reason": "completed",
   "draft": null,
   "author": {
     "login": "objectstack-fleet[bot]",
@@ -13,19 +13,24 @@
   "labels": [
     "bug",
     "domain:spec",
-    "pm:queue",
     "priority:p1",
     "security"
   ],
-  "assignees": [],
+  "assignees": [
+    "huangyiirene"
+  ],
   "milestone": null,
   "type": null,
   "created_at": "2026-10-13T20:36:02Z",
-  "updated_at": "2026-10-14T13:01:54Z",
-  "closed_at": null,
-  "closed_by": null,
+  "updated_at": "2026-10-14T18:11:24Z",
+  "closed_at": "2026-10-14T18:09:55Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
   "merged_at": null,
-  "comments": 6,
+  "comments": 10,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/23335",
   "body": "Blocked-by: #23287\n\nFiling gate ①: a security-boundary defect with a named landing point. It is read from source and **not yet measured on a boot**. Filed by `domain:devx` seat 1 (#6023, `session_012zwsLMxQBwHUYJgPyrpEvx`) from #23288's dev report (PR #23333, which rewrote the \"How enforcement works\" callout). Triage may re-grade it on first touch. ⛔ Not a claim. Function level only, per the lane disclosure rule (`lanes/services.md:19-20`): no route, no recipe.\n\n**Reader who acts:** `domain:spec`, which holds the gate's cross-seam reading in the same family as #23287. The producer side is `plugin-auth`, in the `domain:services` lane. **Whether user administration belongs inside the remediation exemption is a security-boundary call, and it is the maintainer's to make.**\n\n## What the source says (`main` `4d4040ccb6`)\n\n- **The exemption is the whole auth namespace.** `isAuthGateAllowlisted` (`packages/core/src/security/auth-gate.ts`, the auth arm at about `:296`) returns true for any path under `<base>/auth/…`.\n- **The admin judge reads no posture.** `AuthPlugin`'s platform-admin mounts are registered under that namespace. Their single judge, `gateAdmin` → `judgePlatformAdmin` (`packages/plugins/plugin-auth/src/auth-plugin.ts:2706`, `platform-admin-gate.ts`), reads the session and the admin rung. It never reads `authGate`.\n- **The contract says otherwise.** ADR-0069 D3 says a held session is \"gated out of all protected resources until enrollment + verification\". The `auth-gate.ts` header names the exemption's purpose as \"the auth endpoints (change-password, two-factor enrollment, sign-out)\", which is remediation and not administration.\n- **The likely consequence (unmeasured).** A platform admin whose password has expired, or who is required to enrol MFA and has not, is still admitted to the platform-admin user-administration surface. That surface is exactly what enforced MFA is meant to protect when a password alone is known.\n\n## What done looks like\n\n1. **Measure first.** On a boot, hold a platform admin's session (expired password; then MFA required but not enrolled) and call one platform-admin write. Record the answer. If it is refused, close this card with the measurement.\n2. **If it is admitted, the maintainer chooses the boundary.** The recommended reading is that remediation endpoints stay exempt and administration does not.\n3. **Then the gate's one shared decision covers that boundary**, so no single mount has to re-implement it. One pin test proves that a held admin gets `403` with the gate's code on the admin surface, and that change-password / two-factor enrollment / sign-out still pass.\n4. ⛔ No new gate. ⛔ No widening of the exemption.\n\n## Family\n\nADR-0069 seam parity: #23287 (API key beside a held cookie, `domain:spec`) and #23245 (dispatcher fails open when it cannot read the session, `domain:cli`). Neither of them is this exemption.\n\n## 四维(业务立场)\n\n- 长远合理性:豁免只为「自救」而设;让管理面落在豁免里,是 ADR-0069 D3 的口子,修在共享判定处才不会每个挂载点各补一次。\n- 实际业务拉动:强制 MFA 与密码过期是给企业租户的承诺;平台管理员恰是最该被拦住的身份。\n- 防 AI 犯错:一处判定、一条钉子测试,AI 新增管理端点时不会再次落进豁免。\n- 创业阶段不扩散:先实测,再由维护者定边界;不加门禁、不扩豁免。\n\nDedupe: open `security` cards titled `auth.?gate|ADR-0069|admin|allow.?list|held`: #23287 and #23245, neither of which is this. Dedupe words: auth gate allow-list auth namespace platform admin; held session plugin-auth admin mounts gateAdmin posture; isAuthGateAllowlisted auth arm user administration; ADR-0069 D3 admin held."

@@ -1,0 +1,37 @@
+{
+  "number": 23509,
+  "kind": "issue",
+  "title": "mcp: the data tools and the record resource render a coded refusal as its message alone, so a stdio client never reads MFA_REQUIRED (ruling C′ item 1's \"same code\") or any other refusal's code",
+  "state": "closed",
+  "state_reason": "completed",
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "area:access",
+    "bug",
+    "domain:spec",
+    "priority:p2"
+  ],
+  "assignees": [
+    "sunhaolin"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-14T15:16:44Z",
+  "updated_at": "2026-10-14T19:21:59Z",
+  "closed_at": "2026-10-14T19:12:59Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": null,
+  "comments": 5,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/23509",
+  "body": "Filing gate ①, class (b): a declared contract that a producer's rendering breaks. `reach:` is measured on the real stdio transport. On PR #23508's head `fc4aff4a17` (#23455 / #23456, in review), `packages/mcp/src/stdio-api-key-account-posture.pin.test.ts` drives one `tools/call` (`query_records`) over a real `StdioServerTransport` with a key whose owner holds `MFA_REQUIRED`. It answers `isError` with the remediation message as its text, and no code.\n\nFiled by `domain:spec` seat 4 (#18917) · `sunhaolin` · session `session_0121ooBYRmS8ziFXm9ai5YHm`, from PR #23508's dev report (`6171624798` on #23455, out-of-scope finding 1 and open question 2), checked on `origin/main`. ⛔ Not a claim. Lane, type and grade are triage's.\n\n## What differs\n\n- PR #23508 makes the stdio door throw the envelope REST answers a held owner's key with: `code` `MFA_REQUIRED`, `status` `403`, the session's message.\n- The shared presentation then drops the code:\n  - the data tools' catches in `packages/mcp/src/mcp-http-tools.ts` return `errorResult(messageOf(err))` (10 sites on `origin/main`: `:605`, `:629`, `:704`, `:784`, `:876`, `:903`, `:932`, `:966`, `:990`, `:1057`);\n  - the record resource in `packages/mcp/src/mcp-server-runtime.ts` writes `{ error: message }` (`:1265`).\n- `errorResultFromThrown` (`mcp-http-tools.ts:308`) already renders a thrown code. #15942 (closed) chose it for the action tools; the data tools do not use it.\n- The same rendering serves both faces (stdio and HTTP `/mcp`), and every coded refusal, not only ruling C′'s: `RECORD_NOT_FOUND`, permission and validation codes.\n\n## The contract\n\nRuling C′ on #23287 (`6159450584`), item 1, quoted: \"a held user's API key is refused at every seam with the same code\".\n\n`Seam: spec:AUTH_GATE_SCOPES → runtime:mcp mcp-http-tools data-tool catch (errorResult) and mcp-server-runtime record resource | consumer: none`\n\n## What done looks like\n\n- The data tools' and the record resource's catches render a thrown coded refusal with its `code` (and `status` where the envelope carries one), on both faces, through the existing `errorResultFromThrown` shape.\n- A refusal with no code keeps today's message-only rendering.\n- The existing tests that pin today's message-only text are re-judged: each moves to the coded rendering or is named as code-less.\n- One pin per face: a held owner's `query_records` reads `MFA_REQUIRED`.\n\n**Reader who acts:** triage routes it. The fix is in `packages/mcp` alone. It widens what a client can read (a code beside the message), so the claimant declares Clause-② from the surface.\n\n## Dedupe\n\nMCP `search_issues` on this repo, closed included: `MCP data tools record resource flatten coded refusal to message errorResult messageOf code lost errorResultFromThrown` → 6 hits.\n- #22664 is the stdio bridge's `OBJECT_API_DISABLED` provenance.\n- #16913 is `query_records` key handling.\n- #8266 is the record resource's exposure gate.\n- #8034 is stdio tool registration.\n- #22979 and #19404 are PM skill notes.\n\nNone is this. #15942 (closed) is the action tools' precedent.\n\nDedupe words: mcp data tool coded refusal flattened; errorResultFromThrown data tools; stdio MFA_REQUIRED code lost."
+}

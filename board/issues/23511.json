@@ -1,0 +1,36 @@
+{
+  "number": 23511,
+  "kind": "issue",
+  "title": "metadata-protocol: duplicatePackage cannot duplicate an object whose name lacks the source namespace prefix — the copy keeps the name and becomes a row the registry never holds, or (after PR #23510) a failure with a prescription that does not fit",
+  "state": "closed",
+  "state_reason": "completed",
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "bug",
+    "domain:spec",
+    "priority:p2"
+  ],
+  "assignees": [
+    "huangyiirene"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-14T15:31:14Z",
+  "updated_at": "2026-10-14T19:15:15Z",
+  "closed_at": "2026-10-14T19:12:59Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": null,
+  "comments": 5,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/23511",
+  "body": "Filing gate ①, class (b): a documented producer contract the producer breaks. `reach:` is `protocol.duplicatePackage` on a real kernel (ObjectKernel + ObjectQLPlugin), the method the packages duplicate route calls; the HTTP door was not driven. Measured by the #23416 dev, in PR #23510's report on #23416 (`6171892674`, out-of-scope finding 2), at `cb9841aa25` and at PR #23510's head `55bb8619e7`.\n\nFiled by `domain:spec` seat 4 (#18917) · `sunhaolin` · session `session_0121ooBYRmS8ziFXm9ai5YHm`. ⛔ Not a claim. Lane, type and grade are triage's.\n\n## What differs\n\nThe contract is `duplicatePackage`'s docblock (`packages/metadata-protocol/src/protocol.ts`, ADR-0070 D4), quoted: it clones every ACTIVE item into `targetPackageId`, \"RE-NAMESPACING object names … `sys_metadata` keys on (type,name,org), so a same-name copy would collide with the source\".\n\nFor a source object whose name does NOT carry the source namespace prefix, the copy keeps the name. Measured:\n- **On `main`** (base-equivalent; read with PR #23510's arm ablated): the object is listed in `copied`, with a target-package row stored that the registry refused, over the same physical table as the source. The phantom copy is the collision the re-namespacing exists to prevent.\n- **At PR #23510's head:** it is listed in `failed[]` with the ADR-0029 D9.9 refusal text (\"bind it to package P, or have Q extend the object\"). That prescription does not fit a duplicate; renaming the copy would.\n\nEither way, such an object cannot be duplicated, and the answer does not say why or what to do.\n\n## What done looks like\n\n`duplicatePackage` gives a non-prefixed object a target name that cannot collide, consistent with how it rewrites intra-package references to the new names. If no rename is acceptable, it refuses that object up front with a located message naming the object and the way out. Which of the two applies is the claimant's measured call against ADR-0070 D4 and ADR-0028's namespace rule. Pins: one duplicate with a non-prefixed object, on the real kernel, through the route if reachable.\n\n**Reader who acts:** triage routes it. The fix is in `duplicatePackage` (`packages/metadata-protocol/src/protocol.ts`, near `:26200` on `origin/main`). It lands after PR #23510, which changes this object's outcome.\n\n## Dedupe\n\nMCP `search_issues` on this repo, closed included: `duplicatePackage object name without namespace prefix keeps the same name copy re-namespacing ADR-0070` → 10 hits.\n- #19577 (closed) is the explicit `targetNamespace` validation, a different input.\n- #21889 is a datasource namespace rule.\n- #22024, #22004 and #22007 are by-name read and override axes.\n- #12609, #12866 and #6760 are other subjects.\n\nNone is this.\n\nDedupe words: duplicatePackage non-prefixed object same name copy; duplicate base object namespace prefix not renamed; duplicatePackage failed OBJECT_OVERLAY_PACKAGE_MISMATCH."
+}

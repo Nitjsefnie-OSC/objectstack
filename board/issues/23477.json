@@ -2,8 +2,8 @@
   "number": 23477,
   "kind": "issue",
   "title": "platform-objects: sys_session.revoke_reason's description is the field's published vocabulary and lacks admin_password_reset, the value PR #23440's forced-reset revocation writes",
-  "state": "open",
-  "state_reason": null,
+  "state": "closed",
+  "state_reason": "completed",
   "draft": null,
   "author": {
     "login": "objectstack-fleet[bot]",
@@ -14,19 +14,24 @@
     "area:access",
     "bug",
     "domain:spec",
-    "pm:queue",
     "priority:p1",
     "target:v18"
   ],
-  "assignees": [],
+  "assignees": [
+    "baozhoutao"
+  ],
   "milestone": null,
   "type": null,
   "created_at": "2026-10-14T12:06:02Z",
-  "updated_at": "2026-10-14T12:55:32Z",
-  "closed_at": null,
-  "closed_by": null,
+  "updated_at": "2026-10-14T17:38:51Z",
+  "closed_at": "2026-10-14T17:37:18Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
   "merged_at": null,
-  "comments": 1,
+  "comments": 5,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/23477",
   "body": "Filing gate ①, class (b): a declared contract that a producer breaks. `reach:` is a named producer: `packages/plugins/plugin-auth/src/forced-reset-revocation.ts` (PR #23440, #23287) writes `revoke_reason: 'admin_password_reset'` on every live session a forced reset revokes, ON by default (the maintainer's letter A on #23287).\n\nFiled by `domain:spec` seat 4 (#18917) · `sunhaolin` · session `session_0121ooBYRmS8ziFXm9ai5YHm`, from PR #23440's contract review (`6167875771`, ③ (b), escalated to this seat), checked on `origin/main`. ⛔ Not a claim. Lane, type and grade are triage's.\n\n## The contract\n\n`packages/platform-objects/src/identity/sys-session.object.ts`, field `revoke_reason`: the in-code comment says \"this description IS the published vocabulary — there is no Zod enum behind this column (it is free `text`), so this line is the only contract a consumer can read\". The description lists `idle_timeout`, `absolute_max`, `concurrent_cap`, `user_revoked`, `admin` and `organization_membership_ended`. It does not list `admin_password_reset`.\n\n`Seam: platform-objects:sys_session.revoke_reason description → runtime:plugin-auth forced-reset-revocation.ts (FORCED_RESET_REVOKE_REASON) | consumer: none named`\n\n## What done looks like\n\nThe description names `admin_password_reset` beside the other causes (an administrator's forced password reset revoked the session), and the four translation bundles regenerate (`node scripts/check-i18n-bundles.mjs --write`). This lands with or after PR #23440. The value does not exist on `main` until that PR lands.\n\n**Reader who acts:** triage routes it. The fix is one description line in `platform-objects` plus its generated bundles.\n\n## Dedupe\n\nMCP `search_issues` on this repo, closed included: `sys_session revoke_reason vocabulary description admin_password_reset forced reset` → 1 hit: #7732 (closed), the interactive revoke path tombstoning rather than deleting — a different defect on the same field. #15784 (closed) widened this vocabulary for `organization_membership_ended`; it is the precedent, not this.\n\nDedupe words: revoke_reason vocabulary admin_password_reset; sys_session revoke reason description forced reset; published vocabulary free text column."

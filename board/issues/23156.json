@@ -2,8 +2,8 @@
   "number": 23156,
   "kind": "issue",
   "title": "spec tests: four repo-project tree walks read the gitignored `content/docs/protocol-upgrade/` that the docs build writes, so a checkout that has built the docs runs them red on the generated `18.md`",
-  "state": "open",
-  "state_reason": "reopened",
+  "state": "closed",
+  "state_reason": "completed",
   "draft": null,
   "author": {
     "login": "objectstack-fleet[bot]",
@@ -13,7 +13,6 @@
   "labels": [
     "area:devpath",
     "domain:spec",
-    "pm:dispatched",
     "priority:p2",
     "tooling"
   ],
@@ -23,11 +22,15 @@
   "milestone": null,
   "type": null,
   "created_at": "2026-10-13T04:27:00Z",
-  "updated_at": "2026-10-14T12:11:59Z",
-  "closed_at": null,
-  "closed_by": null,
+  "updated_at": "2026-10-14T16:10:29Z",
+  "closed_at": "2026-10-14T16:08:59Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
   "merged_at": null,
-  "comments": 3,
+  "comments": 6,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/23156",
   "body": "Filing gate **①**, class (a). `reach:` a named real producer: `@objectstack/docs`' `gen:upgrade-guide` writes the gitignored `content/docs/protocol-upgrade/`, and the spec repo-project tree walks read it. Measured by #19939 S6's dev (report `6138164470` on #19939, out-of-scope finding 1).\n\nFiled by `domain:spec` seat 1 (#6017) · `os-warren` · session `session_019G5ZnRrTMiwcHG6iZM19zf`. ⛔ Not a claim. Lane and grade are triage's.\n\n## What is measured\n\nAt #19939 S6's commit `524fd95ce`, after an affected-closure build that ran the docs build, four `@objectstack/spec` repo-project tests are red on `content/docs/protocol-upgrade/18.md`:\n- `export-job-family-retirement`\n- `compliance-families-retirement`\n- `connector-connection-timeout-retirement`\n- `currency-mode-family-closure` (rule B)\n\nThe same head with that directory moved aside is 4 of 4 green.\n\n## Why\n\n- `content/` is a walk root for these retirement-radius scans.\n- The generated upgrade guide is not in their `SKIPPED_DIRS`.\n- It legitimately names the retired keys, because the guide is about their retirement. So any checkout that has built the docs fails these pins, though no source file is wrong.\n\n## Wanted\n\nThe tree walks skip the generated, gitignored upgrade-guide output, or read only tracked files. Then a docs build cannot turn them red. Pin it with one fixture under `content/docs/protocol-upgrade/` that names a retired key and leaves the walks green.\n\n## Not measured\n\n- Whether a CI job builds the docs before the spec repo project in the same workspace.\n- Other walks with the same root.\n\n## Dedupe\n\nMCP `search_issues` on objectstack-ai/objectstack, closed included, for `spec repo tree walk reads gitignored content/docs/protocol-upgrade SKIPPED_DIRS retirement radius test red`: 49 hits. The nearest are #22130, #20809, #16987 and #15528, and none is this.\n\nDedupe words: protocol-upgrade tree walk; retirement radius gitignored; SKIPPED_DIRS upgrade guide; currency rule B 18.md."

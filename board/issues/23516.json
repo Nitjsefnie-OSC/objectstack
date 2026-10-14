@@ -1,0 +1,34 @@
+{
+  "number": 23516,
+  "kind": "issue",
+  "title": "hourly full run: red on main (CI)",
+  "state": "closed",
+  "state_reason": "completed",
+  "draft": null,
+  "author": {
+    "login": "github-actions[bot]",
+    "id": 41898282,
+    "type": "Bot"
+  },
+  "labels": [
+    "bug",
+    "domain:devx",
+    "priority:p1"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-14T16:26:01Z",
+  "updated_at": "2026-10-14T17:56:47Z",
+  "closed_at": "2026-10-14T17:56:47Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": null,
+  "comments": 2,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/23516",
+  "body": "os-hourly-full-run-ci — machine-findable marker for this generated card. ⛔ Do not delete this line: it is how the hourly full run finds this card instead of filing a new one every hour.\n# hourly full run: red on main (CI)\n_Swept 2026-10-14T16:25:59.124Z · [run log](https://github.com/objectstack-ai/objectstack/actions/runs/38594515010) · commit `1418de4c7e07bf15469ee8a91ebab19fc843d0b1` · conclusion `failure`._\n`CI` runs the FULL battery on `main` every hour (#16467). A `push` run on\n`main` tests only the packages the merge touched, and a merge-queue build tests only what the group\ncontained — so this hourly run is the only thing that says whether the WHOLE tree is green, and\nthis card is the only channel that reports it. Nothing is blocked by it.\n⛔ The remedy is never to narrow, skip or delete the failing check to make the hourly run green.\nFix what it names and let the next hourly run refresh this card; a card nobody reopens is closed by\nthe next green run being uneventful, not by editing this one.\n## What landed since the last green hourly run\nRange: `cb9841aa25` (run 38560750566, the last green `CI` schedule run) .. `1418de4c7e` — [compare](https://github.com/objectstack-ai/objectstack/compare/cb9841aa253227625738d0e7dbf9add7853fe939...1418de4c7e07bf15469ee8a91ebab19fc843d0b1)\n- `1baf976cf9` fix(metadata-protocol)!: a delete with dropStorage drops an object's table only with its last stored row, refused 409 while another row remains (#23464)\n- `73c7dc4a3d` fix(spec): PermissionSet.description liveness cites its live reader, Studio's permission-set list column (#23467)\n- `0f059078ec` feat(spec,core,plugin-auth)!: an API key answers as its owner's session does when the ADR-0069 policy holds the account (#23287) (#23440)\n- `d54e2393bf` docs(adr-0069): D3 states what the gate holds — the account's standing, so an API key answers as the session does (ruling C′ item 5) (#23472)\n- `87d061922f` feat(spec): the app item read answers by package id — 403 / 404 by the package key, per ADR-0048 §3.1 (#23468)\n- `0ecac9613b` fix(plugin-sharing, runtime): an email-audience share link answers every caller it does not open for with one refusal (#23471)\n- `22fb225dce` pm(skills): rest-channel.md names the relay's release.yml refresh stroke (#23476)\n- `a1285f26db` feat(cli): os meta delete and os meta register take --package, forwarded as the SDK's packageId (#23350) (#23475)\n- `0d3ea295d1` refactor(plugin-security): remove the retired catalog objects' write gates and the walled data door; report positions naming an unresolved set (C3 stage 8-post) (#23428)\n- `873151021f` fix(tooling): check:type-check-debt's closure build takes the shared verify lock, and a call from inside a hold runs NESTED (#23486)\n- `05e3b8e934` feat(service-mailbox): store an ingested message's attachments, and each forwarded message as an .eml, through file-attachments (#23484)\n- `8693110c4c` feat(spec)!: retire page-header-subtitle-alias and inline-action-api-params-to-body-extra from the load path at 18 (#23485)\n- `650933ec76` fix(runtime)!: the dispatcher's PATCH /data/:object/:id honours a body expectedVersion and If-Match, as RestServer's twin does (#23490)\n- `394f65e891` docs(pm-dispatch): triage-duties — a measured fleet-velocity cost is a third tooling entry door; the p2/p3 not_planned rule takes only a card with none of the three (#23482)\n- `ad5a7d7c39` fix(spec)!: page action rows carry ActionSchema's declarative-update rules, read from one judge (#23494)\n- `111b5821ce` test(runtime): pin which sys_metadata row the /automation flow doors write; no caller holds a package to name (#23499)\n- `5547ad451a` feat(spec): export the controlled_by_parent exactly-one-master predicate; lint reads it (#23496)\n- `3a2adc8835` fix(cli): os migrate meta --stored says what holds for each failed row, and names a flow the engine refuses at boot (#23500)\n- `f9b421716d` feat(cli): os migrate organization-ownership --apply executes only the reviewed plan file (ADR-0131 D10, C7b S4) (#23437)\n- `1418de4c7e` chore(spec): retire check:objectui-pin-citations; objectui read points become dated readings and move into the liveness ledger (#23434, part 1) (#23502)\n_Filed by `.github/workflows/scheduled-full-run-card.yml`. Generated by [Claude Code](https://claude.ai/code)_"
+}

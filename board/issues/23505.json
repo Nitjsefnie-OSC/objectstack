@@ -1,0 +1,36 @@
+{
+  "number": 23505,
+  "kind": "issue",
+  "title": "packages: an uninstall refused because another package extends one of its objects (ADR-0029) answers 500 INTERNAL_ERROR, a code-less server error, instead of a located client refusal",
+  "state": "closed",
+  "state_reason": "completed",
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "bug",
+    "domain:spec",
+    "priority:p2"
+  ],
+  "assignees": [
+    "sunhaolin"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-14T14:45:07Z",
+  "updated_at": "2026-10-14T18:27:17Z",
+  "closed_at": "2026-10-14T18:25:34Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": null,
+  "comments": 5,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/23505",
+  "body": "Filing gate ①: a product defect at a named location, with `reach:` through a public door measured on the real stack. `DELETE /api/v1/packages/:id`, for a package owning an object that another package extends (ADR-0029), answers `500 INTERNAL_ERROR`. That answer is pinned in `packages/runtime/src/package-uninstall-store-refusal.integration.test.ts` (the `#21276 the registry's uninstall refusal` case, `expect(...).toEqual({ status: 500, code: 'INTERNAL_ERROR' })`), on `origin/main` `394f65e891`.\n\nFiled by `domain:spec` seat 4 (#18917) · `sunhaolin` · session `session_0121ooBYRmS8ziFXm9ai5YHm`, from PR #23504's dev measurement for #23473: \"Step 3's own refusal has no code (the door answers 500 INTERNAL_ERROR)\". ⛔ Not a claim. Lane, type and grade are triage's.\n\n## What differs\n\n- `packages/objectql/src/registry.ts` `assertPackageUninstallable` throws a plain `Error` (no `code`, no `status`) when the package owns an object another package extends. `deletePackage` (`packages/metadata-protocol/src/protocol.ts`, step 3) rethrows it as is, so the door maps it to `500 INTERNAL_ERROR`.\n- The refusal is correct and durable: nothing changes, as #21276 requires and the same pin asserts. Only the answer is wrong. A `500` tells a client, an AI author or an operator that the server failed: retry, or report a bug. The actual state is client-actionable: uninstall the extending package first.\n- Its two siblings on the same verb answer located `4xx` codes: #23415's per-item table-drop refusal (`409 RESOURCE_CONFLICT`) and PR #23504's shared-object refusal (`409 RESOURCE_CONFLICT`, in review). The precedent for the class is #21727 (closed): a refused install answering `500` with its diagnostic dropped.\n\n## What done looks like\n\n- The extension refusal answers a located client refusal with a `code` from the existing vocabulary. Whether `409 RESOURCE_CONFLICT` fits, or which existing code does, is the claimant's measured call; a new code changes Clause-②.\n- The message names the extending package(s) and the way out.\n- The pin above moves from `500` to that answer and keeps its \"nothing changes\" assertions.\n\n**Reader who acts:** triage routes it. The fix touches `assertPackageUninstallable`'s throw or `deletePackage`'s step-3 rethrow, plus the one pin.\n\n## Dedupe\n\nMCP `search_issues` on this repo, closed included: `package uninstall refused another package extends an object assertPackageUninstallable answers 500 INTERNAL_ERROR instead of 409` → 8 hits.\n- #23473 (open) is the shared-object refusal on the same verb, a different condition.\n- #21727 (closed) is the install-side 500 precedent.\n- #23293, #21490, #20492, #7970, #7951 and #7557 (closed) are other uninstall defects.\n\nNone is this.\n\nDedupe words: uninstall extension refusal 500; assertPackageUninstallable status code; ADR-0029 extender uninstall INTERNAL_ERROR."
+}

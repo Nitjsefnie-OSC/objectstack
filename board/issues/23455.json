@@ -2,8 +2,8 @@
   "number": 23455,
   "kind": "issue",
   "title": "security(cloud-connection): the marketplace install-local resolver admits an API key without asking its owner's account posture, where ruling C′ refuses it at every seam",
-  "state": "open",
-  "state_reason": null,
+  "state": "closed",
+  "state_reason": "completed",
   "draft": null,
   "author": {
     "login": "objectstack-fleet[bot]",
@@ -14,7 +14,6 @@
     "area:access",
     "bug",
     "domain:spec",
-    "pm:dispatched",
     "priority:p1",
     "security"
   ],
@@ -24,11 +23,15 @@
   "milestone": null,
   "type": null,
   "created_at": "2026-10-14T10:01:53Z",
-  "updated_at": "2026-10-14T12:43:27Z",
-  "closed_at": null,
-  "closed_by": null,
+  "updated_at": "2026-10-14T16:15:06Z",
+  "closed_at": "2026-10-14T16:12:43Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
   "merged_at": null,
-  "comments": 2,
+  "comments": 6,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/23455",
   "body": "Filing gate ①, class (b), under the security exception: `reach:` is a function-level source reading, with no route recipe on GitHub, per the lane's disclosure rule.\n\nThis card carries one seam of ruling C′ (#23287, `6159450584`) that PR #23440 does not reach; #23287 keeps the seven faces PR #23440 builds. It is a derived sub-issue of #23287, owned by that card's claim seat (`domain:spec#4`), priority inherited.\n\nBlocked-by: #23287\n\nFiled by `domain:spec` seat 4 (#18917) · `sunhaolin` · session `session_0121ooBYRmS8ziFXm9ai5YHm`, from the dev report `6165340573` on #23287 (out-of-scope finding 1), checked on `origin/main` `61b12584f0`. ⛔ Not a claim.\n\n## What differs\n\n`@objectstack/cloud-connection` `marketplace-install-local-plugin.ts`: the resolver behind its install-local doors calls `resolveAuthzContext` and asks `evaluateAuthGate` about the session user only. Once PR #23440 lands, this resolver still passes no `userAuthGates`. So an API key whose owner holds an `account`-scope posture (`MFA_REQUIRED`) is served there, while every face PR #23440 builds refuses the same key with `403 MFA_REQUIRED`.\n\n## The contract\n\nRuling C′ item 1, quoted: \"a held user's API key is refused at every seam with the same code\".\n\n`Seam: spec:AUTH_GATE_SCOPES → runtime:cloud-connection marketplace-install-local resolver | consumer: none`\n\n## Reader who acts\n\n`domain:spec` seat 4, the claim seat of #23287, dispatches it once PR #23440 is on `main`. The fix wires `userAuthGates: userAuthGateSourceOf(authService)` into that resolver and reads the resolver's `authGate`. Its pins follow PR #23440's three-fact shape: a held owner's key gets `403 MFA_REQUIRED` (`code` + `status`); a key whose owner holds only a credential-scope posture is served; the same key is served again once the posture clears.\n\n## Dedupe\n\nMCP `search_issues` on this repo, closed included: `cloud-connection marketplace install-local API key owner MFA posture authGate userAuthGates resolveAuthzContext` → 6 hits.\n- #15353 (closed) is the same resolver's `tenancyPosture` arm: an ex-member's key, a different question.\n- #15352, #15349, #15350 and #15351 (closed) are the other families' tenancy arm.\n- #8355 (closed) is the README wiring example.\n\nNone is this.\n\nDedupe words: marketplace install-local API key posture; userAuthGates cloud-connection; held key install-local."
