@@ -40,10 +40,11 @@ function engine(opts: { client?: string; failRead?: boolean } = {}) {
   return {
     registry: { getAllObjects: () => OBJECTS },
     getDriverForObject: () => driver,
-    async findOne(object: string, query: { where: { id: string } }) {
+    async findOne(object: string, query: Record<string, unknown>) {
       const exists = db.prepare(`SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?`).all(object).length > 0;
       if (!exists) return null;
-      return db.prepare(`SELECT * FROM ${object} WHERE id = ?`).get(query.where.id) ?? null;
+      const id = String((query.where as { id?: unknown } | undefined)?.id);
+      return db.prepare(`SELECT * FROM ${object} WHERE id = ?`).get(id) ?? null;
     },
   };
 }
