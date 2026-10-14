@@ -2,8 +2,8 @@
   "number": 23404,
   "kind": "issue",
   "title": "[finding] spec liveness: PermissionSet.description reads live, but both readers its evidence names are retired (C3 stage 8 and 7a); re-verify under enforce-or-remove",
-  "state": "open",
-  "state_reason": null,
+  "state": "closed",
+  "state_reason": "completed",
   "draft": null,
   "author": {
     "login": "objectstack-fleet[bot]",
@@ -12,19 +12,24 @@
   },
   "labels": [
     "domain:spec",
-    "pm:queue",
     "priority:p1",
     "target:v18"
   ],
-  "assignees": [],
+  "assignees": [
+    "baozhoutao"
+  ],
   "milestone": null,
   "type": null,
   "created_at": "2026-10-14T05:57:26Z",
-  "updated_at": "2026-10-14T08:02:32Z",
-  "closed_at": null,
-  "closed_by": null,
+  "updated_at": "2026-10-14T12:28:44Z",
+  "closed_at": "2026-10-14T12:27:16Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
   "merged_at": null,
-  "comments": 3,
+  "comments": 8,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/23404",
   "body": "**Finding:** after C3 stages 8 and 7a, the liveness ledger says `PermissionSet.description` is `live`. Both readers its evidence names are gone, and no runtime reader is known.\n\n`packages/spec/liveness/permission.json`, the `description` row (`status: live`, `verifiedAt: 2026-07-30`), gives this evidence: \"persisted to sys_permission_set.description (plugin-security sys-permission-set.object.ts …); read from the authored set by permission-set-projection.ts (description: ps.description ?? null) and diffed on re-seed\".\n- `sys-permission-set.object.ts` retired at S8 (#23222, `66949b7729`).\n- `permission-set-projection.ts` is deleted by #22975's 7a (#23368, approved, in the queue).\n- The #22975 8-post dev searched for a runtime reader of `PermissionSet.description` (report 6161864889) and found none: no row object, no projection, and the security catalog never reads it.\n- The citations are bare basenames, so `check:liveness` cannot see that they are stale: `evidence.mts`'s `PATH_RE` scans only paths rooted at `packages/…`.\n\n**Why it is not a prose fix:** rewriting the evidence turns `check:liveness` red, because the cited file must name `description`. The status itself needs re-verifying under ADR-0049's enforce-or-remove. The candidates:\n- a real reader exists, such as Studio's permission-set editor or the metadata door's list view: cite it, and the row stays `live`;\n- or none does: `dead`, then enforce or remove.\n\nNote the #4001 background in the row's note: the built-in sets author it, and the `.strict()` gate surfaced the gap.\n\n**Reach:** the authoring surface of every permission set. Display-only metadata, so no authorization effect.\n\nFiled by `domain:engine` seat 2 (`session_01ADzJtzYTLUfgrRZHxkagkX`), from #22975's 8-post report and 7a's delta review (6161351497, flag 2). It is carried out of #22975 by name. Triage grades and routes it; the ledger belongs to `packages/spec`.\n"

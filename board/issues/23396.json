@@ -2,8 +2,8 @@
   "number": 23396,
   "kind": "issue",
   "title": "[Decision] 收班流程修法:清单补「释放认领 / 决策挂 needs-user-decision / 欠账必带卡号」,哪几步做成脚本检查",
-  "state": "open",
-  "state_reason": null,
+  "state": "closed",
+  "state_reason": "completed",
   "draft": null,
   "author": {
     "login": "objectstack-fleet[bot]",
@@ -12,21 +12,22 @@
   },
   "labels": [
     "domain:skills",
-    "pm:dispatched",
     "priority:p2",
     "tooling"
   ],
-  "assignees": [
-    "os-zhuang"
-  ],
+  "assignees": [],
   "milestone": null,
   "type": null,
   "created_at": "2026-10-14T04:36:21Z",
-  "updated_at": "2026-10-14T07:58:29Z",
-  "closed_at": null,
-  "closed_by": null,
+  "updated_at": "2026-10-14T08:52:17Z",
+  "closed_at": "2026-10-14T08:45:58Z",
+  "closed_by": {
+    "login": "os-zhuang",
+    "id": 277994282,
+    "type": "User"
+  },
   "merged_at": null,
-  "comments": 6,
+  "comments": 7,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/23396",
   "body": "Ruled: 6162084315 · letter A · 2026-10-14T06:08Z\n\n## [决策卡] 收班流程的修法:清单补哪几步,哪几步做成脚本检查 · `domain:devx` seat 1 (off duty) 改写 · `session_012zwsLMxQBwHUYJgPyrpEvx` · 2026-10-14T04:38Z\n\n**立卡类别:** ③ 维护者直派(「立卡」),随后按维护者「23396 改为决策卡」改为 ② 只有维护者能做的决定。新增脚本检查属于「新增门禁默认否」的例外,需要维护者点名。维护者转来 spec 席的建议时说「前两条可以做成脚本检查」,本卡请维护者确认这句话算点名。**读者:** `domain:skills` 席,裁决后按字母执行。~~⛔ 本卡不是认领。~~\n\n### 维护者速读\n\n- **问题:** 本班(`domain:devx` seat 1)按收班清单逐条执行后,仍留下三类残缺:\n  1. 认领的卡没释放;\n  2. 待裁决的卡没进你的收件箱;\n  3. 台账里有义务没卡号。\n  三类都要你亲自指出。\n- **原因:** 规则大多已经存在,但没进收班清单。清单不点名,照做就漏。\n- **请裁:** 选 A、B 还是 C,见下方选项表。本席推荐 **A**。\n\n### Governing text\n\n- `seat-post-protocol.md:42` 交接收尾清单(10 步):第 2 步「在手工件逐件处置」,第 9 步「在飞 dev 卡…在贴里点名」。两步都没有写释放这个动作。\n- `state-machine.md:41`:「释放者 = 让卡离手的席位:行首 `Release:`(会话/因/去向)与清 assignee 同笔」。\n- `SKILL.md:230`:「决策默认锚在所属 issue(分析发评论,中文;挂 `needs-user-decision`、退出活动队列)」;`:268` 卡先于弹窗;`:122` 六态互斥。\n- `filing-gate.md:21`:无 `reach:` 的 finding 进 Acceptance notes,并带 `carrier:`。这条没说「搭下一个碰 X 的 PR」不算承接者。\n\n### 实测(本班)\n\n1. **认领未释放。** 收班后 #23193 仍是 `pm:dispatched`,挂着本席 assignee,没有 `Release:`。#23169 也挂着 assignee。座位贴里还写了「stays `pm:dispatched` until the ruling」,等于把半状态写成了常态。事后已补:`6160919454`、`6160925950`。\n2. **决策没进收件箱。** `6141962120`(#23193,还是英文写的)和 `6147446653`(#23169)都是决策分析,但卡挂的是 `pm:dispatched` / `pm:blocked`,不是 `needs-user-decision`。\n3. **台账义务没卡号**(空座位正文 `#6023` 现状):\n   - #23177 的 B′ 审计卡「next 发版后 + 两周」到期才立,无卡;\n   - #23282 的线上 pin 仍欠,卡已关;\n   - 四条 Carried 项写的承接者是「下一个碰 X 的 PR」,或者没有承接者:`ci.yml` 里 `dogfood-gate` 的注释、`approvals.json` 那条清单项、`invitation-role-cap.ts:22-25` 的头注释、CRM 行数(1,932 对 1,929)。\n\n### 待裁的五条修法\n\n前三条来自 spec 席(经维护者转来),第 4、5 条来自本卡原文。\n\n| # | 修法 | 落点 |\n|:--|:--|:--|\n| 1 | 收班清单加一步:台账里每条欠账都必须带卡号;条件型的开成 `pm:blocked` + `Blocked-by:`(按时间触发的写 `Restart-when:`);空座位正文只放指针,不放义务 | `seat-post-protocol.md` |\n| 2 | `post-stamped.mjs --body` 写 vacant 正文时,拒绝欠账段里没有 `#编号` 的行。做法与它现在拒绝裸时间戳一样 | `scripts/pm/post-stamped.mjs` + 自测 |\n| 3 | 立卡门补一句:「搭下一个碰 X 的 PR」不算承接者;本席已落地工作欠下的后续动作照常立卡,不受防噪条款限制 | `filing-gate.md` |\n| 4 | 收班清单加一步:本席认领的每张卡,要么已落地,要么 `Release:` + 清 assignee 同笔,并转成真实状态 | `seat-post-protocol.md` |\n| 5 | 收班清单加一步:每张等你裁决的卡只挂 `needs-user-decision` | `seat-post-protocol.md` |\n\n### 选项 × 代价 × 工作量\n\n| 选项 | 做什么 | 你能感知到的后果 | 工作量 |\n|:--|:--|:--|:--|\n| **A(推荐)** | 五条全做。第 1、2 条做成脚本检查:第 2 条按上表;第 1、4、5 条合成一个收班前检查(离任会话名下没有未释放的认领,待裁卡都挂 `needs-user-decision`),优先复用 `check-half-states.mjs` 的既有读法 | 收班时漏任何一项都会被直接拒写,不再靠你发现 | skills 车道 · 2 个 PR:文字 1 个(先例 PR #23257,+4/−4);脚本 1 个(先例 PR #23337,+142/−18) |\n| B | 只改文字:第 1、3、4、5 条进清单和立卡门,不加脚本 | 规则写全了,但仍靠席位自觉;本班的实测说明光读不够 | skills 车道 · 1 个 PR(先例 PR #23257) |\n| C | 文字全改,脚本只做第 2 条(vacant 正文拒绝无卡号欠账),认领释放靠分诊的半状态巡查 | 台账欠账能拦住;认领释放仍要等巡查发现,可能晚数小时 | skills 车道 · 2 个 PR(先例同 A,脚本较小) |\n\n### 四轴(业务立场)\n\n- **长远合理性(领起):** 交接是舰队连续运转的唯一接口。规则散在三个文件、清单不点名,每换一班就要你兜底一次。A 把规则收进清单,再用脚本兜住,一处说全,一处拦住。\n- **实际业务拉动:** 本班实测三类残缺。你的决策收件箱漏了两项;两张卡挂着名字停在空座位上;六条义务没有卡号,下一席读不到。\n- **防 AI 犯错:** AI 席位照清单逐条做;清单缺步,AI 一定缺步。写进清单是必要条件,脚本拒写才让它结构上不可能漏(B 做不到这一点)。\n- **创业阶段不扩散:** 脚本是新增门禁,默认否,例外只有维护者点名。本卡请你确认「前两条可以做成脚本检查」即点名;不确认就选 B。\n\n**推荐 A。** 若只想先止血,选 C。\n\n"

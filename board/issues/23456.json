@@ -1,0 +1,35 @@
+{
+  "number": 23456,
+  "kind": "issue",
+  "title": "security(mcp): the stdio face resolves OS_MCP_STDIO_API_KEY with no owner posture, so a held owner's key starts and serves stdio MCP where ruling C′ refuses it at every seam",
+  "state": "open",
+  "state_reason": null,
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "area:access",
+    "bug",
+    "domain:spec",
+    "pm:dispatched",
+    "priority:p1",
+    "security"
+  ],
+  "assignees": [
+    "sunhaolin"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-14T10:02:13Z",
+  "updated_at": "2026-10-14T12:44:36Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 1,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/23456",
+  "body": "Filing gate ①, class (b), under the security exception: `reach:` is a function-level source reading, with no route recipe on GitHub, per the lane's disclosure rule.\n\nThis card carries one seam of ruling C′ (#23287, `6159450584`) that PR #23440 does not reach; #23287 keeps the seven faces PR #23440 builds. It is a derived sub-issue of #23287, owned by that card's claim seat (`domain:spec#4`), priority inherited.\n\nBlocked-by: #23287\n\nFiled by `domain:spec` seat 4 (#18917) · `sunhaolin` · session `session_0121ooBYRmS8ziFXm9ai5YHm`, from the dev report `6165340573` on #23287 (out-of-scope finding 2), checked on `origin/main` `61b12584f0`. ⛔ Not a claim.\n\n## What differs\n\n`@objectstack/mcp` `plugin.ts`: `resolveStdioExecutionContext` resolves `OS_MCP_STDIO_API_KEY` through `resolveAuthzContext` with no posture source and assembles `authGate: undefined`. Once PR #23440 lands, a key whose owner holds an `account`-scope posture (`MFA_REQUIRED`) still starts the stdio transport and serves it, while every face PR #23440 builds refuses the same key with `403 MFA_REQUIRED`.\n\n## The contract\n\nRuling C′ item 1, quoted: \"a held user's API key is refused at every seam with the same code\". Item 4, quoted: \"The refusal is not a revocation: the key resumes the moment the user enrols (or the account posture clears)\".\n\n`Seam: spec:AUTH_GATE_SCOPES → runtime:mcp plugin.ts resolveStdioExecutionContext | consumer: none`\n\n## Reader who acts\n\n`domain:spec` seat 4, the claim seat of #23287, dispatches it once PR #23440 is on `main`. The refusal's timing is the claimant's measured call, judged against item 4: refusing at start alone would keep a posture that appears mid-run unseen, and a per-call answer is what lets the key resume when the posture clears. Its pins follow PR #23440's three-fact shape.\n\n## Dedupe\n\nMCP `search_issues` on this repo, closed included: `MCP stdio OS_MCP_STDIO_API_KEY held owner posture authGate undefined resolveStdioExecutionContext` → 10 hits.\n- #15348 (closed) is the same door's `tenancyPosture` arm: an ex-member's key, a different question.\n- #22664, #22777, #22423, #7645, #8589, #11622, #8266, #8034 and #8083 (closed) are other stdio defects: provenance, exposure, cwd, transport liveness and localization.\n\nNone is this.\n\nDedupe words: MCP stdio API key posture; OS_MCP_STDIO_API_KEY held owner; stdio authGate undefined."
+}

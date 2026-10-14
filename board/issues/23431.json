@@ -2,8 +2,8 @@
   "number": 23431,
   "kind": "issue",
   "title": "pm-dispatch filing-gate: codify the maintainer's protocol-first grading rule — every metadata-protocol change, and every REST/data door narrowing, is p1 + target:v18 in every lane",
-  "state": "open",
-  "state_reason": null,
+  "state": "closed",
+  "state_reason": "completed",
   "draft": null,
   "author": {
     "login": "objectstack-fleet[bot]",
@@ -13,7 +13,6 @@
   "labels": [
     "area:devpath",
     "domain:skills",
-    "pm:dispatched",
     "priority:p1",
     "tooling"
   ],
@@ -23,11 +22,15 @@
   "milestone": null,
   "type": null,
   "created_at": "2026-10-14T08:11:38Z",
-  "updated_at": "2026-10-14T08:24:48Z",
-  "closed_at": null,
-  "closed_by": null,
+  "updated_at": "2026-10-14T11:36:08Z",
+  "closed_at": "2026-10-14T11:30:33Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
   "merged_at": null,
-  "comments": 1,
+  "comments": 12,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/23431",
   "body": "Filing gate **③ the maintainer's direct order**, given in the triage seat's session on 2026-10-14. Verbatim, in order:\n1. 「spec 车道待办任务中，哪些是会导致元数据协议变更的，这一类应该提高优先级」\n2. 「我的意思是元数据的协议变更应该优先处理，避免每个版本应用都要做复杂的升级」\n3. 「协议变更还经常会影响 objectui 项目的开发，相关任务经常等 spec 发版本」\n4. 「所有元数据协议变更一律 p1，是否建议修改分诊skills」, answered by the seat with options A (text only) / B (text plus a script check) / C (leave it on the seat post)\n5. 「立卡，规则扩到所有车道，REST 收窄也算」\n\nFiled by the triage seat (seat post #6015, `session_01AavokzJ5DndAwitDXvKy4U`). ⛔ Not a claim. The rule is recorded on #6015 (`6163099154`, amended `6163539661`), and triage applies it from those records. This card puts it where every seat reads it.\n\n**Reader who acts:** the `domain:skills` seat. **Surface:** `.claude/skills/pm-dispatch/references/filing-gate.md`, section 〈定级判据(北极星「优先级」的执行说明)〉. Text only: ⛔ no `scripts/**`, ⛔ no new gate (option A; B was not chosen, and 「新增门禁默认否」 stands).\n\n## Why the text must change, not only the seat post\n\n- Every new triage session, and every filing seat that presets a grade, reads the skill, not #6015's comments.\n- Two lines in that section, read alone, grade these cards **down**:\n  - `可达面定上界: … 仅最高权限可达且无现用者至多 p3`. Example: #23415 (a per-package delete with `dropStorage=true` destroys a live object's records) is admin-only with no measured user, so this line caps it at p3.\n  - `⛔「有人在等」不是定级判据`. The maintainer's reason (3) is precisely that objectui waits on these cards and then on their release.\n- The skill's own precedence (`SKILL.md` 〈优先级〉: 维护者裁决 > … > 细则) already puts the maintainer's rule first. The text should say so in place, so no seat has to infer it.\n\n## What done looks like (the content; wording is the seat's)\n\n- **The class.** A card counts when its fix changes the **metadata protocol**: what `@objectstack/spec` accepts or declares (schemas, the stack and manifest definitions, the hook and flow contracts, ADR-0087 conversion windows), or what a metadata door (`/meta` read, save, delete) accepts or answers. That holds widening or narrowing, in **any** `domain:*` lane.\n- **Also counted:** a **narrowing** of a REST or data door (a request that was accepted and is now refused, as in #23265 and #23214). objectui is their client.\n- **Not counted:** message wording, docs, ledgers, CLI flags, lint/verify exports, and service behaviour behind an unchanged door.\n- **The grade:** **`priority:p1` + `target:v18`**, so the change rides the 18 major, apps pay one upgrade, and objectui mirrors it in the same move. A conditional card (one whose outcome may retire a key) gets the same grade, so its verdict lands before GA.\n- **The two lines above:** neither caps this class. One sentence each, or one sentence citing this rule, as the seat finds clearest.\n- **The release side**, one sentence (already practice, see #6015 `6163539661`): the triage round's maintainer list names how many objectui cards wait on the next `next.N`, so a cut is asked for when they pile up.\n\n## Acceptance notes\n\n- One PR, about +5/−1 in `filing-gate.md`. If a mirror of these two lines exists in a file a gate reads, it is named and kept in step in the same PR.\n- `Clause-②: no` (internal PM rules text, no published surface).\n- `.claude/**` is a governed path, so the PR lands by the register's tier with its review record.\n\n## Dedupe\n\nSearched this repo's `domain:skills` cards, open and closed, for `protocol`, `定级` and `priority` in the title: one hit, #23423 (os-dev `carrier:` twins), not this. Searched for `metadata protocol p1 grading rule filing-gate`: no card."

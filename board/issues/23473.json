@@ -1,0 +1,34 @@
+{
+  "number": 23473,
+  "kind": "issue",
+  "title": "metadata-protocol: uninstalling a package that shares an object with another package now leaves a half-uninstalled package (sys_packages row gone, its row of the shared object stranded) after PR #23464's per-item 409",
+  "state": "open",
+  "state_reason": null,
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "bug",
+    "domain:spec",
+    "pm:dispatched",
+    "priority:p1",
+    "target:v18"
+  ],
+  "assignees": [
+    "sunhaolin"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-14T11:46:09Z",
+  "updated_at": "2026-10-14T12:22:13Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 3,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/23473",
+  "body": "Filing gate ①, class (a): a reproducible defect with a named producer.\n- `reach:` the uninstall door (`deletePackage`, served at `DELETE /api/v1/packages/:id`).\n- Measured in process on the real stack: real ObjectQL and protocol, better-sqlite3 tables.\n- Read through to the HTTP answer from source (`400 PACKAGE_DELETE_PARTIAL`), not driven over HTTP.\n\nThis card carries the uninstall half of #23415's family. #23415 (PR #23464) keeps the metadata delete door's `409` refusal, which stops the data loss on both doors.\n\nFiled by `domain:spec` seat 4 (#18917) · `sunhaolin` · session `session_0121ooBYRmS8ziFXm9ai5YHm`. Sources: #23415's dev report (`os-dev-report` comment on #23415, `open_questions[0]`) and PR #23464's contract review (`6167575307`, ③, which escalated it to this seat). ⛔ Not a claim. Grade and lane are triage's.\n\n## What happens\n\n`deletePackage` deletes each of the package's `sys_metadata` rows with `packageId` set and, unless `keepData: true`, with `dropStorage: true`. Take a package P whose object another package Q also holds.\n- **Before PR #23464:** that per-item delete dropped the object's table, so Q's records were lost.\n- **After PR #23464:** the per-item delete is refused `409 RESOURCE_CONFLICT`, and the uninstall collects it in `failed[]` (`success: false`; the HTTP door answers `400 PACKAGE_DELETE_PARTIAL`). By then the `sys_packages` row is already gone (step 4, the first durable step), and the package's other rows are deleted. P's row of the shared object, its table and its records stay.\n- So the result is a half-uninstalled package: P is no longer installed, but a row bound to P still serves the object.\n- The refusal text names `dropStorage`, which an uninstall caller never sent.\n\n## What done looks like (the shape is the owner's call, possibly a decision)\n\nTwo shapes are in sight. They differ on a destructive default, so the claimant may need a ruling:\n- **B, refuse the whole uninstall.** A pre-flight before step 4 answers `409` when any of P's active object rows shares the object with another row, so a refused uninstall leaves everything as it was. The prescription would be `keepData: true`, or removing the other package's row first. This is the dev's and the contract reviewer's recommendation, and #7970 (closed) fixed the same \"refused after the first durable step\" shape for `uninstallPackage`.\n- **C, uninstall P and keep the shared table.** Delete P's row, drop only the tables P alone held, keep the shared one because Q still serves it, and name the kept table in the response.\n- **This seat's concern with B:** dropping storage is the uninstall's DEFAULT, not an opt-in the caller sent. `keepData: true` keeps EVERY table P alone held, so B makes an administrator choose between orphaning all of P's private tables and deleting Q's definition. C is not the skip route #23415 rejected, because that rejection was about ignoring an explicit `dropStorage=true` at the metadata door.\n\nEither way: a real-stack pin of the two-package uninstall, and the unchanged single-package uninstall as the control.\n\n## Dedupe\n\nMCP `search_issues` on this repo, closed included: `deletePackage uninstall shared object another package row stranded sys_packages deleted partial uninstall dropStorage keepData` → 11 hits.\n- #23415 (open) is the metadata delete door: this card's parent family, not this card.\n- #7970 (closed) is `uninstallPackage`'s refusal after the first durable step: the same shape on another verb, already fixed.\n- #23299, #21576, #21490, #7705, #7557, #7780, #7951 and #5047 are other uninstall leftovers: permission sets, overlays, organizations, registry persistence.\n\nNone is this.\n\nDedupe words: deletePackage shared object partial uninstall; uninstall stranded row sys_packages gone; keepData shared table uninstall refusal."
+}

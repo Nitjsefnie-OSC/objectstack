@@ -2,8 +2,8 @@
   "number": 23214,
   "kind": "issue",
   "title": "hono adapter: `createHonoApp`'s catch-all flattens a repeated query name to its last value, so every dispatcher arity rule is unreachable on a `@objectstack/hono` host",
-  "state": "open",
-  "state_reason": null,
+  "state": "closed",
+  "state_reason": "completed",
   "draft": null,
   "author": {
     "login": "objectstack-fleet[bot]",
@@ -14,19 +14,24 @@
     "area:api",
     "bug",
     "domain:cli",
-    "pm:queue",
     "priority:p1",
     "target:v18"
   ],
-  "assignees": [],
+  "assignees": [
+    "sunhaolin"
+  ],
   "milestone": null,
   "type": null,
   "created_at": "2026-10-13T09:07:32Z",
-  "updated_at": "2026-10-14T08:18:43Z",
-  "closed_at": null,
-  "closed_by": null,
+  "updated_at": "2026-10-14T12:02:06Z",
+  "closed_at": "2026-10-14T12:00:43Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
   "merged_at": null,
-  "comments": 10,
+  "comments": 20,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/23214",
   "body": "Filing gate **①**, class **(b)**: a rule the platform declares, and keeps at one adapter, is unreachable at the other. It is measured at a public door's adapter.\n\n`reach:` HTTP, measured once by #23072 slice 2's dev at `6fe8e74629` (`os-dev-report` `6142050405`, out-of-scope finding 1). It used `@objectstack/hono`'s `createHonoApp` with a recording dispatcher. A by-name `/meta` item read carrying the same query name twice, with two different values, reached `dispatcher.dispatch()` as a single string: the LAST value. The first value was dropped silently, and the answer was 200.\n\nFiled by `domain:cli` seat 2 (#22648) · `os-steve` · session `session_01VoSxBQujKLZKPwK2u5ehQ6`. ⛔ Not a claim. Lane and grade are triage's.\n\n**Reader who acts:** triage grades it. The landing is `packages/adapters/hono/src/index.ts`, which is `domain:cli` by the lane table (`packages/adapters/*`). This seat claims it next if triage queues it here.\n\n## What happens\n\n`createHonoApp`'s catch-all builds the dispatcher's query with `url.searchParams.forEach((val, key) => { queryParams[key] = val; })` (`packages/adapters/hono/src/index.ts`, about `:787`-`:789`). A repeated name therefore arrives as its last value, never as the array the handler would need to see the ambiguity.\n\nEvery dispatcher domain that declares an arity rule is unreachable on such a host:\n- the `/packages` domain's `repeatedQueryParamMessage` refusals (`packages/runtime/src/domains/packages-get-version-scope.test.ts` pins them through another adapter);\n- the four by-name `/meta` doors' query decision, as of PR #23211 (`metaItemQueryRefusal`, rule 2).\n\nOn a `createHonoApp` host the request is answered with one of the two values the caller sent, where the same request through `@objectstack/plugin-hono-server` or the node adapter is refused 400 \"supplied 2 times\".\n\n## Governing text\n\n- #6878, the cli-lane seat ruling `5236010909` (route 2, adopted): \"the handler must be able to SEE the ambiguity in order to refuse it\". `@objectstack/plugin-hono-server`'s `readQuery` (`packages/plugins/plugin-hono-server/src/adapter.ts`, about `:375`) implements it with `c.req.queries()` and a `length` normalisation: a single value stays a string, and a repeated one becomes an array.\n- `packages/qa/http-conformance/src/query-multiplicity.conformance.test.ts` (PR #6941) is the multiplicity conformance file. Measure whether it covers `createHonoApp` at all.\n\n`Seam: spec:IHttpServer query Record (string | string[]) → runtime: @objectstack/hono createHonoApp catch-all (consumer: every dispatcher domain with an arity rule)`.\n\n## Acceptance\n\n- `createHonoApp`'s catch-all hands the dispatcher the same query shape `readQuery` hands its handlers: one value as a string, a repeated name as an array, built without dynamic property writes (the `__proto__` reason `readQuery`'s docblock gives).\n- **The #6878 order lesson applies first.** Before the flip, measure which dispatcher read points receive an array for the first time on a `createHonoApp` host and are unguarded. The same dispatcher already receives arrays through `plugin-hono-server`, so the population may be empty, but measure it. Any unguarded point is fixed in the same PR or before it.\n- One conformance case in the multiplicity file runs through `createHonoApp`: a repeated single-valued name is refused 400, as through the other adapters, and a single value is unchanged.\n\n## Dedupe\n\nMCP `search_issues` on objectstack-ai/objectstack, closed included:\n- `createHonoApp catch-all repeated query parameter last value wins searchParams forEach flattens multiplicity`: 0 hits.\n- `hono adapter dispatcher query repeated name supplied twice silently dropped first value`: 5 hits.\n  - #6878 (closed) is the `plugin-hono-server` half of this family: its adapter flipped, and `createHonoApp` was not in its claimed surface.\n  - #16545, #10470, #10479 and #9436 (all closed) are not this.\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_\n"

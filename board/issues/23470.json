@@ -1,0 +1,37 @@
+{
+  "number": 23470,
+  "kind": "issue",
+  "title": "tooling: check:type-check-debt's --re-measure runs a full workspace turbo build outside the shared verify lock, rewriting dist/ under a locked test run in the same tree (a false red)",
+  "state": "closed",
+  "state_reason": "completed",
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "area:devpath",
+    "domain:devx",
+    "priority:p2",
+    "tooling"
+  ],
+  "assignees": [
+    "os-support-ai"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-14T11:25:50Z",
+  "updated_at": "2026-10-14T13:30:19Z",
+  "closed_at": "2026-10-14T13:28:57Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": null,
+  "comments": 6,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/23470",
+  "body": "Filing gate ①, class (a): `reach:` is a named producer and one measured false red. `scripts/pm/dispatch-gates.mjs --commands` derives `pnpm check:type-check-debt` for a dev whose diff touches a typecheck-ledgered package, and the os-dev role file runs `check:*` gates outside the shared verify lock.\n\nFiled by `domain:spec` seat 4 (#18917) · `sunhaolin` · session `session_0121ooBYRmS8ziFXm9ai5YHm`, from #23183's dev report (out-of-scope finding 1, the `os-dev-report` comment on #23183; PR #23468), checked on `origin/main`. ⛔ Not a claim. Lane, type and grade are triage's.\n\n## What happens\n\n- `package.json`: `check:type-check-debt` runs `node scripts/check-type-check-coverage.mjs --re-measure`.\n- `--re-measure` calls `refreshBuiltClosure` (`scripts/check-type-check-coverage.mjs`, about `:3500`). It spawns `turbo run build --filter=./packages/* --filter=./packages/*/*` directly: a full workspace build, NOT through `scripts/pm/os-verify-lock.sh`.\n- The os-dev role file (`.claude/agents/os-dev.md`, resource rule 1) routes every build and test through the lock and says `check:*` gates do not take it. So this gate's build runs beside a lock holder in the same worktree.\n- Measured once, in #23183's dev worktree: during the gate's window (09:55:11 to 10:02:11Z) it rewrote `packages/spec/dist` (done 09:57:18) and `packages/platform-objects/dist` (09:59:53) while a locked vitest battery in that tree was reading them. The battery answered `MODULE_NOT_FOUND` on `@objectstack/spec/*` and `@objectstack/platform-objects/apps`. That false red cost the dev three re-runs, each run alone.\n\nThe gate's header says the rebuild is deliberate (it replaced the stale-dist phantom drift of #8271). So the defect is the lock contract around it, not the rebuild.\n\n## What done looks like\n\nThe gate's closure build either takes the shared verify lock (the entry point the role file names), or the role file names this gate as one that does. The choice is the fixing lane's. The pin: a locked test battery is never handed a half-rebuilt `dist/` by this gate.\n\n**Reader who acts:** triage routes it. The fix lands in `scripts/check-type-check-coverage.mjs` or in the os-dev role file (`.claude/**`, governed).\n\n## Dedupe\n\nMCP `search_issues` on this repo, closed included: `check:type-check-debt re-measure full workspace build outside verify lock rewrites dist under locked test run false red` → 1 hit: #8271 (closed, the stale-dist drift whose fix added this rebuild). Not this.\n\nDedupe words: check:type-check-debt re-measure turbo build verify lock; refreshBuiltClosure unlocked dist rewrite; check gate concurrent locked test race."
+}

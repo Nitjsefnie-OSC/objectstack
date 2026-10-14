@@ -1,0 +1,32 @@
+{
+  "number": 23483,
+  "kind": "issue",
+  "title": "docs(adr): ADR-0069 records ruling C′'s enforcement once every key-admitting seam asks the owner's posture — a dated status note, and the shared key-admission seam as a sixth enforcement-seam entry (Tier H, the maintainer's hand)",
+  "state": "open",
+  "state_reason": null,
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "area:access",
+    "documentation",
+    "domain:spec",
+    "pm:blocked",
+    "priority:p3"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-14T12:38:54Z",
+  "updated_at": "2026-10-14T12:59:05Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 1,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/23483",
+  "body": "Filing gate ①: a named location whose sentence the landed work makes untrue. This is a follow-up owed by landed work (PR #23440 and PR #23472, both merged 2026-10-14 for #23287). `reach:` is the record itself. `docs/adr/0069-enterprise-authentication-hardening.md` line 173 on `origin/main` `d54e2393bf` says \"Each row in D1-D6 names exactly one of these seams\". The five seams listed above it (lines 167–171) do not include the API-key admission seam, which D3's amended note (lines 89–97) now names.\n\nBlocked-by: #23455\nBlocked-by: #23456\n\nFiled by `domain:spec` seat 4 (#18917) · `sunhaolin` · session `session_0121ooBYRmS8ziFXm9ai5YHm`, from PR #23472's at-tier contract review (`6167905954`, recorded on #23287 as `6167957717`), checked on `origin/main` `d54e2393bf`. ⛔ Not a claim. Lane, type and grade are triage's.\n\n## What the record lacks\n\n1. **A dated status note naming the enforcement.** The \"Implementation status (2026-07-04)\" table (line 183 on) claims only that date's scope. The convention is the dated rows and the \"Correction (#4772)\" entry. It invites one note: ruling C′ is enforced by PR #23440 (`0f059078ec`). The note covers:\n   - the closed `AuthGateCodeSchema`;\n   - `AUTH_GATE_SCOPES` (`MFA_REQUIRED` = account, `PASSWORD_EXPIRED` / `PASSWORD_RESET_REQUIRED` = credential);\n   - the `held` outcome of `resolveApiKeyAdmission`;\n   - the forced-reset revocation, on by default.\n2. **The shared key-admission seam as a sixth entry** in \"Enforcement seam summary\" (lines 165–173): `resolveApiKeyAdmission` in `packages/core/src/security/api-key.ts`, fed by `userAuthGates`. That keeps line 173's \"exactly one of these seams\" true for D3.\n\n## Why it waits on #23455 and #23456\n\nA note saying ruling C′ is enforced must be true at every seam that admits a key. On `main` today two seams still admit a held owner's key without asking the posture:\n- `@objectstack/cloud-connection`'s install-local resolver (#23455);\n- `@objectstack/mcp`'s stdio face (#23456).\n\n#23455 also carries `resolveApiKeyPrincipal` and makes `userAuthGates` a required input. The record is written once, after that family lands, so it never states an enforcement the code does not yet hold.\n\n## Reader who acts\n\n`domain:spec` seat 4, the claim seat of #23287 and of the #23455 family, dispatches it once both blockers close. It is one Tier H record edit to `docs/adr/` alone, with a PR of its own: a governed surface, landed only on the maintainer's approval (precedent PR #23472). If triage grades it outside priority:p1/p2, it waits behind that seat's maintainer scope (\"后续只处理 p1 p2 的任务\") and is a candidate for any seat whose scope covers it.\n\n## Dedupe\n\nMCP `search_issues` on this repo, closed included: `ADR-0069 status note enforcement seam summary API key admission held posture amendment` → 106 hits. The top ten were read:\n- #23287 (closed) is the parent ruling's card.\n- #23403, #23225, #23038, #23006, #21327 and #20457 are other ADRs' record edits.\n- #23385, #2776 and #22279 are other subjects.\n\nNone is this.\n\nDedupe words: ADR-0069 status note key admission; enforcement seam summary sixth seam; ruling C′ record enforcement."
+}

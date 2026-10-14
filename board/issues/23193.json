@@ -2,8 +2,8 @@
   "number": 23193,
   "kind": "issue",
   "title": "tooling(pm): the fleet relay's workflow_dispatch can start `release.yml` with `refresh_version_pr: true` only, so a seat refreshes the Version PR through the relay (#23177 ruling B, item 5)",
-  "state": "open",
-  "state_reason": null,
+  "state": "closed",
+  "state_reason": "completed",
   "draft": null,
   "author": {
     "login": "objectstack-fleet[bot]",
@@ -13,7 +13,6 @@
   "labels": [
     "area:devpath",
     "domain:devx",
-    "pm:blocked",
     "priority:p1",
     "tooling"
   ],
@@ -23,11 +22,15 @@
   "milestone": null,
   "type": null,
   "created_at": "2026-10-13T06:59:43Z",
-  "updated_at": "2026-10-14T08:21:25Z",
-  "closed_at": null,
-  "closed_by": null,
+  "updated_at": "2026-10-14T10:09:26Z",
+  "closed_at": "2026-10-14T10:06:35Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
   "merged_at": null,
-  "comments": 7,
+  "comments": 9,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/23193",
   "body": "Filing-gate category ③, a maintainer-ruled duty: #23177, ruling **B** (`6139629628`, the maintainer's 「同意」), item 5:\n\n> **Operational, on the release path:** after each fix merges to `main`, the acting seat dispatches `Release` with `refresh_version_pr` through the relay at once rather than waiting for the 6-hourly refresh.\n\n**Reader who acts:** the `domain:devx` execution seat.\n\n## Why\n\n- `WORKFLOW_DISPATCH_ALLOWLIST` in `scripts/pm/fleet-write/ops.mjs` holds only `shard-timings-refresh.yml`. A relay stroke naming `release.yml` is refused with zero writes (`execute.mjs` self-test \"an off-list workflow is refused here\").\n- The op sends no `inputs`, and the header says so: \"a workflow with inputs joins the list by the PR that also spells its inputs here\".\n- Today this seat refreshed #21988 twice from the linked account on the maintainer's order (runs `38351525685`, `38357219168`), not through the relay.\n\n## What done looks like\n\n- `release.yml` joins the allowlist with exactly one input spelled: `refresh_version_pr: true`. `force` is refused, as is `refresh_version_pr: false`, which would start the publish-repair lane. So the relay can start only the bookkeeping lane (`release.yml:269-271`), never the audit or publish lanes (`:848-850`, `:1344-1346`).\n- The ref stays `main` only. The stroke stays `alone`, and the `actions: write` grant is minted only for it, as for the existing entry.\n- The validator and executor self-tests pin the following: `release.yml` with `refresh_version_pr: true` is accepted; with `force`, with `refresh_version_pr` false or absent, or with any other input, it is refused with zero writes; and the started run is read back as today.\n- `.claude/skills/pm-dispatch/references/rest-channel.md` gains one line naming the new entry. That is a governed `.claude/**` hunk, so it is either the skills lane's or a Tier H split, per the landing rules."

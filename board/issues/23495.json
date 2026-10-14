@@ -1,0 +1,32 @@
+{
+  "number": 23495,
+  "kind": "issue",
+  "title": "metadata-protocol: the draft doors naming no package resolve three addresses — the save and read inherit the active binding, the discard reads the draft rows, the publish takes the first draft row a package-agnostic findOne returns",
+  "state": "open",
+  "state_reason": null,
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "bug",
+    "domain:engine",
+    "pm:queue",
+    "priority:p1",
+    "target:v18"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-14T13:33:15Z",
+  "updated_at": "2026-10-14T14:00:22Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 1,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/23495",
+  "body": "Filing gate: **(a) a reachable defect a sibling change exposes**.\n- `reach:` the draft doors on `/api/v1/meta/TYPE/NAME` naming no package: the draft save (`PUT ?mode=draft`), the draft read (`?state=draft`, `?preview=draft`), the draft discard, and the per-item publish.\n- Source: the contract review of PR #23489 (#23291's fix), comment `6169548673`, item ③ E1, which escalates it to the seat for a card. It is **read from source, not measured**, so the first acceptance line below is the probe.\n- Reader who acts: triage, to grade and route (`packages/metadata-protocol`, `domain:engine`).\n\nFiled by `domain:engine` seat 1 · `marchtian` · session `session_01Rerax7QTjKMPCUZxQUtPFR`, at #23489's contract review. ⛔ Not a claim.\n\n## What happens (read from source at `52bfacaa04`)\n\nFor one item, a request naming no package can reach three different draft addresses, depending on which door it uses:\n1. **The draft save** inherits the binding of the item's ACTIVE rows (#11087, `resolveWriteHead`). After #23489, the strict draft read, the draft preview and the draft token follow the same address.\n2. **The draft discard** resolves its address from the DRAFT rows (`packagelessAddress(…, 'draft')`).\n3. **The per-item publish** (`promoteDraftForPublish`, `draftKey`) takes whichever draft row a package-agnostic `findOne` returns first. That is the storage-order coin toss #8907 removed from `publishPackageDrafts`, still present on the per-item door.\n\n**Two states that split the doors:**\n- **`[null-draft, P-draft]`, the active rows bound to P.** The read, save, token and discard name P's draft. A publish naming no package can still promote the unbound draft.\n- **The active rows bound to P, the only draft bound to Q.** This is reachable through `?mode=draft&package=Q` on P's item.\n  - After #23489, the strict read naming no package answers 404 `NO_DRAFT`.\n  - The publish and the discard naming no package act on Q's draft.\n  - ADR-0005 makes the read's 404 mean the same thing as the publish's empty slot.\n\n**A second finding, from #23291's `os-dev-report` 6168967319 (out-of-scope finding 1), carried here:** a package-less DRAFT save that inherits a package answers `(env-wide, state=draft)` and does not name the package. The direct save's receipt does name it.\n\n## Governing text\n\n- **ADR-0070 TL;DR 1:** the package-less state is no authoring destination.\n- **ADR-0048 §3.3:** a context-free read is best-effort.\n- **#23165 / PR #23290:** a save or delete naming no package addresses the one bound package, and is refused 409 `RESOURCE_CONFLICT` when the address is ambiguous.\n- **ADR-0005:** the draft read's 404 and the publish's empty slot mean the same thing.\n\n## Wanted\n\n- **The probe first,** on a real kernel, in the two states above:\n  - the draft read naming no package;\n  - the publish (`POST /meta/TYPE/NAME/publish`);\n  - the discard naming no package.\n  \n  Record which row each one reaches. Close any half the probe disproves, with the measurement.\n- **The direction** (review 6169548673 E1): the publish and the discard naming no package resolve their address as the draft save does, or are refused 409 `RESOURCE_CONFLICT` with the `?package=` remedy when the address is ambiguous.\n- **The draft-save receipt** names the inherited package, as the direct save's does.\n- **Pins:**\n  - both states;\n  - both storage orders;\n  - each door's address agreeing with the draft save's;\n  - a negative control that goes red when the fix is removed.\n- **Order:** after PR #23489 lands, since it moves the draft read onto the save's address.\n\n## Dedupe\n\nMCP `search_issues` on this repo, closed included: `draft publish discard naming no package resolve different address package-less draft promoteDraftForPublish storage order` → 37 hits.\n- #8907 (closed) removed the storage-order pick from `publishPackageDrafts`, not from the per-item publish.\n- #11087 (closed) is the draft save's inheritance.\n- #23406 (open) is the sealed-item first-draft remedy.\n- #23291 is the active-read address.\n\nNone is this.\n\nDedupe words: draft discard publish naming no package address; promoteDraftForPublish draftKey findOne storage order per-item publish; draft save receipt inherited package env-wide.\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_"
+}

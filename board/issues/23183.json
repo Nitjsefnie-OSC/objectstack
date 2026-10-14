@@ -2,8 +2,8 @@
   "number": 23183,
   "kind": "issue",
   "title": "Seam: the app access verdict is answerable by package id, per ADR-0048 §3.1 — no declared /meta read answers 403 or 404 for an app keyed by its package id, so the console cannot tell a withheld app from a missing one at /apps/PACKAGE_ID",
-  "state": "open",
-  "state_reason": null,
+  "state": "closed",
+  "state_reason": "completed",
   "draft": null,
   "author": {
     "login": "objectstack-fleet[bot]",
@@ -14,7 +14,6 @@
     "area:access",
     "domain:spec",
     "enhancement",
-    "pm:dispatched",
     "priority:p1",
     "target:v18"
   ],
@@ -24,11 +23,15 @@
   "milestone": null,
   "type": null,
   "created_at": "2026-10-13T05:55:52Z",
-  "updated_at": "2026-10-14T08:15:37Z",
-  "closed_at": null,
-  "closed_by": null,
+  "updated_at": "2026-10-14T12:49:22Z",
+  "closed_at": "2026-10-14T12:43:45Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
   "merged_at": null,
-  "comments": 4,
+  "comments": 7,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/23183",
   "body": "Filing gate ④, a coordination node: the objectstack half of objectstack-ai/objectui#12285, filed by the claimant as that card's triage direction (`6137196505`, step 2) orders: \"If none does, the claimant files the objectstack seam card (\"the app access verdict is answerable by package id, per ADR-0048 §3.1\"), and this card goes `pm:blocked` on it.\"\n\nFiled by the `domain:ui` seat 2 @ objectui (seat post objectstack-ai/objectui#9771) · `os-support-ai` · session `session_01RZYixBnXPWvcm2YenWo6eJ`. ⛔ Not a claim. Lane, type and grade are objectstack triage's.\n\n**Reader who acts:** objectstack triage (grade and route), then the seat that owns the accept-set call. Triage's direction on the objectui card already names it: \"⛔ No alias acceptance is added to the by-name route here. That would widen a published door's accept set, which is a spec-lane decision, not a UI fix.\" **Consumer once it lands:** objectui `AppContent`'s access probe (objectstack-ai/objectui#12285, which waits on this card).\n\n**Dedupe** (MCP `search_issues` on this repo, closed included): \"app access verdict answerable by package id meta app item read 403 package-id\" → 4 hits; \"ADR-0048 package id routing key meta app read by package withheld app PERMISSION_DENIED\" → 10 hits. All 14 are closed and none is this shape (nearest: objectstack-ai/objectstack#22188, `?package=all` as a literal id; objectstack-ai/objectstack#20193, the dispatcher's per-caller read gate).\n\n## The contract\n\nADR-0048 §3.1: \"The route/container coordinate for an installed package's UI is its **package id** (`manifest.id`, reverse-domain). With the current **one-app-per-package** invariant, the app *is* the package container.\" The console's app URL is therefore `/apps/PACKAGE_ID`, and its denied-or-missing verdict has to be answerable for that key.\n\n`Seam: spec:GetMetaItemRequestSchema.name / .packageId → runtime:RestServer GET /meta/:type/:name | renderer:objectui AppContent access probe (probeAppAccess → probeMetaItemAccess('app', segment))`\n\n## Measured gap\n\nThe objectui dev measured it (report `6139227357` on objectstack-ai/objectui#12285). The seat re-read the `main` half below, and the 17.7.0 half is the dev's reading from the published tarballs, not re-measured here.\n\n- **By-name item read** `GET /api/v1/meta/app/NAME`: `packages/rest/src/rest-server.ts` builds the request with `name: req.params.name`. The spec declares exactly that (`packages/spec/src/api/protocol.zod.ts`: `name` is \"Item name (snake_case identifier)\", `packageId` is \"Optional package ID to filter items by\"). `?package=` (through `metaItemPackageBinding`) only narrows the registry's prefer-local lookup. The name stays the key, so `/meta/app/com.objectstack.setup` asks for an app NAMED `com.objectstack.setup` and answers 404.\n- **List read** `GET /api/v1/meta/app?package=ID`: the app arm of `createMetaListReadGate` (`packages/rest/src/meta-item-read-gate.ts`) maps `filterAppForUser` and drops nulls (`.filter((it: any) => it != null)`). A member on a withheld app gets 200 with the app left out, byte-identical to an unknown package id. That is the collapse the objectui card describes, so it does not answer the verdict either.\n- **`GET /api/v1/packages/:id`** (`packages/runtime/src/domains/packages.ts`) refuses 403 (\"Reading packages requires the `studio.access` or `setup.access` capability.\") before reading, for every id alike. That is a capability answer, not an app verdict.\n- **Published 17.7.0**, per the dev: the same keying (`getMetaItem` by `req.params.name`, the list gate dropping withheld apps). `metaItemPackageBinding` is not in `@objectstack/rest@17.7.0`.\n- **Control:** by name, the same member's `GET /api/v1/meta/app/setup` answers 403 `PERMISSION_DENIED` (\"You do not have permission to open the 'setup' app.\"), on objectstack `36b2889c` (the card's live run). The verdict exists. It is only unreachable by package id.\n- The two keys' grammars are disjoint: an app name is `SnakeCaseIdentifierSchema` (no dot) and a package id is `MANIFEST_ID_PATTERN` (at least one dot). An answer keyed by package id is unambiguous.\n\n## Wanted\n\nA declared read answers, for a caller and a package id, 403 when that package's app exists but is withheld from the caller, and 404 when no such package app exists. ⛔ Enumeration stays as guarded today: a non-holder learns no more than the by-name read already tells them. Which accept set carries it (a package-id arm on the app item read, or a separately declared verdict read) is the owning seat's call. It is spec-first: the spec states it before the runtime serves it.\n\n**Done when:** the read is declared and served, and objectui's probe can ask it. objectstack-ai/objectui#12285 then probes package-id segments through it (that card's three pins).\n\n## Not here\n\n- The objectui half (the probe, its pins): objectstack-ai/objectui#12285.\n- No console-side guessing in the meantime: an unresolved segment keeps the current screen (triage `6137196505`: \"The console does not guess.\").\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_"

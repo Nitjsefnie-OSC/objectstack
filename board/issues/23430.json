@@ -23,11 +23,11 @@
   "milestone": null,
   "type": null,
   "created_at": "2026-10-14T08:08:06Z",
-  "updated_at": "2026-10-14T08:27:18Z",
+  "updated_at": "2026-10-14T13:04:38Z",
   "closed_at": null,
   "closed_by": null,
   "merged_at": null,
-  "comments": 2,
+  "comments": 7,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/23430",
   "body": "**#15211's stage S3, split out for `domain:engine` seat 1, on the maintainer's word** (「哪些可以分拆给 seat 1」, to spread the work across accounts). Seat 2 keeps #15211 and its stages S1 and S4. Part of #15211 (C7b) and of the ADR-0131 epic chain (#15194).\n\n**S3: retire `sys_user_permission_set.permission_set_id`** with its unique (`user_id`, `permission_set_id`, `organization_id`) and its (`permission_set_id`) index, plus one ADR-0087 column-retired entry (precedent `17.ups-delegated-from-column-retired`). The measured surface is in stage plan 6162468695. Seat 2's answers are 6162538253.\n- **The ceremony:** `organization-ownership.ts`'s column-drops port keeps only `organization_id` ops today (about :488–491). It learns this one named column, dropped after the rewrite step, which reads it raw, gated on the physical column. #23399 (cli seat 2) edits the same port; whichever lands second merges `main` (pointer 6163407103).\n- **Q4 → A (the surface widens to four readers):**\n  - delete `plugin-security`'s `grant-permission-set-name-backfill.ts`, because the ceremony's verified rewrite replaces it;\n  - remove the id leg from `auto-org-admin-grant.ts`, `catalog-reference-report.ts` and `bootstrap-platform-admin.ts` (Leg C);\n  - follow the deletion clause.\n- **Q5 → A:**\n  - add a unique index on (`user_id`, `permission_set`, `organization_id`);\n  - the plan reports existing duplicate groups as a blocker of column-drops, and the ceremony never deletes them;\n  - a duplicate platform-wide grant (NULL organization) is refused at the write door;\n  - pin a revoke that leaves the grant in force.\n\n**Order:** S3 overlaps #22975's 8-post on `catalog-reference-report.ts`, so it opens after 8-post lands.\n\n**Process:**\n- One PR off `main`, with `Part of #15211`.\n- Merge `main` only on a conflict, a `main`-caused red, or a queue removal (ruling #23390).\n- Contract review on opus.\n"

@@ -1,0 +1,37 @@
+{
+  "number": 23478,
+  "kind": "issue",
+  "title": "pm-dispatch triage-duties: a measured fleet-velocity cost (false red/green, re-runs, lost review rounds) admits a tooling card — the maintainer's word on #23470",
+  "state": "closed",
+  "state_reason": "completed",
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "area:devpath",
+    "domain:skills",
+    "priority:p1",
+    "tooling"
+  ],
+  "assignees": [
+    "huangyiirene"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-14T12:07:22Z",
+  "updated_at": "2026-10-14T13:49:31Z",
+  "closed_at": "2026-10-14T13:47:24Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": null,
+  "comments": 5,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/23478",
+  "body": "Filing gate **③ the maintainer's direct order**, given in the triage seat's session on 2026-10-14. Verbatim, in order:\n1. 「23470 ，导致误报红，会耽误车队开发啊，影响车队开发速度 的问题也是问题。」 This was said about #23470, which triage had closed `not_planned` under the tooling entry bar.\n2. 「所以你的分诊规则是不是应该要立卡修改」\n\nFiled by the triage seat (seat post #6015, `session_01AavokzJ5DndAwitDXvKy4U`). ⛔ Not a claim. The rule is recorded on #6015 (`6167942500`), and triage applies it from there. This card puts it in the text every seat reads.\n\n**Reader who acts:** the `domain:skills` seat. **Surface:** `.claude/skills/pm-dispatch/references/triage-duties.md` (`:33`, `:34`, `:61`), and `SKILL.md:113`'s `tooling` row if its reader list needs it. Text only: ⛔ no `scripts/**`, ⛔ no new gate.\n\n## Why the text must change\n\nOn `origin/main` the entry bar for a `tooling` card has two doors:\n- `triage-duties.md:34`: 「`tooling` 入 `pm:queue` 仅当首行带 `Unblocks: #N`(open 产品卡)或点名所护的已发布面」\n- `:33`: 「⛔ 工具/门禁修复不由此进」\n- `:61` closes p2/p3 tooling cards without an unblock target while the lane has an open P0/P1.\n\nSo a defect whose whole cost is the fleet's own speed (a gate that turns a correct tree red, a dev loop that re-runs three times) closes on first touch. Under that text triage closed #23470 and, the day before, #23156. Both are reopened now, as p2 (`6167908930`, `6167924044`).\n\n## What done looks like (the content; wording is the seat's)\n\n- **A third entry door beside the two:** a measured cost to the fleet's development speed. That means a false red or a false green on correct sources, repeated re-runs, or review rounds lost to the same cause. It is measured, not asserted: the card names the instance, as #23470 does with its three re-runs.\n- **`:61` does not close a card admitted through this door.** It closes only the cards that have none of the three doors.\n- **What does not change:**\n  - 「新增门禁默认否」: a fix that adds a new gate rule or axis still needs the maintainer's word (#23239, closed for that reason, stays closed).\n  - The freeze on `dispatch-gates.mjs` (`instrument-discipline.md:10`) stands (#23240 stays closed).\n  - Report-only instruments still close (`:62`, ruling 208).\n- **No version numbers** in the rule text. The maintainer's standing word: 「原则不要写具体的版本号」.\n\n## Acceptance notes\n\n- One PR. The line count is paid by a same-file deletion if `triage-duties.md` is at its ratchet ceiling.\n- `Clause-②: no`.\n- `.claude/**` is governed, so the PR lands by the register's tier with its review record.\n- **Sibling:** #23431 (the protocol-first grading rule, `filing-gate.md`). Same seat, a different file; they may share a landing if the seat prefers.\n\n## Dedupe\n\nSearched this repo's `domain:skills` cards, open and closed, for `tooling entry`, `Unblocks`, `velocity` and `false red` in the title: no card carries this rule. #23431 is the nearest (grading, not admission)."
+}

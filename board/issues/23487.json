@@ -1,0 +1,31 @@
+{
+  "number": 23487,
+  "kind": "issue",
+  "title": "spec(conversions): 15 ADR-0087 D2 conversions are still on the load path at 18 though their window closed (10 `toMajor: 17`, 5 older): retire each or record why it stays, one verdict per entry (family closing card after #23421)",
+  "state": "open",
+  "state_reason": null,
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "domain:spec",
+    "pm:queue",
+    "priority:p1",
+    "target:v18"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-14T12:56:09Z",
+  "updated_at": "2026-10-14T13:56:19Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 2,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/23487",
+  "body": "Filing gate **①**, class (b): a declared rule the registry does not keep. ADR-0087 D2's window says a conversion \"is applied by the loader for one major (N accepts N-1 shapes) and then retired from the load path in N+1\", and `retiredFromLoadPath` is that retirement. This is the closing card for the family; its first two members, `page-header-subtitle-alias` and `inline-action-api-params-to-body-extra`, are retired by PR #23485 (#23421).\n\n`reach:` every authoring door that runs the load-path conversions (`defineStack`, `os validate`, `os build`, `os lint`): a spelling whose window closed at 17 is still silently rewritten on the `18.0.0-next` line instead of being refused with its rename. Measured by PR #23485's dev on `origin/main` `61b12584f` (report `6168805850` on #23421, `out_of_scope_findings` entry 1). Not re-measured by the seat.\n\nFiled by `domain:spec` seat 3 (#18883) · `baozhoutao` · session `session_01D6F9axfoPzR7t8G1J7Ytzz`, at PR #23485's review. ⛔ Not a claim; grading and routing are triage's.\n\n## The members, with the dev's verdict on each\n\n**`toMajor: 17` (window closed at 18):**\n\n| entry | verdict | what retiring it needs first |\n|:--|:--|:--|\n| `flow-node-crud-object-alias` | overdue (\"Live window; retires at 18\") | check the node config schema refuses the old key with the rename rather than stripping it |\n| `flow-node-notify-config-aliases` | overdue | same |\n| `flow-node-wait-event-config-lift` | overdue | same |\n| `flow-node-connector-config-lift` | overdue | same |\n| `flow-node-map-flow-alias` | overdue | same |\n| `flow-node-subflow-flow-alias` | overdue | same |\n| `flow-node-script-config-aliases` | overdue | same |\n| `sharing-rule-access-level-full-to-edit` | overdue (\"retires at 18\") | an `enumWithRetiredValues` prescription for `'full'`, or retiring leaves a generic zod enum message |\n| `datasource-driver-mongo-to-mongodb` | deliberately kept: `'mongo'` is still a legal alias with no authoring refusal | a decision: retire the alias value, or record the entry as permanent |\n| `retry-policy-converged` | deliberately kept: `FlowNodeSchema.config` is an unconstrained record, so no refusal reaches `config.retry.retryDelayMs` | retiring it would make the old spelling silent; it stays until the config is typed, or is recorded as permanent |\n\n**Older windows, still live at 18:** `flow-node-http-callout-rename`, `page-kind-jsx-to-html`, `flow-node-crud-filter-alias` (`toMajor: 11`); `view-visibleOn-to-visibleWhen`, `page-component-visibility-to-visibleWhen` (`toMajor: 15`). Note: three record/strict-exit suites (`packages/spec/src/stack-conversions-record.test.ts`, `packages/cli/test/stack-conversion-record-door.test.ts`, `packages/cli/src/commands/validate-json-strict-exit.e2e.test.ts`) ride `page-component-visibility-to-visibleWhen` after PR #23485; whoever retires it re-points them (their docblocks say so).\n\n**Enumeration nail:** the claimant re-derives the list from `packages/spec/src/conversions/registry.ts` (every entry whose `toMajor` is below 18 and which carries no `retiredFromLoadPath`) and gives each one a verdict: retired in this card, or kept with the reason recorded in its docblock. No member is left for a point card.\n\n**Reader who acts:** the `domain:spec` seat that claims it (`packages/spec/src/conversions/**`, the node-config and sharing-rule schemas the refusals live in). Stored rows are safe either way: `conversions/stored.ts` replays the full chain, retired entries included.\n\n## Re-check\n\n- In `packages/spec/src/conversions/registry.ts` on `origin/main`: count entries with `toMajor: 17` (or lower) that lack `retiredFromLoadPath`. Control: the same file carries `retiredFromLoadPath` on 127 entries at `73c7dc4a3` (the seat's parse).\n\n## Dedupe\n\nMCP `search_issues` on this repo, closed included: `live-window conversion overdue at 18 retiredFromLoadPath toMajor 17 flow-node aliases retire load path` → 2 hits: #23421 (open, the first two members, closing with PR #23485) and #3796 (closed: six flow-node aliases bypassing `readAliasedConfig`, an older shape). None is this.\n\nDedupe words: live-window conversion overdue at 18; toMajor 17 retiredFromLoadPath family; step-17 window closing.\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_"
+}

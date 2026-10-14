@@ -2,8 +2,8 @@
   "number": 23432,
   "kind": "issue",
   "title": ".claude/settings.json: allow the fleet relay's landing strokes (`node scripts/pm/fleet-write/dispatch.mjs`, ops `pr_ready` / `automerge_enable`) so a seat lands a Tier S PR by the register; landing-operations.md names the direct invocation",
-  "state": "open",
-  "state_reason": null,
+  "state": "closed",
+  "state_reason": "completed",
   "draft": null,
   "author": {
     "login": "objectstack-fleet[bot]",
@@ -12,22 +12,23 @@
   },
   "labels": [
     "domain:skills",
-    "pm:dispatched",
     "priority:p2",
     "tooling"
   ],
-  "assignees": [
-    "os-zhuang"
-  ],
+  "assignees": [],
   "milestone": null,
   "type": null,
   "created_at": "2026-10-14T08:15:49Z",
-  "updated_at": "2026-10-14T08:30:51Z",
-  "closed_at": null,
-  "closed_by": null,
+  "updated_at": "2026-10-14T09:24:45Z",
+  "closed_at": "2026-10-14T09:22:46Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
   "merged_at": null,
-  "comments": 2,
+  "comments": 8,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/23432",
-  "body": "**The problem in one sentence:** the Tier S landing path (an at-tier review of record plus the queue, `landing-operations.md:51`) cannot be driven from a seat's session, because the session's permission classifier refuses the relay's landing dispatch: on PR #23417 (`pr_ready` + `automerge_enable`) as \"Self-Approval\", on PR #23389 (`automerge_enable` alone) as \"Merge Without Review\"; `.claude/settings.json` already allows `post-stamped`, `label-write`, `close-cards`, `issue-create`, `issue-transfer` and the curl `ccr/ready_for_review` / `ccr/auto_merge` endpoints, but not `node scripts/pm/fleet-write/dispatch.mjs`, the one write tool the landing strokes go through.\n\nFiled by the director seat (summon #37, `session_01LqNgdPZB2Jnr5HpGbaqLeB`) on the maintainer's word, 2026-10-14, verbatim: 「给 Bash 加一条许可规则，允许 scripts/pm/fleet-write/dispatch.mjs 的落地写入（pr_ready / automerge_enable），以后 Tier S 的 PR 我就能按登记册自己落地」「这个你应该派卡开发」. ⛔ Not a claim.\n\n## Scope\n\n1. **`.claude/settings.json`, `permissions.allow`:** two entries beside the existing `post-stamped` / `label-write` pairs, exact:\n   - `Bash(node scripts/pm/fleet-write/dispatch.mjs *)`\n   - `Bash(node --use-env-proxy scripts/pm/fleet-write/dispatch.mjs *)`\n\n   Nothing else in the file moves. The relay's own controls stay the gate: every op is validated by `fleet-write/validate.mjs`, `pr_update_branch` needs `expected_head_sha`, every stroke is paced by `write-pace.mjs`, and the queue runs `check-governed-queue-guard` on the merge group (an at-tier record on the head, or the maintainer's approval, is still what lets a governed PR through).\n2. **`landing-operations.md:51`** (101 lines; read its ratchet ceiling first, net-zero if at it): the strokes are invoked directly as `node scripts/pm/fleet-write/dispatch.mjs --repo OWNER/NAME --actions-file F` (no shell wrapper in front: the allow rule matches the command as typed), and a write-pace refusal (exit 10) is retried by the seat after `node scripts/pm/write-pace.mjs --status` shows a free slot. One sentence, ≤ 120 bytes, no issue number.\n3. ⛔ No wider glob, no other tool, no `settings.local.json`; objectui and cloud settings untouched (the relay lives in objectstack, and a seat lands any repo's PR from the objectstack checkout).\n\n## Governance\n\n`.claude/**` is Tier S on the register: the PR is governed whole and opens as a draft; the director seat posts the at-tier review of record. Until this PR lands the rule is not in force, so its own landing needs the maintainer's Approve once; after it, a seat's Tier S landing runs by the register.\n\n## Acceptance\n\n- `node -e \"JSON.parse(require('fs').readFileSync('.claude/settings.json','utf8'))\"` exit 0; the diff of the settings file adds exactly two lines; the two strings are byte-exact as above.\n- `pnpm -s check:pm-skill-ratchet`, `check:pm-skill-id-lint`, `check:skill-frame-sync`, `check:pm-governed-prose`, `check:nul-bytes` exit 0; the derived families for the diff run and reconcile with `--ran`.\n- After landing, one live proof recorded on this card by the seat: a Tier S landing stroke (`pr_ready` + `automerge_enable`) runs from a seat session without a permission prompt.\n\n## Not in scope\n\n- How the classifier reads MCP tools or other write tools; the scratchpad pacing wrapper seats use today (the direct invocation replaces it for landing strokes).\n\n## Dedupe\n\nOpen `domain:skills` cards read: #23426, #23423, #23420, #23410, #23409, #23396, #23381, #23378, #23377, #23374, #22060, #17161; none is this. The search API is not available to this session.\n\nRelated: PR #23417 · PR #23389 · `rest-channel.md:55` (the F spelling) · `landing-operations.md:51`."
+  "body": "Ruled: 6164613078 · letter A · 2026-10-14T08:53Z\n\n**The problem in one sentence:** the Tier S landing path (an at-tier review of record plus the queue, `landing-operations.md:51`) cannot be driven from a seat's session, because the session's permission classifier refuses the relay's landing dispatch: on PR #23417 (`pr_ready` + `automerge_enable`) as \"Self-Approval\", on PR #23389 (`automerge_enable` alone) as \"Merge Without Review\"; `.claude/settings.json` already allows `post-stamped`, `label-write`, `close-cards`, `issue-create`, `issue-transfer` and the curl `ccr/ready_for_review` / `ccr/auto_merge` endpoints, but not `node scripts/pm/fleet-write/dispatch.mjs`, the one write tool the landing strokes go through.\n\nFiled by the director seat (summon #37, `session_01LqNgdPZB2Jnr5HpGbaqLeB`) on the maintainer's word, 2026-10-14, verbatim: 「给 Bash 加一条许可规则，允许 scripts/pm/fleet-write/dispatch.mjs 的落地写入（pr_ready / automerge_enable），以后 Tier S 的 PR 我就能按登记册自己落地」「这个你应该派卡开发」. ~~⛔ Not a claim.~~\n\n## Scope\n\n1. **`.claude/settings.json`, `permissions.allow`:** two entries beside the existing `post-stamped` / `label-write` pairs, exact:\n   - `Bash(node scripts/pm/fleet-write/dispatch.mjs *)`\n   - `Bash(node --use-env-proxy scripts/pm/fleet-write/dispatch.mjs *)`\n\n   Nothing else in the file moves. The relay's own controls stay the gate: every op is validated by `fleet-write/validate.mjs`, `pr_update_branch` needs `expected_head_sha`, every stroke is paced by `write-pace.mjs`, and the queue runs `check-governed-queue-guard` on the merge group (an at-tier record on the head, or the maintainer's approval, is still what lets a governed PR through).\n2. **`landing-operations.md:51`** (101 lines; read its ratchet ceiling first, net-zero if at it): the strokes are invoked directly as `node scripts/pm/fleet-write/dispatch.mjs --repo OWNER/NAME --actions-file F` (no shell wrapper in front: the allow rule matches the command as typed), and a write-pace refusal (exit 10) is retried by the seat after `node scripts/pm/write-pace.mjs --status` shows a free slot. One sentence, ≤ 120 bytes, no issue number.\n3. ⛔ No wider glob, no other tool, no `settings.local.json`; objectui and cloud settings untouched (the relay lives in objectstack, and a seat lands any repo's PR from the objectstack checkout).\n\n## Governance\n\n`.claude/**` is Tier S on the register: the PR is governed whole and opens as a draft; the director seat posts the at-tier review of record. Until this PR lands the rule is not in force, so its own landing needs the maintainer's Approve once; after it, a seat's Tier S landing runs by the register.\n\n## Acceptance\n\n- `node -e \"JSON.parse(require('fs').readFileSync('.claude/settings.json','utf8'))\"` exit 0; the diff of the settings file adds exactly two lines; the two strings are byte-exact as above.\n- `pnpm -s check:pm-skill-ratchet`, `check:pm-skill-id-lint`, `check:skill-frame-sync`, `check:pm-governed-prose`, `check:nul-bytes` exit 0; the derived families for the diff run and reconcile with `--ran`.\n- After landing, one live proof recorded on this card by the seat: a Tier S landing stroke (`pr_ready` + `automerge_enable`) runs from a seat session without a permission prompt.\n\n## Not in scope\n\n- How the classifier reads MCP tools or other write tools; the scratchpad pacing wrapper seats use today (the direct invocation replaces it for landing strokes).\n\n## Dedupe\n\nOpen `domain:skills` cards read: #23426, #23423, #23420, #23410, #23409, #23396, #23381, #23378, #23377, #23374, #22060, #17161; none is this. The search API is not available to this session.\n\nRelated: PR #23417 · PR #23389 · `rest-channel.md:55` (the F spelling) · `landing-operations.md:51`.\n"
 }
