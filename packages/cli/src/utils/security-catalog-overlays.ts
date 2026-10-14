@@ -7,7 +7,7 @@
  *
  * ## The population
  *
- * Every active, environment-wide `sys_metadata` row (`organization_id IS NULL`,
+ * Every active `sys_metadata` row (every row is the environment's, ADR-0131 D6;
  * `state = 'active'`) of type `permission` or `position` — the legacy plurals
  * `permissions` / `positions` included, which the boot's load folds to the same
  * types — whose name a configured package holds. That is exactly what the cold
@@ -106,7 +106,7 @@ function engineOf(kernel: { getService(name: string): unknown }): EngineLike {
 async function storedRows(engine: EngineLike, storedType: string): Promise<any[]> {
   const rows = await engine.find(
     'sys_metadata',
-    { where: { type: storedType, organization_id: null, state: 'active' } },
+    { where: { type: storedType, state: 'active' } },
     SYSTEM,
   );
   return [...rows].sort((a, b) =>
@@ -160,7 +160,7 @@ export async function listSecurityCatalogOverlayRows(
 async function stillStored(engine: EngineLike, storedType: string, name: string, ids: readonly string[]): Promise<Set<string>> {
   const rows = await engine.find(
     'sys_metadata',
-    { where: { type: storedType, name, organization_id: null, state: 'active' } },
+    { where: { type: storedType, name, state: 'active' } },
     SYSTEM,
   );
   const present = new Set(rows.map((r: any) => String(r.id)));
@@ -236,7 +236,7 @@ export async function deleteSecurityCatalogOverlayRows(
   const plural = rows.filter((row) => row.storedType !== row.catalogType);
   if (plural.length > 0) {
     const { SysMetadataRepository } = await import('@objectstack/metadata-protocol');
-    const repository = new SysMetadataRepository({ engine: engine as never, organizationId: null, orgLabel: 'env' });
+    const repository = new SysMetadataRepository({ engine: engine as never, orgLabel: 'env' });
     for (const row of plural) {
       try {
         await repository.delete(
