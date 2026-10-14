@@ -26,8 +26,8 @@ import { ObjectSchema, Field } from '@objectstack/spec/data';
  *  3. What outcome?                     → outcome + code
  *  4. Was an override involved?         → lock_overridden + lock_state
  *
- * Indexed on `(organization_id, occurred_at)` for the per-org timeline
- * query and `(type, name, occurred_at)` for the per-item history tab
+ * Indexed on `(occurred_at)` for the environment timeline query and
+ * `(type, name, occurred_at)` for the per-item history tab
  * Studio surfaces on the editor page.
  */
 export const SysMetadataAuditObject = ObjectSchema.create({
@@ -107,13 +107,6 @@ export const SysMetadataAuditObject = ObjectSchema.create({
       readonly: true,
       searchable: true,
       maxLength: 255,
-    }),
-
-    /** Organization for multi-tenant filtering. NULL for env-wide writes. */
-    organization_id: Field.lookup('sys_organization', {
-      label: 'Organization',
-      required: false,
-      readonly: true,
     }),
 
     /** Operation kind. */
@@ -222,8 +215,15 @@ export const SysMetadataAuditObject = ObjectSchema.create({
     }),
   },
 
+  // [ADR-0131 D6/D7, C7b] Tenant-less, like the overlays it records: the
+  // declared organization column is retired (ADR-0087 semantic entry
+  // 18.sys-metadata-audit-organization-column-retired), and `systemFields.tenant: false`
+  // keeps the engine from injecting one back. The v18 ceremony
+  // (`os migrate organization-ownership --apply`) drops the physical column.
+  systemFields: { tenant: false },
+
   indexes: [
-    { fields: ['organization_id', 'occurred_at'] },
+    { fields: ['occurred_at'] },
     { fields: ['type', 'name', 'occurred_at'] },
     { fields: ['actor', 'occurred_at'] },
     { fields: ['outcome'] },

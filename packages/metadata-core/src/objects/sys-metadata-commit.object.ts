@@ -125,14 +125,6 @@ export const SysMetadataCommitObject = ObjectSchema.create({
       readonly: true,
     }),
 
-    /** Organization ID for multi-tenant isolation. */
-    organization_id: Field.lookup('sys_organization', {
-      label: 'Organization',
-      required: false,
-      readonly: true,
-      description: 'Organization for multi-tenant isolation.',
-    }),
-
     /** When the commit was recorded. */
     created_at: Field.datetime({
       label: 'Created At',
@@ -141,11 +133,18 @@ export const SysMetadataCommitObject = ObjectSchema.create({
     }),
   },
 
+  // [ADR-0131 D6/D7, C7b] Tenant-less, like the overlays it records: the
+  // declared organization column is retired (ADR-0087 semantic entry
+  // 18.sys-metadata-commit-organization-column-retired), and `systemFields.tenant: false`
+  // keeps the engine from injecting one back. The v18 ceremony
+  // (`os migrate organization-ownership --apply`) drops the physical column.
+  systemFields: { tenant: false },
+
   indexes: [
     // List a package's history newest-first (the timeline read pattern).
-    { fields: ['organization_id', 'package_id', 'created_at'] },
-    // Org-wide commit replay / audit.
-    { fields: ['organization_id', 'created_at'] },
+    { fields: ['package_id', 'created_at'] },
+    // Environment-wide commit replay / audit.
+    { fields: ['created_at'] },
     { fields: ['parent_commit_id'] },
   ],
 
