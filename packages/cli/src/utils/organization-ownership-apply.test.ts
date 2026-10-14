@@ -22,6 +22,7 @@ import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { permissionSetDefinitionFromRow } from '@objectstack/core';
+import { anonymousFormIntakeCandidates, anonymousFormIntakeWithdrawnIn } from '@objectstack/metadata-core';
 import {
   applyOrganizationOwnership,
   TemplateChoiceRefusal,
@@ -39,10 +40,11 @@ import {
 let dir: string;
 let file: string;
 let db: Database.Database;
-/** Every write statement the ceremony issued, in order. */
+/** Every write statement the ceremony issued, in order, and the values each bound. */
 let writes: string[];
+let writeParams: unknown[][];
 
-function executor(opts: { failOnceOn?: RegExp } = {}): ApplyExecutor {
+function executor(opts: { failOnceOn?: RegExp; failOnceWhen?: (sql: string, params: readonly unknown[]) => boolean } = {}): ApplyExecutor {
   let failed = false;
   return {
     client: 'better-sqlite3',
@@ -50,11 +52,12 @@ function executor(opts: { failOnceOn?: RegExp } = {}): ApplyExecutor {
       return db.prepare(sql).all(...(params as unknown[])) as Record<string, unknown>[];
     },
     async execute(sql, params = []) {
-      if (opts.failOnceOn && !failed && opts.failOnceOn.test(sql)) {
+      if (!failed && (opts.failOnceOn?.test(sql) || opts.failOnceWhen?.(sql, params))) {
         failed = true;
         throw new Error('SQLITE_IOERR: the process was killed mid-step');
       }
       writes.push(sql);
+      writeParams.push([...params]);
       db.prepare(sql).run(...(params as unknown[]));
     },
   };
@@ -294,7 +297,7 @@ async function accessAfter(c: ReturnType<typeof catalog>): Promise<string[]> {
 const apply = (
   c: ReturnType<typeof catalog>,
   l: ReturnType<typeof ledger>,
-  opts: { posture?: string; executor?: ApplyExecutor; templateChoices?: string[] } = {},
+  opts: { posture?: string; executor?: ApplyExecutor; templateChoices?: string[]; columnDrops?: ColumnDropPort } = {},
 ): Promise<OrganizationOwnershipApplyReport> => {
   c.boot();
   return applyOrganizationOwnership({
@@ -306,7 +309,7 @@ const apply = (
     door: c,
     templates: c,
     views: c,
-    columnDrops,
+    columnDrops: opts.columnDrops ?? columnDrops,
     ledger: l,
     now: () => new Date('2026-10-12T00:00:00Z'),
   });
@@ -342,6 +345,7 @@ beforeEach(() => {
   file = join(dir, 'fixture.db');
   db = new Database(file);
   writes = [];
+  writeParams = [];
   seed();
 });
 
@@ -363,6 +367,7 @@ describe('ADR-0131 D10 --apply — the acceptance fixture', () => {
       ['attribution', 'done'],
       ['authored-conversion', 'done'],
       ['template-promotion', 'done'],
+      ['presentational-promotion', 'done'],
       ['settings-move', 'done'],
       ['rewrite', 'done'],
       ['mirror-deletion', 'done'],
@@ -465,7 +470,8 @@ describe('ADR-0131 D10 --apply — idempotent, resumable, gated', () => {
     const again = await apply(c, l);
 
     expect(again.resumedFrom).toEqual([
-      'attribution', 'authored-conversion', 'template-promotion', 'settings-move', 'rewrite', 'mirror-deletion', 'column-drops',
+      'attribution', 'authored-conversion', 'template-promotion', 'presentational-promotion', 'settings-move', 'rewrite',
+      'mirror-deletion', 'column-drops',
     ]);
     expect(again.steps.every((s) => s.status === 'checkpointed')).toBe(true);
     expect(again.complete).toBe(true);
@@ -477,14 +483,20 @@ describe('ADR-0131 D10 --apply — idempotent, resumable, gated', () => {
     const c = catalog();
     const l = ledger();
     await expect(apply(c, l, { executor: executor({ failOnceOn: /^DELETE FROM "sys_capability"/ }) })).rejects.toThrow(/killed mid-step/);
-    expect(Object.keys(l.checkpoint!.completed)).toEqual(['attribution', 'authored-conversion', 'template-promotion', 'settings-move', 'rewrite']);
+    expect(Object.keys(l.checkpoint!.completed)).toEqual([
+      'attribution', 'authored-conversion', 'template-promotion', 'presentational-promotion', 'settings-move', 'rewrite',
+    ]);
     expect(rows('SELECT COUNT(*) AS n FROM sys_position_permission_set')).toEqual([{ n: 3 }]);
     writes = [];
 
     const resumed = await apply(c, l);
 
-    expect(resumed.resumedFrom).toEqual(['attribution', 'authored-conversion', 'template-promotion', 'settings-move', 'rewrite']);
-    expect(resumed.steps.map((s) => s.status)).toEqual(['checkpointed', 'checkpointed', 'checkpointed', 'checkpointed', 'checkpointed', 'done', 'done']);
+    expect(resumed.resumedFrom).toEqual([
+      'attribution', 'authored-conversion', 'template-promotion', 'presentational-promotion', 'settings-move', 'rewrite',
+    ]);
+    expect(resumed.steps.map((s) => s.status)).toEqual([
+      'checkpointed', 'checkpointed', 'checkpointed', 'checkpointed', 'checkpointed', 'checkpointed', 'done', 'done',
+    ]);
     expect(writes.some((w) => /^UPDATE/.test(w))).toBe(false);
     expect(resumed.complete).toBe(true);
     expect(rows('SELECT COUNT(*) AS n FROM sys_position_permission_set')).toEqual([{ n: 0 }]);
@@ -704,8 +716,9 @@ describe('ADR-0131 D10 --apply — idempotent, resumable, gated', () => {
 
   it('holds a column whose rows another stage owns, and reports it', async () => {
     db.exec(`
-      CREATE TABLE sys_metadata (id TEXT PRIMARY KEY, organization_id TEXT, type TEXT, name TEXT, state TEXT, package_id TEXT);
-      INSERT INTO sys_metadata VALUES ('md_1', 'org_b', 'view', 'deal_list', 'active', NULL);
+      CREATE TABLE sys_metadata (id TEXT PRIMARY KEY, organization_id TEXT, type TEXT, name TEXT, state TEXT, package_id TEXT,
+        metadata TEXT);
+      INSERT INTO sys_metadata VALUES ('md_1', 'org_b', 'view', 'deal_list', 'active', NULL, '{"name":"deal_list"}');
     `);
     const report = await apply(catalog(), ledger());
 
@@ -714,5 +727,305 @@ describe('ADR-0131 D10 --apply — idempotent, resumable, gated', () => {
     expect(drops.blockers.join('\n')).toMatch(/sys_metadata\.organization_id is not dropped/);
     expect(rows(`SELECT name FROM pragma_table_info('sys_metadata') WHERE name = 'organization_id'`)).toHaveLength(1);
     expect(rows(`SELECT name FROM pragma_table_info('sys_job') WHERE name = 'organization_id'`)).toHaveLength(0);
+  });
+});
+
+describe('ADR-0131 D10 --apply — the presentational promotion (rulings 6020163868 A and 6020151485 A)', () => {
+  type MetadataTuple = [id: string, org: string | null, type: string, name: string, state: string, pkg: string | null, member: string | null, body: unknown];
+
+  /** The v17 `sys_metadata` columns the ceremony reads, and its rows, as the 17.x doors left them. */
+  function metadataRows(tuples: MetadataTuple[]): void {
+    db.exec(`CREATE TABLE IF NOT EXISTS sys_metadata (id TEXT PRIMARY KEY, organization_id TEXT, type TEXT, name TEXT,
+      state TEXT, package_id TEXT, bundle_member TEXT, metadata TEXT, version INTEGER)`);
+    const insert = db.prepare('INSERT INTO sys_metadata VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)');
+    for (const [id, org, type, name, state, pkg, member, body] of tuples) {
+      insert.run(id, org, type, name, state, pkg, member, typeof body === 'string' ? body : JSON.stringify(body));
+    }
+  }
+
+  const metaRow = (id: string): Record<string, unknown> => rows(`SELECT * FROM sys_metadata WHERE id = '${id}'`)[0]!;
+  const bodyOf = (id: string): Record<string, any> => JSON.parse(String(metaRow(id).metadata)) as Record<string, any>;
+  const step = (report: OrganizationOwnershipApplyReport, name: string) => report.steps.find((s) => s.step === name)!;
+  /** The one write shape the step may issue: the category's predicate, the row's id and the Default Organization. */
+  const PROMOTION_WRITE =
+    /^UPDATE "sys_metadata" SET "organization_id" = NULL(, "metadata" = \?)? WHERE \("organization_id" IS NOT NULL AND "type" IN \(\?, \?, \?, \?, \?\)\) AND "id" = \? AND "organization_id" = \?$/;
+  const metadataWrites = (): Array<{ sql: string; params: unknown[] }> =>
+    writes.map((sql, i) => ({ sql, params: writeParams[i]! })).filter((w) => w.sql.includes('sys_metadata'));
+
+  /** A public form view; `allowAnonymous: false` with the link kept is an explicit withdrawal. */
+  const formView = (allowAnonymous: boolean, label = 'Contact us') => ({
+    name: 'contact',
+    label,
+    object: 'crm_deal',
+    viewKind: 'form',
+    config: {
+      data: { provider: 'object', object: 'crm_deal' },
+      sections: [{ fields: ['name'] }],
+      sharing: { enabled: true, allowAnonymous, publicLink: '/forms/contact-us' },
+    },
+  });
+  /** The slugs a body opens to anonymous intake, by the rule the anonymous doors serve. */
+  const opens = (body: unknown): string[] => anonymousFormIntakeCandidates(body).map((c) => c.slug);
+
+  /**
+   * The schema-drift ceremony as this release answers it: `sys_metadata` still DECLARES `organization_id` (the
+   * family's schema change is another stage's), so its drop is not proposed; every other table drops as before.
+   */
+  const declaredDrops: ColumnDropPort = {
+    async drop(tables) {
+      const metadata = tables.filter((t) => t === 'sys_metadata');
+      const others = await columnDrops.drop(tables.filter((t) => t !== 'sys_metadata'));
+      return [...others, ...metadata.map((table) => ({ table, outcome: 'not-proposed' as const, detail: 'the runtime still declares the column' }))];
+    },
+  };
+  const applyAt = (c: ReturnType<typeof catalog>, l: ReturnType<typeof ledger>, opts: { posture?: string; executor?: ApplyExecutor } = {}) =>
+    apply(c, l, { ...opts, columnDrops: declaredDrops });
+  /** Column drops held only by the declared column: none of the category's rows is left to hold them. */
+  const heldOnlyByTheDeclaration = (report: OrganizationOwnershipApplyReport): void => {
+    expect(step(report, 'column-drops')).toMatchObject({ status: 'blocked' });
+    expect(step(report, 'column-drops').blockers).toEqual([expect.stringMatching(/^sys_metadata\.organization_id was not proposed for dropping/)]);
+  };
+
+  it("under single, the Default Organization's rows become environment rows in place, and sys_metadata loses its column", async () => {
+    const list = { name: 'rh7k_project.list', label: 'Projects', object: 'rh7k_project', type: 'grid', columns: ['name', 'status'] };
+    metadataRows([
+      ['md_view', 'org_default', 'view', 'rh7k_project.list', 'active', null, null, list],
+      ['md_view_draft', 'org_default', 'view', 'rh7k_project.list', 'draft', null, null, { ...list, label: 'Projects (draft)' }],
+      ['md_dash', 'org_default', 'dashboard', 'sales_overview', 'active', 'com.acme.crm', null, { name: 'sales_overview', label: 'Sales' }],
+      ['md_report', 'org_default', 'report', 'pipeline', 'active', null, null, { name: 'pipeline', label: 'Pipeline' }],
+      ['md_tr', 'org_default', 'translation', 'crm_zh', 'active', null, null, { name: 'crm_zh', locale: 'zh-CN' }],
+      ['md_tpl', 'org_default', 'email_template', 'auth.welcome', 'active', null, 'zh-CN', { name: 'auth.welcome', locale: 'zh-CN', subject: '欢迎' }],
+      ['md_env', null, 'view', 'deal_board', 'active', null, null, { name: 'deal_board', label: 'Board' }],
+    ]);
+    const before = rows('SELECT * FROM sys_metadata ORDER BY id');
+
+    const report = await applyAt(catalog(), ledger());
+
+    expect(step(report, 'presentational-promotion')).toMatchObject({
+      status: 'done', summary: { promoted: 6, withdrawalsCarried: 0, reported: 0 }, blockers: [], notes: [],
+    });
+    // In place: only the organization left each row — body, state, package, member and version unchanged — so each
+    // is the row the /meta doors read (type, name, state 'active', no organization: environment → code).
+    expect(rows('SELECT * FROM sys_metadata ORDER BY id')).toEqual(before.map((r) => ({ ...r, organization_id: null })));
+    // The category no longer holds the column: what does is the declaration alone (the family's schema stage).
+    heldOnlyByTheDeclaration(report);
+    // Every write is the category-scoped promotion, bound to the row and the Default Organization; nothing is deleted.
+    const promotions = metadataWrites();
+    expect(promotions).toHaveLength(6);
+    for (const w of promotions) {
+      expect(w.sql).toMatch(PROMOTION_WRITE);
+      expect(w.params.at(-1)).toBe('org_default');
+    }
+    expect(metadataWrites().filter((w) => /^DELETE/.test(w.sql))).toEqual([]);
+  });
+
+  it("the conflict rule: another organization's row of the same name is listed and left unpromoted; the Default Organization's row promotes", async () => {
+    metadataRows([
+      ['md_d', 'org_default', 'view', 'deal_list', 'active', null, null, { name: 'deal_list', label: 'Deals (default)' }],
+      ['md_b', 'org_b', 'view', 'deal_list', 'active', null, null, { name: 'deal_list', label: 'Deals (b)' }],
+      ['md_b_only', 'org_b', 'dashboard', 'b_only', 'active', null, null, { name: 'b_only', label: 'B' }],
+    ]);
+    const kept = { md_b: metaRow('md_b'), md_b_only: metaRow('md_b_only') };
+
+    const report = await applyAt(catalog(), ledger());
+
+    const promotion = step(report, 'presentational-promotion');
+    expect(promotion).toMatchObject({ status: 'done', summary: { promoted: 1, reported: 2 }, blockers: [] });
+    expect(metaRow('md_d')).toMatchObject({ organization_id: null, metadata: JSON.stringify({ name: 'deal_list', label: 'Deals (default)' }) });
+    expect(metaRow('md_b')).toEqual(kept.md_b);
+    expect(metaRow('md_b_only')).toEqual(kept.md_b_only);
+    expect(promotion.notes.find((n) => n.includes('md_b (view deal_list'))).toMatch(/never guessed \(ruling record 6020163868, the conflict rule\)/);
+    expect(promotion.notes.find((n) => n.includes('md_b_only'))).toMatch(/other than the Default Organization/);
+    // The column stays until the operator chooses per row: listed, never guessed, and no verified ceremony.
+    const drops = step(report, 'column-drops');
+    expect(drops.status).toBe('blocked');
+    expect(drops.blockers.join('\n')).toMatch(/sys_metadata\.organization_id is not dropped: 2 row\(s\) of "organization-scoped rows of the five presentational types/);
+    expect(report.complete).toBe(false);
+  });
+
+  it('under a wall no row is promoted: each is reported with its remedy', async () => {
+    metadataRows([['md_d', 'org_default', 'view', 'deal_list', 'active', null, null, { name: 'deal_list' }]]);
+    const kept = metaRow('md_d');
+
+    const report = await applyAt(catalog(), ledger(), { posture: 'isolated' });
+
+    const promotion = step(report, 'presentational-promotion');
+    expect(promotion).toMatchObject({ status: 'done', summary: { promoted: 0, reported: 1 } });
+    expect(promotion.notes).toEqual([
+      expect.stringMatching(/^1 sys_metadata row\(s\) are reported, never promoted: under the isolated posture no organization's presentational row becomes the environment's .*: md_d \(view deal_list, organization org_default\)\.$/),
+    ]);
+    expect(metaRow('md_d')).toEqual(kept);
+    expect(metadataWrites()).toEqual([]);
+  });
+
+  it("never overwrites the environment's own row: an equal or a differing one keeps the organization row reported", async () => {
+    metadataRows([
+      ['md_d_equal', 'org_default', 'view', 'v_equal', 'active', null, null, { name: 'v_equal', label: 'Same', columns: ['a'] }],
+      ['md_e_equal', null, 'view', 'v_equal', 'active', null, null, '{"columns":["a"],"label":"Same","name":"v_equal"}'],
+      ['md_d_differ', 'org_default', 'view', 'v_differ', 'active', null, null, { name: 'v_differ', label: 'Organization' }],
+      ['md_e_differ', null, 'view', 'v_differ', 'active', null, null, { name: 'v_differ', label: 'Environment' }],
+      ['md_d_draft', 'org_default', 'view', 'v_differ', 'draft', null, null, { name: 'v_differ', label: 'Draft' }],
+    ]);
+    const kept = rows(`SELECT * FROM sys_metadata WHERE id <> 'md_d_draft' ORDER BY id`);
+
+    const report = await applyAt(catalog(), ledger());
+
+    const promotion = step(report, 'presentational-promotion');
+    expect(promotion).toMatchObject({ status: 'done', summary: { promoted: 1, reported: 2 } });
+    expect(rows(`SELECT * FROM sys_metadata WHERE id <> 'md_d_draft' ORDER BY id`)).toEqual(kept);
+    expect(metaRow('md_d_draft').organization_id).toBeNull();
+    expect(promotion.notes.find((n) => n.includes('md_d_equal'))).toMatch(/equal the environment's own row .*md_e_equal/);
+    expect(promotion.notes.find((n) => n.includes('md_d_differ'))).toMatch(/never overwritten.*md_e_differ/);
+  });
+
+  it('a public form the Default Organization withdrew is withdrawn at the environment layer once its row is promoted', async () => {
+    const c = catalog();
+    c.views.set('contact', formView(true));
+    metadataRows([['md_form', 'org_default', 'view', 'contact', 'active', null, null, formView(false)]]);
+    const stored = metaRow('md_form').metadata;
+
+    const report = await applyAt(c, ledger());
+
+    expect(step(report, 'presentational-promotion')).toMatchObject({ status: 'done', summary: { promoted: 1, withdrawalsCarried: 0 } });
+    expect(metaRow('md_form').organization_id).toBeNull();
+    heldOnlyByTheDeclaration(report);
+    // The environment row IS the withdrawal, verbatim: it opens nothing, and by the doors' kill-switch rule it closes
+    // the form the code opens.
+    expect(metaRow('md_form').metadata).toBe(stored);
+    expect(opens(bodyOf('md_form'))).toEqual([]);
+    const code = c.views.get('contact')!;
+    expect(anonymousFormIntakeCandidates(code).map((cand) => anonymousFormIntakeWithdrawnIn([bodyOf('md_form')], code, cand))).toEqual([true]);
+  });
+
+  it("fail-closed across organizations: another organization's withdrawal is carried into the Default Organization's promoted row", async () => {
+    const c = catalog();
+    c.views.set('contact', formView(true));
+    metadataRows([
+      ['md_d', 'org_default', 'view', 'contact', 'active', null, null, formView(true, 'Default')],
+      ['md_b', 'org_b', 'view', 'contact', 'active', null, null, formView(false, 'B')],
+    ]);
+    const kept = metaRow('md_b');
+
+    const report = await applyAt(c, ledger());
+
+    const promotion = step(report, 'presentational-promotion');
+    expect(promotion).toMatchObject({ status: 'done', summary: { promoted: 1, withdrawalsCarried: 1, reported: 1 }, blockers: [] });
+    // The Default Organization's body, with only that form's anonymous switch cleared (the link kept).
+    const promoted = metaRow('md_d');
+    expect(promoted.organization_id).toBeNull();
+    const expected = formView(true, 'Default');
+    expected.config.sharing.allowAnonymous = false;
+    expect(bodyOf('md_d')).toEqual(expected);
+    expect(opens(bodyOf('md_d'))).toEqual([]);
+    expect(metaRow('md_b')).toEqual(kept);
+    expect(metadataWrites().map((w) => w.sql)).toEqual([expect.stringMatching(/SET "organization_id" = NULL, "metadata" = \?/)]);
+  });
+
+  for (const posture of ['single', 'isolated'] as const) {
+    it(`${posture}: a withdrawal the environment would serve open from a body this step does not write blocks, naming it`, async () => {
+      const c = catalog();
+      c.views.set('contact', formView(true));
+      metadataRows([['md_b', 'org_b', 'view', 'contact', 'active', null, null, formView(false)]]);
+      const kept = metaRow('md_b');
+
+      const report = await applyAt(c, ledger(), { posture });
+
+      const promotion = step(report, 'presentational-promotion');
+      expect(promotion.status).toBe('blocked');
+      expect(promotion.blockers).toEqual([
+        expect.stringMatching(/^The public form \/forms\/contact-us of view contact is withdrawn by md_b \(view contact, organization org_b\), and the item the environment serves .* serves it open\..*ruling record 6020151485/),
+      ]);
+      expect(step(report, 'settings-move').status).toBe('not-reached');
+      expect(report.complete).toBe(false);
+      expect(metaRow('md_b')).toEqual(kept);
+      expect(metadataWrites()).toEqual([]);
+    });
+  }
+
+  it('control: an organization row that withdraws nothing the environment serves open blocks nothing', async () => {
+    const c = catalog();
+    c.views.set('contact', { name: 'contact', viewKind: 'form', config: { data: { provider: 'object', object: 'crm_deal' } } });
+    metadataRows([['md_b', 'org_b', 'view', 'contact', 'active', null, null, formView(false)]]);
+
+    const report = await applyAt(c, ledger());
+
+    expect(step(report, 'presentational-promotion')).toMatchObject({ status: 'done', summary: { promoted: 0, reported: 1 } });
+  });
+
+  it("an environment row that serves a form open which the Default Organization's row withdraws blocks, and neither row moves", async () => {
+    metadataRows([
+      ['md_d', 'org_default', 'view', 'contact', 'active', null, null, formView(false)],
+      ['md_e', null, 'view', 'contact', 'active', null, null, formView(true, 'Environment')],
+    ]);
+    const kept = rows('SELECT * FROM sys_metadata ORDER BY id');
+
+    const report = await applyAt(catalog(), ledger());
+
+    const promotion = step(report, 'presentational-promotion');
+    expect(promotion.status).toBe('blocked');
+    expect(promotion.blockers.join('\n')).toMatch(/withdrawn by md_d .*the environment's own row md_e serves it open/);
+    expect(promotion.notes.join('\n')).toMatch(/never overwritten.*: md_d \(view contact, organization org_default\); the environment's row md_e\./);
+    expect(rows('SELECT * FROM sys_metadata ORDER BY id')).toEqual(kept);
+  });
+
+  it('a resumed run touches no row outside its category, and promotes a row written between runs', async () => {
+    metadataRows([
+      ['md_d1', 'org_default', 'view', 'a_list', 'active', null, null, { name: 'a_list' }],
+      ['md_d2', 'org_default', 'view', 'b_list', 'active', null, null, { name: 'b_list' }],
+      ['md_b', 'org_b', 'view', 'a_list', 'active', null, null, { name: 'a_list', label: 'B' }],
+      ['md_e', null, 'view', 'c_list', 'active', null, null, { name: 'c_list' }],
+      ['md_flow', 'org_b', 'flow', 'escalate', 'active', null, null, { name: 'escalate' }],
+    ]);
+    const outside = (): unknown => rows(`SELECT * FROM sys_metadata WHERE id IN ('md_b', 'md_e', 'md_flow') ORDER BY id`);
+    const kept = outside();
+    const c = catalog();
+    const l = ledger();
+    // Killed on the second promotion: the first row is an environment row already, the second is not.
+    await expect(applyAt(c, l, {
+      executor: executor({ failOnceWhen: (sql, params) => sql.startsWith('UPDATE "sys_metadata"') && params.includes('md_d2') }),
+    })).rejects.toThrow(/killed mid-step/);
+    expect(l.checkpoint!.completed['presentational-promotion']).toBeUndefined();
+    expect(metaRow('md_d1').organization_id).toBeNull();
+    expect(metaRow('md_d2').organization_id).toBe('org_default');
+    // A 17.x door saves another row for the Default Organization between the runs.
+    metadataRows([['md_late', 'org_default', 'dashboard', 'late', 'active', null, null, { name: 'late' }]]);
+    writes = [];
+    writeParams = [];
+
+    const resumed = await applyAt(c, l);
+
+    expect(resumed.resumedFrom).toEqual(['attribution', 'authored-conversion', 'template-promotion']);
+    expect(step(resumed, 'presentational-promotion')).toMatchObject({ status: 'done', summary: { promoted: 2, reported: 1 } });
+    expect([metaRow('md_d2').organization_id, metaRow('md_late').organization_id]).toEqual([null, null]);
+    expect(outside()).toEqual(kept);
+    const promotions = metadataWrites();
+    expect(promotions.map((w) => w.params.at(-2))).toEqual(['md_d2', 'md_late']);
+    for (const w of promotions) expect(w.sql).toMatch(PROMOTION_WRITE);
+  });
+
+  it('column drops promote first: a row written after the step was checkpointed is promoted before the column is judged', async () => {
+    metadataRows([
+      ['md_d', 'org_default', 'view', 'a_list', 'active', null, null, { name: 'a_list' }],
+      ['md_flow', 'org_b', 'flow', 'escalate', 'active', null, null, { name: 'escalate' }],
+    ]);
+    const l = ledger();
+    const first = await applyAt(catalog(), l);
+    expect(step(first, 'column-drops').blockers.join('\n')).toMatch(/sys_metadata\.organization_id is not dropped: 1 row\(s\) of "organization-scoped rows of a non-overridable type/);
+    expect(l.checkpoint!.completed['presentational-promotion']).toBeDefined();
+    // The operator resolves the reported flow row; a 17.x door saves one more Default Organization row.
+    db.exec(`DELETE FROM sys_metadata WHERE id = 'md_flow'`);
+    metadataRows([['md_late', 'org_default', 'view', 'late_list', 'active', null, null, { name: 'late_list' }]]);
+    writes = [];
+    writeParams = [];
+
+    const second = await applyAt(catalog(), l);
+
+    expect(step(second, 'presentational-promotion').status).toBe('checkpointed');
+    heldOnlyByTheDeclaration(second);
+    expect(metadataWrites().map((w) => w.sql)).toEqual([expect.stringMatching(PROMOTION_WRITE)]);
+    expect(rows(`SELECT id, organization_id FROM sys_metadata ORDER BY id`)).toEqual([
+      { id: 'md_d', organization_id: null },
+      { id: 'md_late', organization_id: null },
+    ]);
   });
 });
