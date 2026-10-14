@@ -1,5 +1,6 @@
 // Copyright (c) 2026 ObjectStack. Licensed under the Apache-2.0 license.
 
+import { ORGANIZATION_OWNERSHIP_MIGRATION_ID } from '@objectstack/spec/system';
 import {
   convertPositionBindingRows,
   permissionSetDefinitionFromRow,
@@ -95,8 +96,8 @@ import {
  * Organization. ⛔ Run at boot: the command is the only caller.
  */
 
-/** The `sys_migration` row the ceremony checkpoints into and completes. */
-export const ORGANIZATION_OWNERSHIP_MIGRATION_ID = 'adr-0131-organization-ownership';
+/** The `sys_migration` row the ceremony checkpoints into and completes; the v18 boot guard reads it. */
+export { ORGANIZATION_OWNERSHIP_MIGRATION_ID };
 
 export const CEREMONY_STEPS = [
   'attribution',
