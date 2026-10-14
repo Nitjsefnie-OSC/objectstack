@@ -274,13 +274,13 @@ describe('ADR-0131 D10 --apply on a real stack: what the deployment serves after
     stacks.pop();
 
     const report = await ceremony();
-    expect(report.steps.find((s) => s.step === 'presentational-promotion')).toMatchObject({ status: 'done', summary: { promoted: 1 } });
 
     const after = await boot();
     for (const { label, protocol } of kernels(after.ql, after.host)) {
       const answer = await protocol.getMetaItem({ type: 'view', name: LIST_VIEW.name });
       expect(answer?.item, label).toMatchObject({ name: LIST_VIEW.name, label: 'Inquiry board', viewKind: 'list' });
     }
+    expect(report.steps.find((s) => s.step === 'presentational-promotion')).toMatchObject({ status: 'done', summary: { promoted: 1 } });
   });
 
   it('(b) a public form withdrawn before the upgrade, by the Default Organization or another one, is refused at both doors after it, on both kernels', async () => {
@@ -298,9 +298,6 @@ describe('ADR-0131 D10 --apply on a real stack: what the deployment serves after
     stacks.pop();
 
     const report = await ceremony();
-    expect(report.steps.find((s) => s.step === 'presentational-promotion')).toMatchObject({
-      status: 'done', summary: { promoted: 1, withdrawalsCarried: 1, reported: 1 },
-    });
 
     const after = await boot();
     for (const { label, protocol, environmentId } of kernels(after.ql, after.host)) {
@@ -312,5 +309,8 @@ describe('ADR-0131 D10 --apply on a real stack: what the deployment serves after
     const legacy = await after.host.getMetaItems({ type: 'view', legacyFormOrganizationId: DEFAULT_ORG });
     const envWide = await after.host.getMetaItems({ type: 'view' });
     expect(legacy.items).toEqual(envWide.items);
+    expect(report.steps.find((s) => s.step === 'presentational-promotion')).toMatchObject({
+      status: 'done', summary: { promoted: 1, withdrawalsCarried: 1, reported: 1 },
+    });
   });
 });
