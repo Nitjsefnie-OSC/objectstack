@@ -1,0 +1,45 @@
+// Copyright (c) 2026 ObjectStack. Licensed under the Apache-2.0 license.
+
+import type { SemanticMigration } from '../../types.js';
+
+// #15211 (ADR-0131 D4/D10, C7b) — a platform-object COLUMN retirement, not a
+// spec-key retirement: no authorable spec key moves, so nothing lands in
+// RETIRED_KEYS_BY_MAJOR and no D2 conversion exists to pair with (the
+// ups-delegated-from-column-retired shape).
+export const entry: SemanticMigration = {
+  id: 'ups-permission-set-id-column-retired',
+  // No backticks in `surface` — build-upgrade-guide.ts renders it inside a
+  // code span AND a table cell.
+  surface:
+    'sys_user_permission_set.permission_set_id — the legacy id reference of a permission-set grant '
+    + 'left the platform grant table declared by plugin-security (packages/plugins/plugin-security/'
+    + 'src/objects/sys-user-permission-set.object.ts), with its (permission_set_id) index. The unique '
+    + 'index (user_id, permission_set_id, organization_id) is replaced by one on (user_id, '
+    + 'permission_set, organization_id), and a second platform-wide grant (organization NULL) of one '
+    + 'set to one user is refused at the write door with 409 UNIQUE_VIOLATION',
+  replacement:
+    '`permission_set`, the machine name of the permission set the grant holds (ADR-0131 D4). Delete '
+    + 'the key from any authored `sys_user_permission_set` seed row or data-door write that still '
+    + 'carries it, and name the set instead. Existing databases: run the v18 ceremony, '
+    + '`os migrate organization-ownership --apply`, whose verified rewrite names every grant from the '
+    + 'column and whose column-drops step then drops it',
+  reason:
+    'ADR-0131 D4 makes every reference to a catalog item a name, and D3 retired the permission-set '
+    + 'catalog rows the id pointed at. Since then no writer fills the column and no reader confers '
+    + 'anything through it: a grant holds its set by permission_set. D10 orders the column\'s removal '
+    + 'after every grant names its set, which is the v18 ceremony\'s verified id-to-name rewrite: it '
+    + 'reads the physical column by raw SQL, names each grant, verifies every name against the '
+    + 'security catalog, and only then drops the column through the schema-drift machinery (schema '
+    + 'sync is additive, so an undeclared column stays until it is dropped). The boot-time name '
+    + 'backfill that did the same job is retired with it. The old unique index keyed the id, which '
+    + 'grants written by name leave NULL, so it never refused a duplicate grant; a duplicate confers '
+    + 'nothing more, but a revoke that deletes one row leaves the other granting. The new index keys '
+    + 'the name. The ceremony reports existing duplicate grants, deletes none, and does not drop the '
+    + 'column until the operator has removed them.',
+  acceptanceCriteria:
+    'No authored stack seed or client write names `permission_set_id` on `sys_user_permission_set`: '
+    + 'the engine refuses the undeclared field with 400 INVALID_FIELD. A second grant of one set to '
+    + 'one user in one organization is refused with 409 UNIQUE_VIOLATION, platform-wide grants '
+    + 'included. On a legacy database, after `os migrate organization-ownership --apply` the column '
+    + 'is gone and the boot no longer reports it orphaned.',
+};

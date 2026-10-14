@@ -64,7 +64,8 @@ import {
  *  3. `rewrite` — the verified id→name rewrite (D4):
  *     `sys_user_permission_set.permission_set` is named from the set row its
  *     `permission_set_id` points at, then EVERY grant is verified to name a set
- *     the security catalog resolves. The id column stays (C7b drops it).
+ *     the security catalog resolves. The id column is read here, by raw SQL,
+ *     and dropped by column-drops.
  *  4. `mirror-deletion` (fate 2) — gated on the rewrite's verification, which
  *     is read again immediately before the first delete. Only rows of a
  *     `mirror-deletion` object that match its mirror selector and none of its
@@ -73,7 +74,10 @@ import {
  *     pass verified are deleted, by id.
  *  5. `column-drops` (fate 1) — `organization_id` leaves the D7 objects
  *     through the schema-drift ceremony ({@link ColumnDropPort}), never a hand
- *     `ALTER`.
+ *     `ALTER`; so does the retired `sys_user_permission_set.permission_set_id`
+ *     (C7b), once the rewrite has read it and no two grants hold one set for
+ *     one user in one organization (the unique index that replaces the old
+ *     one would refuse them; they are reported, never deleted).
  *
  * Then the post-check re-runs the plan and reports, per table, what remains.
  *
@@ -129,16 +133,21 @@ export interface TemplatePort {
   find(name: string, locale: string): Promise<{ definition: Readonly<Record<string, unknown>>; environment: boolean } | undefined>;
 }
 
-/** One table's column drop, as the schema-drift ceremony answered it. */
-export interface ColumnDropOutcome {
+/** One column drop: `organization_id` of a fate-1 table, or a retired column the ceremony owns. */
+export interface ColumnDrop {
   table: string;
+  column: string;
+}
+
+/** One column drop, as the schema-drift ceremony answered it. */
+export interface ColumnDropOutcome extends ColumnDrop {
   outcome: 'dropped' | 'not-proposed' | 'failed';
   detail?: string;
 }
 
-/** Drops `organization_id` on the named tables through the schema-drift ceremony (ADR-0120 D4). */
+/** Drops the named columns through the schema-drift ceremony (ADR-0120 D4). */
 export interface ColumnDropPort {
-  drop(tables: readonly string[]): Promise<ColumnDropOutcome[]>;
+  drop(columns: readonly ColumnDrop[]): Promise<ColumnDropOutcome[]>;
 }
 
 /** What the ceremony records after each finished step. */
@@ -1085,10 +1094,15 @@ async function deletePromotedTemplates(run: Run, tables: readonly string[]): Pro
 
 // ── Step 5: column drops (fate 1) ────────────────────────────────────────────
 
+/** The retired id column of a grant (ADR-0131 D4, C7b), which the rewrite reads before column-drops drops it. */
+const GRANT_SET_ID_COLUMN = 'permission_set_id';
+/** The inventory category that counts the grants the unique index on (user, set, organization) would refuse. */
+export const DUPLICATE_GRANTS_CATEGORY = 'duplicate-grants';
+
 async function runColumnDrops(run: Run): Promise<StepReport> {
   const plan = await planFor(run);
   const blockers: string[] = [];
-  const due: string[] = [];
+  const due: ColumnDrop[] = [];
   for (const table of plan.tables) {
     if (table.fate !== 'column-drop' || table.physical !== 'present' || table.organizationColumn !== 'present') continue;
     const held = table.categories.filter((c) => c.rows > 0);
@@ -1099,7 +1113,24 @@ async function runColumnDrops(run: Run): Promise<StepReport> {
       );
       continue;
     }
-    due.push(...table.tables);
+    due.push(...table.tables.map((t) => ({ table: t, column: ORG })));
+  }
+  // [C7b] The grant's retired id column: the rewrite (step 3) has read it and
+  // verified every grant by name. It goes once no two grants hold one set for
+  // one user in one organization — the unique index that replaces the old one
+  // refuses them, and which to keep is the operator's call, never the ceremony's.
+  if ((await columnsOf(run, GRANTS))?.has(GRANT_SET_ID_COLUMN)) {
+    const duplicates = plan.tables.find((t) => t.object === GRANTS)?.categories.find((c) => c.id === DUPLICATE_GRANTS_CATEGORY);
+    if (duplicates && duplicates.rows > 0) {
+      blockers.push(
+        `${GRANTS}.${GRANT_SET_ID_COLUMN} is not dropped: ${duplicates.rows} grant(s) in ${duplicates.groups ?? 0} group(s) ` +
+          'hold one permission set for one user in one organization, which the unique index on (user_id, ' +
+          'permission_set, organization_id) refuses, and a revoke of one of them would leave the other in force. ' +
+          'Which grant stays is never guessed and none is deleted here: remove all but one grant per group, then re-run.',
+      );
+    } else {
+      due.push({ table: GRANTS, column: GRANT_SET_ID_COLUMN });
+    }
   }
   let dropped = 0;
   if (due.length) {
@@ -1110,10 +1141,10 @@ async function runColumnDrops(run: Run): Promise<StepReport> {
       }
       blockers.push(
         outcome.outcome === 'not-proposed'
-          ? `${outcome.table}.${ORG} was not proposed for dropping by the schema-drift ceremony: the object this ` +
-            `runtime declares still carries the column${outcome.detail ? ` (${outcome.detail})` : ''}. Run the ceremony ` +
-            'with the release whose declaration drops it.'
-          : `Dropping ${outcome.table}.${ORG} failed: ${outcome.detail ?? 'no detail'}. Re-run once the cause is fixed.`,
+          ? `${outcome.table}.${outcome.column} was not proposed for dropping by the schema-drift ceremony: the object ` +
+            `this runtime declares still carries the column${outcome.detail ? ` (${outcome.detail})` : ''}. Run the ` +
+            'ceremony with the release whose declaration drops it.'
+          : `Dropping ${outcome.table}.${outcome.column} failed: ${outcome.detail ?? 'no detail'}. Re-run once the cause is fixed.`,
       );
     }
   }

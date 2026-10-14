@@ -125,11 +125,11 @@ function ledger(): CeremonyLedgerPort & { checkpoint: CeremonyCheckpoint | null;
 
 /** The schema-drift ceremony, as SQLite answers it: the column goes. */
 const columnDrops: ColumnDropPort = {
-  async drop(tables) {
-    return tables.map((table) => {
-      writes.push(`ALTER TABLE ${table} DROP COLUMN organization_id`);
-      db.exec(`ALTER TABLE "${table}" DROP COLUMN organization_id`);
-      return { table, outcome: 'dropped' as const };
+  async drop(columns) {
+    return columns.map(({ table, column }) => {
+      writes.push(`ALTER TABLE ${table} DROP COLUMN ${column}`);
+      db.exec(`ALTER TABLE "${table}" DROP COLUMN "${column}"`);
+      return { table, column, outcome: 'dropped' as const };
     });
   },
 };
@@ -393,13 +393,15 @@ describe('ADR-0131 D10 --apply — the acceptance fixture', () => {
       { id: 'set_secret', namespace: 'ai', key: 'api_key', value: null, encrypted: 1, locked: 0, locked_reason: null, value_enc: 'secret:h_1' },
     ]);
 
-    // Every grant names its set; the id column is still there (C7b's later drop).
-    expect(rows('SELECT id, permission_set, permission_set_id FROM sys_user_permission_set ORDER BY id')).toEqual([
-      { id: 'grant_1', permission_set: 'member_default', permission_set_id: 'ps_org' },
-      { id: 'grant_2', permission_set: 'member_default', permission_set_id: 'ps_null' },
-      { id: 'grant_3', permission_set: 'field_auditor', permission_set_id: 'ps_auth' },
-      { id: 'grant_4', permission_set: 'member_default', permission_set_id: 'ps_null' },
+    // Every grant names its set, and the id column the rewrite read is gone (C7b).
+    expect(rows('SELECT id, permission_set FROM sys_user_permission_set ORDER BY id')).toEqual([
+      { id: 'grant_1', permission_set: 'member_default' },
+      { id: 'grant_2', permission_set: 'member_default' },
+      { id: 'grant_3', permission_set: 'field_auditor' },
+      { id: 'grant_4', permission_set: 'member_default' },
     ]);
+    expect(rows(`SELECT name FROM pragma_table_info('sys_user_permission_set') WHERE name = 'permission_set_id'`)).toEqual([]);
+    expect(writes).toContain('ALTER TABLE sys_user_permission_set DROP COLUMN permission_set_id');
 
     // Attributed rows carry their organization — the anchor's, else the Default Organization.
     expect(rows(`SELECT organization_id FROM sys_file WHERE id = 'file_1'`)).toEqual([{ organization_id: 'org_b' }]);
@@ -704,5 +706,42 @@ describe('ADR-0131 D10 --apply — idempotent, resumable, gated', () => {
     expect(drops.blockers.join('\n')).toMatch(/sys_metadata\.organization_id is not dropped/);
     expect(rows(`SELECT name FROM pragma_table_info('sys_metadata') WHERE name = 'organization_id'`)).toHaveLength(1);
     expect(rows(`SELECT name FROM pragma_table_info('sys_job') WHERE name = 'organization_id'`)).toHaveLength(0);
+  });
+});
+
+describe('ADR-0131 D10 --apply — the grant\'s retired id column (C7b, seat answers 6162538253 Q5 A)', () => {
+  it('two grants of one set to one user in one organization block the id column\'s drop; neither is deleted', async () => {
+    // usr_2's grant is attributed to the Default Organization, beside a second one already there.
+    db.exec(`INSERT INTO sys_user_permission_set VALUES ('grant_dup', 'org_default', 'usr_2', NULL, 'member_default')`);
+
+    const report = await apply(catalog(), ledger());
+
+    const drops = report.steps.find((s) => s.step === 'column-drops')!;
+    expect(drops.status).toBe('blocked');
+    expect(drops.blockers.join('\n')).toMatch(/sys_user_permission_set\.permission_set_id is not dropped: 2 grant\(s\) in 1 group\(s\)/);
+    expect(rows(`SELECT id FROM sys_user_permission_set WHERE user_id = 'usr_2' ORDER BY id`)).toEqual([{ id: 'grant_2' }, { id: 'grant_dup' }]);
+    expect(rows(`SELECT name FROM pragma_table_info('sys_user_permission_set') WHERE name = 'permission_set_id'`)).toHaveLength(1);
+    expect(writes.some((w) => /DELETE FROM "sys_user_permission_set"/.test(w))).toBe(false);
+
+    // The operator removes one; the re-run drops the column.
+    db.exec(`DELETE FROM sys_user_permission_set WHERE id = 'grant_dup'`);
+    const again = await apply(catalog(), ledger());
+    expect(again.steps.find((s) => s.step === 'column-drops')!.status).toBe('done');
+    expect(rows(`SELECT name FROM pragma_table_info('sys_user_permission_set') WHERE name = 'permission_set_id'`)).toEqual([]);
+  });
+
+  it('a second platform-wide grant (organization NULL) is a duplicate too: GROUP BY keys NULLs together, unlike the index', async () => {
+    await onlyTemplates(`('tpl_none', NULL, 'crm.none', 'en-US', 'x', 0, 'package')`, async () => {
+      db.exec(`
+        CREATE TABLE sys_user_permission_set (id TEXT PRIMARY KEY, organization_id TEXT, user_id TEXT,
+          permission_set_id TEXT, permission_set TEXT);
+        INSERT INTO sys_user_permission_set VALUES
+          ('g1', NULL, 'usr_p', NULL, 'member_default'),
+          ('g2', NULL, 'usr_p', NULL, 'member_default');
+      `);
+      const report = await apply(catalog(), ledger(), { posture: 'isolated' });
+      const drops = report.steps.find((s) => s.step === 'column-drops')!;
+      expect(drops.blockers.join('\n')).toMatch(/permission_set_id is not dropped: 2 grant\(s\) in 1 group\(s\)/);
+    });
   });
 });

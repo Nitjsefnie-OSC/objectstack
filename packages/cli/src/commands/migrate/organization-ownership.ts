@@ -482,25 +482,32 @@ export default class MigrateOrganizationOwnership extends Command {
           },
         },
         columnDrops: {
-          drop: async (tables) => {
+          drop: async (columns) => {
             const drift = await liveStack.detectManagedDrift();
-            const wanted = new Set(tables);
+            const key = (table: string, column: string): string => `${table}.${column}`;
+            const wanted = new Set(columns.map((c) => key(c.table, c.column)));
             const entries = drift.filter((d) => {
               const op = (d as { op?: { type?: string; column?: string } }).op;
-              return op?.type === 'drop_column' && op.column === 'organization_id' && wanted.has(String(d.table));
+              return op?.type === 'drop_column' && wanted.has(key(String(d.table), String(op.column)));
             });
+            const columnOf = (d: unknown): string => String((d as { op?: { column?: string } }).op?.column);
             const outcomes: ColumnDropOutcome[] = [];
-            const proposed = new Set(entries.map((d) => String(d.table)));
-            for (const table of tables) {
-              if (!proposed.has(table)) {
-                outcomes.push({ table, outcome: 'not-proposed', detail: 'the drift differ proposed no drop for it' });
+            const proposed = new Set(entries.map((d) => key(String(d.table), columnOf(d))));
+            for (const c of columns) {
+              if (!proposed.has(key(c.table, c.column))) {
+                outcomes.push({ ...c, outcome: 'not-proposed', detail: 'the drift differ proposed no drop for it' });
               }
             }
             if (entries.length === 0) return outcomes;
             const { applied, skipped } = await liveStack.applyMigrationEntries(entries, { allowDestructive: true });
-            for (const d of applied) outcomes.push({ table: String(d.table), outcome: 'dropped' });
+            for (const d of applied) outcomes.push({ table: String(d.table), column: columnOf(d), outcome: 'dropped' });
             for (const d of skipped) {
-              outcomes.push({ table: String(d.table), outcome: 'failed', detail: String((d as { message?: unknown }).message ?? 'skipped by the schema-drift ceremony') });
+              outcomes.push({
+                table: String(d.table),
+                column: columnOf(d),
+                outcome: 'failed',
+                detail: String((d as { message?: unknown }).message ?? 'skipped by the schema-drift ceremony'),
+              });
             }
             return outcomes;
           },

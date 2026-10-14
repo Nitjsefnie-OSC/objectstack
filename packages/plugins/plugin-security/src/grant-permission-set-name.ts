@@ -13,12 +13,12 @@
  * security catalog's definition of that name. Every grant writer in this
  * repository writes the name and nothing else (the organization-admin
  * reconcile, the platform-admin promotion, self-registration, the verify RLS
- * persona, Setup's grant picker). D10 orders the id column's removal after
- * every grant names its set; this is that first step, so `permission_set_id`
- * is optional, no writer fills it, and no write derives the name from it. The
- * column and its data go with D10's later stage. Rows written before the name
- * column existed are named by the one-time backfill
- * (`grant-permission-set-name-backfill.ts`), never here.
+ * persona, Setup's grant picker). D10 ordered the id column's removal after
+ * every grant names its set: the declaration of `permission_set_id` is
+ * retired (C7b), and rows written before the name column existed are named by
+ * the v18 ceremony's verified rewrite (`os migrate organization-ownership
+ * --apply`), which reads the physical column before its column-drops step
+ * drops it — never here.
  *
  * ## What is refused — exactly "the catalog holds no set by this name"
  *
@@ -58,6 +58,18 @@
  * dialect for "this reference names nothing". No new error code (ADR-0112,
  * ADR-0114).
  *
+ * ## One grant per user, set and organization
+ *
+ * The declared unique index on (`user_id`, `permission_set`,
+ * `organization_id`) refuses a second grant of one set to one user in one
+ * organization: a duplicate confers nothing more (the resolver dedupes by
+ * name), but a revoke that deletes one row would leave the other granting.
+ * SQL keys a NULL apart from every other value, so the index cannot see a
+ * duplicate platform-wide grant (organization NULL). These hooks refuse that
+ * one at the write door, with the envelope the index answers in
+ * (`DuplicateRecordError`: 409, `UNIQUE_VIOLATION` at the HTTP doors), so an
+ * author meets one dialect for "this grant exists".
+ *
  * ## Hooks, not a middleware
  *
  * Registered as engine `beforeInsert` / `beforeUpdate` hooks at priority 30:
@@ -70,6 +82,7 @@
  */
 
 import { securityCatalogReaderOf } from '@objectstack/core';
+import { DuplicateRecordError } from '@objectstack/objectql';
 import type { FieldErrorCode } from '@objectstack/spec/api';
 import { isPlainRecord } from '@objectstack/spec/data';
 import { validationFailure } from '@objectstack/types';
@@ -77,12 +90,8 @@ import { SysUserPermissionSet } from './objects/sys-user-permission-set.object.j
 
 /** The grant object this module judges. */
 export const GRANT_OBJECT = 'sys_user_permission_set';
-/** The grant's legacy id reference to a catalog row (dropped by ADR-0131 D10; read only by the backfill and the D10 report). */
-export const GRANT_SET_ID_FIELD = 'permission_set_id';
 /** The grant's NAME reference to the permission set (ADR-0131 D4). */
 export const GRANT_SET_NAME_FIELD = 'permission_set';
-/** The legacy row table the backfill reads an id's name from. */
-export const PERMISSION_SET_CATALOG_OBJECT = 'sys_permission_set';
 /** The security catalog type a `permission_set` value must name an item of. */
 const PERMISSION_SET_CATALOG_TYPE = 'permission';
 /** The `packageId` both hooks register under, so they bind and unbind as one. */
@@ -156,16 +165,12 @@ function judgedName(value: unknown): string | undefined {
 /**
  * [ADR-0131 D4] The permission set a STORED grant names, as every by-name
  * grant reader asks it: the grant's `permission_set`, or `undefined` for a
- * grant that names none — `NULL` or blank, which is a grant written before the
- * column existed that the backfill has not named yet, or one it could not name
- * (an id with no set row, or a set row of another organization).
+ * grant that names none — `NULL` or blank, a grant written before the column
+ * existed that the v18 ceremony's rewrite has not named (its verification
+ * blocks the ceremony on every such grant before the id column is dropped).
  *
  * A grant that names nothing grants nothing through a by-name reader: it is
- * never matched to a set, never shown as held, never counted. A reader whose
- * job is to RESTRICT — a revocation, a refused promotion, a duplicate it must
- * not insert — may still reach such a legacy grant through its id until
- * ADR-0131 D10 counts the unnamed grants and drops that column; no reader
- * reaches it through the id to confer anything.
+ * never matched to a set, never shown as held, never counted.
  */
 export function grantSetNameOf(row: unknown): string | undefined {
   if (!row || typeof row !== 'object') return undefined;
@@ -190,6 +195,7 @@ export function grantOrganizationOf(row: unknown): string | null {
 }
 
 interface GrantNameEngine {
+  find?: (object: string, query: Record<string, unknown>) => Promise<unknown[]>;
   registerHook?: (
     event: string,
     handler: (ctx: any) => void | Promise<void>,
@@ -218,13 +224,38 @@ async function assertNameInCatalog(engine: GrantNameEngine, name: string, logger
   if (!held) throw grantSetNotInCatalogError(name);
 }
 
+/**
+ * Refuse a second platform-wide grant (organization NULL) of `name` to
+ * `userId`, the one duplicate the unique index cannot see (module note).
+ * `except` is the row an update rewrites, which is not its own duplicate.
+ */
+async function assertNoPlatformWideDuplicate(
+  engine: GrantNameEngine,
+  userId: unknown,
+  name: string,
+  except?: unknown,
+): Promise<void> {
+  if (typeof engine.find !== 'function' || userId === null || userId === undefined || userId === '') return;
+  const held = await engine.find(GRANT_OBJECT, {
+    where: { user_id: userId, [GRANT_SET_NAME_FIELD]: name, organization_id: null },
+    fields: ['id'],
+    limit: 2,
+    context: { isSystem: true },
+  });
+  if ((held ?? []).some((row) => String((row as { id?: unknown })?.id) !== String(except))) {
+    throw new DuplicateRecordError(GRANT_OBJECT, undefined, GRANT_SET_NAME_FIELD);
+  }
+}
+
 /** `beforeInsert`: one dispatch per row, handed the caller's row as sent. */
 async function onInsert(engine: GrantNameEngine, ctx: any, logger: GrantNameLogger): Promise<void> {
   if (ctx?.object !== GRANT_OBJECT || ctx?.session?.isSystem === true) return;
   const data = ctx?.input?.data;
   if (!isPlainRecord(data)) return;
   const name = judgedName(data[GRANT_SET_NAME_FIELD]);
-  if (name !== undefined) await assertNameInCatalog(engine, name, logger);
+  if (name === undefined) return;
+  await assertNameInCatalog(engine, name, logger);
+  if (grantOrganizationOf(data) === null) await assertNoPlatformWideDuplicate(engine, data.user_id, name);
 }
 
 /**
@@ -241,6 +272,8 @@ async function onUpdate(engine: GrantNameEngine, ctx: any, logger: GrantNameLogg
   const previous = isPlainRecord(ctx?.previous) ? ctx.previous : undefined;
   if (previous && judgedName(previous[GRANT_SET_NAME_FIELD]) === name) return;
   await assertNameInCatalog(engine, name, logger);
+  const merged = { ...(previous ?? {}), ...data };
+  if (grantOrganizationOf(merged) === null) await assertNoPlatformWideDuplicate(engine, merged.user_id, name, previous?.id);
 }
 
 /**
