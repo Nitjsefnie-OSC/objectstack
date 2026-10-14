@@ -32,6 +32,7 @@ import {
   type ColumnDropPort,
   type MetadataDoorPort,
   type OrganizationOwnershipApplyReport,
+  type ServedViewPort,
   type TemplatePort,
 } from './organization-ownership-apply.js';
 
@@ -64,9 +65,11 @@ function executor(opts: { failOnceOn?: RegExp } = {}): ApplyExecutor {
  * Like the registry, it serves a saved definition only from the next boot on
  * ({@link boot}), never the moment it is saved.
  */
-function catalog(): CatalogPort & MetadataDoorPort & TemplatePort & {
+function catalog(): CatalogPort & MetadataDoorPort & TemplatePort & ServedViewPort & {
   saved: Map<string, Record<string, unknown>>;
   templates: Map<string, Record<string, unknown>>;
+  /** The code's `view` items, by name: what the environment serves where no environment row holds the name. */
+  views: Map<string, Record<string, unknown>>;
   boot(): void;
 } {
   const declared = new Map<string, Record<string, unknown>>([
@@ -80,9 +83,15 @@ function catalog(): CatalogPort & MetadataDoorPort & TemplatePort & {
     ['auth.reset_password|en-US', { name: 'auth.reset_password', label: 'Reset', locale: 'en-US', subject: 'Reset', bodyHtml: '<p>code</p>' }],
   ]);
   let hydrated = new Map<string, Record<string, unknown>>();
+  const views = new Map<string, Record<string, unknown>>();
   return {
     saved,
     templates,
+    views,
+    async served(name) {
+      const item = views.get(name);
+      return item ? [item] : [];
+    },
     async find(name, locale) {
       const own = templates.get(`${name}|${locale}`);
       if (own) return { definition: own, environment: true };
@@ -296,6 +305,7 @@ const apply = (
     catalog: c,
     door: c,
     templates: c,
+    views: c,
     columnDrops,
     ledger: l,
     now: () => new Date('2026-10-12T00:00:00Z'),

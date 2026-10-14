@@ -91,8 +91,8 @@ async function confirm(question: string): Promise<boolean> {
  * the precondition (D10 item 2): `--backup-taken`, or a yes at the prompt; a
  * non-interactive run without the flag is refused before the boot. It then
  * performs the fates in order — attribution, the authored catalog conversion,
- * the template promotion, the settings global-rung move, the verified id→name
- * rewrite, mirror deletion, column drops — through `../../utils/organization-ownership-apply.ts`,
+ * the template promotion, the presentational promotion, the settings global-rung
+ * move, the verified id→name rewrite, mirror deletion, column drops — through `../../utils/organization-ownership-apply.ts`,
  * checkpointing each finished step in the deployment ledger (`sys_migration`,
  * row {@link ORGANIZATION_OWNERSHIP_MIGRATION_ID}) so an interrupted run
  * resumes where it stopped, and ends with the post-check. The ledger row is
@@ -128,8 +128,8 @@ export default class MigrateOrganizationOwnership extends Command {
     'The v18 organization-ownership ceremony (ADR-0131 D10). Without --apply, the read-only plan: per table, the fate, ' +
     'the row counts, the rows whose owner cannot be derived (by id), and which tables will receive NOT NULL, written ' +
     'to a file — never a row or a column changed; it refuses, naming it, any table it cannot enumerate. With --apply ' +
-    '(and a backup): attribution, the authored catalog conversion, the template promotion, the settings move, the ' +
-    'verified id-to-name rewrite, mirror deletion and column drops, in that order, ' +
+    '(and a backup): attribution, the authored catalog conversion, the template promotion, the presentational ' +
+    'promotion, the settings move, the verified id-to-name rewrite, mirror deletion and column drops, in that order, ' +
     'resumable from a recorded checkpoint, then the post-check.';
 
   static override examples = [
@@ -479,6 +479,22 @@ export default class MigrateOrganizationOwnership extends Command {
               return !!i && i.name === name && (typeof i.locale === 'string' && i.locale ? i.locale : 'en-US') === locale;
             }) as Record<string, unknown> | undefined;
             return served ? { definition: served, environment: false } : undefined;
+          },
+        },
+        views: {
+          // The items the environment serves under one view name (environment →
+          // code), read only when no environment row holds the name, to judge a
+          // withdrawn public form fail-closed. An unreadable protocol throws, and
+          // the step blocks rather than reading the form as closed.
+          served: async (name) => {
+            if (typeof protocol?.getMetaItemsForExecution !== 'function') {
+              throw new Error('no metadata protocol is composed on this stack');
+            }
+            const listed = await protocol.getMetaItemsForExecution({ type: 'view' });
+            return (listed?.items ?? []).filter(
+              (item): item is Record<string, unknown> =>
+                !!item && typeof item === 'object' && (item as Record<string, unknown>).name === name,
+            );
           },
         },
         columnDrops: {

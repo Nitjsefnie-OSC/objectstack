@@ -5,6 +5,7 @@ import {
   permissionSetDefinitionFromRow,
   positionDefinitionFromRow,
 } from '@objectstack/core';
+import { anonymousFormIntakeCandidates, anonymousFormIntakeWithdrawnIn } from '@objectstack/metadata-core';
 import {
   inventoryEntryFor,
   type InventoryEntry,
@@ -21,6 +22,7 @@ import {
   columnNameOf,
   dialectOf,
   predicateSql,
+  requireColumn,
   Sql,
   type AttributionSink,
   type TemplateConflict,
@@ -55,7 +57,22 @@ import {
  *     customer edit, under every posture. One `(name, locale)` held by rows
  *     that differ is a conflict: listed, kept, and blocking until the operator
  *     chooses one row with `--template-choice ROW_ID`; a nameless row blocks.
- *  2c. `settings-move` — the inventory's `global-rung-move` departure,
+ *  2c. `presentational-promotion` — the inventory's
+ *     `organization-presentational-promotion` category on `sys_metadata`,
+ *     executed ({@link runPresentationalPromotion}). Under `single`, each of
+ *     the Default Organization's rows of the five presentational types becomes
+ *     an environment row, in place: its `organization_id` is cleared and
+ *     nothing else of the row changes, which is the row the `/meta` doors read
+ *     (environment → code). Every other row of the category is reported, never
+ *     promoted: another organization's (ruling record 6020163868, A), and every
+ *     row under a wall. A row the environment already holds an active or draft
+ *     row for is reported too: the environment's row is never overwritten.
+ *     Public-form withdrawals are carried fail-closed under every posture
+ *     (ruling record 6020151485, A): a form any organization's row withdraws is
+ *     withdrawn in the environment row this step writes, and when the
+ *     environment layer serves that form open from a body this step does not
+ *     write, the step blocks and names it.
+ *  2d. `settings-move` — the inventory's `global-rung-move` departure,
  *     executed (#15207's ruling: "C7's ceremony moving the existing rows"):
  *     each `sys_setting` row of `scope = 'global'` with no organization is
  *     copied, by the database itself, into `sys_platform_setting`, read back,
@@ -73,7 +90,9 @@ import {
  *     pass verified are deleted, by id.
  *  5. `column-drops` (fate 1) — `organization_id` leaves the D7 objects
  *     through the schema-drift ceremony ({@link ColumnDropPort}), never a hand
- *     `ALTER`.
+ *     `ALTER`. The presentational promotion runs again first, so a row
+ *     written since its checkpoint is promoted, or reported, before the
+ *     `sys_metadata` column is judged.
  *
  * Then the post-check re-runs the plan and reports, per table, what remains.
  *
@@ -90,7 +109,8 @@ import {
  *
  * ## What it never does
  *
- * ⛔ Delete a row outside fate 2. ⛔ Give an unattributable row an owner:
+ * ⛔ Delete a row outside fate 2 (the presentational promotion deletes none).
+ * ⛔ Give an unattributable row an owner:
  * owners come only from the plan's anchors and, under `single`, the Default
  * Organization. ⛔ Run at boot: the command is the only caller.
  */
@@ -102,6 +122,7 @@ export const CEREMONY_STEPS = [
   'attribution',
   'authored-conversion',
   'template-promotion',
+  'presentational-promotion',
   'settings-move',
   'rewrite',
   'mirror-deletion',
@@ -127,6 +148,15 @@ export interface MetadataDoorPort {
 /** The `email_template` item the registry serves for one `(name, locale)` bundle member. */
 export interface TemplatePort {
   find(name: string, locale: string): Promise<{ definition: Readonly<Record<string, unknown>>; environment: boolean } | undefined>;
+}
+
+/**
+ * The `view` items the environment serves under one name (environment →
+ * code), for the withdrawal check when no `sys_metadata` row of the
+ * environment holds that name. Throws when they cannot be read.
+ */
+export interface ServedViewPort {
+  served(name: string): Promise<ReadonlyArray<Readonly<Record<string, unknown>>>>;
 }
 
 /** One table's column drop, as the schema-drift ceremony answered it. */
@@ -219,6 +249,7 @@ export interface ApplyOptions {
   catalog: CatalogPort;
   door: MetadataDoorPort;
   templates: TemplatePort;
+  views: ServedViewPort;
   columnDrops: ColumnDropPort;
   ledger: CeremonyLedgerPort;
   inventory?: readonly InventoryEntry[];
@@ -712,7 +743,340 @@ function validateTemplateChoices(run: Run): void {
   }
 }
 
-// ── Step 2c: the settings global rung moves (D7) ────────────────────────────
+// ── Step 2c: presentational promotion (rulings 6020163868 A, 6020151485 A) ──
+
+const METADATA = 'sys_metadata';
+/** The inventory category this step executes, on {@link METADATA}. */
+const PRESENTATIONAL_CATEGORY = 'organization-presentational-promotion';
+/** The states an overlay key is unique within: a promotion never makes a second environment row of one. */
+const KEYED_STATES: ReadonlySet<string> = new Set(['active', 'draft']);
+
+/** One `sys_metadata` row, as the presentational promotion reads it. */
+interface MetadataRow {
+  id: string;
+  type: string;
+  name: string;
+  state: string | null;
+  organizationId: string | null;
+  packageId: string | null;
+  member: string | null;
+  /** The stored body, parsed; `null` when it is not a JSON object. */
+  body: Record<string, unknown> | null;
+}
+
+function metadataRow(row: Record<string, unknown>): MetadataRow {
+  let body: Record<string, unknown> | null = null;
+  try {
+    const parsed: unknown = typeof row.metadata === 'string' ? JSON.parse(row.metadata) : row.metadata;
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) body = parsed as Record<string, unknown>;
+  } catch {
+    // Not JSON: `body` stays null, and the row is reported, never promoted.
+  }
+  return {
+    id: String(row.id),
+    type: String(row.type),
+    name: String(row.name),
+    state: text(row.state),
+    organizationId: text(row[ORG]),
+    packageId: text(row.package_id),
+    member: text(row.bundle_member),
+    body,
+  };
+}
+
+/** JSON with every object's keys sorted, so two stored bodies compare by content, not by key order. */
+const canonicalJson = (value: unknown): string =>
+  JSON.stringify(value, (_key, v: unknown) =>
+    v && typeof v === 'object' && !Array.isArray(v)
+      ? Object.fromEntries(Object.keys(v).sort().map((k) => [k, (v as Record<string, unknown>)[k]]))
+      : v);
+
+/** The item a row overlays — the overlay key without its organization — and that key with the row's state. */
+const itemOf = (r: MetadataRow): string => JSON.stringify([r.type, r.name, r.packageId, r.member]);
+const itemAndState = (r: MetadataRow): string => `${itemOf(r)}|${r.state ?? ''}`;
+
+function groupBy<T>(rows: readonly T[], key: (row: T) => string): Map<string, T[]> {
+  const out = new Map<string, T[]>();
+  for (const row of rows) out.set(key(row), [...(out.get(key(row)) ?? []), row]);
+  return out;
+}
+
+const describeRow = (r: MetadataRow): string =>
+  `${r.id} (${r.type} ${r.name}${r.packageId ? `, package ${r.packageId}` : ''}${r.member ? `, ${r.member}` : ''}, ` +
+  `organization ${r.organizationId ?? 'none'}${r.state && r.state !== 'active' ? `, ${r.state}` : ''})`;
+
+/** A body the kill-switch predicate can judge: it matches a layer by the view's `name`, which a stored body may leave to its row. */
+const judged = (body: Record<string, unknown>, name: string): Record<string, unknown> =>
+  (typeof body.name === 'string' && body.name ? body : { ...body, name });
+
+/**
+ * The forms `body` opens to anonymous intake that a body in `layer` withdraws:
+ * the shared kill-switch predicate (`anonymousFormIntakeWithdrawnIn`,
+ * `@objectstack/metadata-core`) over `body`'s open candidates, the rule the
+ * anonymous form doors serve by.
+ */
+const withdrawnOpenForms = (body: Record<string, unknown>, layer: readonly Record<string, unknown>[]) =>
+  anonymousFormIntakeCandidates(body).filter((candidate) => anonymousFormIntakeWithdrawnIn(layer, body, candidate));
+
+/**
+ * `body` with every form it opens that a body in `layer` withdraws switched
+ * off for anonymous intake (`allowAnonymous: false`, the link kept, so the
+ * environment row is itself an explicit withdrawal), and the slugs it closed.
+ */
+function carryWithdrawals(
+  body: Record<string, unknown>,
+  name: string,
+  layer: readonly Record<string, unknown>[],
+): { body: Record<string, unknown>; slugs: string[] } {
+  const copy = structuredClone(body);
+  const slugs: string[] = [];
+  for (const candidate of withdrawnOpenForms(judged(copy, name), layer)) {
+    candidate.form.sharing = { ...(candidate.form.sharing as Record<string, unknown>), allowAnonymous: false };
+    slugs.push(candidate.slug);
+  }
+  return { body: copy, slugs };
+}
+
+/** The environment's rows (no organization) of every `(type, name)` the population names. */
+async function environmentRowsOf(run: Run, select: readonly string[], population: readonly MetadataRow[]): Promise<MetadataRow[]> {
+  const { sql } = run;
+  const out: MetadataRow[] = [];
+  for (const [type, rows] of groupBy(population, (r) => r.type)) {
+    const names = [...new Set(rows.map((r) => r.name))];
+    for (let i = 0; i < names.length; i += IN_CHUNK) {
+      const chunk = names.slice(i, i + IN_CHUNK);
+      const found = await readAll(run, METADATA, select, {
+        text: `${sql.q(ORG, METADATA)} IS NULL AND ${sql.q('type', METADATA)} = ? AND ${sql.q('name', METADATA)} IN (${chunk.map(() => '?').join(', ')})`,
+        params: [type, ...chunk],
+      });
+      out.push(...found.map(metadataRow));
+    }
+  }
+  return out;
+}
+
+/**
+ * The `sys_metadata` rows of the inventory's `organization-presentational-promotion`
+ * category become environment rows, or are reported — rulings 6020163868 (A)
+ * and 6020151485 (A), one conflict rule (pointer 6020279837).
+ *
+ *  - **Promoted:** under `single`, a row of the Default Organization, when the
+ *    environment holds no active or draft row of the same item and state. The
+ *    promotion is IN PLACE: `organization_id` is cleared and nothing else of
+ *    the row moves (body, package, bundle member, state, version), so the row
+ *    is exactly what the `/meta` doors read (environment → code). Each write is
+ *    `UPDATE … WHERE` the category's own predicate `AND id = ? AND
+ *    organization_id = ?` (the Default Organization), then read back; it can
+ *    touch no row outside the category, on a first run or a resumed one.
+ *  - **Reported, never promoted** (fate 4, each row named with its remedy):
+ *    another organization's row, a conflict or not (the conflict rule: the
+ *    Default Organization's row is the one promoted); every row under a wall
+ *    (ADR-0131 D6); a row the environment already holds an active or draft row
+ *    of the same item for (the environment's row is never overwritten); a row
+ *    the Default Organization holds twice; a body that is not JSON. These keep
+ *    `column-drops` from dropping `sys_metadata.organization_id` until the
+ *    operator chooses per row.
+ *  - **Withdrawals, fail-closed, under every posture:** a public form that any
+ *    organization's active `view` row withdraws — or that an environment row
+ *    of the same name withdraws — is withdrawn in each row this step promotes
+ *    ({@link carryWithdrawals}, judged by the shared predicate). When the
+ *    environment layer would serve such a form open from a body this step
+ *    does not write (the environment's own row, or the code's item when the
+ *    environment holds none), the step BLOCKS and names it: writing that body
+ *    would be a write outside the category.
+ *
+ * ⛔ It deletes nothing. Idempotent: a promoted row has left the category, and
+ * a run reads the category afresh.
+ */
+async function runPresentationalPromotion(run: Run): Promise<StepReport> {
+  const step = 'presentational-promotion' as const;
+  const summary: Record<string, number> = { promoted: 0, withdrawalsCarried: 0, reported: 0 };
+  const blockers: string[] = [];
+  const notes: string[] = [];
+  const where = mirrorEntry(run, METADATA)?.categories?.find((c) => c.id === PRESENTATIONAL_CATEGORY)?.where;
+  const cols = await columnsOf(run, METADATA);
+  if (!where || !cols?.has(ORG)) return { step, status: 'done', summary, blockers, notes };
+  const { sql } = run;
+  const category = predicateSql(sql, METADATA, cols, where);
+  const select = ['type', 'name', 'state', ORG, 'metadata', 'package_id', 'bundle_member'].filter((c) => cols.has(c));
+  const population = (await readAll(run, METADATA, select, category)).map(metadataRow);
+  if (population.length === 0) return { step, status: 'done', summary, blockers, notes };
+  // A row this step cannot read whole is a row it cannot judge: refused, naming the column.
+  for (const column of ['name', 'state', 'metadata']) requireColumn(METADATA, cols, column);
+  const environment = await environmentRowsOf(run, select, population);
+
+  const posture = run.opts.posture;
+  const defaultOrganization = run.plan.defaultOrganization?.id ?? null;
+  const promotable = (r: MetadataRow): boolean =>
+    posture === 'single' && defaultOrganization !== null && r.organizationId === defaultOrganization;
+  const candidates = groupBy(population.filter(promotable), itemAndState);
+  const environmentAt = groupBy(environment, itemAndState);
+  const heldElsewhere = new Set([...population.filter(promotable), ...environment].map((r) => `${r.type}|${r.name}`));
+
+  const reported = new Map<string, string[]>();
+  const report = (reason: string, row: MetadataRow, detail = ''): void => {
+    reported.set(reason, [...(reported.get(reason) ?? []), `${describeRow(row)}${detail}`]);
+    summary.reported++;
+  };
+  const choose =
+    'Choose per row: carry what the environment should keep into its own item in Studio, then delete the row from ' +
+    `${METADATA}, and re-run`;
+  const promote: MetadataRow[] = [];
+  for (const r of population) {
+    if (!promotable(r)) {
+      if (posture !== 'single') {
+        report(
+          `are reported, never promoted: under the ${posture} posture no organization's presentational row becomes the ` +
+            'environment\'s (ruling record 6020163868 promotes the Default Organization\'s rows under single; ADR-0131 D6 ' +
+            `retires the per-organization overlay axis). ${choose}`,
+          r,
+        );
+      } else if (defaultOrganization === null) {
+        report(`are reported, never promoted: no Default Organization (slug 'default') exists to promote from. ${choose}`, r);
+      } else if (heldElsewhere.has(`${r.type}|${r.name}`)) {
+        report(
+          'belong to another organization and name an item the Default Organization or the environment also holds: the ' +
+            'Default Organization\'s row is the one promoted, and these are reported, never guessed (ruling record ' +
+            `6020163868, the conflict rule). ${choose}`,
+          r,
+        );
+      } else {
+        report(
+          'belong to an organization other than the Default Organization: reported, never promoted (ruling record ' +
+            `6020163868 promotes the Default Organization's rows). ${choose}`,
+          r,
+        );
+      }
+      continue;
+    }
+    if (!r.body) {
+      report(`store a body that is not a JSON object, so nothing of it is promoted: repair or delete each row, then re-run`, r);
+      continue;
+    }
+    if (r.state !== null && KEYED_STATES.has(r.state)) {
+      if (candidates.get(itemAndState(r))!.length > 1) {
+        report(
+          'are held more than once by the Default Organization for one item and state: which one the environment keeps is ' +
+            'never guessed. Delete all but one, then re-run',
+          r,
+        );
+        continue;
+      }
+      const own = environmentAt.get(itemAndState(r)) ?? [];
+      if (own.length > 0) {
+        const ids = `; the environment's row ${own.map((e) => e.id).join(', ')}`;
+        if (own.some((e) => e.body && canonicalJson(e.body) === canonicalJson(r.body))) {
+          report(
+            'equal the environment\'s own row of the same item and state, which already holds them: delete each ' +
+              'organization row, then re-run',
+            r,
+            ids,
+          );
+        } else {
+          report(
+            'differ from the environment\'s own row of the same item and state, which is never overwritten: carry what ' +
+              'should stay into the environment\'s item in Studio, then delete each organization row, and re-run',
+            r,
+            ids,
+          );
+        }
+        continue;
+      }
+    }
+    promote.push(r);
+  }
+
+  // Withdrawals, fail-closed (ruling record 6020151485, A): every active `view`
+  // name an organization holds, judged against every active body of that name.
+  const rewritten = new Map<string, Record<string, unknown>>();
+  const activeViews = (rows: readonly MetadataRow[]) => rows.filter((r) => r.type === 'view' && r.state === 'active' && r.body);
+  const organizationViews = groupBy(activeViews(population), (r) => r.name);
+  const environmentViews = groupBy(activeViews(environment), (r) => r.name);
+  const promotedViews = groupBy(activeViews(promote), (r) => r.name);
+  for (const [name, withdrawers] of organizationViews) {
+    const organizationLayer = withdrawers.map((w) => judged(w.body!, name));
+    const environmentRows = environmentViews.get(name) ?? [];
+    const promoted = promotedViews.get(name) ?? [];
+    // A promoted body narrows to every withdrawal of its name, the environment's own included:
+    // layering may only narrow anonymous intake, never re-open it.
+    const layer = [...organizationLayer, ...environmentRows.map((e) => judged(e.body!, name))];
+    for (const p of promoted) {
+      const carried = carryWithdrawals(p.body!, name, layer);
+      if (carried.slugs.length === 0) continue;
+      rewritten.set(p.id, carried.body);
+      summary.withdrawalsCarried += carried.slugs.length;
+    }
+    const byWhom = (body: Record<string, unknown>, slug: string): string =>
+      withdrawers
+        .filter((w) => withdrawnOpenForms(body, [judged(w.body!, name)]).some((c) => c.slug === slug))
+        .map(describeRow)
+        .join(', ');
+    const failClosed = (body: Record<string, unknown>, where: string): void => {
+      for (const candidate of withdrawnOpenForms(body, organizationLayer)) {
+        blockers.push(
+          `The public form /forms/${candidate.slug} of view ${name} is withdrawn by ${byWhom(body, candidate.slug)}, and ` +
+            `${where} serves it open. A form any organization withdrew is withdrawn at the environment layer (ruling ` +
+            'record 6020151485, A, fail-closed), and this step writes only the rows it promotes: in Studio, switch off ' +
+            `anonymous access on that form for the environment and save, then re-run.`,
+        );
+      }
+    };
+    for (const e of environmentRows) failClosed(judged(e.body!, name), `the environment's own row ${e.id}`);
+    if (environmentRows.length === 0 && promoted.length === 0) {
+      let served: ReadonlyArray<Readonly<Record<string, unknown>>>;
+      try {
+        served = await run.opts.views.served(name);
+      } catch (error) {
+        blockers.push(
+          `View ${name} holds an organization's row that may withdraw a public form, and the item the environment serves ` +
+            `under that name could not be read (${error instanceof Error ? error.message : String(error)}), so the ` +
+            'withdrawal cannot be verified closed. Re-run once the deployment\'s metadata can be read.',
+        );
+        continue;
+      }
+      for (const item of served) failClosed(judged({ ...item }, name), 'the item the environment serves (no environment row holds the name)');
+    }
+  }
+
+  const t = sql.q(METADATA, METADATA);
+  const id = sql.q('id', METADATA);
+  const org = sql.q(ORG, METADATA);
+  for (const r of promote) {
+    const body = rewritten.get(r.id);
+    await execute(
+      run,
+      METADATA,
+      `UPDATE ${t} SET ${org} = NULL${body ? `, ${sql.q('metadata', METADATA)} = ?` : ''} ` +
+        `WHERE (${category.text}) AND ${id} = ? AND ${org} = ?`,
+      [...(body ? [JSON.stringify(body)] : []), ...category.params, r.id, defaultOrganization],
+    );
+  }
+  // Read back: each promoted row is now an environment row, holding the body this step wrote.
+  const ids = promote.map((r) => r.id);
+  for (let i = 0; i < ids.length; i += IN_CHUNK) {
+    const chunk = ids.slice(i, i + IN_CHUNK);
+    const landed = new Map(
+      (await readAll(run, METADATA, [ORG, 'metadata'], { text: `${id} IN (${chunk.map(() => '?').join(', ')})`, params: chunk }))
+        .map((row) => [String(row.id), metadataRow(row)]),
+    );
+    for (const rowId of chunk) {
+      const row = landed.get(rowId);
+      const body = rewritten.get(rowId);
+      if (!row || row.organizationId !== null || (body && canonicalJson(row.body) !== canonicalJson(body))) {
+        throw new Error(
+          `The promotion of ${METADATA} row ${rowId} did not read back as an environment row; every row promoted before ` +
+            'it stays promoted, and a re-run reads the category afresh.',
+        );
+      }
+    }
+  }
+  summary.promoted = promote.length;
+  if (promote.length) run.opts.onProgress?.(`presentational promotion: ${promote.length} row(s) are now environment rows`);
+  for (const [reason, rows] of reported) notes.push(`${rows.length} ${METADATA} row(s) ${reason}: ${rows.join('; ')}.`);
+  return { step, status: blockers.length ? 'blocked' : 'done', summary, blockers, notes };
+}
+
+// ── Step 2d: the settings global rung moves (D7) ────────────────────────────
 
 async function runSettingsMove(run: Run): Promise<StepReport> {
   const summary: Record<string, number> = { moved: 0, alreadyMoved: 0 };
@@ -1086,6 +1450,20 @@ async function deletePromotedTemplates(run: Run, tables: readonly string[]): Pro
 // ── Step 5: column drops (fate 1) ────────────────────────────────────────────
 
 async function runColumnDrops(run: Run): Promise<StepReport> {
+  // The presentational promotion, run again now: on a resumed run its
+  // checkpoint says nothing about a row written since, and the column it
+  // gates is the one this step drops. Idempotent: it reads its category afresh.
+  const pass = await runPresentationalPromotion(run);
+  if (pass.status !== 'done') {
+    return {
+      step: 'column-drops',
+      status: 'blocked',
+      summary: { dropped: 0, due: 0 },
+      blockers: ['Column drops re-run the presentational promotion first, and it no longer completes:', ...pass.blockers],
+      notes: pass.notes,
+    };
+  }
+  run.columns.clear();
   const plan = await planFor(run);
   const blockers: string[] = [];
   const due: string[] = [];
@@ -1117,7 +1495,7 @@ async function runColumnDrops(run: Run): Promise<StepReport> {
       );
     }
   }
-  return { step: 'column-drops', status: blockers.length ? 'blocked' : 'done', summary: { dropped, due: due.length }, blockers, notes: [] };
+  return { step: 'column-drops', status: blockers.length ? 'blocked' : 'done', summary: { dropped, due: due.length }, blockers, notes: pass.notes };
 }
 
 // ── The run ──────────────────────────────────────────────────────────────────
@@ -1126,6 +1504,7 @@ const RUNNERS: Record<CeremonyStep, (run: Run) => Promise<StepReport>> = {
   attribution: runAttribution,
   'authored-conversion': runAuthoredConversion,
   'template-promotion': runTemplatePromotion,
+  'presentational-promotion': runPresentationalPromotion,
   'settings-move': runSettingsMove,
   rewrite: runRewrite,
   'mirror-deletion': runMirrorDeletion,
