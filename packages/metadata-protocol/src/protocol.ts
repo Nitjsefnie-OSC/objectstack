@@ -7693,7 +7693,7 @@ export class ObjectStackProtocolImplementation implements
             // The row's OWN package binding, read from this replica's DB the
             // way the recovery callers derive it (#4867 / #4636) — the wire
             // carries no binding, and must not.
-            const packageId = await this.resolveOverlayPackageBinding(type, evt.name, orgId, evt.member);
+            const packageId = await this.resolveOverlayPackageBinding(type, evt.name, evt.member);
             await this.applyRegistryWriteThrough({
                 type,
                 name: evt.name,
@@ -7805,33 +7805,16 @@ export class ObjectStackProtocolImplementation implements
 
     /**
      * [ADR-0131 D6] THE repository every metadata read and write goes
-     * through: the environment's (`organization_id IS NULL`). One lazily
-     * built singleton under the `__env__` key.
+     * through: the environment's — since C7b the only scope `sys_metadata`
+     * has. One lazily built singleton under the `__env__` key.
      */
     private getOverlayRepo(): SysMetadataRepository {
-        return this.repositoryFor(null);
-    }
-
-    /**
-     * [ADR-0131 D6/D12] The repository of ONE legacy organization's rows,
-     * for the one caller left that touches them: the uninstall's removal of
-     * a package's legacy organization-scoped rows
-     * ({@link removeLegacyOrganizationRowOnUninstall}). ⛔ No read goes
-     * through it: a legacy organization-scoped row is reported at boot
-     * ({@link reportUnhydratableOrgScopedRows}), never served.
-     */
-    private legacyOrganizationRepo(organizationId: string): SysMetadataRepository {
-        return this.repositoryFor(organizationId);
-    }
-
-    private repositoryFor(organizationId: string | null): SysMetadataRepository {
-        const key = organizationId ?? '__env__';
+        const key = '__env__';
         let repo = this.overlayRepos.get(key);
         if (!repo) {
             repo = new SysMetadataRepository({
                 engine: this.engine as unknown as SysMetadataEngine,
-                organizationId,
-                orgLabel: organizationId ?? 'env',
+                orgLabel: 'env',
             });
             this.overlayRepos.set(key, repo);
         }
@@ -9693,7 +9676,7 @@ export class ObjectStackProtocolImplementation implements
                 // those gates was rejected rather than attempted. This pass
                 // has no such gate to worry about: `overlays` is already this
                 // request's own correctly org/environment-scoped read (the
-                // `queryByOrg` merge above), so expanding it into the RETURNED
+                // `queryActive` read above), so expanding it into the RETURNED
                 // list — and only the returned list — cannot leak one
                 // org/environment's container into another's.
                 //
@@ -9898,30 +9881,30 @@ export class ObjectStackProtocolImplementation implements
         // process-wide registry or to non-preview reads.
         if (request.previewDrafts) {
             try {
-                const queryDrafts = async (oid: string | null, pkg: string | undefined): Promise<any[]> => {
-                    const whereClause: Record<string, unknown> = { type: request.type, state: 'draft', organization_id: oid };
+                const queryDrafts = async (pkg: string | undefined): Promise<any[]> => {
+                    const whereClause: Record<string, unknown> = { type: request.type, state: 'draft' };
                     if (pkg) whereClause.package_id = pkg;
                     // [#21911] The explicit system opt-in — see findServedOverlayRow.
                     let rs = await this.engine.find('sys_metadata', { where: whereClause, context: { isSystem: true } });
                     if (!rs || rs.length === 0) {
                         const alt = PLURAL_TO_SINGULAR[request.type] ?? SINGULAR_TO_PLURAL[request.type];
                         if (alt) {
-                            const altWhere: Record<string, unknown> = { type: alt, state: 'draft', organization_id: oid };
+                            const altWhere: Record<string, unknown> = { type: alt, state: 'draft' };
                             if (pkg) altWhere.package_id = pkg;
                             rs = await this.engine.find('sys_metadata', { where: altWhere, context: { isSystem: true } });
                         }
                     }
                     return rs ?? [];
                 };
-                // [ADR-0131 D6] The environment's drafts only, whoever asks.
-                const draftRecords = await queryDrafts(null, packageId);
+                // [ADR-0131 D6] The environment's drafts, whoever asks.
+                const draftRecords = await queryDrafts(packageId);
                 // [#21817] A list scoped to a package previews the package-less
                 // drafts as stand-ins, as its active arm does: the
                 // package-agnostic draft read, filtered back to the
                 // package-less rows. The by-name preview arm naming the
                 // package serves that draft when the package has none.
                 const standInDraftRecords = packageId
-                    ? (await queryDrafts(null, undefined)).filter((record) => (record?.package_id ?? null) === null)
+                    ? (await queryDrafts(undefined)).filter((record) => (record?.package_id ?? null) === null)
                     : [];
                 if (draftRecords.length > 0 || standInDraftRecords.length > 0) {
                     // ADR-0048 (#1828) — package-aware draft overlay (parity with
@@ -10222,11 +10205,10 @@ export class ObjectStackProtocolImplementation implements
         request: { type: string; packageId?: string },
     ): Promise<any[]> {
         const { packageId } = request;
-        const queryByOrg = async (oid: string | null): Promise<any[]> => {
+        const queryActive = async (): Promise<any[]> => {
             const whereClause: Record<string, unknown> = {
                 type: request.type,
                 state: 'active',
-                organization_id: oid,
             };
             if (packageId) whereClause.package_id = packageId;
             // [#21911] The explicit system opt-in — see findServedOverlayRow.
@@ -10234,7 +10216,7 @@ export class ObjectStackProtocolImplementation implements
             if ((!rs || rs.length === 0)) {
                 const alt = PLURAL_TO_SINGULAR[request.type] ?? SINGULAR_TO_PLURAL[request.type];
                 if (alt) {
-                    const altWhere: Record<string, unknown> = { type: alt, state: 'active', organization_id: oid };
+                    const altWhere: Record<string, unknown> = { type: alt, state: 'active' };
                     if (packageId) altWhere.package_id = packageId;
                     rs = await this.engine.find('sys_metadata', { where: altWhere, context: { isSystem: true } });
                 }
@@ -10245,7 +10227,7 @@ export class ObjectStackProtocolImplementation implements
         //
         // ⭐ The cache sits HERE, and its position IS the resolution of the
         // SchemaRegistry-hydration trap #11633 §4 names. What is cached is
-        // the ROW SET — the value the environment `queryByOrg` call produces —
+        // the ROW SET — the value the `queryActive` call produces —
         // never the merged answer below it. Everything downstream of this
         // point still runs on every call, hit or miss: the overlay parse,
         // the package-aware merge, `hydrateOverlayIntoRegistry`, the
@@ -10283,7 +10265,7 @@ export class ObjectStackProtocolImplementation implements
         if (cachedRecords !== undefined) {
             records = cachedRecords as any[];
         } else {
-            records = await queryByOrg(null);
+            records = await queryActive();
             // ⭐ An EMPTY row set is cached too, and that is the main point
             // rather than an edge case: the empty result is what triggers the
             // alt-type retry above, so "no overlay rows for this type" is the
@@ -10515,7 +10497,7 @@ export class ObjectStackProtocolImplementation implements
             const type = candidate.spelling === 'canonical' ? args.type : other;
             if (type === undefined) continue;
             const where: Record<string, unknown> = {
-                type, name: args.name, state: args.state, organization_id: candidate.organizationId,
+                type, name: args.name, state: args.state,
                 // [#22877] A by-name read of a bundled type answers the member
                 // its selector named, else its CANONICAL member, as the
                 // registry's bare-name read does; nothing for every other type.
@@ -20539,7 +20521,6 @@ export class ObjectStackProtocolImplementation implements
     private async resolveOverlayPackageBinding(
         type: string,
         name: string,
-        organizationId: string | null,
         /**
          * [#22877] The bundle member whose row's binding to read; omitted, the
          * canonical member. Nothing for a type with no members.
@@ -20551,7 +20532,6 @@ export class ObjectStackProtocolImplementation implements
             where: {
                 type,
                 name,
-                organization_id: organizationId,
                 state: 'active',
                 ...overlayMemberWhere(type, member),
             },
@@ -25629,23 +25609,19 @@ export class ObjectStackProtocolImplementation implements
         for (const row of ordered) {
             const state: 'active' | 'draft' = row.state === 'draft' ? 'draft' : 'active';
             try {
-                if (row.organization_id) {
-                    await this.removeLegacyOrganizationRowOnUninstall(row, state, request.actor);
-                } else {
-                    await this.deleteMetaItem({
-                        type: row.type,
-                        name: row.name,
-                        state,
-                        // [#23165, ADR-0048] The package being uninstalled
-                        // owns this row, so the delete names it. Named no
-                        // package, the delete of a name a second package also
-                        // holds was a driver-order pick between the two rows
-                        // (and is now refused).
-                        packageId: request.packageId,
-                        ...(request.actor ? { actor: request.actor } : {}),
-                        ...(dropStorage ? { dropStorage: true } : {}),
-                    });
-                }
+                await this.deleteMetaItem({
+                    type: row.type,
+                    name: row.name,
+                    state,
+                    // [#23165, ADR-0048] The package being uninstalled
+                    // owns this row, so the delete names it. Named no
+                    // package, the delete of a name a second package also
+                    // holds was a driver-order pick between the two rows
+                    // (and is now refused).
+                    packageId: request.packageId,
+                    ...(request.actor ? { actor: request.actor } : {}),
+                    ...(dropStorage ? { dropStorage: true } : {}),
+                });
                 deleted.push({ type: row.type, name: row.name, state });
             } catch (e: any) {
                 // [#8136] NO filter here, deliberately, and this comment is why
@@ -25732,54 +25708,6 @@ export class ObjectStackProtocolImplementation implements
             failed,
             cleanups,
         };
-    }
-
-    /**
-     * [ADR-0131 D6/D12] Remove ONE organization-scoped row stored before the
-     * per-organization overlay axis retired, as part of uninstalling the
-     * package it is bound to. The uninstall is environment-wide, so the
-     * package's legacy rows leave with it rather than being stranded for the
-     * promotion ceremony (ADR-0131 C7) to carry into the environment layer
-     * for a package that is gone.
-     *
-     * The one organization-scoped write left in this class, and it only
-     * REMOVES: reachable from {@link deletePackage} alone, never from a
-     * request (every write verb refuses an organization-scoped request,
-     * {@link organizationScopedWriteRefusal}). Through the repository, so the
-     * removal is transactional and leaves its history tombstone, like every
-     * other delete. A legacy row is presentational (only the five
-     * formerly org-overridable types could be stored per organization), so
-     * there is no table to tear down and no registry entry to retire —
-     * boot hydration never registered one.
-     */
-    private async removeLegacyOrganizationRowOnUninstall(
-        row: { type: string; name: string; organization_id: string },
-        state: 'active' | 'draft',
-        actor: string | undefined,
-    ): Promise<void> {
-        const type = PLURAL_TO_SINGULAR[row.type] ?? row.type;
-        const repo = this.legacyOrganizationRepo(row.organization_id);
-        const ref = { type, name: row.name, org: row.organization_id } as Parameters<typeof repo.delete>[0];
-        const current = await repo.get(ref, { state });
-        if (!current) return;
-        await repo.delete(ref, {
-            parentVersion: current.hash,
-            actor: actor ?? null,
-            source: 'protocol.deletePackage',
-            intent: 'runtime-only',
-            state,
-        });
-        await this.recordMetadataAudit({
-            type,
-            name: row.name,
-            organizationId: null,
-            operation: 'delete',
-            outcome: 'allowed',
-            code: 'ok',
-            ...(actor ? { actor } : {}),
-            source: 'protocol.deletePackage',
-            note: `${state}; legacy organization-scoped row (organization '${row.organization_id}') removed with its package`,
-        });
     }
 
     /**
@@ -27282,7 +27210,7 @@ export class ObjectStackProtocolImplementation implements
                     // fallible query downstream of a write that already succeeded —
                     // the shape that ends in a `catch {}` swallowing a real outage
                     // (#4867). Per ITEM, because a batch mixes bindings.
-                    const restorePackageId = await this.resolveOverlayPackageBinding(it.type, it.name, itemOrgId, member);
+                    const restorePackageId = await this.resolveOverlayPackageBinding(it.type, it.name, member);
                     const restored = await repo.restoreVersion(ref, restoreToVersion, {
                         actor,
                         source: 'protocol.revertCommit',
@@ -27643,7 +27571,7 @@ export class ObjectStackProtocolImplementation implements
         // it afterwards would put a fallible query downstream of a write that
         // already succeeded — the shape that ends in a `catch {}` swallowing a
         // real outage (#4867).
-        const rollbackPackageId = await this.resolveOverlayPackageBinding(singularType, request.name, orgId, member);
+        const rollbackPackageId = await this.resolveOverlayPackageBinding(singularType, request.name, member);
         try {
             const result = await repo.restoreVersion(ref, request.toVersion, {
                 // #4556 — NULL, not 'system', for an actor-less rollback.
@@ -27896,7 +27824,6 @@ export class ObjectStackProtocolImplementation implements
             // second locale's snapshot as its "earlier version".
             const rows: any[] = historyRowsOfMember<any>(singularType, await engineAny.find('sys_metadata_history', {
                 where: {
-                    organization_id: orgId,
                     type: singularType,
                     name: request.name,
                 },
@@ -27991,7 +27918,7 @@ export class ObjectStackProtocolImplementation implements
             // read above.
             const current = (await this.engine.findOne('sys_metadata', {
                 where: {
-                    organization_id: orgId, type: singularType, name: request.name, state: 'active',
+                    type: singularType, name: request.name, state: 'active',
                     // [#22877] The canonical member, as the by-name read serves.
                     ...overlayMemberWhere(singularType),
                 },
@@ -28611,7 +28538,6 @@ export class ObjectStackProtocolImplementation implements
         const scopedWhere: Record<string, unknown> = {
             type: request.type,
             name: request.name,
-            organization_id: null,
         };
 
         try {
@@ -28817,11 +28743,10 @@ export class ObjectStackProtocolImplementation implements
         // rows this registry takes.
         this.storeHydratedIntoRegistry = true;
         try {
-            // [ADR-0131 D6] Hydrate only the environment's rows
-            // (organization_id IS NULL); no read serves any other.
+            // [ADR-0131 D6] Every row is the environment's (no organization
+            // column since C7b).
             const where: Record<string, unknown> = {
                 state: 'active',
-                organization_id: null,
             };
             const records = await this.engine.find('sys_metadata', { where });
             // [#22877] The table answered, so it is provisioned: give rows stored
@@ -29028,11 +28953,11 @@ export class ObjectStackProtocolImplementation implements
                     }
                 }
             }
-            // [ADR-0131 D6] Say out loud which rows this load walked past:
-            // the sealed overlays above, and (#6190) every legacy
-            // organization-scoped row the filter skipped.
+            // [ADR-0131 D6] Say out loud which rows this load walked past: the
+            // sealed overlays above. (A legacy organization-scoped row cannot
+            // be here: since C7b the column is gone, and a database still
+            // holding one is refused at boot until the v18 ceremony has run.)
             this.reportSealedOverlayRows(sealedOverlays);
-            await this.reportUnhydratableOrgScopedRows();
         } catch (e: unknown) {
             // #5841 — the ONE benign reason this whole read can fail is
             // `sys_metadata` not being provisioned yet: on a first boot, before
@@ -29116,147 +29041,6 @@ export class ObjectStackProtocolImplementation implements
         );
     }
 
-    /**
-     * [#6190, ADR-0131 D6] Say out loud which stored rows no read serves
-     * because they sit in a legacy organization's layer.
-     *
-     * Boot hydrates `organization_id IS NULL` rows only, and since ADR-0131 D6
-     * every read is environment → code: no read, of any type, serves a row
-     * stored organization-scoped, and no write can store a new one
-     * ({@link organizationScopedWriteRefusal}). The rows stored before the
-     * per-organization overlay axis retired are left at rest — ⛔ nothing here
-     * deletes or rewrites one. The v18 migration ceremony (ADR-0131 D10, `os
-     * migrate`: plan → backup → apply → post-check) carries them and names
-     * each row's fate: the Default Organization's rows of the five
-     * presentational types are promoted to the environment layer, and a name
-     * another organization also holds is reported for the operator to choose.
-     * Until then this line is the operator's account of what is not served.
-     *
-     * Shape decisions, all deliberate:
-     *
-     *  - **Every type.** The narrowing is type-blind, so the report is too: a
-     *    view a tenant customised and a flow a tenant authored before #6190
-     *    are both unserved now. No registry is consulted, so a plugin type
-     *    that is not live this boot is reported all the same.
-     *  - **Active and draft rows** of `sys_metadata` — the listing of pending
-     *    drafts no longer shows a legacy organization's drafts either — plus
-     *    a count of the legacy rows of the three ledgers the timeline,
-     *    history, diff and audit reads no longer show.
-     *  - **One predicate, re-checked in JS.** A driver that cannot lower
-     *    `$null: false` hands back a superset, and a superset must not become
-     *    a false line.
-     *  - **One aggregated line.** Counts per type plus a capped sample of
-     *    names, so a tenant with a thousand such rows costs one line.
-     *  - **Each read is its own term.** A read that fails for any reason but
-     *    a missing table (an unprovisioned ledger holds no legacy row) costs
-     *    its own term only: the line names it NOT MEASURED, with the reason,
-     *    beside the terms that were measured.
-     *  - **Best-effort, and non-fatal by construction.** A diagnostic must
-     *    never be the reason a boot fails, so its own catch swallows: the
-     *    caller's outer catch classifies REAL hydration outages
-     *    (`storeUnavailable`, #5897) and this must not be able to reach it.
-     */
-    private async reportUnhydratableOrgScopedRows(): Promise<void> {
-        /** Names printed per type before the line collapses to a count. */
-        const SAMPLE_PER_TYPE = 5;
-        try {
-            // A legacy row is one whose `organization_id` names an
-            // organization: neither NULL nor the empty string.
-            const LEGACY = { $and: [{ organization_id: { $null: false } }, { organization_id: { $ne: '' } }] };
-            // An unprovisioned ledger holds no legacy row; any other failure is
-            // this diagnostic's own, and its term reports it (below).
-            const orNoTable = async <T>(object: string, read: () => Promise<T>, empty: T): Promise<T> => {
-                try {
-                    return await read();
-                } catch (error) {
-                    if (isMissingTableError(error, object)) return empty;
-                    throw error;
-                }
-            };
-
-            // [#15206] Each of the four reads is its own term: one that fails
-            // costs its own term, never the others, and is printed NOT
-            // MEASURED with its reason — never a zero, never a silent line.
-            const unmeasured: string[] = [];
-            const isolated = async (object: string, read: () => Promise<void>): Promise<void> => {
-                try {
-                    await read();
-                } catch (error) {
-                    unmeasured.push(`${object} (${error instanceof Error ? error.message : String(error)})`);
-                }
-            };
-
-            // Only the columns the line prints — never a row's body. The
-            // three ledgers below are counted, never read: this runs on every
-            // boot, and the populations it names can be large.
-            let rows: any[] = [];
-            await isolated('sys_metadata', async () => {
-                rows = (await orNoTable('sys_metadata', async () => ((await this.engine.find('sys_metadata', {
-                    where: { state: { $in: ['active', 'draft'] }, ...LEGACY },
-                    fields: ['type', 'name', 'organization_id', 'state'],
-                    context: { isSystem: true },
-                })) ?? []) as any[], [] as any[]))
-                    // A driver that cannot lower the predicate hands back a
-                    // superset; the names this line prints are re-checked here.
-                    .filter((row) => {
-                        const org = (row as { organization_id?: string | null }).organization_id;
-                        return org !== null && org !== undefined && org !== '';
-                    });
-            });
-            const counts = new Map<string, number>();
-            const samples = new Map<string, string[]>();
-            for (const row of rows) {
-                const singular = PLURAL_TO_SINGULAR[String(row.type)] ?? String(row.type);
-                counts.set(singular, (counts.get(singular) ?? 0) + 1);
-                const names = samples.get(singular) ?? [];
-                const draft = row.state === 'draft' ? ' (draft)' : '';
-                if (names.length < SAMPLE_PER_TYPE) names.push(`${String(row.name)}@${String(row.organization_id)}${draft}`);
-                samples.set(singular, names);
-            }
-            const ledgers: string[] = [];
-            for (const ledger of ['sys_metadata_commit', 'sys_metadata_history', 'sys_metadata_audit']) {
-                await isolated(ledger, async () => {
-                    const n = await orNoTable(ledger, () => this.engine.count(ledger, {
-                        where: LEGACY,
-                        context: { isSystem: true },
-                    }), 0);
-                    if (n > 0) ledgers.push(`${ledger}×${n}`);
-                });
-            }
-            if (rows.length === 0 && ledgers.length === 0 && unmeasured.length === 0) return;
-
-            const detail = Array.from(counts.entries())
-                .map(([type, count]) => {
-                    const names = samples.get(type) ?? [];
-                    const more = count > names.length ? `, +${count - names.length} more` : '';
-                    return `${type}×${count} (${names.join(', ')}${more})`;
-                })
-                .join('; ');
-            console.warn(
-                `[Protocol] [metadata_org_scoped_unserved] ` +
-                (rows.length > 0
-                    ? `${rows.length} sys_metadata row(s) are stored in a legacy organization's layer, which ` +
-                    `ADR-0131 D6 retired: no read serves them, boot does not load them, and the environment's ` +
-                    `row or the package's definition is served in their place: ${detail}. A 'flow' listed here ` +
-                    `does not bind its triggers. `
-                    : '') +
-                (ledgers.length > 0
-                    ? `Legacy organization-scoped ledger rows, which the commit timeline, history, diff and audit ` +
-                    `reads no longer show: ${ledgers.join(', ')}. `
-                    : '') +
-                (unmeasured.length > 0
-                    ? `NOT MEASURED, so this account may be incomplete — the read failed: ${unmeasured.join(', ')}. `
-                    : '') +
-                `Nothing is deleted or rewritten: the v18 migration ceremony (\`os migrate\`, ADR-0131 D10) ` +
-                `carries these rows and names each one's fate — promoted to the environment layer, or reported ` +
-                `when another organization holds the same name.`,
-            );
-        } catch {
-            // Diagnostics never break boot — see the TSDoc. Deliberately not
-            // routed to the caller's outer catch: that one classifies real
-            // hydration outages, and a failed extra probe is not one.
-        }
-    }
 
     /**
      * [ADR-0131 D6, triage ruling Q1 → C] Say out loud which stored
