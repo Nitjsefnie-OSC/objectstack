@@ -1,0 +1,36 @@
+{
+  "number": 23596,
+  "kind": "pull_request",
+  "title": "docs(agents): a test file that declares a measured budget with its class is held to that budget, not the 10 s line",
+  "state": "closed",
+  "state_reason": null,
+  "draft": false,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "documentation",
+    "size/s",
+    "skip-changeset"
+  ],
+  "assignees": [
+    "huangyiirene"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-15T03:04:33Z",
+  "updated_at": "2026-10-15T04:17:41Z",
+  "closed_at": "2026-10-15T04:16:44Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": "2026-10-15T04:16:44Z",
+  "comments": 5,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/pull/23596",
+  "body": "Refs #23534\nClause-②: no\n\n**Tier H (governed surface: `AGENTS.md`). The maintainer lands this PR; no seat merges, queues or arms it.**\n\nThis is item 4 of ruling record 6181973363 (letter B, both classes): the `AGENTS.md` sentence on the per-file test budget gains \"unless the file declares a measured budget with its class\", in its own draft PR. The refresh-script change it describes is the separate script PR #23595 (`claude/issue-23534-test-budget-declaration`), which carries the card's closing keyword. Merging this PR leaves the card open.\n\n## The edit\n\n```diff\n-ruling (`RULED_CEILING_RAISES`); a test file over 10 s of wall is its lane's card, fixed and ⛔\n+ruling (`RULED_CEILING_RAISES`); a test file over 10 s of wall, unless the file declares a\n+measured budget with its class (ruling record 6181973363), is its lane's card, fixed and ⛔\n never deleted; a test is deleted only when its PR names a duplicate pinning that assertion at a\n layer at least as close to the code (ruling record 6120820653).\n```\n\n- **What changed.** The ruled phrase is added verbatim. It cites its ruling record the way the paragraph already cites `6120820653`. There is no issue number, no date and no narrative.\n- **The next two lines are byte-identical.** A greedy rewrap of the sentence at the paragraph's own width puts the tail back on the existing lines unchanged. I checked this at 96 and 97 bytes; the paragraph's widest line is 97 bytes.\n\n## Named gap: the AGENTS.md line ratchet is red\n\n- **`pnpm check:pm-skill-ratchet` exits 1.** Its refusal reads: `✗ check-skill-line-ratchet: AGENTS.md is 1117 lines; the ratchet ceiling is 1116. … Raising a ceiling requires a maintainer ruling quoted in the PR.`\n- **The line cannot be paid for by rewrapping.** Measured on this sentence, the edit adds 87 bytes to a tail of 256 (343 after). A greedy rewrap at 96, 97 and even 100 bytes needs 4 lines where the tail had 3. The ruled phrase plus its record cannot be shortened without changing the ruled words.\n- **What would turn it green is outside this PR's file surface:**\n  - either a ruled raise of the `AGENTS.md` ceiling from 1116 to 1117 in `scripts/pm/check-skill-line-ratchet.mjs`, with the ruling quoted;\n  - or a one-line deletion of other content from `AGENTS.md`.\n- **Neither is made here.** The ruling's item 4 sized the edit at \"one line, Tier H\". Whether that sizing is the ruled raise is the maintainer's call, so it is asked below rather than assumed.\n\n## Gates (local, at `e5de5ac3`)\n\n- `node scripts/pm/dispatch-gates.mjs --commands --repo objectstack-ai/objectstack` derived 15 commands off merge base `744b73f5`. 14 exited 0 and `pnpm check:pm-skill-ratchet` exited 1, as above.\n- The 14 that passed include `check:pm-governed-prose`, `check:pm-governed-merges`, `check:pm-skill-id-lint`, `check:docs-audit-scope`, `check:required-contexts`, `check:nul-bytes`, and `check-closing-keyword-parity` with its self-test.\n- `--ran` printed `15 derived famil(ies) accounted for — 15 run, 0 NOT-MEASURED`.\n- Every family CI runs is read from this PR's check-runs.\n\n## Ruling for the ceiling raise (quoted, per the ratchet's own exit)\n\nThe `AGENTS.md` line ceiling rises 1116 → 1117 for this sentence. Maintainer ruling, verbatim and untranslated: 「A 上限抬到 1117 (Recommended)」 — the maintainer's live answer in `domain:devx` seat 1's session `session_01ESFcvW3staenyBCGq7kcDH` on 2026-10-15, to the question of how to clear this PR's `check:pm-skill-ratchet` red, recorded on this PR at comment 6184004601. The one-row `CEILINGS` change in `scripts/pm/check-skill-line-ratchet.mjs` rides this PR's follow-up push. Whether the ratchet as a whole is too strict is a separate open decision, #23606; this raise does not wait for it.\n\n## 维护者速读(草稿)\n\n### 改了什么\n\n`AGENTS.md` 里关于「单个测试文件超过 10 秒」的那一句，按裁决原文加上「除非该文件声明了带类别的实测预算」，并标注裁决记录号。只动这一句，后两行一字未改。\n\n### 为什么改\n\n这是 ruling record 6181973363 第 4 项的落地。有两类测试文件结构上压不进 10 秒：一类是每个单因夹具真跑一次门禁或生成器，另一类是测试主题就是整个包的所有模块。这两类改为在文件头声明自己的实测预算，超出预算才立卡。刷新脚本那边已经按这句话实现，在另一个 PR 里，不等本 PR 落地。\n\n### 风险与代价(含回滚)\n\n- 规则文字只放宽这两类、且必须写明类别的文件。其余文件照旧按 10 秒判。\n- 代价是 `AGENTS.md` 多一行，触发了行数上限门禁（1117 行，上限 1116）。在本段原有行宽下重新折行装不下，实测见上。\n- 回滚就是 revert 这一个提交。\n\n### 席位意见\n\n\n\n### 你要做的\n\n回复一句：是否同意把 `AGENTS.md` 的行数上限从 1116 抬到 1117，只为这一句。同意的话，席位补上抬上限的提交后由你合并；不同意的话，这一句需要从 `AGENTS.md` 别处删掉一行来抵。\n\n---\n\n_Generated by [Claude Code](https://claude.ai/code/session_01ESFcvW3staenyBCGq7kcDH)_\n"
+}

@@ -2,7 +2,7 @@
   "number": 23583,
   "kind": "pull_request",
   "title": "test(verify): the dashboard-window runs freeze Date at noon UTC, pinned from a wall clock 100 ms before midnight",
-  "state": "open",
+  "state": "closed",
   "state_reason": null,
   "draft": false,
   "author": {
@@ -21,10 +21,14 @@
   "milestone": null,
   "type": null,
   "created_at": "2026-10-15T02:00:17Z",
-  "updated_at": "2026-10-15T02:19:28Z",
-  "closed_at": null,
-  "closed_by": null,
-  "merged_at": null,
+  "updated_at": "2026-10-15T02:42:33Z",
+  "closed_at": "2026-10-15T02:42:31Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": "2026-10-15T02:42:31Z",
   "comments": 2,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/pull/23583",

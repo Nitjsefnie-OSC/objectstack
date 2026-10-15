@@ -2,8 +2,8 @@
   "number": 23574,
   "kind": "issue",
   "title": "/data request contracts, the family remainder after PR #23571: a JSON `null` create still makes an empty row on both doors; the dispatcher `POST /data/:object/query` validates no `FindDataRequestSchema`",
-  "state": "open",
-  "state_reason": null,
+  "state": "closed",
+  "state_reason": "completed",
   "draft": null,
   "author": {
     "login": "objectstack-fleet[bot]",
@@ -13,19 +13,24 @@
   "labels": [
     "bug",
     "domain:cli",
-    "pm:queue",
     "priority:p1",
     "target:v18"
   ],
-  "assignees": [],
+  "assignees": [
+    "os-bill"
+  ],
   "milestone": null,
   "type": null,
   "created_at": "2026-10-15T01:03:53Z",
-  "updated_at": "2026-10-15T02:11:46Z",
-  "closed_at": null,
-  "closed_by": null,
+  "updated_at": "2026-10-15T07:10:08Z",
+  "closed_at": "2026-10-15T07:07:31Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
   "merged_at": null,
-  "comments": 2,
+  "comments": 7,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/23574",
   "body": "Filing gate **①**, class **(b)**: two `/data` routes do not enforce the request contract their schemas declare. Both were measured at a public door. This is the closing card for the family PR #23571 started (#23491 + #23517: each `/data` write door validates the assembled request as the caller sent it). One card covers every remaining location, per the report contract's family rule. ⛔ No point cards.\n\nFiled by `domain:cli` seat 1 (#6024) · `os-bill` · session `session_01FLwgbTSmGMrqsXkBDsiwfG`, from PR #23571's `os-dev-report` (on #23491, out-of-scope findings 1 and 2, and open question 1). ⛔ Not a claim. Lane and grade are triage's.\n\n**Reader who acts:** the `domain:cli` seat that claims it after PR #23571 merges. It edits the same two files: `packages/runtime/src/domains/data.ts` and the `POST /data/:object` handler of `packages/rest/src/rest-server.ts`.\n\n## Locations (enumeration pin: each closes with its own pin)\n\n1. **`POST /data/:object` with a JSON `null` body, both doors.**\n   - `reach:` measured by #23491's dev on PR #23571's rig (a real better-sqlite3 store, ObjectQL and the protocol, `RestServer`'s handler and `HttpDispatcher.dispatch()` side by side), at `086fa4640f` and at `3dd76b2a8`.\n   - **Answer:** `201` and an empty row, on `RestServer` and on the dispatcher.\n   - **Mechanism:** `RestServer` assembles `data: req.body ?? {}`. PR #23571's dispatcher create gate mirrors it statement for statement, on purpose, so the two doors would not split.\n   - `CreateDataRequestSchema.data` declares a record. PR #23571 refuses the `PATCH` twin of this case (`null` → `400`) on both doors.\n2. **The dispatcher's `POST /data/:object/query` has no `FindDataRequestSchema` gate.**\n   - `reach:` measured by the same dev on the same rig at `3dd76b2a8`, through the `createHonoApp` catch-all's body parse.\n   - **Answer:** `{ limit: \"ten\" }` and the retired `{ joins: [] }` answer `200` with the full record set on the dispatcher. `RestServer` refuses both `400 VALIDATION_FAILED` (`query.limit`; the `joins` tombstone's prescription). A string or array body answers the engine's `INVALID_FIELD` `400` on the dispatcher, against `VALIDATION_FAILED` on REST.\n\n## Governing text\n\n- `CreateDataRequestSchema.data` and `FindDataRequestSchema` / `QuerySchema` (`@objectstack/spec/api`), including the `joins` `retiredKey` tombstone.\n- #3899 (closed): a request body is checked against the schema that declares it.\n- AGENTS.md Prime Directive 12: ⛔ no `??` leniency in a consumer to tolerate off-contract input.\n- AGENTS.md 〈Route & surface ownership〉: one route's two transports answer one request alike.\n\n`Seam: spec:CreateDataRequestSchema.data (record) → rest: rest-server.ts POST /data/:object (req.body ?? {}) + runtime: domains/data.ts POST create (mirrors it)` · `Seam: spec:FindDataRequestSchema / QuerySchema (retiredKey joins) → runtime: domains/data.ts POST /data/:object/query (no request-schema gate)`.\n\n## Acceptance (a proposal; triage's call)\n\n- Location 1: both doors refuse a `null` create `400 VALIDATION_FAILED` naming `data`, with no row written. It is an accept-set narrowing on both doors (`201` → `400`), so it owes the contract-tier review before the queue, as PR #23571 does.\n- Location 2: the dispatcher validates the assembled `FindDataRequestSchema` request before the engine is asked, as `RestServer`'s twin does. A non-conforming query is refused `400 VALIDATION_FAILED` and never answered with the full set.\n- Pins on both doors per location, beside the twin: `code` + `status` at least.\n- **Order:** after PR #23571 lands. It edits the same files.\n\n## Dedupe\n\nMCP `search_issues` on objectstack-ai/objectstack, closed included:\n- `dispatcher data query request schema gate POST /data/:object/query limit string answers 200 retired joins tombstone`: 9 hits, all closed. None is this. The nearest are #20139 (REST's bare `Number()` query reads), #7534 (an unknown `where` field), and #17502 (tombstones in a repeater row).\n- `POST /data/:object JSON null body creates empty row 201 CreateDataRequestSchema data record null coerced`: 2 hits (#21654, #21613), both closed and different.\n\nDedupe words: dispatcher data query request schema gate; POST data object query limit string 200; create data null body empty row 201; CreateDataRequestSchema data null coerced.\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_"

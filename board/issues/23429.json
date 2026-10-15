@@ -2,8 +2,8 @@
   "number": 23429,
   "kind": "issue",
   "title": "feat(metadata-core,metadata-protocol,runtime): #15211 S2+S5 — the sys_metadata family drops organization_id, and the v18 boot refusal lands with it (C7b, split for seat 1)",
-  "state": "open",
-  "state_reason": null,
+  "state": "closed",
+  "state_reason": "completed",
   "draft": null,
   "author": {
     "login": "objectstack-fleet[bot]",
@@ -23,11 +23,15 @@
   "milestone": null,
   "type": null,
   "created_at": "2026-10-14T08:08:03Z",
-  "updated_at": "2026-10-15T01:39:34Z",
-  "closed_at": null,
-  "closed_by": null,
+  "updated_at": "2026-10-15T07:05:47Z",
+  "closed_at": "2026-10-15T06:44:35Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
   "merged_at": null,
-  "comments": 16,
+  "comments": 20,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/23429",
   "body": "**#15211's stages S2 and S5, split out for `domain:engine` seat 1, on the maintainer's word** (「哪些可以分拆给 seat 1」, to spread the work across accounts). Seat 2 keeps #15211 and its stages S1, S3 and S4. Part of #15211 (C7b) and of the ADR-0131 epic chain (#15194).\n\n**S2: the `sys_metadata` family's declared no-column schema** (`sys_metadata`, `sys_metadata_audit`, `sys_metadata_commit`, `sys_metadata_history`). The measured surface is in #15211's stage plan 6162468695:\n- remove the declared `organization_id`, and set `systemFields.tenant: false`;\n- re-key the indexes:\n  - the overlay unique key becomes (`type`, `name`, `package_id`, `bundle_member`);\n  - history gets (`event_seq`) and (`type`, `name`, `version`);\n  - audit and commit lose the organization prefix;\n  - `idx_sys_metadata_org_type` is dropped;\n- `metadata-protocol` `migrations/overlay-index.ts` (`OVERLAY_INDEX_COLUMNS`) and its duplicate probe take the new key, and `runtime-index-preflight.test.ts`'s false \"blocked\" fixture flips (6071418113);\n- remove every engine read and write of `organization_id` on the four tables, because the engine refuses an undeclared field: about 23 sites in `sys-metadata-repository.ts`, plus `protocol.ts`, `metadata` `database-loader.ts` and `history-cleanup.ts`;\n- add four ADR-0087 column-retired semantic entries (after the `18.sys-presence` precedent) and update the census.\n\nThe ceremony's history renumbering (Q2 → A) is #15211's S1, not here.\n\n**S5: the v18 boot refusal** (decision #23413 Q3 → A, ruling 6163114098):\n- the runtime refuses to start against a database still in the v17 shape (a D7 table, or the family, with a physical `organization_id`) while the marker `adr-0131-organization-ownership` is not verified;\n- it names `os migrate organization-ownership`, with no escape hatch (ADR-0131 D10 item 5);\n- a fresh database bootstraps normally;\n- site: the `kernel:ready` reader shape of `packages/runtime/src/migration-recovery-plugin.ts`, refusing where it warns;\n- three pins: a 17-shape database is refused, a migrated one passes, a fresh one passes.\n\n**Order:** S2 and S5 land **together**, and only **after #15211's S1** (the `sys_metadata` promotions) is on `main`, because the ceremony promotes before it drops. S5 cannot land before S2: a fresh database on today's `main` still carries the family's column. Build now.\n\n**Process:**\n- One PR each, off `main`, with no stacking.\n- Merge `main` only on a conflict, a `main`-caused red, or a queue removal (ruling #23390).\n- Contract reviews on opus.\n- A PR over 3,000 lines carries `## 维护者速读（草稿）`.\n- When both are on `main`, seat 2 closes #15211 after checking its other stages.\n"

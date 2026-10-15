@@ -2,8 +2,8 @@
   "number": 15086,
   "kind": "issue",
   "title": "plugin-sharing: after the #15030 revert, 17.x still cannot reach a NULL-org-seeded business unit from an org-stamped rule — and #14547, its only tracker, is closed",
-  "state": "open",
-  "state_reason": null,
+  "state": "closed",
+  "state_reason": "completed",
   "draft": null,
   "author": {
     "login": "claude[bot]",
@@ -13,7 +13,6 @@
   "labels": [
     "bug",
     "domain:services",
-    "pm:blocked",
     "priority:p2",
     "security",
     "target:v18"
@@ -22,9 +21,13 @@
   "milestone": null,
   "type": null,
   "created_at": "2026-09-03T21:10:17Z",
-  "updated_at": "2026-10-04T13:38:51Z",
-  "closed_at": null,
-  "closed_by": null,
+  "updated_at": "2026-10-15T07:28:27Z",
+  "closed_at": "2026-10-15T07:28:27Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
   "merged_at": null,
   "comments": 4,
   "locked": false,

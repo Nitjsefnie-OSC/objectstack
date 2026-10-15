@@ -1,0 +1,34 @@
+{
+  "number": 23639,
+  "kind": "issue",
+  "title": "ADR-0139 E3 + E4: the five drivers compile the composed ReadableIds leaf or refuse it with D3's envelope, and the conformance case-set lands with their suites (D3)",
+  "state": "open",
+  "state_reason": null,
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "area:access",
+    "domain:engine",
+    "enhancement",
+    "pm:dispatched",
+    "priority:p2"
+  ],
+  "assignees": [
+    "sunhaolin"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-15T08:28:33Z",
+  "updated_at": "2026-10-15T08:30:11Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 1,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/23639",
+  "body": "Filing gate: **④ a coordination node's execution card**, rows E3 and E4 of ADR-0139's execution plan (part of #22788). It is derived and in scope, so it inherits #22788's lane, grade and area. Filed by `domain:engine` seat 1 (#6367) · `sunhaolin` · `session_01GP3comALHRcRBixS2TEnLF`, as the record's plan orders (\"cut after acceptance\", each row when its predecessor lands). ⛔ Classes, positions and functions only.\n\n**Predecessors landed:**\n- E2 (#22861), PR #23301 → `87e902dcbb`. The engine composes every `ReadableIds` leaf at its executor boundary, immediately before each read verb's driver call, and fails closed.\n- #23009's spec half, PR #23144: `ReadableIds.compose`, `isComposedReadableIds`, `ComposedReadableIds` and `RLS_DENY_FILTER` from `@objectstack/spec/data`.\n\n**Why E3 and E4 are one card.** `domain:spec` seat 3's ruling on #23009 (pointer 6137585321 on #22788): \"the case-set lands in the same PR as the five driver suites that run it, with zero ledger rows.\"\n- `scripts/check-driver-conformance.mjs`, in the required `Lint & Repo Gates` job, refuses a classified case-set until every driver package imports and runs it. The plan row reads E4 \"with E3\".\n- This card is the \"E3 and E4 in one PR\" form. Landing E3 first with DEBT rows for E4's drivers would need the maintainer's word, and is not this card.\n\n## The work (ADR-0139 D3; the plan's rows E3 and E4)\n\n- **`driver-sql`** compiles the composed leaf in its filter compiler to `field IN (SELECT id FROM P_TABLE WHERE SCOPE AND TENANT)`. The subquery is scoped by `SqlDriver#applyTenantScope` with the outer read's options, in one statement, so `find`, `count` and `aggregate` agree by construction. `driver-sqlite-wasm` and the local transport of `driver-turso` inherit it.\n- **The Turso remote transport** (`RemoteTransport`, an independent compiler) implements the same compilation.\n- **`driver-memory`** implements it in process: it reads P under the composed scope, then member-tests. No tenant wall is owed, because memory refuses multi-tenant boot.\n- **`driver-mongodb`** refuses loudly (open item O3: a pipeline form is unmeasured).\n- **The refusal** is one envelope on every driver (ADR-0112): status 500, `INTERNAL_ERROR`, a message naming the driver, the leaf and the remedy, logged at `error` once per driver.\n  - ⛔ Not `INVALID_FILTER`.\n  - ⛔ No `DriverCapabilities` bit.\n  - A driver refuses an uncomposed leaf on `isReadableIds` alone.\n- **The conformance case-set** (`READABLE_IDS_CASES`, D3's last bullet) lands with the five suites.\n  - It is parked, with no PR, on branch `claude/issue-23009-readable-ids-conformance` at `e641ab6d8`: `packages/spec/src/data/readable-ids-conformance.ts` plus its `CASE_SETS` row.\n  - That branch's other commits are #23144's, already squash-merged to `main`, so a claimant carries the two artefacts over, not the branch.\n  - `packages/spec` and the gate script are `domain:spec` surfaces. The claim declares them cross-lane.\n\n## Pins (the plan's rows; red before, green after)\n\n- **E3:**\n  - a reader with more than 2,000 readable candidates gets every visible row;\n  - an unreadable row stays hidden;\n  - a deleted parent is excluded;\n  - `count` equals the rows served.\n- **E4:** the conformance table records memory as compiling and mongodb as refusing.\n- **Every driver:** the case-set's `matches` cases and its `refuses-uncomposed` case, through the shared conformance suite (no per-driver hand copy).\n\n## Readings this card owes (ADR-0139 open items)\n\n- **O1:** the bound-parameter ceilings of SQLite, Postgres and MySQL. The record cites documented values only. E3 measures what the subquery form binds.\n- **O3:** mongodb keeps the refusal. No pipeline prototype here.\n- **The driver conformance ledger only goes down.** The claimant reads `covered` and DEBT before and after. Zero new DEBT rows.\n\n## Governing text\n\n- **ADR-0139 D3** and the execution plan's rows E3 and E4.\n- **ADR-0112:** the refusal envelope.\n- **#22788 note 3** (the director's ruling pointer 6104842076): \"**D3 stands as written**, per the maintainer: no capability bit, and `driver-mongodb` refuses loudly until O3 measures a pipeline form.\"\n- **#5499** (the 2026-08-05 driver-memory / driver-mongodb freeze) freezes defect and semantic-completion investment in those two drivers.\n  - ADR-0139 was accepted later (PR #22707 → `a2e94c2a05`, Tier H). Its D3 names memory's implementation and mongodb's refusal, so this card's two rows are the record's, not a thaw.\n  - Nothing else in those two drivers rides along.\n\n## State at filing (`origin/main` `23e689dc7d`)\n\n- `git grep -l \"ReadableIds\" origin/main -- packages/drivers` returns 0 files. The control `TEMPORAL_CASES` over the same pathspec returns 10.\n- `readable-ids-conformance.ts` is not on `main`. `git cat-file -e` fails, while `packages/spec/src/data/readable-ids.ts` is present.\n\n## Dedupe\n\nMCP `search_issues` on this repo, closed included: \"ADR-0139 E3 driver-sql compiles the ReadableIds leaf applyTenantScope memory mongodb E4\" returns 43 hits.\n- The nearest are #22788 (the parent), #22861 (E2), #22787 (E1) and #22678 (the ADR card).\n- None is E3 or E4.\n\nDedupe words: ReadableIds driver compile; READABLE_IDS_CASES conformance suites; applyTenantScope semi-join subquery; driver-mongodb refuses composed leaf; ADR-0139 E3 E4.\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_"
+}

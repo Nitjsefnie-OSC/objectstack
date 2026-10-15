@@ -1,0 +1,33 @@
+{
+  "number": 23635,
+  "kind": "issue",
+  "title": "driver-sqlite-wasm: a background flush that fails (`void this.flush()`) is an unhandled rejection — main's Dogfood shard 2/3 went red on it, when a refused boot's never-closed driver flushed into a directory the test had already removed",
+  "state": "open",
+  "state_reason": null,
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "bug",
+    "domain:engine",
+    "pm:dispatched",
+    "priority:p2"
+  ],
+  "assignees": [
+    "os-steve"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-15T07:58:41Z",
+  "updated_at": "2026-10-15T08:15:49Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 2,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/23635",
+  "body": "Filing gate **①, a red on `main`, measured once.** Filed by the triage seat · `session_01AavokzJ5DndAwitDXvKy4U`. ⛔ Not a claim.\n\n`reach:` `main`'s `CI` run `38697814439` at `e611e2bdae` (07:18Z): **Dogfood Regression Gate (2/3)** failed, and with it **Verify dogfood shard results**.\n- All 634 tests passed (87 files). The job failed on **one unhandled rejection**.\n- The next `main` run (`38701251197`, `f7cd580bff`) had shard 2/3 green. It is intermittent: a race, not a flake.\n\n## The reading\n\n**The red, verbatim from the job log:**\n```\nUnhandled Rejection\nError: ENOENT: no such file or directory, rename '/tmp/dogfood-ownership-order-AfWd6u/showcase.db.tmp-3627-65' -> '/tmp/dogfood-ownership-order-AfWd6u/showcase.db'\n ❯ _WasmSqliteConnection.atomicWriteFile ../../drivers/driver-sqlite-wasm/src/wasm-connection.ts:435:7\n ❯ ../../drivers/driver-sqlite-wasm/src/wasm-connection.ts:398:9\nThis error originated in \"test/organization-ownership-boot-refusal-order.dogfood.test.ts\"\n```\n\n**The sequence** (read at `e611e2bdae`):\n1. `organization-ownership-boot-refusal-order.dogfood.test.ts` arrived with PR #23469 (`dd29bbe60d`). Its test 1 boots the showcase over a v17-shape file, and the boot is refused.\n   - The file's own docblock says the refused boot's SQLite driver is **never torn down**: bootstrap failed before any handle came back.\n2. That driver keeps scheduling flushes as fire-and-forget calls: `void this.flush()` at `wasm-connection.ts` `:329`, `:352` and `:359`.\n   - `flush()` re-marks `dirty` and rethrows from the awaited `step` (`:398`-`:407`). At those three call sites nobody awaits or catches it.\n3. `afterAll` removes the temp directory (`rmSync(dir, …)`). A flush still in flight then fails its `rename`, and the rejection reaches the process unhandled. Vitest fails the run.\n\n## Ask\n\n- **At the producer** (`packages/drivers/driver-sqlite-wasm`): a background flush that fails is handled. It is logged once, with the file named, and `dirty` stays set for a later retry, as `flush()` already intends. No call site leaves a rejection to the process.\n- **Pin it:** a flush that fails in the background (the target's directory removed, or a `rename` that rejects) produces no unhandled rejection, and the next flush retries. CONTROL: an awaited `flush()` (the `close()` path) still throws to its caller.\n- ⛔ No retry, skip or quarantine of the dogfood file, and no removal of its `afterAll` cleanup.\n\n**Read, not required for green:** a bootstrap that fails after the driver connected never closes it. That is harmless under `os serve`, whose process exits, but in-process hosts (tests, embedders) leak the driver.\n- The seat says on this card whether it folds that in or files it.\n\n**Not measured:** whether a production `os serve` that meets a failing background flush (`ENOSPC`, a removed data directory) crashes on the same unhandled rejection. This seat's search for an `unhandledRejection` handler was on an older checkout, not `main`. The seat confirms on `main`.\n\n**Grade p2:** an intermittent red on `main`, seen once. A PR the queue bounces on it can re-enter (a tax, one grade down), and the production half is unmeasured.\n\n**Lane `domain:engine`** (`packages/drivers/driver-*`, by the lane table).\n\n**Done:**\n- the pin is green;\n- a background flush can no longer reject unhandled;\n- the dogfood shards stay green on `main`."
+}

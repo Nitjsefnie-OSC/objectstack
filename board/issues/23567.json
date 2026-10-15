@@ -2,7 +2,7 @@
   "number": 23567,
   "kind": "pull_request",
   "title": "fix(runtime): a flow name two packages hold is refused at /automation with a remedy that works from there",
-  "state": "open",
+  "state": "closed",
   "state_reason": null,
   "draft": false,
   "author": {
@@ -22,10 +22,14 @@
   "milestone": null,
   "type": null,
   "created_at": "2026-10-15T00:49:32Z",
-  "updated_at": "2026-10-15T02:03:10Z",
-  "closed_at": null,
-  "closed_by": null,
-  "merged_at": null,
+  "updated_at": "2026-10-15T02:31:59Z",
+  "closed_at": "2026-10-15T02:31:57Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": "2026-10-15T02:31:57Z",
   "comments": 3,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/pull/23567",

@@ -2,8 +2,8 @@
   "number": 23534,
   "kind": "issue",
   "title": "[Decision] The 10 s per-file test budget (#22949 ruling E item 3) and gate self-tests that spawn the real gate once per one-cause fixture: an exemption class, or a measured per-file ceiling beside the window's readings",
-  "state": "open",
-  "state_reason": null,
+  "state": "closed",
+  "state_reason": "completed",
   "draft": null,
   "author": {
     "login": "objectstack-fleet[bot]",
@@ -13,7 +13,6 @@
   "labels": [
     "area:devpath",
     "domain:devx",
-    "pm:dispatched",
     "priority:p2"
   ],
   "assignees": [
@@ -22,11 +21,15 @@
   "milestone": null,
   "type": null,
   "created_at": "2026-10-14T19:10:53Z",
-  "updated_at": "2026-10-15T02:30:31Z",
-  "closed_at": null,
-  "closed_by": null,
+  "updated_at": "2026-10-15T04:18:18Z",
+  "closed_at": "2026-10-15T03:32:07Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
   "merged_at": null,
-  "comments": 5,
+  "comments": 11,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/23534",
   "body": "Ruled: 6181973363 · letter B · 2026-10-15T01:04Z\n\nFiling gate ②: a decision only the maintainer can make. It moves a line the maintainer's ruling set: #22949 ruling E item 3 (`6125775640`), \"a test file over 10 s of wall is a card for the owning lane\", under #22998's test-budget rule.\n\nFiled by `domain:spec` seat 4 (#18917) · `sunhaolin` · session `session_0121ooBYRmS8ziFXm9ai5YHm`. It comes from the measured stop on #23180 (dev report on that card, option D). ⛔ The seat does not rule this. Reader: the maintainer, or the director seat on the maintainer's summon.\n\n## 维护者速读\n\n### 一句话问题\n\n有一类测试文件，按设计就是对每个单因夹具真跑一次门禁或生成器。这类文件在「不删用例、不调超时、不挪去更慢的分组」这三条禁令下，结构上压不进 10 秒。每次刷新窗口都会把它们重新列为「超预算」，可没有任何席位能关掉这些行。要定的是：这类文件豁免 10 秒线，还是按实测给每个文件记一个上限。\n\n### 背景(#23180 实测,本地,在验证锁下)\n\n- **`packages/spec/scripts/build-schemas-check-mode.test.ts`**\n  - 88 个用例，每个都对自己的夹具真跑一次生成器，共约 96 次。\n  - 一次热运行要 8.5–9.0 秒，其中 Zod `toJSONSchema` 约 4 秒 CPU，git 1.1 秒，重写输出树 0.9 秒。\n  - 全文件约 900 秒，CI 读数 902.1 秒。单个用例的中位数就有 9.07 秒。\n  - 再快只有一条路：把 3923 行的生成器拆成「进程内库加共享产物」。这正是该文件头注释明确拒绝的「只为测试开的缝」。\n- **`packages/spec/scripts/liveness/check-liveness.test.ts`**\n  - 71 个用例里有 63 个各起一次真门禁。\n  - 本轮落地的读缓存（选项 A，输出逐字节一致）把它从 190–255 秒降到 87–90 秒，单次门禁从 3.8–4.2 秒降到 1.2–1.3 秒，但仍超约 9 倍。\n  - 改成进程内复用的原型，本地底线约 7.4 秒，余量为零。按 CI 比本地慢 1.9–2.6 倍估算，CI 上约 14–19 秒（未在 CI 实测）；而且这样做会推翻文件「起真门禁」的设计。\n- **其他车道**：同类文件很可能也有，例如 cli 车道的 #23181 列了 119 个文件，其中有门禁自测试。本卡只证实了上面两个。\n\n## Governing text\n\n- #22949 ruling E item 3 (`6125775640`): \"The per-file budget (a test file over 10 s of wall is a card for the owning lane, #22998) reads the per-file durations the dataset already carries.\"\n- #22998's test-budget rule: a file over 10 s of wall is a card for the owning lane. Both the card and the dispatch carry its prohibitions: ⛔ no deletion without a named duplicate, ⛔ no timeout raise, ⛔ no move to a slower or skipped project.\n- `build-schemas-check-mode.test.ts`'s header rejects a test-only seam in the generator; `check-liveness.test.ts`'s design spawns the real gate.\n\n## 前提(各附 re-check 命令)\n\n1. Every case of the two files runs the real producer once per fixture. Re-check: `git show origin/main:packages/spec/scripts/build-schemas-check-mode.test.ts | grep -c -E \"\\brun(Box)?\\(\"` and `git show origin/main:packages/spec/scripts/liveness/check-liveness.test.ts | grep -c \"runGate(\"`.\n2. The per-run cost dominates. The readings are #23180's dev report, which includes the per-case histogram.\n\n## 选项 × 真实代价 × 工作量\n\n| | 做什么 | 客户/团队可感知后果 | 工作量 |\n|:--|:--|:--|:--|\n| **A 豁免类** | 给「对每个单因夹具起一次真门禁或生成器」的门禁自测试定义一个豁免类,文件头声明类与理由,刷新车道不再列它们为超预算行 | 刷新 PR 不再反复列不可关的行;全量跑墙钟不变 | 一次裁决 + 刷新脚本识别类的一处改动(devx 车道)· 无先例 |\n| **B 实测上限** | 这类文件不豁免,而是在窗口读数旁记一个按文件的实测上限(如当前读数 ×1.25);超上限才立卡 | 回归仍会被抓住(文件变慢 25% 以上);常态不再反复立卡 | 一次裁决 + 刷新脚本读上限表 · 先例:ruling E 的 25% 差分口径 |\n| **C 维持现状** | 10 秒线照旧适用 | 这些行永远挂在卡上,席位只能靠削弱或拆分绕过 | 零 |\n\n### 业务含义直译\n\n- A:「这类考试本来就要做满 90 道真题,不按小测验计时」。\n- B:「这类考试按它自己的历史用时计时,慢太多才报警」。\n- C:「所有考试都按 10 分钟交卷」,结果只能改题或不考。\n\n## 四轴(业务立场)\n\n- **① 项目长远合理性:** 起真门禁、跑真生成器的测试,证的正是用户与 CI 实际跑的那条路。为了满足单文件时长去拆缝或合并用例,会让测试与门禁漂开。B 保留了回归检测(复用 ruling E 的 25% 口径),A 更简单但不再看这些文件变慢。两年后的样子:测试预算按「类」管,而不是一刀切。\n- **② 实际业务拉动:** 实测拉动是存在的。这两个文件占全量跑墙钟的大头,也是 #23107 那类分片漂移变红的最大输入。但它们的成本是真实工作,不是浪费。本轮选项 A 已把 liveness 的可减部分减掉了。\n- **③ 防 AI 犯错:** 维持现状最容易让 AI 犯错:为过线去合并夹具、拆文件,数字好看了,证明力却变弱或被藏起来。A 和 B 都去掉了这种激励,B 还留着一道响亮的回归线。\n- **④ 创业阶段不扩散:** 不加门禁,只改裁决口径。B 多维护一张上限表,A 零维护。\n\n## 推荐 B,回退 A,置信缺口\n\n- **推荐 B。** 只看①选 B:它在不削弱证明力的前提下保住回归检测。②③④ 不翻转。\n- **回退 A。** 前提是你不想维护上限表。\n- **置信缺口:**\n  - 只实测了本车道这两个文件;其他车道同类文件的数目未测。\n  - CI 上的倍率按 1.9–2.6 估算,未逐文件实测。\n\n## 裁后执行段\n\n- **裁 B 或 A:** devx 车道一张卡,改刷新车道的列表逻辑(`scripts/measure-test-shard-timings.mjs` 的超预算清单)。#23180 上这两行按裁决关掉;其余 24 行照旧。\n- **裁 C:** #23180 的这两行保持开着,并明记「无可行修法」。\n\nos-decision-facets\n- ① 项目长远合理性:B 保留回归检测且不逼测试开缝;C 逼出削弱证明力的「优化」。\n- ② 实际业务拉动:两文件约占全量跑墙钟大头,成本是真实工作;可减部分已由 A 减掉。\n- ③ 防 AI 犯错:去掉「为过线合并夹具、拆文件」的激励;B 留响亮回归线。\n- ④ 创业阶段不扩散:零新门禁,只改裁决口径;B 多一张上限表。\nPrior rulings read: #22949 ruling E (`6125775640`), #22998 (test budget); thread: none (new card); repo: objectstack-ai/objectstack\n\n## Related\n\n- #23180 (spec lane's share; the measured stop and option A).\n- #23151 (closed parent).\n- #23181, #23182 and #23184 (the other lanes' shares).\n\nDedupe: MCP `search_issues` on this repo, closed included, query `test budget 10 s per file exemption gate self-test spawns real gate per fixture ceiling ruling`: 16 hits. The top ones are the per-lane budget cards (#23180–#23185) and #23151, all listing rows. None decides a class or ceiling.\n"

@@ -13,20 +13,22 @@
   "labels": [
     "bug",
     "domain:spec",
-    "needs-user-decision",
+    "pm:dispatched",
     "priority:p1",
     "target:v18"
   ],
-  "assignees": [],
+  "assignees": [
+    "os-bill"
+  ],
   "milestone": null,
   "type": null,
   "created_at": "2026-10-15T01:13:29Z",
-  "updated_at": "2026-10-15T02:24:44Z",
+  "updated_at": "2026-10-15T07:32:53Z",
   "closed_at": null,
   "closed_by": null,
   "merged_at": null,
-  "comments": 3,
+  "comments": 12,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/23577",
-  "body": "Filing gate **(c)**: observations from a contract round, read from source and not run end to end. Filed by `domain:engine` seat 2 (#20966) · `os-steve` · `session_01ADzJtzYTLUfgrRZHxkagkX` at the ACCEPT of PR #23565 (#23406). They come from that PR's contract record (findings 1 to 3) and the dev's report 6181706743 (open question, out-of-scope findings). Per the family rule, they share one card. Reader who acts: triage, to grade and route. ⛔ Not a claim.\n\n## Positions (read at PR #23565's head `6f79997618`)\n1. **The publish-side first write over a sealed item still reads the create remedy.**\n   - `GetMetaItemResponseSchema.version` (`packages/spec/src/api/protocol.zod.ts`) says an item served from a package artifact serves `version: null`, and that the next save pins `If-None-Match: *`.\n   - On the uncached read paths (cache off, or `?package=`), a client following that and pinning a PUBLISH save to edit a sealed item gets 403 `NOT_OVERRIDABLE` with \"choose a name no package or built-in holds\". A client or AI following the remedy creates a second item.\n   - This is the pre-existing `[#22591]` reading, kept by #23406 as its control (seat answer A on #23406).\n   - Fixing it properly needs the request to declare that it is a create, which is a new accepted key (`Clause-②: yes`). Otherwise the create remedy is left with no door that produces it.\n2. **A stale docblock.** The `## create` section of `packagedBaseRefusal`'s docblock (`packages/metadata-protocol/src/protocol.ts`, about line 17405 at the head) still names the retired \"Setup's position write-through\" (`.changeset/pre/15204-7b-position-write-through-retired.md`). It omits the `/meta` publish first-write pin, now the only caller that asks for `create`.\n3. **The permission-set clone's lost-race message.** `permission-set-clone.ts` saves with `parentVersion: null`. When it loses a race, its 409 now tells the caller to send `If-Match` on the REST door, but the clone door takes no `If-Match`. Only a race reaches it, and the old message was no better.\n\n## Wanted\n- **Position 1:** a decision, whether a create needs a declared request fact (and which), or whether the remedy stays as it is. It is a contract question, so it is for the spec lane or the decision box.\n- **Positions 2 and 3:** wording corrections, with no contract change.\n\nDedupe: #23406 (closed by PR #23565) covered the draft lifecycle only. No open card names these.\n"
+  "body": "Ruled: 6184789291 · letter B · 2026-10-15T05:00Z\n\nFiling gate **(c)**: observations from a contract round, read from source and not run end to end. Filed by `domain:engine` seat 2 (#20966) · `os-steve` · `session_01ADzJtzYTLUfgrRZHxkagkX` at the ACCEPT of PR #23565 (#23406). They come from that PR's contract record (findings 1 to 3) and the dev's report 6181706743 (open question, out-of-scope findings). Per the family rule, they share one card. Reader who acts: triage, to grade and route. ~~⛔ Not a claim.~~\n\n## Positions (read at PR #23565's head `6f79997618`)\n1. **The publish-side first write over a sealed item still reads the create remedy.**\n   - `GetMetaItemResponseSchema.version` (`packages/spec/src/api/protocol.zod.ts`) says an item served from a package artifact serves `version: null`, and that the next save pins `If-None-Match: *`.\n   - On the uncached read paths (cache off, or `?package=`), a client following that and pinning a PUBLISH save to edit a sealed item gets 403 `NOT_OVERRIDABLE` with \"choose a name no package or built-in holds\". A client or AI following the remedy creates a second item.\n   - This is the pre-existing `[#22591]` reading, kept by #23406 as its control (seat answer A on #23406).\n   - Fixing it properly needs the request to declare that it is a create, which is a new accepted key (`Clause-②: yes`). Otherwise the create remedy is left with no door that produces it.\n2. **A stale docblock.** The `## create` section of `packagedBaseRefusal`'s docblock (`packages/metadata-protocol/src/protocol.ts`, about line 17405 at the head) still names the retired \"Setup's position write-through\" (`.changeset/pre/15204-7b-position-write-through-retired.md`). It omits the `/meta` publish first-write pin, now the only caller that asks for `create`.\n3. **The permission-set clone's lost-race message.** `permission-set-clone.ts` saves with `parentVersion: null`. When it loses a race, its 409 now tells the caller to send `If-Match` on the REST door, but the clone door takes no `If-Match`. Only a race reaches it, and the old message was no better.\n\n## Wanted\n- **Position 1:** a decision, whether a create needs a declared request fact (and which), or whether the remedy stays as it is. It is a contract question, so it is for the spec lane or the decision box.\n- **Positions 2 and 3:** wording corrections, with no contract change.\n\nDedupe: #23406 (closed by PR #23565) covered the draft lifecycle only. No open card names these.\n\n"
 }

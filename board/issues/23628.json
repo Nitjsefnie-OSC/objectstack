@@ -1,0 +1,33 @@
+{
+  "number": 23628,
+  "kind": "pull_request",
+  "title": "fix(metadata-protocol): an optimistic-concurrency conflict reports only what the caller may read",
+  "state": "open",
+  "state_reason": null,
+  "draft": false,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "documentation",
+    "size/m",
+    "tests",
+    "tooling"
+  ],
+  "assignees": [
+    "os-bill"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-15T07:27:27Z",
+  "updated_at": "2026-10-15T08:25:40Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 3,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/pull/23628",
+  "body": "Fixes #23586\nClause-②: no\n\n## What changes (function level)\n\n`metadata-protocol`'s `updateData` and `deleteData` judge the caller's version token on the row `probeRecord` reads with a system context. That probe asks existence, not visibility, and it stays exactly as it is. What changes is the mismatch branch of `assertVersionOf`:\n\n- On a mismatch, the row is read again under the caller's own `context` (`readAsCaller`, a by-id `engine.findOne` with the same context spelling as the write it precedes), so every RLS and FLS rule of the read door applies.\n- **No row for the caller:** `assertVersionOf` throws `recordNotFoundError(object, id)`. That is the same producer the security layer's by-id write gate uses for a row the caller cannot read, so the stale-token request gets exactly what the same request without a token gets: `404 RECORD_NOT_FOUND`, with no `currentVersion` and no `currentRecord`.\n- **A row for the caller:** `ConcurrentUpdateError` as before, with `currentRecord` set to the caller's read, so it is field-masked like the caller's own read. `currentVersion` is still the token the comparison ran on.\n- **A token that matches, or no token:** unchanged. The extra read happens only on a mismatch.\n\n`assertVersionOf` became async and takes the request context. Both callers (`updateData`, and `assertVersionMatch` for `deleteData`) pass `request.context` and await it.\n\n### The four `probeRecord` callers\n\n- `updateData` and `assertVersionMatch` (`deleteData`): these are the conflict path. Both are fixed by the one change in `assertVersionOf`.\n- `assertRecordExists`, used by `updateManyData` and `batchData`'s `update` branch: existence only. It never takes a version token, never hands the probed row to the caller, and leaves the write to `engine.update` under the caller's policy. Not this path.\n- `batchData`'s `upsert` fork: existence only, deciding update versus insert. It has no version token, and the response row is `engine.update`'s readback under the caller's context, never the probed row. Not this path.\n\n## Pins\n\nNew file `packages/runtime/src/domains/data-conflict-caller-visibility.test.ts`. It uses the measured rig shape: a real `ObjectQL` over a real `SqlDriver` (better-sqlite3), with the real `SecurityPlugin` started (an RLS policy and an FLS rule on one object, nothing on a second). It runs `PATCH` and `DELETE` through `RestServer`'s registered routes and through the runtime `HttpDispatcher`'s `/data` domain. A dispatcher throw is rendered by `declaredEnvelopeForThrow`, the exit the Hono hosts use, and the thrown error is read too. Per door and verb:\n\n1. **A row RLS hides:** the stale-token answer equals the control (the same request without a token): same status, same body (`toEqual`), with no `currentVersion` or `currentRecord` on the wire or on the thrown error. The row is unchanged.\n2. **A field FLS hides:** `409 CONCURRENT_UPDATE`, `currentVersion` equal to the stored token, and `currentRecord` equal to the caller's own read of the row, without the hidden field.\n3. **Positive control, a row the caller reads whole:** `409` with the whole row and its version, so conflict detection still works.\n4. **A matching token:** `200`, and the engine's `findOne` is called the same number of times as without a token (plus the one probe `DELETE` already issues when a token is present).\n\nThe pins live in `runtime`, beside the existing both-door OCC pins (`data-update-expected-version.test.ts`, `data-delete-expected-version.test.ts`). It is the one package whose test graph holds `RestServer`, the dispatcher, `plugin-security`, a SQL driver and `declaredEnvelopeForThrow` together. They are in a new file.\n\n## Verification\n\nThe readings below were taken at `7a4652fdb4`, before `main` was merged in at `2a20fe2d80`. The re-runs on the merged head are in the `os-dev-report` comment on #23586.\n\n- **Red, before the fix** (pins on the unfixed `metadata-protocol` dist): `8 failed | 8 passed (16)`. The eight failures are the RLS and FLS rows on both doors and both verbs (a `409` carrying the hidden row or field where the control answered `404`). The positive-control and matching-token rows passed.\n- **Green, after the fix** (`metadata-protocol` rebuilt): `16 passed (16)`. The final verification runs are listed in the report comment on #23586.\n- `pnpm --filter @objectstack/metadata-protocol test`: 237 files, 28429 passed. `typecheck`: exit 0.\n- `pnpm --filter @objectstack/runtime test`: 385 files, 5798 passed. `typecheck` (with `check:test-typecheck`): exit 0, and the new file adds no ledger entry.\n- `pnpm --filter @objectstack/rest test`: 285 files, 5858 passed.\n- Gates: the `dispatch-gates --commands` list for this diff, run one by one. `check:query-options-erasure` caught an untyped options bag on the first pass. It is now typed to `EngineQueryOptionsParsed` / `EngineQueryOptions`. Per-gate readings are in the report.\n\n## Acceptance notes\n\n- **The Hono doors (`plugin-hono-server`) are not touched.** After this change the producer's conflict answer holds only what the caller reads, so if `declaredConflictContext` forwarded `currentRecord`, that record would be safe to send. The hold #23587 placed there can be lifted on that card. A row the caller cannot read now answers `404 RECORD_NOT_FOUND` through those doors as well.\n- **`currentVersion` is the token the comparison ran on** (the system probe's `updated_at`), so its meaning is unchanged. If an FLS rule ever hid `updated_at` itself, the version token would still be published on a conflict. A `git grep` over `examples/` and `packages/` finds no field-permission entry keyed on `.updated_at` (0 hits), and this PR does not change that case.\n- **A caller-context read that throws** (the object's read grant withheld, a store fault) propagates as raised. It is never relabelled as a conflict or a not-found.\n\n---\n_Generated by [Claude Code](https://claude.ai/code/session_01YNquHRZKDpiKsgmHXSd9Jx)_\n"
+}

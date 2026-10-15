@@ -1,0 +1,31 @@
+{
+  "number": 23609,
+  "kind": "issue",
+  "title": "metadata: after #23469, the legacy-organization read seam's loose ends (ambient transaction, filter-after-limit, an unpinned by-name filter, DatabaseLoader._count, a 404 where a named refusal belongs) and the ceremony wording",
+  "state": "open",
+  "state_reason": null,
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "domain:engine",
+    "pm:queue",
+    "priority:p3",
+    "target:v18"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-15T04:40:54Z",
+  "updated_at": "2026-10-15T06:46:26Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 0,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/23609",
+  "body": "Blocked-by: #23469\n\nFiling gate: **(c) a read-only finding from a contract review, not run.** The PASS record 6184549574 on PR #23469 (#23429, C7b S2 + S5) lists these as non-blocking.\nReader who acts: `domain:engine` triage, to grade and route.\n\nFiled by `domain:engine` seat 1 · `marchtian` · session `session_01Rerax7QTjKMPCUZxQUtPFR`. ⛔ Not a claim.\n\n**⛔ Blocked on PR #23469.** None of this code is on `main` until that PR merges. The seat flips this card to `pm:queue` on MERGED.\n\n## Why it is low priority\n\nEvery path below matters only on an **unmigrated (v17-shape) database**, where legacy organization rows still sit in the `sys_metadata` family. `os serve` refuses to boot such a database (S5's guard) until `os migrate organization-ownership` has verified. So no served door reaches these paths in a supported posture today. They are latent, and worth closing before anything else starts reading the family off the served boot.\n\n## What the review found (PR #23469 at `e4811b67f2`, read only)\n\n1. **`findServedOverlayRow`'s filter has no pin of its own.** In `meta-stored-legacy-organization.integration.test.ts`, the `_lock` case asserts only `lock` and `editable`. With that filter alone removed, `getMetaItem` would serve the organization's body as `item`, and no pin goes red.\n   - Wanted: assert that `read.item` is not the organization's body.\n2. **The seam joins only an explicit `context.transaction`.**\n   - `legacyOrganizationRowsOf`'s raw `listPhysicalColumns` / `execute` calls do not read ObjectQL's ambient transaction.\n   - The protocol passes none: every call site passes `{ isSystem: true }`.\n   - Inside `publishPackageDrafts`' ambient `engine.transaction`, on a v17-shape SQLite file, the column read would wait on a second pool connection. The paths are `promoteDraftForPublish`'s draft read, the active-row read, `repo.get` and `repo.promoteDraft`.\n   - Wanted: take the engine's ambient transaction, or thread `trxCtx` into those reads.\n3. **The plural form filters after `limit`**, so a page under-fills, or a single-row read misreads, when legacy rows sit in it:\n   - `auditMetaItem` (`orderBy` plus `limit`);\n   - `listCommits` (`limit`);\n   - `revertStoredPackage` (`limit: 1`), which answers 409 \"never been published\" when its first active row is a legacy one;\n   - the repository's `list(filter.limit)`.\n   - Wanted: filter before limiting, or page until the limit is met.\n4. **`DatabaseLoader._count` does not filter.** So `exists()` answers true for an address that only a legacy row holds, while `load()` answers null, and the history `total` counts legacy rows. This is pre-existing: `main`'s loader never filtered.\n5. **`rollbackToPackageCommit` answers `COMMIT_NOT_FOUND` (404) for a legacy commit**, where `revertCommit` gives a named refusal. Wanted: the same named refusal.\n6. **Inert plumbing to remove, behaviour-neutral:**\n   - `rowsRead`;\n   - `ServedOverlayRowCandidate.scope` / `organizationId`;\n   - `orgId` / `itemOrgId` in `protocol.ts`.\n\n   Every row that reaches them is now the environment's (the dev's report 6184164699; verified inert in 6184549574).\n7. **Wording:**\n   - The four ADR-0087 entries `18.sys-metadata{,-audit,-commit,-history}-organization-column-retired`, and `content/docs/concepts/metadata-lifecycle.mdx`, name `os migrate organization-ownership --apply` without `--plan-file`. `main`'s `18.cli-organization-ownership-apply-plan-file-required` makes `--plan-file` required.\n   - E1's refusal sentence in `os migrate apply` reads \"which the organization-ownership ceremony owns that drop\", which is garbled.\n\n## Not in this card\n\n- **The ceremony's `dialectOf` / `config.client`** is #23558.\n- **The `/meta` trail doors admitting `setup.access`** is #23546.\n- **The changeset gaps** the review named are not here: S5's unnamed runtime exports, and the `ApiError.code` widening by `ORGANIZATION_OWNERSHIP_MIGRATION_REQUIRED`. Changesets are consumed at release, so these ride the release notes, not a code change.\n\n## Dedupe\n\nThe words `legacyOrganizationRowsOf findEnvironmentRows ambient transaction rollbackToPackageCommit DatabaseLoader _count rowsRead itemOrgId` match only PR #23469 and #23429.\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_"
+}

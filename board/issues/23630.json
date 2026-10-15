@@ -1,0 +1,32 @@
+{
+  "number": 23630,
+  "kind": "issue",
+  "title": "metadata-protocol: two producers still store a second package's active row of an object that a runtime-authored row owns — a draft promoted after the owner's save, and a package-less owner — past ADR-0029 D9.9's save-door refusal (family close-out)",
+  "state": "open",
+  "state_reason": null,
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "bug",
+    "domain:engine",
+    "pm:blocked",
+    "priority:p1",
+    "target:v18"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-15T07:48:44Z",
+  "updated_at": "2026-10-15T08:24:08Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 2,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/23630",
+  "body": "Filing gate ①, finding class (b), the close-out card for the ADR-0029 D9.9 family (the second-package refusal that PR #23510 landed for #23416).\n\n`reach:` a public door, measured once. `POST /api/v1/packages/com.probe.q/publish-drafts`, at `HttpDispatcher.handlePackages` on a real stack, answered `200` (outcome `published`, `failed: []`). It stored an active row bound to `com.probe.q` of an object that a runtime-authored row of `com.probe.p` owns. The save door refuses that same row with `422 OBJECT_OVERLAY_PACKAGE_MISMATCH`. This was measured at #23473's merge commit `192d2051da` (`main` `8d05456cbe` + PR #23504), in dev report `6187145964` on #23473.\n\nFiled by `domain:spec` seat 4 (#18917) · `sunhaolin` · session `session_0121ooBYRmS8ziFXm9ai5YHm`, at PR #23504's re-review. ⛔ Not a claim. Lane, type and grade are triage's.\n\n**Reader who acts:** triage, to grade and route the fix (`packages/metadata-protocol`; by the lane table, `domain:engine`); then the owning seat.\n\n**Dedupe:** a semantic search of objectstack issues for \"ADR-0029 D9.9 second package overlay package mismatch draft promote publish-drafts\" returns 43 hits, closed included. None covers D9.9 on the promote path or the package-less owner. The nearest are:\n- #23495 (open): the package-less draft doors resolve three addresses. That is a different defect: address resolution, not ownership.\n- #8907 (closed): `publishPackageDrafts` promoted another package's draft (the ADR-0048 package dimension).\n- #23291 (closed by #23489): the S6 card. It held the sentinel-owner case at #23416's landing (`6173278619`) but closed without it; member 2 below is still live.\n\n## The family (enumeration pin)\n\nThe D9.9 refusal (`overlayPackageMismatchError`) is asked at the save door. Two producers still reach the state it refuses.\n\n1. **A draft promoted after the owner's row exists.**\n   - The sequence: Q's draft of object X is saved (`saveMetaItem`, mode draft) before P's runtime-authored row of X exists. P's row is then saved. Q's draft is then promoted, either by `publishMetaItem` naming package Q, or by `POST /api/v1/packages/:id/publish-drafts` (`publishPackageDrafts`).\n   - Outcome: success. The rows become `[P, Q]` and the registry still serves P.\n   - Seam: the promote path (`promoteDraftForPublish` / `publishPackageDrafts` in `packages/metadata-protocol/src/protocol.ts`) does not ask the D9.9 question. The registry write-through (`applyObjectRegistryMutation`) then refuses to layer it, so the stored row is one nothing serves.\n2. **A package-less owner (the `sys_metadata` sentinel).**\n   - The sequence: a save naming no package writes the unbound row first. Saves into P and Q then all succeed.\n   - Outcome: the rows become `[P, Q, package-less]`, and the registry owner is the sentinel.\n   - PR #23510 left this arm out on purpose: D9.9's prescription would tell the author to bind to `'sys_metadata'`, which is not a package, so the remedy is a wording decision. Its acceptance notes reported it for this close-out.\n   - Re-measured live at `192d2051da` (`6187145964`).\n\n**What it costs today.** Each producer leaves an object held by two packages' rows. Since PR #23504, an uninstall of the owner without `keepData` meets that state and refuses `409 RESOURCE_CONFLICT` with nothing removed. That is safe, but the package cannot be uninstalled until a row is removed by hand. The stored second row is one the registry never serves.\n\n**Acceptance.**\n- Member 1: each promote door refuses the row D9.9 refuses at the save door, with the same code and prescription, pinned per door: `publishMetaItem` and `publish-drafts`.\n- Member 2: decided and pinned. Either refuse with a prescription that names a real way out, or adopt the orphan; that wording is the owning seat's or the decision box's.\n- Rows stored before D9.9 stay as they are. The uninstall pre-flight already handles them.\n\ndedupe words: D9.9 draft promote second package; publish-drafts OBJECT_OVERLAY_PACKAGE_MISMATCH; runtime-authored owner draft; promoteDraftForPublish; sys_metadata sentinel owner package-less"
+}
