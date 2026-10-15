@@ -2,7 +2,7 @@
   "number": 23680,
   "kind": "pull_request",
   "title": "feat(client): meta.publishItem names the package whose draft it promotes, sent as ?package=",
-  "state": "open",
+  "state": "closed",
   "state_reason": null,
   "draft": false,
   "author": {
@@ -22,10 +22,14 @@
   "milestone": null,
   "type": null,
   "created_at": "2026-10-15T13:40:37Z",
-  "updated_at": "2026-10-15T14:04:15Z",
-  "closed_at": null,
-  "closed_by": null,
-  "merged_at": null,
+  "updated_at": "2026-10-15T14:42:41Z",
+  "closed_at": "2026-10-15T14:42:39Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": "2026-10-15T14:42:39Z",
   "comments": 3,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/pull/23680",
