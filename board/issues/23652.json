@@ -1,0 +1,35 @@
+{
+  "number": 23652,
+  "kind": "pull_request",
+  "title": "docs(qa): lifecycle-retention-sweep steps[4] re-expects the idle sweep's one aggregate line (#23169)",
+  "state": "closed",
+  "state_reason": null,
+  "draft": false,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "size/s",
+    "skip-changeset"
+  ],
+  "assignees": [
+    "os-sales"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-15T10:21:09Z",
+  "updated_at": "2026-10-15T10:47:00Z",
+  "closed_at": "2026-10-15T10:46:58Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": "2026-10-15T10:46:58Z",
+  "comments": 1,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/pull/23652",
+  "body": "Fixes #23169\n\nClause-②: no\n\n## What\n\nThis is the last open row of the family card: `platform-core.lifecycle-retention-sweep` steps[4], the idle-proof step. It is re-expected under the maintainer's ruling A: decision 6147446653, answered 「23169 我同意。」, recorded in comment 6160866003. The checklist step was stale, and the product is correct.\n\nOne file and one item change: `docs/qa/platform-checklist/areas/platform-core.json`, item `platform-core.lifecycle-retention-sweep`. Its revision goes from 2 to 3, with one appended `history` entry.\n\n- **steps[4]** read \"idle proof: … the log carries NO sweep line — an idle sweep logs nothing\". It is now a positive heartbeat check. One more sweep runs on the now-clean DB: a second interval on steps[2]'s boot, or a fresh boot plus 90 s with `OS_LOG_LEVEL=info` as in steps[2]. That sweep still logs its one aggregate INFO line, `[lifecycle] sweep: N policy(ies) applied, ~0 rows reaped, …`, and the reaped rows stay gone.\n  - N counts the policies applied, not rows.\n  - On an info-level boot, a missing line means no sweep reached its print. It never means \"idle\".\n  - A boot at the default warn level never prints the line, so it proves nothing.\n- **fixtures.knownGaps[3]**, the \"RULING OWED\" entry, now reads \"RULED, no longer a gap\" and keeps its reason. That follows the README rule that a closed gap keeps its reason, and the RULED / CLOSED / FIXED prefixes other items use. A run record scored against revision 2 or earlier stays interpretable.\n- **Unchanged:**\n  - steps[5], the kill switch, which is still bracketed by steps[2]'s armed control;\n  - every acceptance clause;\n  - `negative`, `variants`, `traps`, `title` and `source`.\n  - No clause rested on steps[4] before, and none does now.\n\nNo product change: `packages/objectql` is not touched.\n\n## Grounds, re-read at `c5dd7fce3`\n\n- In `packages/objectql/src/lifecycle/lifecycle-service.ts`, `sweep()` prints the aggregate line when `report.swept.length > 0 || report.errors.length > 0 || report.alerts.length > 0`.\n- `reap()` runs `report.swept.push({ object, class: lc.class, policy, cutoff, deleted: total })` for every applied policy, including a `total` of 0.\n  - The rotation leg pushes its entry unconditionally.\n  - An archive-pending object goes to `report.skipped`, not to `swept`.\n  - A `deleted: 0` swept entry is pinned in `lifecycle-service.no-tenant-column.test.ts`.\n- **Attribution, corrected from the ruling record:**\n  - \"one aggregate log line per sweep is the entire trace it leaves\" is the code comment at that print site.\n  - ADR-0057 §3.3's own text says the service's own deletes and rotations \"are not audited or activity-logged\", and \"Aggregate one summary row at most.\"\n  - The item and its history entry attribute each wording to where it actually lives.\n\n## Method\n\nThe edit is one span-scoped scripted edit in Node, against BASE `c5dd7fce3`. Each anchor (steps[4], knownGaps[3], the item-level `revision` line, the history tail) was asserted to occur exactly once, both in the file and in the item's span. After the write, the script asserted on disk that:\n\n- every byte outside the item's span is identical to BASE;\n- the 29 other items parse identical to BASE;\n- the item changed only in `fixtures`, `steps`, `revision` and `history`, and inside those only in `knownGaps[3]` and `steps[4]`;\n- the revision went from 2 to 3, and `history` is the base's 2 entries plus 1.\n\n## Verification at head `cad70efd0`\n\n`node scripts/pm/dispatch-gates.mjs --commands --repo objectstack-ai/objectstack` derived 13 commands for 1 path. `--ran` printed \"13 derived, 13 run, 0 NOT-MEASURED, 0 UNRUN\".\n\n- **Exit 0, 12 gates:**\n  - check-ci-filter-parity;\n  - check-closing-keyword-parity, and its `--self-test`;\n  - check-comment-mask-corpus;\n  - check:cross-package-test-inputs;\n  - check:doc-authoring;\n  - check:driver-memory-census;\n  - check:gitlink-declared;\n  - check:nul-bytes;\n  - check:refd-timer-probe;\n  - check:watch-hint-literal;\n  - `@objectstack/lint` check:doc-formula-expressions, after building the lint dependency closure under the verify lock.\n- **`pnpm check:platform-checklist` exits 1 with \"8 problem(s)\", at BASE and at head alike.**\n  - The sorted problem lines diff empty, and none is in `platform-core`.\n  - All 8 sit in `access-security`, `attachments-storage` and `search`, which belong to the in-flight work of #23593. They are pre-existing and not touched here.\n- **`--anchor-census`** is identical at BASE and head: 724/741 anchors, plus 10 on the named residual. `platform-core.json` holds 69 on both.\n- **`node scripts/checklist-select.mjs platform-core.lifecycle-retention-sweep`** returns 1 runnable item.\n- **A control-byte self-scan** of the edited file found none.\n\n**`skip-changeset`:** this is QA data outside every package.\n- `git grep 'docs/qa' -- '*package.json'` exits 1, and the root package is private.\n- Positive control: `packages/spec/package.json` carries a `files` list.\n\nThere is no ablation or reverse verification: the diff is ledger text, and no tested behaviour moved.\n\n## Acceptance notes\n\n- **The ruling record misattributes one quote.** Comment 6160866003 and decision 6147446653 quote \"one aggregate log line per sweep is the entire trace it leaves\" as ADR-0057 §3.3. It is the code comment at the print site. The item and its history entry carry the correction; the comments themselves are not edited. Carrier: this PR. Not filed.\n- **No test pins the INFO aggregate line itself.** The report shape is pinned, `deleted: 0` included; the print gate and its message are not. A future change that silenced idle sweeps would turn steps[4] red only on the next live run. Observation only; 承接者:无. Not filed.\n\n---\n_Generated by [Claude Code](https://claude.ai/code/session_016PVjjuVPte5XEJvaQx1E4t)_\n"
+}

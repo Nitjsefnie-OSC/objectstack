@@ -2,8 +2,8 @@
   "number": 23606,
   "kind": "issue",
   "title": "[Decision] The line ratchet (check:pm-skill-ratchet): 32 of 37 files at zero headroom, so a sentence already ruled still needs a second ruling to land — keep it, let the ordering ruling carry its lines, add slack, or narrow it",
-  "state": "open",
-  "state_reason": null,
+  "state": "closed",
+  "state_reason": "completed",
   "draft": null,
   "author": {
     "login": "objectstack-fleet[bot]",
@@ -13,18 +13,23 @@
   "labels": [
     "area:devpath",
     "domain:skills",
-    "pm:queue",
     "priority:p2"
   ],
-  "assignees": [],
+  "assignees": [
+    "os-sales"
+  ],
   "milestone": null,
   "type": null,
   "created_at": "2026-10-15T03:58:08Z",
-  "updated_at": "2026-10-15T05:07:36Z",
-  "closed_at": null,
-  "closed_by": null,
+  "updated_at": "2026-10-15T12:27:20Z",
+  "closed_at": "2026-10-15T12:24:26Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
   "merged_at": null,
-  "comments": 3,
+  "comments": 9,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/23606",
   "body": "Ruled: 6184799323 · letter B · 2026-10-15T05:07Z\n\nFiling gate ② (a decision only the maintainer can make), filed on the maintainer's direct order (③), verbatim: 「行数门禁是否限制太严格了，开决策卡。」, given in `domain:devx` seat 1's session `session_01ESFcvW3staenyBCGq7kcDH` on 2026-10-15, about PR #23596.\n\nFiled by `domain:devx` seat 1 (#6023) · `huangyiirene` · `session_01ESFcvW3staenyBCGq7kcDH`. ~~⛔ Not a claim.~~ **Reader who acts:** the maintainer, or the director seat on the maintainer's summon. The execution lane after a ruling is `domain:skills` (the ratchet is the governed surface's own gate).\n\n## 维护者速读\n\n### 一句话问题\n\nAI 写的指令文件（`AGENTS.md`、PM 技能及其 references、`os-dev.md` 等 37 个文件）每个都有行数上限，只降不升。其中 32 个文件余量为 0。\n\n结果是，你已经裁定要写进去的一句话，往往还要再找你要第二句原话才能落地。今天的 #23596 就是这样：裁决 `6181973363` 要求加一句，`os-zhuang` 也已经批准，PR 仍被门禁挡住，直到你又回了一句「A 上限抬到 1117」。\n\n### 背景（实测，`origin/main` `16abea884`，2026-10-15）\n\n- **覆盖面：** `scripts/pm/check-skill-line-ratchet.mjs` 的 `CEILINGS` 有 37 行，32 行余量为 0。余量不为 0 的 5 个：`os-dev.md` 2、`lanes/skills.md` 1、`lanes/director.md` 6、`dogfood-verification/SKILL.md` 9、`contract-review.md` 16。\n- **近 30 天（09-15 至 10-15）的上限变动：**\n  - 抬高 11 次，每次都要一句维护者原话；#23596 是第 12 次。\n  - 降低 3 次，另有 09-23 一次整体重构：`SKILL.md` 819→319，同时新建 5 个 references 文件。\n  - 抬高的分布：`platform-readings.md` 4 次，`AGENTS.md` 3 次（1075→1099→1109→1116），`SKILL.md` 2 次，`filing-gate.md` 10-14 一天 2 次（58→61→64）。\n- **专门为抬一次上限立过的决策卡：** #15013（+34 行）、#15192。\n- **门禁当初的理由：** 你 08-12 说「现有的项目经理 skills 应该大幅简化,只需要说原则,不需要写细节」，08-14 又说「8685 字太多了 并且综合审查一下相关的skills是不是应该压缩字数。」。当时没上限的文件一班就涨了 31%。\n\n## Governing text\n\n- `.claude/skills/pm-dispatch/SKILL.md` 〈机械守卫索引〉 row `check-skill-line-ratchet.mjs`: 「本文件行数只降不升(`pnpm check:pm-skill-ratchet`);抬上限需维护者裁决引用在 PR 正文;⛔ re-wrap 不得用作筹行,新增以删减付账;不买内容的密度修复允许」.\n- The ratchet's header: \"RAISING one requires a maintainer ruling quoted in the raising PR's body\". The header also cites the 2026-08-12 and 2026-08-14 rulings quoted above.\n- #23177 ruling B (`6139629628`), item A2′, for the sibling `check-skills-token-ratchet.mjs`: \"**no tolerance band** … ceilings stay shrink-only and the current headroom (0 and 1 tokens) stays as it is\". Item B′: an audit, due after v18 `next` ships plus two weeks of A1, that ranks every gate family by interceptions × wall into stay, move or retire.\n- SKILL.md 〈升级与决策〉: 「新增门禁默认否:门禁是只减不增的零件」.\n\n## 前提(各附 re-check 命令)\n\n1. **32 of 37 rows are at zero headroom on `origin/main`.** Re-check:\n   ```bash\n   git show origin/main:scripts/pm/check-skill-line-ratchet.mjs | sed -n '/^export const CEILINGS = new Map/,/^\\]);/p' | grep -oE \"\\['[^']+', [0-9]+\\]\" | sed -E \"s/\\['([^']+)', ([0-9]+)\\]/\\1 \\2/\" | while read p c; do [ \"$(git show origin/main:$p | wc -l)\" -ge \"$c\" ] && echo \"$p\"; done | wc -l\n   ```\n   It prints 32. Positive control: the same pipeline without the `while` filter prints 37 rows, one of them `AGENTS.md 1116`.\n2. **12 raises against 3 lowers in the 30 days to 2026-10-15.** Re-check: `GET /repos/objectstack-ai/objectstack/commits?path=scripts/pm/check-skill-line-ratchet.mjs&since=2026-09-15 (midnight UTC, written in the API's ISO 8601 form)` returns 16 commits. Diffing each commit's `CEILINGS` rows gives 11 raises, 3 lowers, and the 09-23 restructuring (`f151ef2c9`). #23596 is the 12th raise, ruled at PR #23596 comment `6184004601`. Positive control: `08ea7e368` (`filing-gate.md` 58 → 61) appears among the raises.\n\n## 选项 × 真实代价 × 工作量\n\n| | 做什么 | 客户/团队可感知后果 | 工作量 |\n|:--|:--|:--|:--|\n| **A 维持现状** | 余量 0，每次加行都要你单独一句原话 | 已裁的内容常要你再答一次；席位有压力去删别的规则或压缩措辞来凑行数 | 零 |\n| **B 下令写入的裁决即授权其实测行数（推荐）** | 一条裁决如果明确要求往受管文件写某段内容，PR 引这条裁决和实测增加的行数，同一个 PR 移动上限行，不再要第二句原话。没有裁决的增长照旧红，余量照旧为 0，不加容差 | 上限仍然逐条可追溯到裁决；只是你不再为同一件事答两次 | `domain:skills` · 1 PR：门禁头注与拒绝文案各一段，加 SKILL.md 守卫索引那一行改措辞（同行数，Tier S）· 不加门禁 · 无确切先例，最近的是 #23192（A2′ 执行） |\n| **C 加容差带** | 上限设为「落地行数 + N%」，带内增长不用裁决 | 带内会被慢慢填满，正是门禁要挡的那种累积；与 #23177 A2′ 刚裁的「不加容差带」理由相反，需要你明确推翻 | `domain:skills` · 1 PR：映射逻辑、自测、37 行全部重钉 |\n| **D 收窄覆盖面** | 把仓根的 `AGENTS.md` / `CLAUDE.md` 移出行数门禁，只管 `.claude/**` | `AGENTS.md` 是每个 agent 每次都读的文件，当初就是从它漏进来一段 39 行条款（#9792），收窄会重开这个口子 | 1 PR，删 2 行加头注 |\n| **E 退役行数门禁** | 删门禁，靠评审控制篇幅 | 回到 08-14 那时的状态：没上限的文件一班涨 31% | 1 PR，Tier H（`lint.yml` 接线、SKILL.md 守卫索引、`package.json`、删脚本）|\n\n### 业务含义直译\n\n- A：「每笔支出都要老板签两次字：一次批项目，一次批钱。」\n- B：「批了项目就等于批了这个项目实测要的钱；没批的支出照旧拦。」\n- C：「每个部门给一笔零花钱，不用报批。」\n- D/E：「取消这类文件的预算控制。」\n\n## 四轴(业务立场)\n\n- **① 项目长远合理性：** 这道门禁该留，它挡的是 AI 一段一段好心地把指令写长，这个风险有实测（一班 +31%）。真正过严的是双重报批：你已经下令要写的内容，还要为它的行数再批一次。B 只去掉这一点，门禁对没有裁决的增长照样响亮拒绝。两年后的样子：指令文件的长度只随裁决移动，每一次上限变动都能追溯到一条裁决。C/D/E 都在不同程度上拆掉这道防线。\n- **② 实际业务拉动：** 实测有拉动。30 天抬了 12 次，次次都是已裁内容；#15013、#15192 两张卡只为抬一次上限而立；今天 #23596 你批准之后，还被挡到你再回一句话。\n- **③ 防 AI 犯错：** 余量为 0 加「新增以删减付账」，会逼席位删掉别的规则或压缩已裁措辞来凑行数，规则就这样悄悄丢了含义。B 保留对没有裁决的增长的响亮拒绝，又去掉了这种压力；C 会在带内静默放行累积。\n- **④ 创业阶段不扩散：** B 不加门禁，只改一句规则。E 是唯一减少门禁数量的选项，但会丢掉一条实测有效的防线。按长远权重 ≥50%，仍推荐 B。\n\nos-decision-facets\n- ① 项目长远合理性：B 保留防累积的门禁，只去掉对已裁内容的二次报批；C/D/E 削弱或拆除防线。\n- ② 实际业务拉动：30 天抬上限 12 次，全部是已裁内容；#23596 批准后仍被挡，直到第二句原话。\n- ③ 防 AI 犯错：B 对没有裁决的增长照旧响亮拒绝，并去掉「删规则凑行数」的压力；C 的容差带会静默放行累积。\n- ④ 创业阶段不扩散：B 零新增门禁、只改一句规则；E 是唯一减少门禁的选项，但代价是丢掉实测有效的防线。\n\nPrior rulings read: line ratchet,skill-line-ratchet,headroom,行数 → 0 hits (`check-prior-rulings` at `16abea88`); #23177 ruling B items A2′ and B′ (`6139629628`), read in full; the ratchet header's 2026-08-12 and 2026-08-14 rulings; thread: none (new card); repo: objectstack-ai/objectstack\n\n## 推荐 B,回退 A,置信缺口\n\n- **推荐 B。** 只看①就选 B：它在不削弱防线的前提下，去掉了对已裁内容的二次报批。②③④ 不翻转。\n- **回退 A，** 并把这道门禁交给 #23177 B′ 审计统一排序，看拦截次数 × 耗时，决定留、挪还是退役。\n- **置信缺口：**\n  - 测不到这道门禁真正的收益：有多少 PR 因为它改成删内容抵行数，有多少新增因此被压短。git 历史里只看得到上限变动，看不到被它改写过的 PR。\n  - 也测不到有多少次席位为了凑行数而删减或压缩了已裁措辞。\n\n## 裁后执行段\n\n- **裁 B：** `domain:skills` 车道一张卡。\n  - 门禁头注加一段：裁决明确要求写入的内容，PR 引裁决 ID 与实测行数增量，即构成抬上限的授权。\n  - 拒绝文案同步。\n  - SKILL.md 守卫索引那一行改措辞，同行数，Tier S。\n  - 已经落地的上限不回改。\n- **裁 A：** 本卡关闭，#23177 B′ 审计时把本门禁列入排序。\n- **裁 C / D / E：** `domain:skills` 车道一张卡，按上表执行。裁 C 等于明确推翻 #23177 A2′ 的理由，执行卡需引这一条。\n\n## Related\n\n- PR #23596: the instance that raised the question.\n- #23534: its card, closed.\n- #15013 and #15192: per-instance raise decisions.\n- #9792 and #9965: the coverage findings that added `AGENTS.md` and `CLAUDE.md` to the ratchet.\n- #23177 and #23192: the sibling token ratchet's no-band ruling and its execution.\n\nDedupe: MCP `search_issues` on objectstack-ai/objectstack, closed included, query `line ratchet ceiling too strict headroom zero raise requires maintainer ruling skill line count`: 9 hits, all read. None decides the ratchet's strictness. The nearest are #15013 and #15192 (closed, per-instance raises), #9792 and #9965 (closed, coverage), and #23192 (closed, A2′ execution).\n"

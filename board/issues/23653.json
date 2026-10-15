@@ -1,0 +1,36 @@
+{
+  "number": 23653,
+  "kind": "issue",
+  "title": "dispatch-gates: a PR that removes a symbol the platform checklist anchors derives no checklist signal, so the red reaches main and only the next-day watchdog sees it (#23593's recurrence)",
+  "state": "closed",
+  "state_reason": "completed",
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "domain:devx",
+    "priority:p2",
+    "tooling"
+  ],
+  "assignees": [
+    "os-sales"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-15T10:23:25Z",
+  "updated_at": "2026-10-15T13:27:33Z",
+  "closed_at": "2026-10-15T13:26:03Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": null,
+  "comments": 7,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/23653",
+  "body": "Ruled: 6190922830 · letter C · 2026-10-15T11:25Z\n\nFiling gate ①, a `tooling` defect with named instances. A PR that removes or renames a symbol the platform checklist cites by `#symbol` gets no signal before merge. The checklist goes red on `main`, and only the daily watchdog sees it, a day later.\n\nFiled by `domain:devx` seat 1 (#6023) · `huangyiirene` · `session_01ESFcvW3staenyBCGq7kcDH`, from #23593's `os-dev-report` (`open_questions[0]`, on the card). Triage asked the fixing seat for exactly this proposal (`6186008553`: \"If the seat finds a cheap way for the renaming PR to see it before merge without a new CI gate … it proposes that on this card\"). ⛔ Not a claim. Lane and grade are triage's.\n\n**Reader who acts:** triage grades and routes it. The fix touches the frozen `scripts/pm/dispatch-gates.mjs` (`instrument-discipline.md:10`: 「`dispatch-gates.mjs` 冻结,只在它喂的 workflow 坏了时碰」), so the executing seat argues the freeze exception on the card, the way #23584 did. ⛔ It is not assumed here.\n\n## Measured (dev, at `b7774745e` / `origin/main` `c5dd7fce3`; the first line re-measured by the seat at `e611e2bda`)\n\n- `dispatch-gates --commands --repo objectstack-ai/objectstack packages/metadata-protocol/src/protocol.ts` names `check:platform-checklist` **0** times (48 commands). The same holds for `packages/services/service-storage/src/attachment-access-hooks.ts` (0 of 50).\n- The corpus anchors **344** distinct repo files by `#symbol` (743 symbol anchors over 21 swept documents). 164 of the last 300 first-parent commits on `main` touched at least one of them.\n- `dispatch-gates` reads watch hints as LITERAL arrays (`check:watch-hint-literal`), so a target set computed from the corpus contributes nothing today.\n- **The cost so far:**\n  - Three refactors in three days broke 8 citations: `ce3d0ad41`, `b389e4355` and `55382dc02`.\n  - The watchdog re-filed six times (#22594, #22758, #22924, #23139, #23376, #23593) before the maintainer's 「平台测试清单反复变红，肯定要修啊」.\n  - The fix itself landed as PR #23651.\n\n## The dev's proposal (option A of four; the others are on #23593)\n\n- Add a path-scoped mode to the EXISTING `check-platform-checklist.mjs`. It resolves only the anchors whose target file is in the change set.\n- Add one derivation input to `dispatch-gates`, so that it names that command when the change set touches an anchored target, with the target set derived from the corpus rather than hand-copied.\n- The result is a local pre-push signal. ⛔ No change to per-PR CI, which stays out by the standing decision. ⛔ No new gate script.\n- Option B, naming the full gate, is refused: it would hand every PR touching `protocol.ts` today's standing reds that it did not cause.\n\n## Done looks like\n\n`dispatch-gates --commands` on a diff that touches an anchored file names the scoped checklist command. A self-test pins it, and fails without the change. The scoped run reds only on anchors that the diff's own files lost.\n\nDedupe: MCP `search_issues` on this repo, closed included:\n- `platform checklist anchor symbol removed refactor dispatch-gates derive check:platform-checklist pre-merge`: 0 hits.\n- `checklist symbol anchors refactor rename not derived watchdog re-file`: 13 hits. All are the watchdog re-files (#22594 … #23593), #13788 (the anchor re-authoring) or unrelated. None proposes a pre-merge signal.\n"
+}

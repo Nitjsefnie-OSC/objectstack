@@ -2,8 +2,8 @@
   "number": 23579,
   "kind": "issue",
   "title": "[Decision] A card triaged to one lane carries an item that lands in another (#23513: an engine card with a skills/** item) — who splits it, and when",
-  "state": "open",
-  "state_reason": null,
+  "state": "closed",
+  "state_reason": "completed",
   "draft": null,
   "author": {
     "login": "objectstack-fleet[bot]",
@@ -13,19 +13,24 @@
   "labels": [
     "area:devpath",
     "domain:skills",
-    "pm:queue",
     "priority:p2",
     "tooling"
   ],
-  "assignees": [],
+  "assignees": [
+    "os-sales"
+  ],
   "milestone": null,
   "type": null,
   "created_at": "2026-10-15T01:30:55Z",
-  "updated_at": "2026-10-15T05:06:28Z",
-  "closed_at": null,
-  "closed_by": null,
+  "updated_at": "2026-10-15T11:37:29Z",
+  "closed_at": "2026-10-15T11:35:25Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
   "merged_at": null,
-  "comments": 3,
+  "comments": 8,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/23579",
   "body": "Ruled: 6184818831 · letter D · 2026-10-15T05:02Z\n\nFiled by `domain:engine` seat 2 (#20966) · `os-steve` · `session_01ADzJtzYTLUfgrRZHxkagkX`, on the maintainer's word in this seat's session, 2026-10-15, verbatim: 「这种情况该怎么处理立决策卡」. The maintainer's follow-up in the same discussion, verbatim: 「如果你自己把 skills 相关的开发拆分出来立卡呢」 (option D below).\n\n## One-line question\nA card triaged to one lane carries an item whose fix lands in another lane. The live case: #23513, `domain:engine`, item 1 edits `skills/**`. Who splits that item out, and when, so the off-lane work is neither done by the wrong lane nor left waiting?\n\n## Background\n- #23513 is a carried follow-up of C7b S3, triaged `domain:engine` p2. Its item 1 restates a rule in `skills/objectstack-data/rules/security.md`, which is governed and Tier H. Items 2 and 3 are engine texts.\n- Triage's grade (6172504723) and its unlock (6173812728) say \"Item 1 is a governed `skills/**` PR on its own\", but leave the whole card `domain:engine`.\n- When dispatching, this seat first planned to carry item 1 as well. The maintainer asked why it is not the skills lane.\n\n## Governing text\n- **SKILL.md 〈域车道〉:**\n  - \"锚定规则:每个包恰属一个域;`domain:*` = 修复落地包的域\"\n  - \"`domain:*` 只由分诊席产出,例外仅在飞卡衍生 sub-issue 承父卡域\"\n  - \"跨域例外路径:拆不动的跨域单 PR 由分诊席指定一个车道 PM 认领\"\n- **The domain table:** `domain:skills` = \"governed 面全量\", and `skills/**` is a governed surface.\n- **SKILL.md 状态模型 `pm:retriage`:** \"向分诊提问(改判、跨域 PR 指定车道、改路由、拆卡…)… 与现行 `pm:*` 并存;带本标签的 `pm:queue` 卡跳过派发\"\n- **`references/execution-duties.md`:**\n  - \"部分落地(PR 带 `Refs #N (item k)`)即释放… 余项需换道/拆分加 `pm:retriage`\"\n  - \"自在飞派发升级出的卡首行一句:本卡承哪一半、父卡留哪一半\"\n- **Precedents:**\n  - #13593: the triage ruling that a card whose fix lands on a governed surface is `domain:skills`.\n  - #23352 / #23445 (ruling B′): a skills-face hunk can be reviewed by an isolated review at the face's tier.\n- **Protocol statement:** options B and C use today's rules. Option D needs one rule line: a split-off off-lane item does NOT inherit the parent's domain. Today a derived sub-issue inherits it, which would label item 1 `domain:engine` again.\n\n## Premises (each with a re-check)\n- P1. #23513 is unclaimed `pm:queue`, `domain:engine`, item 1 in `skills/**`. Re-check: `curl -sS https://api.github.com/repos/objectstack-ai/objectstack/issues/23513 | jq '.labels[].name,.assignees'`.\n- P2. No rule names a mixed-lane queued card. Re-check: `git grep -n \"拆卡\\|跨域\" origin/main -- .claude/skills/pm-dispatch`.\n\n## Options\n| | What the seats do | What the customer sees | Workload |\n|:--|:--|:--|:--|\n| **A** | The executing seat carries the whole card: one dev, a separate PR per surface; the skills PR is reviewed at the face's tier (B′) and approved by a human (Tier H) | Fastest; governed skill text written and judged by a non-skills seat | 0 rule lines; the same PRs either way |\n| **B** | Split first: the seat sets `pm:retriage`; triage splits; the seat dispatches only after | Clean, but every lane item waits a triage round | 0 rule lines; one triage round per case |\n| **C** | Claim and ask in parallel: the seat claims its lane's items, adds `pm:retriage`, and triage splits the off-lane item while the dev works | No waiting; for a while the card holds a claim and a retriage request at once | 0 rule lines (allowed today) |\n| **D** | The seat splits it itself: it files a new card for the off-lane item (no domain label; first line \"carries item 1 of #N; #N keeps items 2, 3\"); triage stamps `domain:skills` at first touch; the original card keeps only its lane's items and closes with `Fixes` | No waiting, one card per lane at once, nothing forgotten | One `.claude/skills/pm-dispatch/references/execution-duties.md` line (Tier S, skills lane); no precedent PR |\n\n**Business meaning, one line each:**\n- A: one team does the work of two, fast but outside its role.\n- B: stop and ask the dispatcher to re-route before starting.\n- C: start your part and ask the dispatcher to re-route the rest.\n- D: start your part and hand the rest to the right team yourself, with the dispatcher only confirming the team.\n\n## Recommendation\n**D**, fallback **C**. Confidence gap: no measurement of how often triage files mixed-lane cards (#13593 counted four in one round).\n- **The end state in two years:** every card belongs to exactly one lane, and the lane that owns a surface writes and reviews its text. That is the shape GitHub CODEOWNERS and monorepo ownership tools take.\n- D reaches that state at the moment the mix is found, by the seat that holds the context, with no waiting. A leaves governed text with a non-owner. B costs a round each time. C reaches the same end state but later, and through a mixed-label interval.\n- **Self-check:** reading ① alone gives D; ②③④ do not flip it.\n\n<!-- os-decision-facets -->\nos-decision-facets\n- ① 项目长远合理性:D 让「一卡一车道」在发现混卡的那一刻成立，归属与审查都回到本车道，不扩大任何特例；A 让非本车道写受管文本，是特例增生。\n- ② 实际业务拉动:今天就撞上(#23513 的第 1 项);#13593 一轮曾有四张同类卡，说明分诊产出混卡并非孤例。\n- ③ 防 AI 犯错:D 的新卡首行写明「承哪一项、原卡留哪几项」，分诊首触补 `domain:skills`;拆错会被分诊当场看见(响亮)，而 A 下的错误只能靠复核兜底。\n- ④ 创业阶段不扩散:D 只加一行协议、不加门禁、不加标签;B 每次多一轮往返，C 多一段双标记状态。\nPrior rulings read: `拆卡 跨域 混卡 skills governed lane split` → 6 hits (#13593 ruling: a governed-surface fix is `domain:skills`; #23352/#23445 B′: an at-tier isolated review); ADR none; thread: none\n\n## After the ruling\n- **D:** this seat files item 1 of #23513 as its own card now, and dispatches items 2 and 3 as #23513 with `Fixes #23513`. The rule line lands as a skills-lane PR to `references/execution-duties.md`.\n- **C:** this seat claims #23513 for items 2 and 3 and sets `pm:retriage` for triage to split item 1.\n- **A or B:** as described in the table.\n- Until the ruling, this seat dispatches no part of #23513. The next p2 candidate goes first.\n\n## Related\n#23513 (the live case) · #13593 · #23352 / #23445 · the seat's round marker 6180782510.\n\n---\n_Generated by [Claude Code](https://claude.ai/code/session_01ADzJtzYTLUfgrRZHxkagkX)_\n\n"

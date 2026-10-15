@@ -1,0 +1,36 @@
+{
+  "number": 23660,
+  "kind": "pull_request",
+  "title": "pm-dispatch execution-duties: a split-off off-lane card does not inherit the parent's domain; ceiling 183 → 185 by ruling",
+  "state": "closed",
+  "state_reason": null,
+  "draft": false,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "documentation",
+    "size/s",
+    "skip-changeset"
+  ],
+  "assignees": [
+    "os-sales"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-15T11:06:47Z",
+  "updated_at": "2026-10-15T11:35:25Z",
+  "closed_at": "2026-10-15T11:35:23Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": "2026-10-15T11:35:23Z",
+  "comments": 2,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/pull/23660",
+  "body": "Fixes #23579\nClause-②: no\n\nLands item 3 of ruling record 6184818831 (letter D): the rule in `.claude/skills/pm-dispatch/references/execution-duties.md` that says who splits an off-lane item out of a queued card, how the split-off card is filed, and that it does not inherit the parent's domain. That file's `CEILINGS` row in `scripts/pm/check-skill-line-ratchet.mjs` moves by the measured delta, under ruling record 6184799323 (letter B, item 1).\n\n## The ruling and the raise authorization\n\n- **Ruling of record:** comment 6184818831 on #23579, letter D, the maintainer's 「同意」 (2026-10-15T05:02Z). Item 3, verbatim: \"One rule line in `references/execution-duties.md`: a split-off off-lane card does not inherit the parent's domain; the derived sub-issue rule (「在飞卡衍生 sub-issue 承父卡域」) keeps applying to sub-issues of the card's own lane.\" Items 1 and 2 of the same ruling (who splits, how the new card is filed, the parent keeps `Fixes` on its remaining items) are the content the rule carries.\n- **Raise authorization:** ruling record 6184799323 on #23606, letter B, item 1, the maintainer's 「同意」, verbatim: \"A ruling of record that orders text into a ratcheted file is the authorization to raise that file's ceiling by the measured lines the text needs: the raising PR quotes the ruling comment's id and the measured line delta in its body, and moves the `CEILINGS` row in the same PR by at most that delta. No second word from the maintainer is needed.\" Its item 5 names this card's line.\n- **Measured line delta: +2.** `execution-duties.md` is 183 lines on the base (`286eb9ef3`) and 185 on this head; the `CEILINGS` row moves 183 → 185 (headroom 0). The width pin stays 0 (no table row added).\n\n## What changed\n\nTwo rule lines, inserted directly after the derived-sub-issue pair in 〈候选与批次〉 (the lines beginning 「在飞卡衍生三分」 and 「该 sub-issue 带父卡域与优先级直接派发」). No other line in the file moved or was reworded.\n\n```text\n- 排队卡含他车道项 ⇒ 发现席自拆:新卡无 `domain:*`,首行 `carries item k of #N; #N keeps items …`。\n- 分诊首触定域可改判;拆出卡 ⛔ 不承父卡域(承域只及本车道 sub-issue),父卡余项照 `Fixes`。\n```\n\n- Line 1 carries ruling items 1 and 2's filing: a queued card carrying another lane's item ⇒ the seat that finds it splits it out itself, with no triage round; the new card has no `domain:*` and its first line is the literal `carries item k of #N; #N keeps items …`. (\"他车道项\" reads against SKILL.md's anchor rule: `domain:*` is the domain of the package the fix lands in.)\n- Line 2 carries the rest: triage stamps the domain at first touch and may regrade; the split-off card does not inherit the parent's domain, while the inheritance on the line above keeps applying to sub-issues of the card's own lane; the parent keeps `Fixes` on its remaining items.\n\n`scripts/pm/check-skill-line-ratchet.mjs`: only the `execution-duties.md` row of `CEILINGS` (183 → 185), plus a comment block above it in the map's own convention (what the text is, the ruling that ordered it, the maintainer's word verbatim and untranslated, the authorization, \"Landed count, headroom 0, same convention\"). The header docblock and the refusal text are untouched; they belong to #23606.\n\n**Why two lines, not one (measured):** this same ratchet caps every line of the file at 120 bytes. The tightest one-line spelling of the ruled content (the two lines joined into one bullet) is 235 bytes. The two lines land at 120 B and 119 B. No neighbour was re-wrapped and no rule was deleted to pay for them.\n\n## Verification (head `b609a9164`)\n\n- `node scripts/pm/check-skill-line-ratchet.mjs`: exit 0. Its verdict lines for the file:\n  - `✓ check-skill-line-ratchet: .claude/skills/pm-dispatch/references/execution-duties.md: widest table row is 0 bytes (pin 0; headroom 0).`\n  - `✓ check-skill-line-ratchet: .claude/skills/pm-dispatch/references/execution-duties.md is 185 lines (ceiling 185; headroom 0).`\n- Reverse reading, with the md edited and the row not yet moved: exit 1, `✗ check-skill-line-ratchet: .claude/skills/pm-dispatch/references/execution-duties.md is 185 lines; the ratchet ceiling is 183.` That was the only red line, so the two new lines pass the 120-byte rule, and the row move is what makes the gate green.\n- `node scripts/pm/check-skill-line-ratchet.mjs --self-test`: exit 0, `157 cases pass`. It accepts the plain ruled raise and pins no map-wide total.\n- `node scripts/pm/dispatch-gates.mjs --commands --repo objectstack-ai/objectstack` (no paths) at `b609a9164`: 36 commands, all run locally, every final exit code 0. `pnpm --filter @objectstack/lint run check:doc-formula-expressions` first exited 3 (PREREQUISITE NOT MET: `@objectstack/formula` and `@objectstack/lint` not built). It was re-run after the build it prescribes and exited 0. `pnpm check:pm-dispatch-gates`: fast tier, `1884 cases pass`. `--ran`: `36 derived famil(ies) accounted for — 36 run, 0 NOT-MEASURED`.\n- CI runs the full farm on this PR. Its check-runs are the evidence for every family CI owns.\n\n## Changeset\n\nNone. The diff publishes nothing (`.claude/**`, `scripts/pm/**`), so this PR gets the `skip-changeset` label.\n\n## Landing\n\nGoverned surface (`.claude/**`, Tier S). The PR stays in draft; the owning seat lands it on a contract-tier review PASS.\n\n## Acceptance notes\n\n- Observation, not filed (no carrier): the 认领 section's line 「余项需换道/拆分加 `pm:retriage`」 still routes the remainder of a partially landed card through triage. The new lines cover a different case: a queued card found mixed before dispatch. The two do not collide.\n- The dispatch asked for \"ONE rule line\". The 120-byte cap makes the ruled content two physical lines, so the row moves by the measured two, as the dispatch's own mechanism assumption (c) allowed.\n\n## 维护者速读(草稿)\n\n**改了什么**:在 PM 执行职责文件 `execution-duties.md` 里加两行规则。排队卡里如果夹着属于别的车道的工作项，由发现它的席位自己拆成新卡：新卡不打 `domain:*`,首行写明承接原卡哪一项、原卡留哪几项;分诊首次接触时定车道，可以改判;拆出的卡不继承原卡车道，原卡剩余项照常用 `Fixes` 关闭。行数门禁里这个文件的上限按实测从 183 抬到 185。\n\n**为什么改**:执行裁决 6184818831(D 案，维护者「同意」)第 3 项。这个文件已经顶到上限。按裁决 6184799323(B 案第 1 项，维护者「同意」),有裁决下令写入的文本，裁决本身就是抬上限的授权，抬幅等于实测行数 +2。\n\n**风险与代价(含回滚)**:只改给 agent 读的协议文本和一个行数上限，不碰产品代码，不发版。代价是每个席位会话多读两行(约 240 字节)。回滚 = revert 本 PR。\n\n**席位意见**:\n\n**你要做的**:无需操作。本 PR 属 Tier S,席位达档复核 PASS 后自行落地。\n\n---\n_Generated by [Claude Code](https://claude.ai/code/session_01GjUZrCo7Yi58T4vPXqx88e)_"
+}

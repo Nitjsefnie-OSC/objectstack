@@ -2,8 +2,8 @@
   "number": 23625,
   "kind": "issue",
   "title": "docs deploy is red: llms-full.txt reached 20 MB, Vercel's cap for an ISR page, so every production docs deploy now fails",
-  "state": "open",
-  "state_reason": null,
+  "state": "closed",
+  "state_reason": "completed",
   "draft": null,
   "author": {
     "login": "hotlong",
@@ -13,7 +13,6 @@
   "labels": [
     "bug",
     "domain:devx",
-    "pm:dispatched",
     "priority:p1"
   ],
   "assignees": [
@@ -22,11 +21,15 @@
   "milestone": null,
   "type": null,
   "created_at": "2026-10-15T06:24:14Z",
-  "updated_at": "2026-10-15T07:28:12Z",
-  "closed_at": null,
-  "closed_by": null,
+  "updated_at": "2026-10-15T10:39:50Z",
+  "closed_at": "2026-10-15T09:23:11Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
   "merged_at": null,
-  "comments": 2,
+  "comments": 8,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/23625",
   "body": "## What is red\n\n`docs-deploy.yml` failed on its 2026-10-15 01:07 UTC scheduled run (https://github.com/objectstack-ai/objectstack/actions/runs/38663939159). Every earlier scheduled run since the workflow landed (#22925) was green. The build passed; the upload of the prebuilt output then failed at Vercel's deploy step:\n\n```\nError: ISR page llms-full.txt is 20.00 MB, over the 20 MB limit, and will fail at runtime (FALLBACK_BODY_TOO_LARGE). Reduce its size and redeploy, or set VERCEL_BYPASS_FALLBACK_OVERSIZED_ERROR=1 to deploy anyway.\n```\n\n`apps/docs/app/llms-full.txt/route.ts` concatenates `getLLMText` over every page in `source.getPages()` and declares `revalidate = false`. Vercel stores it as a prerendered ISR fallback, and a fallback body is capped at 20 MB. The docs content has grown past that cap.\n\n## Impact\n\n- Production docs stay on the last successful deploy (2026-10-14 18:51 UTC). Every run, 4 a day, will fail at the same step until this is fixed, so no docs change reaches objectstack.ai in the meantime.\n- The failure is loud by design: the workflow goes red instead of skipping. Nothing silently stops publishing.\n\n## Options (pick one)\n\n1. **Serve it as a static asset rather than an ISR page**: write `llms-full.txt` into the build output at build time (for example `public/` or a build-step script), so it is not subject to the 20 MB ISR fallback cap.\n2. **Shrink it**: drop sections an LLM reader does not need, or split it into per-section files linked from `llms.txt`.\n3. **Bypass** with `VERCEL_BYPASS_FALLBACK_OVERSIZED_ERROR=1`. Not recommended: Vercel says the page \"will fail at runtime\".\n\nOption 1 or 2 is the real fix. Content keeps growing, so a fix that only gets the file just under 20 MB will break again.\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n"

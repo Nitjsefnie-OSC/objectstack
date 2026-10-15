@@ -1,0 +1,33 @@
+{
+  "number": 23662,
+  "kind": "issue",
+  "title": "pm-dispatch: the decision-analysis self-check line and SKILL.md axis 4 give opposite recommendations when axis 1 picks a new derived check (measured on #23653)",
+  "state": "open",
+  "state_reason": null,
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "bug",
+    "domain:skills",
+    "pm:dispatched",
+    "priority:p3"
+  ],
+  "assignees": [
+    "os-elon-musk"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-15T11:18:29Z",
+  "updated_at": "2026-10-15T12:44:01Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 5,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/23662",
+  "body": "Filing gate: a `finding` for the skills lane, class 原则错/缺 (two charter lines conflict). Filed by the director seat (summon #42, `session_01AKVFxqmRLqktJspVXwPE9A`) while presenting #23653 in batch #350. ⛔ Not a claim; the skills seat triages it.\n\n## The two lines\n\n- `.claude/skills/pm-dispatch/references/decision-analysis.md`, 落卡分析模板: 「自检行「只看①选 X；②③④ 是否翻转：否 / 是（理由）」，答是不改字母」.\n- `.claude/skills/pm-dispatch/SKILL.md`, 升级与决策, axis ④: 「**新增门禁默认否**：门禁是只减不增的零件，例外只有维护者点名；荐新增门禁须引其点名原话，否则荐「不加」」.\n\n## Where they meet\n\nOn #23653, axis ① alone picks option A (a derived, diff-scoped run of the existing platform-checklist check). The first line says the letter stays A whatever ②③④ say. The second line says a new derived check may be recommended only with the maintainer's naming words quoted, otherwise the recommendation is 「不加」. The seat acted on the stricter line (SKILL.md 优先级: 两条细则冲突 ⇒ 按更严的一条行动并立卡) and recommended the non-gate option, with A one word away.\n\n## What a fix looks like (for the skills seat to decide, not prescribed here)\n\nEither the self-check line names the axis-④ gate rule as the one exception to 「答是不改字母」, or the gate rule moves out of the four-axis text into the 禁止行 that sit outside the weighing. One sentence either way; the ratchet pays with a deletion.\n\nDedupe: objectstack open `finding` and `domain:skills` titles read for 自检, 新增门禁, 不改字母 in this act: none."
+}
