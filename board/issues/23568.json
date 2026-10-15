@@ -1,0 +1,39 @@
+{
+  "number": 23568,
+  "kind": "pull_request",
+  "title": "feat(spec): the page form offers the list page's own empty state, interfaceConfig.emptyState",
+  "state": "closed",
+  "state_reason": null,
+  "draft": false,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "documentation",
+    "protocol:system",
+    "protocol:ui",
+    "size/s",
+    "tests",
+    "tooling"
+  ],
+  "assignees": [
+    "baozhoutao"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-15T00:50:08Z",
+  "updated_at": "2026-10-15T02:10:25Z",
+  "closed_at": "2026-10-15T02:10:24Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": "2026-10-15T02:10:24Z",
+  "comments": 2,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/pull/23568",
+  "body": "Fixes #23395\nClause-②: no\n\nThis PR covers item 4 of the card, which is all that is left: the triage unlock scan (comment 6164900480) records that PR #23424 carried items 1, 2, 3 and 5. The page metadata form now offers `interfaceConfig.emptyState`. The form/zod reconciliation ledger row that excused leaving it out is deleted, because the reason it gave stopped being true at the current console pin.\n\n## Premise, measured at the pin\n\n`.objectui-sha` on `origin/main` is `b9814b334d8a`. At that objectui commit, `packages/app-shell/src/views/InterfaceListPage.tsx:509` reads the page's own empty state ahead of the source view's: `emptyState: cfg.emptyState ?? view.emptyState`, and `:292` defines `cfg` as `page?.interfaceConfig || {}`. The comment above it (`:503-508`) says the page's value replaces the source view's as a whole, on every visualization. The deleted row said \"no console list page draws it yet\", so it was false from this pin.\n\n## What changed\n\n- `packages/spec/src/ui/page.form.ts`: the Interface section's `interfaceConfig` composite gains `{ field: 'emptyState', type: 'composite', disclosure: 'popover', ... }`, right after `addRecord`. It uses the same popover-composite shape as its neighbours `appearance`, `userActions` and `addRecord`. The sub-rows come from the schema (`EmptyStateSchema`: `title`, `message`, `icon`, `link`), so nothing is hand-listed. The list-view form does not offer `emptyState` either (`view` is top-level-deferred in the ledger), so there was no existing control to copy, and this one follows the form's own composite convention.\n- `packages/spec/src/system/metadata-form-zod-reconciliation.test.ts`: the `page` / `interfaceConfig` / `emptyState` omit row is deleted.\n- `packages/platform-objects/src/apps/translations/*.metadata-forms.generated.ts`: regenerated with `node scripts/check-i18n-bundles.mjs --filter=platform-objects --write`. The new label and help text are translated in zh-CN, ja-JP and es-ES. A second `--write` run then dropped the six provenance-table entries the first run had added, which shows the leaves are recorded as authored and not as extractor fills. Without these translations, the page Interface panel's echo-decision ledger (`page-interface-panel-echo-decisions.test.ts`, \"no leaf on this panel reads its `en` source unless the ledger decided it is an echo\") would fail.\n- `packages/platform-objects/src/apps/translations/object-lifecycle-panel-echo-decisions.test.ts`: the whole-catalog positive control (authored labels per locale) goes from 668 to 669, one new row label, with a comment line in the file's existing style. This pin counts authored labels. The new number is the substance of the change, and the pin is not loosened.\n- `.changeset/23395-page-form-empty-state.md`: `patch` for `@objectstack/spec` and `@objectstack/platform-objects`.\n\n**Landing spot vs the claim's file surface:** the claim names `page.form.ts`, the reconciliation test, \"the generated form artifacts and baselines the gates name\", and the changeset. The four translation bundles are those generated form artifacts, and they live in `@objectstack/platform-objects`. The 668 → 669 count pin in that package is the one file outside the named surface: it is a count of the same bundles, and a new form row moves it.\n\nNo schema changes. `InterfacePageConfigSchema.emptyState` already parsed, so no accept or refuse result changes. `check:generated` reports all 14 spec artifacts up to date after the change.\n\n## Proof the reconciliation test passes because the form offers the key\n\nAblation on the committed fix, done with `node scripts/ablation-replace.mjs` (the anchor `{ field: 'emptyState', type: 'composite'` hit once, went from 1 to 0, and the blob went from `1b33812358a5` to `ac3e49c316f8`):\n\n```\nFAIL page: every hand-written nested list matches its sub-schema\nAssertionError: page.interfaceConfig: accepted by the Zod but unauthorable in the form — offer it, or add a ledger entry: expected [ 'emptyState' ] to deeply equal []\nTests  1 failed | 75 passed (76)\n```\n\nRestored: blob after restore equals the blob at HEAD (`1b33812358a5`), and `git diff HEAD` is empty. With the fix in place: `Tests 76 passed (76)`.\n\n## Tests (head `524446de94`; the platform-objects runs come after the merge of `origin/main`)\n\n- `@objectstack/spec` `test` (local project): `Test Files 678 passed (678)`, `Tests 20728 passed | 1 todo`.\n- `@objectstack/spec` `test:repo`: `Test Files 61 passed (61)`, `Tests 1033 passed (1033)`.\n- `@objectstack/platform-objects` vitest (whole package): `Test Files 70 passed (70)`, `Tests 1091 passed (1091)`.\n- `typecheck` for `@objectstack/platform-objects` and `@objectstack/spec`: exit 0.\n- `node scripts/pm/dispatch-gates.mjs --commands --repo objectstack-ai/objectstack` derived 86 families. All 86 were run with exit codes recorded and reconciled with `--ran`: 85 exit 0 and 1 NOT MEASURED. The NOT MEASURED one is `pnpm check:dual-build-cjs-loads`, which exited 3 (`PREREQUISITE NOT MET`) because nine packages this diff does not touch have no `dist/`. It is left to CI. The derivation was taken again on `524446de94` and gives the same 86 families. On that head, `check:nul-bytes`, `check:cross-package-test-inputs`, `check:test-source-alias`, `check:issue-citations`, `check:i18n` and `check:type-check-debt` were re-run and each exited 0.\n\n## Acceptance notes\n\n- No new labels, and no `skip-changeset` (the diff publishes).\n\n---\n_Generated by [Claude Code](https://claude.ai/code/session_01D6F9axfoPzR7t8G1J7Ytzz)_\n"
+}

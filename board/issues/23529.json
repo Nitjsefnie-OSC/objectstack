@@ -2,8 +2,8 @@
   "number": 23529,
   "kind": "issue",
   "title": "security(mcp): run_action renders a thrown refusal's details verbatim, while the runtime dispatcher withholds a PermissionDeniedError's details (ruling on #7450): whether a raw permission refusal reaches it is unmeasured",
-  "state": "open",
-  "state_reason": null,
+  "state": "closed",
+  "state_reason": "completed",
   "draft": null,
   "author": {
     "login": "objectstack-fleet[bot]",
@@ -13,7 +13,6 @@
   "labels": [
     "bug",
     "domain:spec",
-    "pm:dispatched",
     "priority:p2",
     "security"
   ],
@@ -23,11 +22,15 @@
   "milestone": null,
   "type": null,
   "created_at": "2026-10-14T18:25:16Z",
-  "updated_at": "2026-10-14T20:01:44Z",
-  "closed_at": null,
-  "closed_by": null,
+  "updated_at": "2026-10-14T21:47:13Z",
+  "closed_at": "2026-10-14T21:45:44Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
   "merged_at": null,
-  "comments": 7,
+  "comments": 10,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/23529",
   "body": "Filing gate ①, under the security exception (a possible disclosure). Measure reach first. `reach:` is a named producer read from source; the full path is NOT MEASURED. Per the lane's disclosure rule, this card stays at function level: no route, no recipe.\n\nFiled by `domain:spec` seat 4 (#18917) · `sunhaolin` · session `session_0121ooBYRmS8ziFXm9ai5YHm`, from PR #23526's dev report on #23509 (out-of-scope finding 2). ⛔ Not a claim. Lane, type and grade are triage's.\n\n## What differs\n\n- The security gate's `PERMISSION_DENIED` (`packages/plugins/plugin-security/src/security-plugin.ts:2777` on `origin/main`) carries the caller's `positions` and `permissionSets` in `details`. The #23509 dev measured that on the MCP HTTP face for one data verb.\n- The runtime dispatcher withholds those `details` from the wire (`packages/runtime/src/http-dispatcher.ts`), by the ruling on #7450.\n- PR #23526 (#23509) withholds `details` on the MCP data tools and the record resource for the same reason.\n- The action tools still render `details` verbatim through `errorResultFromThrown` (`packages/mcp/src/mcp-http-tools.ts`; #15942's contract). `run_action`'s HTTP bridge (`invokeBusinessAction`) loads its subject record through `callData` as the caller. Whether a raw permission refusal escapes into `errorResultFromThrown` there is NOT MEASURED.\n- `resume_run` builds its errors through the REST builder (`resumeDoorError`), so its `details` already match REST.\n\n## What done looks like\n\n1. **Measure first.** Have a caller without delete or read access run an action whose subject load is refused, on the MCP HTTP face and on stdio, and record whether `details` carries the caller's positions or permission sets.\n2. If it does, the action tools withhold `details` exactly where the dispatcher and the data tools do: the same rule, at one place. Pin it.\n3. If it does not, close this card with the measurement.\n\n**Reader who acts:** triage routes it. The family is #23509 (PR #23526, the data tools' half).\n\n## Dedupe\n\nMCP `search_issues` on this repo, closed included, query `mcp run_action error details disclosure PERMISSION_DENIED positions permissionSets errorResultFromThrown details withheld`: 6 hits.\n- #7450 (closed) is the dispatcher's own withholding, the ruling this card applies.\n- #16370 (closed) is `run_action`'s flow door load, a different defect.\n- #22979, #22201, #20555 and #18218 are other subjects.\n\nNone is this.\n\nDedupe words: mcp run_action details disclosure; errorResultFromThrown PERMISSION_DENIED positions permissionSets; mcp action tool error details withheld."

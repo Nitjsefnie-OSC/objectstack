@@ -1,0 +1,38 @@
+{
+  "number": 23549,
+  "kind": "issue",
+  "title": "security(lint/plugin-security): a permission set's field rule keyed with an empty object part ('.FIELD') is accepted at save, passes both FLS lint rules, and never enforces",
+  "state": "closed",
+  "state_reason": "completed",
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "bug",
+    "domain:spec",
+    "priority:p1",
+    "security",
+    "target:v18"
+  ],
+  "assignees": [
+    "huangyiirene"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-14T22:26:20Z",
+  "updated_at": "2026-10-15T02:10:32Z",
+  "closed_at": "2026-10-15T02:09:10Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": null,
+  "comments": 5,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/23549",
+  "body": "Filing gate ①, finding class (c), under the security exception (a declared field mask that never enforces). Measure reach first; it is measured below. `reach:` `protocol.saveMetaItem` on a real kernel (ObjectKernel + ObjectQLPlugin, memory driver) at `origin/main` `7b64a3d73d`, the method behind the metadata save route. The HTTP door was not driven.\n\nFiled by `domain:spec` seat 4 (#18917) · `sunhaolin` · session `session_0121ooBYRmS8ziFXm9ai5YHm`, from #23539's dev report `6179812710` (out-of-scope finding 1). ⛔ Not a claim. Lane, type and grade are triage's.\n\n## What happens (measured, then read)\n\n- **Measured:** a permission set whose `fields` holds the key `'.full_name'` (an empty object part) saves with `success: true`.\n- **Measured, for contrast:** the save door refuses a bare key (422 `security-fls-unqualified-key`) and a deeper key on an in-stack object (422 `security-fls-unknown-field`).\n- **Read, `packages/lint/src/validate-security-posture.ts`:** the empty-object-part key passes both rules.\n  - The unqualified-key rule skips every key that contains a `.` (about `:759`).\n  - The unknown-field rule splits at the first `.`, reads the empty prefix as \"not this stack's object\", and skips it (`skip 1`, about `:821`). That skip is right for `no_such_object.x`, an object another package may declare. No package can declare an empty name, because `ObjectSchema.name` is `/^[a-z_][a-z0-9_]*$/` (`object.zod.ts:2042`).\n- **Read, `packages/plugins/plugin-security/src/permission-evaluator.ts`:** `getFieldPermissions` keeps only keys that start with `OBJECT.` (about `:439`). A key with an empty object part matches no object, so the declared mask is never applied in any deployment.\n\nThis is the declared-≠-enforced class that the unqualified-key rule's own comment calls the worst one (ADR-0049): an author believes a field is hidden or read-only, and it is not.\n\n## What done looks like\n\n1. A `fields` key whose object part is empty is refused at authoring with a prescription naming the `OBJECT.FIELD` form. It is refused by the lint the save door runs, so `os validate` and the save door answer alike.\n2. `no_such_object.x` (another package's object) keeps its current answer.\n3. Pin it at the save door on a real kernel, with the bare-key and deeper-key controls unchanged.\n\n**Reader who acts:** triage routes it. The fix lands in `packages/lint/src/validate-security-posture.ts`, which is `domain:spec` per the lane table (`packages/lint`). The family is #23539, whose dev measured the split rule (the text before the first `.`, as `getFieldPermissions` and `rewriteFieldRuleKeys` read it).\n\n## Dedupe\n\nMCP `search_issues` on objectstack-ai/objectstack, closed included, query `permission set fields key empty object part leading dot accepted FLS never enforced security-fls-unknown-field skip`: 13 hits, all closed. None is this.\n- #21884, #21063, #20932 and #9481 are other FLS defects (cross-object action params, capability-gated fields, cross-field comparands, read-side pins).\n- #21158, #21079, #21061, #20555 and #20027 are permission-set resolution defects.\n- #21787, #9329, #7900 and #3661 are other subjects.\n\nDedupe words: FLS key empty object part; fields key leading dot accepted; security-fls-unknown-field skip empty object."
+}
