@@ -1,0 +1,34 @@
+{
+  "number": 23788,
+  "kind": "issue",
+  "title": "release(next): the Version Packages PR #23481 is red — npm 10 crashes with `edgesOut` on two lockfile-less installs (validate-deps vendor-export resolve, scaffold-e2e); fix on main, never on the generated branch",
+  "state": "open",
+  "state_reason": null,
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "bug",
+    "domain:devx",
+    "pm:dispatched",
+    "priority:p1",
+    "tooling"
+  ],
+  "assignees": [
+    "os-sales"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-16T02:17:09Z",
+  "updated_at": "2026-10-16T02:18:48Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 1,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/23788",
+  "body": "Filing gate ③: a direct task from the maintainer. In the `domain:devx` seat 2 session (`session_016PVjjuVPte5XEJvaQx1E4t`, #20163), 2026-10-16, verbatim: 「23481 ci 报错，你负责排查并优先派发处理」.\n\n**Filed by** the `domain:devx` seat 2 · `os-sales` · `session_016PVjjuVPte5XEJvaQx1E4t`. Under the maintainer's order this seat also claims and dispatches the card.\n- Labels are set at filing under the maintainer's relaxed acceptance rule (#23733): the lane by the domain table (`.github/workflows/**`, `scripts/**` → `domain:devx`), and `priority:p1` by the #23135 precedent (a red Version Packages PR blocks the release).\n- Triage spot-checks the labels after the fact.\n\n**Reader who acts:** the `domain:devx` seat 2, through its dispatched dev. If the repair needs the scaffold template (`packages/create-objectstack/**`, the `domain:cli` surface), the claim declares it.\n\n## What is red (measured)\n\nPR #23481 (`chore: version packages (next)`, head `958e5b07b718`), attempt 2 of the 01:24Z runs (re-run by `os-zhuang` at 01:39Z):\n\n1. **`Validate Package Dependencies`** (`validate-deps.yml`, run 38834967394, job 116765985763).\n   - Step `pnpm check:vendor-export-contract-resolve` → `scripts/check-vendor-export-contract.mjs --resolve`.\n   - It runs `npm install better-auth@1.7.3 --no-package-lock --no-audit --no-fund` in a fresh `mkdtemp` under `os.tmpdir()`, with no lockfile and no overrides.\n   - Result: `npm error Cannot read properties of null (reading 'edgesOut')`, then `PREREQUISITE NOT MET`, exit 3.\n2. **`Scaffold with repo dist`** (`scaffold-e2e.yml`, run 38834967305, job 116765980131).\n   - The blank template is scaffolded to `$RUNNER_TEMP/e2e-app`. Its `@objectstack/*` ranges are stamped `^18.0.0-next.2`, which is unpublished (`ETARGET`).\n   - The step falls back to `latest` (17.7.0) and runs `npm install --no-fund --no-audit` again.\n   - Result: the same `edgesOut` crash, exit 1.\n\n## What did not change (measured)\n\n- **The tool versions.** Node `v22.23.3` and npm `10.9.9` (setup-node's environment details) are identical in the failing jobs and in the last successes:\n  - `validate-deps` run 38706841786, 2026-10-15T08:36Z: `better-auth@1.7.3` resolved, PASS;\n  - `scaffold-e2e` run 38544404820, 2026-10-14T09:45Z.\n  - Only the runner image moved, from `20261004.327.1` to `20261012.334.1`.\n- **The inputs.** The release branch changes only the `version` fields of 80 `package.json` files. `scripts/check-vendor-export-contract.mjs`, both workflows, the blank template, `.npmrc`, `pnpm-workspace.yaml` and `pnpm-lock.yaml` are byte-identical to `main` and to the failing merge base.\n- **Where it shows.** No other branch has run either step since 2026-10-15T08:36Z. `main`'s next `schedule` run of `validate-deps.yml` (~03:03Z) is the first reading off this PR.\n\n## Working hypothesis (to measure, not to assume)\n\nBoth installs resolve the live registry with no lockfile. The same command passed at 2026-10-15T08:36Z and crashed at 2026-10-16T01:40Z on the same npm.\n- The likely cause is an upstream publish in that window that brings back the npm-10 arborist `#loadPeerSet` crash.\n- #22912 (closed) measured that crash class on npm 10.9.4 and 10.9.9: vite's optional `@vitejs/devtools*` peers, with `@vitejs/devtools-vitest` peering `vitest@*`. npm 11 installs.\n- If the hypothesis holds, it is not only CI: a user on Node 22 (npm 10) scaffolding a project could hit it too. `npx create-objectstack` falls back to npm when pnpm is absent.\n\n## Executable criterion\n\n- On `main`, `pnpm check:vendor-export-contract-resolve` passes on npm 10.9.9. The scaffold-e2e \"Install generated project (registry deps)\" step passes on npm 10.9.9, both with the `^18.0.0-next.*` range and with its `latest` fallback.\n- After the Version Packages PR regenerates from that `main`, its `Validate Package Dependencies` and `Scaffold with repo dist` read green. A re-run of a bot-triggered run is a maintainer's act.\n- ⛔ Nothing is pushed to `changeset-release/main`. ⛔ No shipped `.npmrc` `legacy-peer-deps` (#22912's direction: it changes peer resolution for every npm user).\n\n## Dedupe\n\nMCP `search_issues` on this repo, closed included, at this filing:\n- `npm install edgesOut Cannot read properties of null scaffold vendor-export-contract`: 1 hit, #22912 (closed). It is the same crash class on the CLI's `SCAFFOLD_VITEST_RANGE`, fixed by `~4.0.0` in PR #22920. It is not this card: different installs, and a new trigger after its fix.\n- `version packages release PR CI red Scaffold with repo dist Validate Package Dependencies`: 30 hits, top 10 read. The release-PR precedent is #23135 (closed; \"fix on main, never on the generated branch\"). The OSV-red family (#22013, #21945, #21055, #20561, #22148) is a different cause.\n- Open PRs read at filing: none touches this. #23777 is pnpm flag spelling.\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_"
+}

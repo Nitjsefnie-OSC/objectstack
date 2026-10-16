@@ -1,0 +1,37 @@
+{
+  "number": 23724,
+  "kind": "pull_request",
+  "title": "fix(metadata-protocol): an orphan adoption rebinds a draft view in storage only, never registering it live",
+  "state": "closed",
+  "state_reason": null,
+  "draft": false,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "documentation",
+    "size/m",
+    "tests",
+    "tooling"
+  ],
+  "assignees": [
+    "sunhaolin"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-15T20:58:06Z",
+  "updated_at": "2026-10-15T21:54:14Z",
+  "closed_at": "2026-10-15T21:54:13Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": "2026-10-15T21:54:12Z",
+  "comments": 2,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/pull/23724",
+  "body": "Fixes #23690\n\nClause-②: no\n\nDev session `session_01SVE8bSorrxjRHx7edWAdKm`, dispatched by `domain:engine` seat 1 (`session_01GP3comALHRcRBixS2TEnLF`), claim 6200629773.\n\n## What this does\n\n`reassignOrphanedMetadata` (the method `POST /api/v1/packages/:id/adopt-orphans` calls, ADR-0070 D5) sends each rebound view row through the registry write-through (#23198). The view limb admitted a row by its type alone, so adopting a package-less **draft** view registered its draft body as live, stamped `_packageId` = the target package, until the next boot (which registers active rows only, `loadMetaFromDb`). `applyRegistryWriteThrough`'s own header says drafts \"are a staging buffer and must never leak into the runtime\" (ADR-0048).\n\n- **The fix, at the producer:** one `row.state !== 'active'` gate now runs before both limbs (view and object). It replaces the object limb's own copy of the same check (PR #23688), so the object limb's behaviour is byte-for-byte the same (its pins green, below). An adopted draft view is rebound in storage only.\n- **Unchanged:** which rows are rebound, each row's stored `state`, `reassignedCount` / `reassigned`, and an adopted ACTIVE view going live at its new binding.\n- **A second face of the same defect, now pinned:** a draft adopted beside an active row of the same view name *replaced* the published body the registry served (measured red on `main`, below).\n- Accept sets: none moves. No door's accepted input changes; only what the registry serves for an unpublished view, which is the implementation brought back to its declared contract.\n- ADRs: `docs/adr/` grepped for the surface (ADR-0070 D5 rules on the storage rebind only; ADR-0048 on draft / active). No ADR is reversed.\n\n## Verification (final head `f60a676d6`, a merge commit of `origin/main` `9e0945cf4` that brought in PR #23706)\n\n- **Negative control on `main` (`4c21e57169`), before the fix**, the new pins on a real `ObjectKernel` + `ObjectQLPlugin`: `Tests 2 failed | 1 passed (3)`. The draft case: `registerItem` was called with `['view', {…}, 'name']`. The draft-beside-active case: served `{ label: 'Draft gadgets', … }` where `'Published gadgets'` was expected. The CONTROL (active view adopted) passed.\n- **Pins after the fix** (`packages/objectql/src/protocol-adopt-orphans-draft-view-registry.test.ts`, beside the object-registry pin):\n  - an adopted DRAFT view: the registry serves nothing before and after the adoption, no `registerItem('view', …)` call, the stored row is Q's draft, `reassignedCount: 1`, and a boot afterwards serves nothing;\n  - a draft adopted beside an active row of the same view: `reassignedCount: 2`, the active body is served at Q, and a boot agrees;\n  - CONTROL: an adopted active view is served at Q at once, and a boot agrees.\n  - With the object-registry pin and `protocol-package-lifecycle.test.ts`: `Test Files 3 passed (3)`, `Tests 19 passed (19)` (before and after the main merge).\n- **Ablation** (`scripts/ablation-replace.mjs`, the gate narrowed to objects only, `metadata-protocol` rebuilt, `ablation-dist-preflight` marker present in `dist/index.cjs` and `dist/index.js`): `Tests 2 failed | 7 passed (9)`, the two draft-view pins red; the CONTROL and all five object pins green. Restored: blob == HEAD `07e2e03b650b`, `git diff HEAD` empty; rebuilt, `--absent` clean across 24 built files, pins 3/3.\n- **HTTP door, walked once** on `pnpm dev:crm -- --fresh -p 38690` (better-sqlite3): package `com.qa.q` created (`201`), a package-less draft view and a package-less active view seeded into `sys_metadata` (no door writes package-less rows today). Before: `GET /api/v1/meta/view/qa_draft_grid` `404`; the active one `200`. `POST /api/v1/packages/com.qa.q/adopt-orphans` `200`, `reassignedCount: 2`. After: draft `404 RESOURCE_NOT_FOUND`; active `200`, `label: 'Published gadgets'`, `_packageId: 'com.qa.q'`; both stored rows bound to `com.qa.q`, states unchanged.\n  - **HTTP negative control** (the same ablation, one-off, second server on port 38691): the same sequence answered `GET /api/v1/meta/view/qa_draft_grid` `200` with `\"label\":\"Draft gadgets\",\"_packageId\":\"com.qa.q\"` after the adoption. So the leak was reachable at the public door, and the fix closes it there.\n- **Suites:** `@objectstack/metadata-protocol` full suite `Test Files 236 passed | 3 skipped (239)`, `Tests 20566 passed | 19 skipped` on `f60a676d6`. PR #23706's REST pin `meta-draft-head-package-inheritance.test.ts` re-run after the merge: 21/21.\n- **Typecheck:** `@objectstack/metadata-protocol` and `@objectstack/objectql` exit 0 (`objectql`'s includes `check:test-typecheck`: OK, debt held).\n- **Derived gates** on `f60a676d6`: `node scripts/pm/dispatch-gates.mjs --commands --repo objectstack-ai/objectstack` (3 paths, 67 commands), all run; reconciled with `--ran`: `67 derived, 67 run, 0 NOT-MEASURED, 0 UNRUN` (a derived zero, every line carrying its exit code). Two families first refused on the shallow clone (`check-engine-split-ratio.mjs --days 90` exit 2, `check-plugin-teardown-shape.mjs --self-test` exit 3); after `git fetch --shallow-since=2026-07-10` both re-ran at exit 0.\n\n## Neighbours\n\nOpen PRs touching `packages/metadata-protocol/src/protocol.ts`: PR #23704 (#23514, the D9.9 / `saveMetaItem` region) only; `git merge-tree` of this head with its branch is clean. PR #23418 touches a `metadata-protocol` test file, not `protocol.ts`. PR #23706 (#23657) landed on `main` while this was in flight and is merged in with a merge commit (no conflict); its pins above.\n\n## Acceptance notes\n\n- #23646 and PR #23688 are referenced as context only.\n- None found outside the card's scope.\n\n---\n_Generated by [Claude Code](https://claude.ai/code/session_01SVE8bSorrxjRHx7edWAdKm)_\n"
+}

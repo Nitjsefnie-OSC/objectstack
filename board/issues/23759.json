@@ -1,0 +1,38 @@
+{
+  "number": 23759,
+  "kind": "pull_request",
+  "title": "feat(spec): referenceDeletedWhen beside referenceVia marks a pointer's target as platform-deleted",
+  "state": "closed",
+  "state_reason": null,
+  "draft": false,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "documentation",
+    "protocol:data",
+    "size/l",
+    "tests",
+    "tooling"
+  ],
+  "assignees": [
+    "os-elon-musk"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-16T00:30:17Z",
+  "updated_at": "2026-10-16T01:46:02Z",
+  "closed_at": "2026-10-16T01:46:00Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": "2026-10-16T01:46:00Z",
+  "comments": 3,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/pull/23759",
+  "body": "Fixes #23735\n\nClause-②: yes\n\nThe spec half of objectstack-ai/objectui#12489 ruling `6203737086`, letter A (maintainer 「A (推荐)」): `FieldSchema` gains `referenceDeletedWhen: { field, value }` beside `referenceVia`. On rows where the sibling `select` field `field` holds the option `value`, the record the pointer names was deleted by the platform's own assertion; a renderer draws the tombstone from that option's own label, reads nothing and links nothing.\n\n## What changed\n\n- **`packages/spec/src/data/field.zod.ts`**: the key, directly after `referenceVia`, as a closed `strictObject` (`field`: snake_case; `value`: string). Refusal 1 in the `FieldSchema` superRefine beside the `referenceVia` checks: the key on a field that declares no `referenceVia`. The message names the field and the option.\n- **`packages/spec/src/data/object.zod.ts`**: `refuseDishonestReferenceDeletedWhen`, in the `ObjectSchema` superRefine beside `refuseNonPictureImageField` (the parse-time sibling door), not in `create()` only. One located `custom` issue at `fields.FIELD.referenceDeletedWhen.field` or `.value` when `field` is the declaring field itself, is undeclared, is not a `select`, is a `multiple: true` select, or declares no inline `options` (a `picklist`-backed select); or when `value` is not one of the sibling's option values (the declared set is listed). Every door refuses it: `ObjectSchema.create()`, `defineStack`, raw `.parse()` and the save door (`getMetadataTypeSchema('object')`).\n- **`packages/spec/src/data/field.form.ts`**: a `composite` form row beside `referenceVia` (the `currencyConfig` face), gated `data.type == 'text'`.\n- **`packages/spec/liveness/field.json`**: a `planned` row, drilled to `field` / `value`. It names both carriers: the producer #23736 (`sys_approval_request.record_id` with `{ field: 'cancel_reason', value: 'record_deleted' }`) and the consumer objectui#12489 step 4. There is no `authorWarn`, following the `field.settledWhen` precedent.\n- Regenerated: `authorable-surface/data.json`, `content/docs/references/**` (3 pages), the strictness-ledger counts, and `liveness/state-counts/field.md`.\n- `.changeset/23735-reference-deleted-when.md`: `@objectstack/spec` `minor`; `@objectstack/metadata-core`, `@objectstack/driver-sql` and `@objectstack/platform-objects` `patch` (commit `645116bef`; this line amended by the seat to match the changeset).\n\n## Outside the claimed file surface (forced by the widening, measured)\n\nA new `FieldSchema` key reaches every exhaustive per-key table and census pin. Each one below went red, or would have, without its line:\n\n- `packages/metadata-core/src/object-schema-fls-references.ts`: `FIELD_REFERENCE_POSITIONS` is pinned against the live `FieldSchema` shape. The key is classified `deletedWhen`: the predicate is deleted whole when its `field` names a field the caller cannot read (`value` is an option, never a field). This has a new pin in `object-schema-fls-references.test.ts`.\n- `packages/drivers/driver-sql/src/builtin-column-collision.ts`: `FIELD_KEY_STORAGE_CLASS` classifies it `presentation` (no DDL reads it).\n- `packages/platform-objects` translation catalogs: the form row's three labels and help texts, hand-translated in zh-CN, ja-JP and es-ES (`check:i18n` green, source-hash entries dropped). Two catalog census pins moved: 669 → 672 and 8 → 10.\n- Census pins: `metadata-protocol` `/meta/types` field property count 79 → 80, and `lint` shipped-form predicate counts 88 → 89 and 65 → 66.\n\nNo `plugin-approvals` or `platform-objects` object file was touched; that is #23736. No objectui file was touched.\n\n## Verification (head `d13e56398`, after merging `origin/main` `a869ea636`)\n\n- `@objectstack/spec`: test 680 files / 20771 passed; typecheck exit 0; `check:generated` \"All 14 generated artifacts are up to date\" after a real (DTS) build; `check:liveness` exit 0.\n- New pins `field-reference-deleted-when.test.ts`: 15 passed. **Ablation:** the `value` check disabled through `scripts/ablation-replace.mjs` gave 3 failed / 12 passed, and the file was restored with blob equal to HEAD (`c7916c270c23`) and an empty `git diff HEAD`.\n- Consumers: `@objectstack/objectql` 427 files / 8148 passed (pre-merge head); `@objectstack/metadata-protocol` 236 files / 20577 passed; `@objectstack/lint` 139 files / 6771 passed; `@objectstack/metadata-core` 18 files / 728 passed plus typecheck; `@objectstack/platform-objects` 70 files / 1091 passed plus typecheck; `@objectstack/driver-sql` collision pin 11 passed plus typecheck.\n- `dispatch-gates --commands`: 113 families derived. 110 exited 0. 3 are NOT MEASURED locally: `check:skill-examples` (exit 3) and `check:dual-build-cjs-loads` (exit 3) refused a prerequisite, and `check:dts-closure` (exit 1) reported missing `.d.ts` in 48 packages that this container had built with `OS_SKIP_DTS`. That is local dist state, not a tree finding. CI builds fresh and runs all three.\n\n## Acceptance notes\n\n- The sibling check needs inline `options`. A `picklist`-backed `select` is refused, because its values are not declared on the object and the option cannot be checked at parse. A `multiple: true` select is refused, because \"holds that value\" has no single reading on an array.\n- Extensions (`ObjectExtensionSchema`) are not judged: the check reads the authored object's own field map, as `imageField` does.\n\n---\n_Generated by [Claude Code](https://claude.ai/code/session_01LSSHP4Yb97YuFXXzj85HMJ)_\n"
+}

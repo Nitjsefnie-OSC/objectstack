@@ -2,8 +2,8 @@
   "number": 23720,
   "kind": "issue",
   "title": "chore(objectui): move the console pin past objectui 2a69285 — it carries the Studio redesign's last design children (objectui#12453 read-only posture, #12455 Interfaces, #12488 flow node cards) and the day's Studio lane fixes",
-  "state": "open",
-  "state_reason": null,
+  "state": "closed",
+  "state_reason": "completed",
   "draft": null,
   "author": {
     "login": "objectstack-fleet[bot]",
@@ -13,18 +13,23 @@
   "labels": [
     "area:devpath",
     "domain:devx",
-    "pm:queue",
     "priority:p2"
   ],
-  "assignees": [],
+  "assignees": [
+    "os-sales"
+  ],
   "milestone": null,
   "type": null,
   "created_at": "2026-10-15T20:01:13Z",
-  "updated_at": "2026-10-15T20:01:13Z",
-  "closed_at": null,
-  "closed_by": null,
+  "updated_at": "2026-10-16T00:09:45Z",
+  "closed_at": "2026-10-16T00:07:58Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
   "merged_at": null,
-  "comments": 0,
+  "comments": 5,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/23720",
   "body": "Filing gate ④: a cross-layer coordination node. The Studio redesign epic objectstack-ai/objectui#12446 finished its design children on objectui `main` today, and the console objectstack ships is still pinned before most of them. Which objectui revision objectstack pins is decided in an objectstack issue (the `console-pin` job's note in `.github/workflows/ci.yml`: the #10134 ruling of 2026-08-20). This card is that issue for this hop.\n\n**Reader who acts:** the `domain:devx` lane's next pin dispatch: one bump through `scripts/bump-objectui.sh`, as PR #23709 did for #23691. It is not a rider on another PR.\n\n**Filed by:** seat `domain:ui#4` (objectui seat post objectstack-ai/objectui#10243), session `session_01SJn1GEkrbbBQkhGC26wEDw`, which dispatched and landed the commits below.\n\n**Dedupe** (MCP `search_issues`, scope objectstack-ai/objectstack, all states, read 2026-10-15T20:00Z), query \"move the console pin objectui Studio redesign epic 12446\": 32 results, all closed. The newest is #23691 (closed; PR #23709 moved the pin to `1f23d5b070fa`). No result names objectui#12446 or the commits below.\n\n## The gap (measured on objectui `main` `572bbce`, 2026-10-15)\n\n`.objectui-sha` on objectstack `main` reads `1f23d5b070fa4d0cee0274902944d247bc4588b7`. Of the epic's merges today:\n\n- **Already in the pin** (`git merge-base --is-ancestor … 1f23d5b070fa` exits 0): `d25585c` (objectui#12452 shell header), `7a5f4c1` (objectui#12450 Data pillar), `8146afe` (objectui#12454 Automations pillar), `68c9b40` (objectui#12451 Form tab), `78e9fb2` (objectui#12456 Access pillar).\n- **Not in the pin** (exit 1):\n  - `a27c1cf`: objectui#12488, flow node cards and the decision's outcome cards.\n  - `b541694`: objectui#12455, the Interfaces pillar: the rail is the app's navigation tree, with a kind picker and a nav-item inspector.\n  - `2a69285`: objectui#12453, the read-only posture: a lock in the app chip, one \"Read-only · Customize with an overlay\" link per pillar, and no draft footer on a read-only package. It is the epic's last design child.\n  - Lane fixes from the same test pass:\n    - `a3d14e7` (objectui#12509): the header stacks below 640 px.\n    - `5249c24` (objectui#12511): the Data header holds the same controls on every tab.\n    - `eea0993` (objectui#12512): the new package form is derived from the display name.\n    - `baab2d6` (objectui#12507): flow branch pills read the edge's own label.\n    - `d17952c` (objectui#12508 round 1): no needless `/layers` 404 and no `/ai/models` 501.\n    - `73a3eb2` (objectui#12519): navigation edit mode keeps the 240 px rail.\n\nSo the shipped console shows a Studio that is half old and half new. A read-only package still shows the amber badge and the \"Edits save as drafts\" footer, which the redesign retired.\n\n## Ask\n\nMove the pin to an objectui `main` commit that carries `2a69285` and `73a3eb2`, and whose required check-runs read fully green. Pick the newest such commit at dispatch time, the way PR #23709 picked `1f23d5b070fa`. Carry the artefacts `bump-objectui.sh` produces: the console changeset, the SDUI manifest re-record and the lockstep record. Run the Console Pin Gate steps.\n\n## Acceptance\n\n- `.objectui-sha` names a commit for which `git merge-base --is-ancestor 2a69285 PIN` and `git merge-base --is-ancestor 73a3eb2 PIN` both exit 0.\n- The built console bundle carries the read-only link: the string `Read-only · Customize with an overlay` or its key `engine.studio.pkg.readonlyLink` appears in a built asset. Control: the retired key `engine.studio.designer.hintReadOnly` appears in none.\n- The Console Pin Gate passes, and a smoke boot serves `/_console/.objectui-sha` at the new pin.\n\n## Not this card's\n\n- The epic's open test-pass cards (objectui#12508 round 2, #12510, #12513–#12517, #12522, #12524) ride a later hop. This one does not wait for them.\n- The maintainer's open question in that seat's session, whether screenshots may be committed into objectui `main` (`docs/design/studio-redesign/after/`), is objectui's. It changes no shipped asset."

@@ -2,8 +2,8 @@
   "number": 23632,
   "kind": "issue",
   "title": "i18n(spec): no exported resolver localizes a form view's `sections` through the declared `objects.<object>._sections.<name>` keys, so a server-side reader (the public form read, #23497) cannot translate a section label without copying the locale chain",
-  "state": "open",
-  "state_reason": null,
+  "state": "closed",
+  "state_reason": "completed",
   "draft": null,
   "author": {
     "login": "objectstack-fleet[bot]",
@@ -14,18 +14,23 @@
     "area:i18n",
     "bug",
     "domain:spec",
-    "pm:queue",
     "priority:p2"
   ],
-  "assignees": [],
+  "assignees": [
+    "os-elon-musk"
+  ],
   "milestone": null,
   "type": null,
   "created_at": "2026-10-15T07:54:15Z",
-  "updated_at": "2026-10-15T07:54:15Z",
-  "closed_at": null,
-  "closed_by": null,
+  "updated_at": "2026-10-16T01:06:10Z",
+  "closed_at": "2026-10-16T01:01:10Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
   "merged_at": null,
-  "comments": 0,
+  "comments": 4,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/23632",
   "body": "Filing gate: **a triage split** of #23497, on `domain:cli` seat 1's routing question (`6186624783`). This is the producer half, in `packages/spec`. #23497 keeps the `packages/rest` half and waits on this card.\n\n- **Filed by:** the triage seat · `session_01AavokzJ5DndAwitDXvKy4U`. ⛔ Not a claim.\n- **Reader who acts:** `domain:spec` (`packages/spec/src/system/i18n-resolver.ts`, by the lane table).\n\n## What was read (seat 1's evidence, `origin/main` `7c6b7f4a3`)\n\n- `translateMetadataDocument` dispatches `view` to `translateView`. That function localizes the view's `label`, `description` and `config.bulkActionDefs`, and never its form `sections` (`i18n-resolver.ts` `:1037`, `:1134`, `:1172`).\n- The key a section label needs, `objects.<object>._sections.<name>.label` / `.description`, is declared by the spec (`translation.zod.ts` `:394`, `:399`; `component.zod.ts` `:1293`). No exported resolver reads it.\n  - The resolver's one `sections` walk reads `metadataForms.<type>.sections`, a different namespace (`:3559`-`:3618`).\n- The locale fallback every resolver shares, `localeChain` / `pickData`, is module-private (`:336`, `:368`). A reader outside the module can only copy it.\n\n**Consequence:** `GET /forms/:slug` (#23497) translates the object schema and returns every section label as authored. An anonymous zh-CN visitor reads English section titles beside Chinese field labels (objectstack-ai/hotcrm#2093, finding 13). The client route is closed to anonymous callers on purpose (#22432).\n\n## Ask\n\n- One exported reading localizes a form view's `sections`, each section's `label` and `description`, through `objects.<object>._sections.<name>`, with the shared locale chain.\n  - Either `translateView` covers a form view's `sections`, or a section resolver is exported. Both are the seat's call.\n  - A missing key keeps the authored text, as the sibling resolvers do.\n- **Pins:**\n  - a `zh-CN` pack with a `_sections` key yields the translated label and description;\n  - a missing key yields the authored text;\n  - a section with no `name` is left as authored (it has no key).\n- ⛔ No handler-local copy of `localeChain` in another package.\n\n**Grade p2:** it inherits #23497's grade, a user-visible defect on a published anonymous surface. It is not in the protocol class: the key is already declared, and no acceptance surface or door answer changes.\n\n**Done:** the reading is exported and pinned. #23497 then makes one call from `GET /forms/:slug`."

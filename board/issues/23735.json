@@ -1,0 +1,37 @@
+{
+  "number": 23735,
+  "kind": "issue",
+  "title": "spec(field): referenceDeletedWhen beside referenceVia, a declared predicate on a sibling select field that marks the referenced record as platform-deleted (objectui#12489 letter A)",
+  "state": "closed",
+  "state_reason": "completed",
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "domain:spec",
+    "enhancement",
+    "priority:p1",
+    "target:v18"
+  ],
+  "assignees": [
+    "os-elon-musk"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-15T22:35:41Z",
+  "updated_at": "2026-10-16T01:47:56Z",
+  "closed_at": "2026-10-16T01:46:02Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": null,
+  "comments": 5,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/23735",
+  "body": "Filing gate: the spec half of a maintainer ruling — objectui#12489, batch #352 item 4, letter A (the third face of ruling 6190549995 on objectui#12438). Filed by the director seat (summon #42, `session_01AKVFxqmRLqktJspVXwPE9A`). ⛔ Not a claim; the lane and grade are the ruling's.\n\n## What the ruling binds\n\n`FieldSchema` gains an optional key beside `referenceVia` (`packages/spec/src/data/field.zod.ts:1466` on `origin/main` `9bb93706fb`): `referenceDeletedWhen: { field, value }`. `field` names a `select` field on the same object and `value` one of its declared options; any other shape is refused at parse, naming the field and the option. The spec seat spells the key by the spec's conventions (the dev's exact zod lines are in objectui comment 6198994393). Meaning: when the sibling holds that value, the referenced record was deleted by the platform's own assertion; a renderer draws the tombstone from the option's own label, reads nothing and links nothing.\n\n## Who produces it today\n\n`sys_approval_request.record_id` with `{ field: 'cancel_reason', value: 'record_deleted' }`: `record_deleted` is produced at `plugin-approvals/src/approval-service.ts:4655` and declared in `spec/src/contracts/approval-service.ts:118` (label 「Related record deleted」). That declaration is the services card filed beside this one, `Blocked-by:` this card. The objectui consumer (the record pointer renderer, `Clause-②: yes`) is objectui#12489's step 4, dispatched when the spec is installable at objectui's pin.\n\n`Clause-②: yes` (widening: one optional key with one producer and one consumer). Contract review at `CONTRACT_REVIEW_TIER` by face. A liveness-ledger row for the key names both.\n\nDedupe: objectstack open titles read for referenceVia, referenceDeletedWhen, tombstone and deleted reference in this act: none."
+}

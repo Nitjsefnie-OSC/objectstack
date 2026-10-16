@@ -1,0 +1,37 @@
+{
+  "number": 23734,
+  "kind": "issue",
+  "title": "spec(record-surface): a field-heavy create/edit flow on desktop derives a bounded modal, not full-screen; mobile keeps full (objectui#12521 letter B)",
+  "state": "closed",
+  "state_reason": "completed",
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "domain:spec",
+    "enhancement",
+    "priority:p1",
+    "target:v18"
+  ],
+  "assignees": [
+    "os-elon-musk"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-15T22:35:19Z",
+  "updated_at": "2026-10-16T00:57:30Z",
+  "closed_at": "2026-10-16T00:56:13Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": null,
+  "comments": 6,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/23734",
+  "body": "Filing gate: the spec half of a maintainer ruling — objectui#12521, batch #352 item 2, letter B (the ruling comment on that card). Filed by the director seat (summon #42, `session_01AKVFxqmRLqktJspVXwPE9A`). ⛔ Not a claim; the lane and grade are the ruling's; triage adds `target:` as it sees fit.\n\n## What the ruling binds\n\n`packages/spec/src/data/record-surface.ts` `deriveRecordFlowSurface`: a task flow (create / edit / child-*) whose base surface is `page` (field-heavy, `RECORD_SURFACE_PAGE_THRESHOLD = 12`) derives on desktop a bounded modal, `{ container: 'overlay', surface: 'modal', size: 'auto' }`, instead of `size: 'full'` (`:150` on `origin/main` `9bb93706fb`); a mobile posture keeps `size: 'full'`. `record-surface.test.ts`, the docblock and the docs move with it. The objectstack#2604 D1 note the docblock cites gets a dated amendment line naming the ruling, ⛔ not rewritten.\n\n## Premise the spec seat measures first\n\nA field-heavy task flow WITH an embedded child or line-items table. If #2604 D1 chose full-screen for that case, the bounded modal applies only to forms without an embedded subtable, and this card's PR states that split in the derivation and its test; the fork is reported on objectui#12521.\n\n## Downstream\n\nobjectui `AppContent.tsx:1200-1206` keys on `size === 'full'`, so the console needs no code: the spec bump carries it. objectui#12521 is `pm:blocked` on this card; objectui PR #12546 (the bounded default when the host gives no size) lands after the spec is installable at objectui's pin.\n\n`Clause-②: no` (no key moves; a published function's derived default changes, with a BREAKING line in the changeset for a consumer that relied on `size: 'full'` for heavy desktop task flows). Contract review at `CONTRACT_REVIEW_TIER` by face (`packages/spec/src/**`).\n\nDedupe: objectstack open titles read for record-surface, deriveRecordFlowSurface, full-screen and modal in this act: none."
+}

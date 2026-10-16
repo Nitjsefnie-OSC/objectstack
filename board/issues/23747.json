@@ -1,0 +1,38 @@
+{
+  "number": 23747,
+  "kind": "pull_request",
+  "title": "feat(spec)!: a field-heavy task flow on desktop derives a bounded modal; mobile keeps full-screen",
+  "state": "closed",
+  "state_reason": null,
+  "draft": false,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "documentation",
+    "protocol:data",
+    "size/s",
+    "tests",
+    "tooling"
+  ],
+  "assignees": [
+    "os-elon-musk"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-15T23:48:46Z",
+  "updated_at": "2026-10-16T00:56:13Z",
+  "closed_at": "2026-10-16T00:56:11Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": "2026-10-16T00:56:11Z",
+  "comments": 3,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/pull/23747",
+  "body": "Fixes #23734\n\nClause-②: no\n\nThe spec half of objectstack-ai/objectui#12521 ruling `6203721639` (letter B, maintainer 「B (推荐)」): `deriveRecordFlowSurface` now derives, for a field-heavy task flow on desktop, a **bounded** modal (`size: 'auto'`, so the renderer's `lg` / `xl` bound applies); a mobile posture keeps the full-screen modal.\n\n## What changed\n\n- `packages/spec/src/data/record-surface.ts`: the task-flow arm. When the base derivation says `'page'` (field-heavy, or mobile), a task flow (`create` / `edit` / `child-create` / `child-edit`) answers `{ container: 'overlay', surface: 'modal', size }` with `size: 'full'` only for `viewport: 'mobile'` and `size: 'auto'` otherwise. No new parameter, export or type member: the mobile posture was already the `viewport` input, and `RecordFlowSurface.size` was already `'auto' | 'full'`. The docblock states the viewport split and the no-subtable-split reading, and carries a dated amendment line on the #2604 D1 statement it cites (the original D1 sentence is kept, not rewritten).\n- `packages/spec/src/data/record-surface.test.ts`: the pins that asserted `size: 'full'` for a heavy desktop task flow are flipped to assert `size: 'auto'` (heavy task flows, the fat `child-edit` child, the `pageThreshold` case, now a full `toEqual`). Added: an explicit `viewport: 'desktop'` leg, heavy-on-mobile stays `'full'`, and a heavy form with an embedded line-items table (a `repeater` field) takes the same bounded modal on desktop and full-screen on mobile.\n- `.changeset/23734-heavy-flow-bounded-modal.md`: `@objectstack/spec` minor, BREAKING line with the FROM / TO table and the one-line fix (`navigation.size: 'full'` or `FormView.modalSize: 'full'` for an object that genuinely needs full-screen on desktop), ADR-0087 disposition `not-required (no-migration-prescription)`.\n\n## Premise measured first (ruling item 2)\n\nThe ruling asked whether #2604 D1 chose full-screen for a field-heavy task flow with an embedded child or line-items table. Read on objectstack#2604 (design comment `4884632356`, the D1 table and its scope note):\n\n> | `'page'`(字段多) | 整页 **route** | **全屏 modal**(`size:'full'`)—— 同样大画布 + overlay 返回语义 |\n\n> (此处\"子表\" = 详情页 related list(`relatedList`,#2594);表单内写侧 `inlineEdit` 网格本就与父表单原子提交,不在本设计范围。)\n\nD1 sized task flows by authorable field count alone, and its own scope note puts the in-form `inlineEdit` (line-items) grid outside the design. The derivation's input is the object def, so it never sees an embedded grid either. D1 therefore never chose full-screen *for* that case: the split the ruling conditions on does not apply, and the bounded modal covers every field-heavy desktop task flow. A test states this. No fork is reported to objectui#12521.\n\n## Consumers swept\n\n`git grep -n \"deriveRecordFlowSurface\"` across the repo (`packages`, `examples`, `content/docs`, `skills`): the only callers are `record-surface.ts` and its test. The other hits are the generated `api-surface` / `export-origins` rosters (unchanged: no export moved) and `content/docs/releases/v12.mdx` (release-owned, not edited). The console consumer (objectui `AppContent.tsx`, keyed on `size === 'full'`) is in objectui#12521 / objectui PR 12546; no objectui file is touched here.\n\n## Verification (at `c5defce`)\n\n- `pnpm --filter @objectstack/spec build` :: exit 0; `pnpm --filter @objectstack/spec typecheck` :: exit 0.\n- `pnpm --filter @objectstack/spec exec vitest run --maxWorkers=2 src/data/record-surface.test.ts` :: 15 passed.\n- `pnpm --filter @objectstack/spec exec vitest run --maxWorkers=2` (whole package) :: 21808 passed, 1 todo, exit 0.\n- `pnpm --filter @objectstack/spec check:generated` :: all 14 generated artifacts up to date (no regeneration needed: the docblock is not a `.describe()`).\n- Ablation, two legs, through `scripts/ablation-replace.mjs` (anchor hit x1, blob changed, restored to the HEAD blob with `git diff HEAD` empty): size forced to `'full'` everywhere: 4 failed / 11 passed; size forced to `'auto'` everywhere: 2 failed / 13 passed (the mobile legs).\n- `node scripts/pm/dispatch-gates.mjs --commands --repo objectstack-ai/objectstack`: 84 derived commands, run locally with exit codes recorded; `--ran` reconciliation: 84 accounted, 83 run, 1 NOT MEASURED. Three gates first exited 3 on prerequisites (shallow clone, unbuilt `@objectstack/formula` / `@objectstack/objectql`) and were re-run green after fetching the pinned fixture commit and building those two packages. NOT MEASURED: `pnpm check:dual-build-cjs-loads` (needs every package's `dist`; CI runs it).\n\n## Acceptance notes\n\n- `skills/objectstack-ui/rules/navigation.md` (Record Presentation, \"Surface (page vs drawer)\") says a field-heavy object opens create/edit/detail as a **full page**. That was already inexact before this change (create/edit has been a full-screen modal since #2604), and it is now a bounded modal on desktop. Not edited here: `skills/**` is a governed surface outside this card's claimed file surface. Drift only, no runtime or authoring consequence (the paragraph tells authors not to set the surface). Carrier: none.\n\n---\n_Generated by [Claude Code](https://claude.ai/code/session_01FaR7ExTuo2XxtaZH3xKJ1e)_\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nhttps://claude.ai/code/session_01FaR7ExTuo2XxtaZH3xKJ1e\n"
+}

@@ -1,0 +1,30 @@
+{
+  "number": 23731,
+  "kind": "issue",
+  "title": "ADR-0139 E6: sys_activity gains a writer-stamped changed_fields column with an idempotent backfill, and the withheld-update rule becomes a predicate with no SYSTEM pre-scan (D4)",
+  "state": "open",
+  "state_reason": null,
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "domain:services",
+    "pm:queue",
+    "priority:p2"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-15T22:28:54Z",
+  "updated_at": "2026-10-16T00:46:36Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 8,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/23731",
+  "body": "Ruled: 6205262047 · letter B · 2026-10-16T00:33Z\n\ncarries item E6 of #22788; #22788 keeps item E7 (cut beside this one)\n\nFiling gate: **④ a coordination node's execution card**, row E6 of ADR-0139's execution plan. It is cut by #22788's owner (`domain:engine` seat 1, #6367 · `sunhaolin` · `session_01GP3comALHRcRBixS2TEnLF`) now that its predecessor has landed. It lands in `packages/plugins/plugin-audit`, another lane. Per the split rule it carries no `domain:*`: triage sets the lane and the grade on first touch. ⛔ Classes, positions and functions only.\n\n**Predecessor landed:** E5 (#23673), PR #23693 → `69351e985a`. `computeParentRecordFilter` now emits one `ReadableIds` leaf per parent object and does no pre-scan. D5's three classes keep the bounded probe. Earlier: E1 (#22787), E2 (#22861), E3 + E4 (#23639, PR #23656 → `462dff36f1`).\n\n**Reader who acts:** triage, to set the lane (by the lane table, `plugin-audit` is `domain:services`) and the grade; then that lane's seat.\n\n## The work (ADR-0139 D4; the plan's row E6)\n\n- `packages/plugins/plugin-audit/src/objects/sys-activity.object.ts#sys_activity` gains a writer-stamped column, **`changed_fields`**: the key set of the recorded change. The CRUD mirror stamps it from the same `packages/plugins/plugin-audit/src/audit-writers.ts#diff` that composes the change.\n- The withheld-update rule (`packages/plugins/plugin-audit/src/activity-field-redaction.ts#computeWithheldUpdateFilter`; today it judges `#isWithheldOnlyUpdate` over the `metadata` text column) becomes a predicate. An update row is withheld when its `changed_fields` is non-empty and this reader is served none of its members. Its SYSTEM pre-scan, and the 2,000-row window that pre-scan composes the gate's leaves under, are gone.\n- Stored rows are **backfilled** from their `metadata.old` / `metadata.new` keys by one idempotent stored-row migration, in the shape of `packages/plugins/plugin-audit/src/stored-metadata-body-migration.ts#migrateStoredMetadataBodyCopies`. The object is `managedBy: 'append-only'`, so the backfill goes through the migration door, never the CRUD write path. A row the backfill cannot judge keeps the fail-closed answer it has today.\n- ADR-0139's Consequences: \"`changed_fields` is a schema change on an append-only engine-owned object, with a backfill a deployment must run; the changeset of that card says so.\"\n- **Clause-② check:** this adds a column to a published platform object. The claiming seat judges the line.\n\n## Pins\n\n- **The plan's row:** the org-peer sign-in case stays withheld; an empty change is unaffected; the backfill is idempotent.\n- **Carried from E5** (the amended pin set, 6197472558 on #22788; E5's real-stack measurement 6196293752: the activity stream stayed capped by this consumer, member 725 of 1,816 and an administrator total of 1,999):\n  - the measured scenario answers **1,808 of 1,808 end to end** on a real `SecurityPlugin` stack;\n  - **the director's site-wide pair** (6115710018, \"Two pins for E5 / E6\"): an administrator's Console header-bell or home-page read of `sys_activity` (`$orderby: timestamp desc`, `$top: 20`) over a store of 4,201 rows answers 20 rows and a `total` of 4,201, not 2,000; and a member sees every row the caller may read past the old 2,000-row window (the 6112812510 measurement: 39% of visible rows missing).\n- **The pinned-record timeline** stays #22788's (its item). It is not this card's.\n\n## Notes carried from E5's report (inputs, noted on #22788, not filed)\n\n- plugin-security's `explain` answers a SYSTEM context `allowed: false` while `canReadObject` answers true. So a leaf composed in a SYSTEM read selects everything or nothing, depending on which half the service offers. E5 guards its own consumer by writing no leaf without `canReadObject`. This card removes a SYSTEM pre-scan and should leave no SYSTEM-composed leaf behind.\n- The engine composes each leaf with the outer read's full envelope, operation-private keys included (`__readScope`). Observation only.\n\n## Readings this card owes\n\n- **O2 (ADR-0139):** the activity measurement is the only measured one. This card's pins read it end to end.\n\n## Governing text\n\nADR-0139 D4 (the withheld-update rule and `changed_fields`) and its Consequences; the plan's row E6; #22788's amended pin set 6197472558 and the director's pin pointer 6115710018.\n\n## Dedupe\n\nMCP `search_issues` on this repo, closed included: \"ADR-0139 E6 changed_fields sys_activity writer stamp backfill withheld-update rule predicate\" returns 57 hits. The nearest are #22788 (the parent), #22590 (the original report), and #22678 (the record's own card, closed). None is E6.\n\nDedupe words: ADR-0139 E6 changed_fields; withheld-update rule predicate no SYSTEM pre-scan; sys_activity backfill migration.\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_\n"
+}

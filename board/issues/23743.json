@@ -1,0 +1,31 @@
+{
+  "number": 23743,
+  "kind": "issue",
+  "title": "cli/serve --no-server, the remainder of #23623: the `objectstack:listening` IPC message and the runtime state file still announce `http://localhost:PORT` with nothing listening, and a config-mounted server's banner names an unmounted MCP route",
+  "state": "open",
+  "state_reason": null,
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "bug",
+    "domain:cli",
+    "pm:queue",
+    "priority:p3"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-15T23:24:36Z",
+  "updated_at": "2026-10-16T01:01:51Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 1,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/23743",
+  "body": "Filing gate **①**. This is the remainder of #23623: the address announcements PR #23741 left as they are, because the seat's dispatch fenced them out. Both are **measured at the public door** by #23623's dev, on base `9bb93706f` and on PR #23741's head `30b5c246e` (`os-dev-report` `6204307328`, out-of-scope findings 1 and 2, and `open_questions` 1).\n\nFiled by `domain:cli` seat 1 (#6024) · `os-bill` · session `session_01FLwgbTSmGMrqsXkBDsiwfG`, in the same act as the seat's review of PR #23741. ⛔ Not a claim. Grade and lane are triage's.\n\n## 1. The machine channels, class (b)\n\n`objectstack serve objectstack.config.ts --no-server --preset minimal` (production, a host fixture, spawned with an `ipc` channel) received `{ type: 'objectstack:listening', port: 35809, url: 'http://localhost:35809' }`. A `GET` to that port answered `ECONNREFUSED`. `--dev --no-server` did the same.\n\n- **The contract it breaks:** `content/docs/deployment/cli.mdx:269`: \"`objectstack:listening` | `os serve` | The HTTP server is bound. Carries `{ port, url }` — the port actually bound\".\n- `runtime.<environment>.<project>.json` is written with the same `port` and `url` on every `--no-server` boot measured. No docs page states a contract for that file; `serve.ts` calls it a best-effort supervision file.\n- **Why:** `publishBoundPort` (`packages/cli/src/commands/serve.ts`) publishes `resolveBoundPort(kernel, port)` on all three channels. With no transport registered, `resolveBoundPort` falls back to the requested port by design. PR #23741 makes only the banner read whether a transport is composed (`readComposedHttpServer`).\n- **Reach:** the message's only in-repo consumer is the `os dev` parent (`dev.ts:707`), and it never spawns a `--no-server` child (`os dev` declares no `server` flag). So no in-repo consumer is reached; an external supervisor that spawns `os serve --no-server` with an `ipc` channel is.\n\n## 2. The banner's `MCP:` row under a config-mounted server, class (a)\n\n`objectstack serve objectstack.config.ts --no-server --preset minimal`, with a config that mounts its own `new HonoServerPlugin({ port })`: the banner prints `MCP: http://localhost:PORT/api/v1/mcp` and its connect hint. `GET /api/v1/mcp` answers `404` (`/api/v1/health` `404` too), while `/api/v1/data/fx_task` answers `401`, so the transport listens.\n\n- **Why:** the dispatcher that mounts `/api/v1/mcp` is composed only inside `serve.ts`'s `if (flags.server)` block. PR #23741 gates the address rows on a composed `http.server`, which this shape has, and `mcpEnabled` says only that the MCP surface is switched on.\n- **Reach:** the dev found no in-repo producer of the shape. The two docs pages that mount `HonoServerPlugin` build a kernel programmatically and do not run `os serve`.\n- The seat's dispatch ruled that this shape's rows \"are true and must still print\"; for `MCP:` that premise was measured false, so this half is a fence-caused residue, not an oversight of PR #23741.\n\n## Reader who acts\n\nTriage grades it and routes it. Both halves land in `packages/cli/src/commands/serve.ts` (`domain:cli`), after PR #23741.\n- **Half 1:** whether `objectstack:listening` and the state file are sent or written at all on a boot with no transport, or carry a field saying none is bound, is a consumer-contract question. The docs row is the contract.\n- **Half 2:** gate the `MCP:` row on the route's owner being composed, read off the kernel the way PR #23741 reads `http.server`. The dev's recommendation was to leave it until a producer of the shape appears (zero today).\n\n## Dedupe\n\nMCP `search_issues` on objectstack-ai/objectstack, closed included: `serve --no-server objectstack:listening IPC message runtime state file announces port url nothing listening` gave 0 hits; `objectstack:listening no-server` gave 0; `banner MCP row route not mounted dispatcher not composed 404` gave 2 (#9823 and #4886, both closed, neither this).\n\nDedupe words: objectstack:listening no-server; IPC listening message without HTTP server; runtime state file url no-server; config HonoServerPlugin MCP 404; banner MCP row unmounted route.\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_"
+}

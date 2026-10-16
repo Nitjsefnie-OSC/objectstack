@@ -2,8 +2,8 @@
   "number": 23603,
   "kind": "issue",
   "title": "verify family split (#15953), engine rows: objectql and driver-sql regression tests that replace hotcrm's platform-semantics pins (rows 3, 4-5, 7, 8, 10, 11)",
-  "state": "open",
-  "state_reason": null,
+  "state": "closed",
+  "state_reason": "completed",
   "draft": null,
   "author": {
     "login": "objectstack-fleet[bot]",
@@ -12,19 +12,24 @@
   },
   "labels": [
     "domain:engine",
-    "pm:queue",
     "priority:p3",
     "tooling"
   ],
-  "assignees": [],
+  "assignees": [
+    "sunhaolin"
+  ],
   "milestone": null,
   "type": null,
   "created_at": "2026-10-15T03:55:13Z",
-  "updated_at": "2026-10-15T03:55:13Z",
-  "closed_at": null,
-  "closed_by": null,
+  "updated_at": "2026-10-16T01:06:13Z",
+  "closed_at": "2026-10-16T01:04:43Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
   "merged_at": null,
-  "comments": 0,
+  "comments": 5,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/23603",
   "body": "Filing gate **④ a split of a routed card by landing lane**: triage split objectstack-ai/objectstack#15953 (retriage `6183290473`) under the lane rule 「按落点判归属」. Part of #15953 and of epic objectstack-ai/hotcrm#1579 (hotcrm's \"platform-semantics pins\" become platform tests, never app tests). Filed by the triage seat (seat post #6015, `session_01AavokzJ5DndAwitDXvKy4U`). ⛔ Not a claim.\n\n`reach:` hotcrm keeps local tests pinning platform semantics until the platform pins them itself. Each row below names the hotcrm file it replaces. The classification table is `6115219467` on #15953, and the rows are as of slice 6's landing `6144431383`.\n\n## Rows (the R residues that land in `domain:engine`)\n\n| row | hotcrm file | platform test to add |\n|:--|:--|:--|\n| 3 | `test/line-item-cascade.test.ts` | `packages/objectql` referential-pass test: a spec-default `set_null` on a REQUIRED lookup escalates to restrict |\n| 4-5 | `test/lead-duplicate-link-cleanup.test.ts`, `test/freeze-guard-reference-cleanup.test.ts` | `packages/objectql` referential-pass tests for the reference-cleanup write the two files lean on (their K halves stay in hotcrm) |\n| 7 | `test/case-number-tenant-scope.test.ts` | `packages/drivers/driver-sql` test: the old table-composite unique constrained nothing untenanted (SQL NULL-distinct, ADR-0120 D3) |\n| 8 | `test/readonly-write-semantics.test.ts` | `packages/objectql` update-path test: a read-only field is stripped iff the context is not system |\n| 10 | `test/undeclared-key-probe.test.ts` | `packages/objectql` write-path test: an undeclared key on the caller path answers `INVALID_FIELD` / 400 (the dogfood driver conformance half stays on #15953) |\n| 11 | `test/flow-filter-today-token.test.ts` | `packages/objectql` `resolveFilterTokens` test: the query layer refuses the `TODAY()` spelling and knows `{today}` (the service-automation half is its own card) |\n\n## What done looks like\n\n- Each row lands as a platform test in its package, pinning the semantics the hotcrm file pins, with one ablation each.\n- Each row's landing names the hotcrm file it lets hotcrm retire (objectstack-ai/hotcrm#1583).\n- Rows may land in more than one PR, each `Part of` this card. The card closes when all rows are carried.\n\n**Grade:** p3, as #15953. **Lane:** `domain:engine` (`packages/objectql`, `packages/drivers/driver-sql`)."

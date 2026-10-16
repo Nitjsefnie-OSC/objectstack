@@ -1,0 +1,38 @@
+{
+  "number": 23771,
+  "kind": "pull_request",
+  "title": "feat(spec)!: FormSectionSchema.columns drops default(1) — undeclared section density is the renderer's, declared is the author's ceiling",
+  "state": "closed",
+  "state_reason": null,
+  "draft": false,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "documentation",
+    "protocol:ui",
+    "size/m",
+    "tests",
+    "tooling"
+  ],
+  "assignees": [
+    "os-elon-musk"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-16T00:54:26Z",
+  "updated_at": "2026-10-16T02:12:56Z",
+  "closed_at": "2026-10-16T02:12:54Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": "2026-10-16T02:12:54Z",
+  "comments": 3,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/pull/23771",
+  "body": "Fixes #23740\n\nClause-②: no\n\n## What\n\n`FormSectionSchema.columns` (`packages/spec/src/ui/view.zod.ts`) drops `.default(1)`, per the maintainer ruling recorded on objectstack-ai/objectui#12521 (comment 6204264665): 「不用决策卡，我同意 b) 改协议（推荐）： 去掉分节 columns 的 default(1)」.\n\n- The key stays optional with values `1`–`4`; the string spellings `'1'`–`'4'` keep their transform (now `parseInt(val, 10)`), and `undefined` passes through. Measured with zod 4.6.5: an absent key parses to an object with no `columns` key at all (not `columns: undefined`).\n- The schema gains a docblock and a `.describe()` stating the two meanings: **declared** = the author's ceiling (at most that many fields per row where the container is wide enough; collapsed by the renderer on narrow containers); **undeclared** = the renderer's choice by available width. No pixel or breakpoint value enters the protocol.\n- `FormViewSchema.columns` is untouched: its describe does not speak to sections.\n\n## Files\n\n- `packages/spec/src/ui/view.zod.ts`: the schema change.\n- `packages/spec/scripts/lib/default-changes.ts`: a new `18: [...]` row declaring `ui/FormSection:columns: 1 → (none)`. The spec build's default ratchet refused the change until it was declared; its `reason` explains what moves for a consumer and why no `semantic` migration entry comes with it. A conversion that writes `columns: 1` onto stored sections would bring back the reading the ruling removed.\n- Generated: `packages/spec/authorable-defaults/ui.json` (the `ui/FormSection:columns = 1` line leaves) and `content/docs/references/ui/view.mdx` (three tables lose `default: 1` and gain the describe). `check:generated` named only `check:docs` as stale; `--fix` regenerated it.\n- Docs: `content/docs/protocol/objectui/layout-dsl.mdx` gets one paragraph on the two meanings.\n- Tests: the pins that asserted a parsed section's `columns: 1` now assert the key is absent. None was deleted.\n  - `packages/spec/src/ui/view.test.ts` (plus a new case: declared `1`/`'2'`/`4` survive, and `5`/`'0'` are refused)\n  - `packages/spec/src/ui/view-union-diagnostics.test.ts` (the `SECTION` parse output)\n  - `packages/spec/src/ui/view-overlay-viewkind-arm.test.ts` (byte-identical form overlay output)\n  - `packages/metadata-protocol/src/protocol.graft-folded-form-sections.test.ts`\n- `.changeset/23740-form-section-columns-no-default.md`: `@objectstack/spec` `minor`, with a BREAKING line, a before/after table of parse outputs, and the ADR-0087 disposition `not-required (no-migration-prescription)`. `check:adr-0087-registration` accepts that spelling (measured, exit 0).\n\n## Evidence\n\n- Readers of a form section's `columns` in `packages/*/src` outside `view.zod.ts`: 0, re-measured at `2906cd8d2`. `protocol.ts` hand-builds a section with an explicit `columns: 2`, so it is unaffected.\n- `pnpm --filter @objectstack/spec build`: exit 0, after the default row was declared.\n- `pnpm --filter @objectstack/spec test`: 678 files passed, 1 skipped; 20755 tests passed.\n- `pnpm --filter @objectstack/spec typecheck`: exit 0.\n- `@objectstack/metadata-protocol`: its dependency closure was built, `protocol.graft-folded-form-sections.test.ts` passed 46 of 46, and `typecheck` exited 0.\n- Ablation, run once: `node scripts/ablation-replace.mjs` put `.default(1)` back on disk (anchor 1 → 0, blob `3dba72ea` → `f04fd827`). `view.test.ts` then failed 1 test, `FormSectionSchema > should accept minimal form section`. The tool restored the file: blob back to the HEAD blob `3dba72ea`, and `git diff HEAD` empty.\n- Derived gates (`dispatch-gates --commands`, at head `741552c0`): 110 derived, 109 ran with exit 0. `--ran` reconciles 110 of 110.\n  - Two gates first exited 3 on prerequisites and passed after the prerequisite was fixed: `check-plugin-teardown-shape --self-test` (the shallow clone lacked its pinned fixture commit, which was fetched) and `check:skill-examples` (the client-react closure was built first).\n  - **NOT MEASURED:** `check:dual-build-cjs-loads`, exit 3, PREREQUISITE NOT MET. It needs every package's `dist/`, which takes a repo-wide build. Left to CI.\n\n## Acceptance notes\n\n- objectui consumers named on the card (`metadata-admin/SchemaForm.tsx` reads `s.columns ?? 1`; plugin-form's sectioned layout) are objectui#12521 / objectui PR #12546's side. No objectui file is touched here.\n- `main` gained 3 commits since the branch point (pm-dispatch, plugin-security tests, objectui pin). None touches `packages/spec` or `metadata-protocol`, so no merge was made before opening.\n- This PR is meant to ride the same spec release as #23747.\n\n---\n_Generated by [Claude Code](https://claude.ai/code/session_012vwv8sA1ZBBjmphdHWo9i5)_\n"
+}

@@ -13,18 +13,20 @@
   "labels": [
     "area:devpath",
     "domain:spec",
-    "pm:queue",
+    "pm:dispatched",
     "priority:p3"
   ],
-  "assignees": [],
+  "assignees": [
+    "os-elon-musk"
+  ],
   "milestone": null,
   "type": null,
   "created_at": "2026-10-13T09:15:32Z",
-  "updated_at": "2026-10-13T13:54:38Z",
+  "updated_at": "2026-10-16T02:26:17Z",
   "closed_at": null,
   "closed_by": null,
   "merged_at": null,
-  "comments": 1,
+  "comments": 5,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/23216",
   "body": "Filed by the director seat (summon #37, `session_01LqNgdPZB2Jnr5HpGbaqLeB`) on the maintainer's ruling C′ on #23128 (「同意」, recorded at 6142279866) under 「立卡你决定，不需要我同意」: the seat files, the lane claims, dispatches and lands. ⛔ Not a claim. Filing gate ③ (a consequence of a ruling). Governed: `packages/spec` prose only (`Clause-②: no`: a retire message and three doc pages; no key, no accept set moves), plus `content/docs/**`.\n\n## What is wrong today\n`manifest.contributes.routes` was retired in spec 17 (ADR-0049, `packages/spec/src/kernel/manifest.zod.ts:884`), and its retire text still tells an app author: \"A route that needs real handler CODE is mounted imperatively: resolve the `http.server` service from the plugin context and register the handler on `kernel:ready`.\" The same sentence is published in `content/docs/references/api/metadata.mdx`, `package-api.mdx` and `kernel/manifest.mdx`. That door was never finished for app code: a code-mounted route gets no caller identity, no ADR-0069 auth gate, no rate limit, no namespace carve-out and no OpenAPI (#23128's dev report 6138940364); the only in-tree app that followed the sentence is the showcase's `recalc-endpoint.ts`, which answers 500 on every call. The ruling: the imperative route is the platform's own door-building primitive, not an app-author surface.\n\n## What to build (one PR)\n1. `manifest.zod.ts:884`'s retire message: replace the imperative sentence with the app-author rule: an app declares `defineStack({ apis })` (`object_operation` or `flow`, ADR-0121), computes in a flow, and registers code as a stack function (`defineStack({ functions })` → `registerFunction`) or a connector; it does not mount routes on `http.server`.\n2. The three published pages: the same sentence, regenerated or edited wherever the retire text is rendered (`package-api.mdx:237` is a generated row; say which of the three are generated and regenerate them with the repo's tooling).\n3. Nothing else: `http.server` (`core-service-contracts.ts`) and the platform plugins that mount on it are untouched; no key is added or removed.\n\n## Acceptance\n- `git grep -n \"mounted imperatively\" -- packages/spec content/docs` finds nothing; the spec's own tests over retired-key messages pass; `check:generated` (if the pages are generated) and the docs gates exit 0; the manifest reference page renders the new sentence.\n\nRelated: #23128 (ruling C′) · ADR-0121 · ADR-0096 · ADR-0049 · `examples/app-showcase/src/system/apis/index.ts`."
