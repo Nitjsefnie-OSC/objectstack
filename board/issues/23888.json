@@ -1,0 +1,36 @@
+{
+  "number": 23888,
+  "kind": "pull_request",
+  "title": "test(lint): the two lazy-deps contract files declare their whole-package-import budget",
+  "state": "closed",
+  "state_reason": null,
+  "draft": false,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "size/xs",
+    "skip-changeset",
+    "tests"
+  ],
+  "assignees": [
+    "os-elon-musk"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-16T11:31:46Z",
+  "updated_at": "2026-10-16T12:42:56Z",
+  "closed_at": "2026-10-16T12:42:54Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": "2026-10-16T12:42:54Z",
+  "comments": 2,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/pull/23888",
+  "body": "Part of #23180\nClause-②: no\n\nThis PR covers the card's two `@objectstack/lint` rows: `src/runtime-lazy-deps.test.ts` (19.2 s, run `38314183560`) and `src/lazy-deps.test.ts` (18.0 s, run `38267594064`). Each file gets one header line in ruling `6181973363`'s spelling, class `whole-package import`, budget 30 s. No other line changes: the net diff is +2 / -0 over the two test files. #23180 remains open for its other rows, and the next refresh PR's list decides these two.\n\n## What the wall is (measured first)\n\nAll local readings are shared-box seconds on a built `@objectstack/lint` closure, taken through `os-verify-lock.sh`. In every run each `VERDICT` line read `command-exit 0`.\n\n| reading | `lazy-deps` | `runtime-lazy-deps` |\n|:--|--:|--:|\n| file alone (vitest `Duration`) | 16.97 s | 15.37 s |\n| of which: the one in-process cold import case | 14.46 s | 11.96 s |\n| of which: the spawned built-dist probes (one `node` per format, plus the positive control) | 1.10 + 1.11 s | 0.87 + 0.98 + 1.29 s |\n| inside the package's own run (`vitest run`, 140 files) | 5.22 s | 5.31 s |\n\n- **Where the in-process case's time goes.** A `DEBUG=vite:transform,vite:load` trace of the runtime file's flow case puts ~11.5 s of its 13.8 s in the gaps after vite transforms each `@objectstack/spec` dist bundle the lint graph reaches (`dist/index.mjs`, `system/`, `kernel/`, `ui/`, `api/`, `shared/`, `data/`, `automation/` …, 2.1–2.9 MB each, 33 MB across the 24 `.mjs` files). A pnpm-linked workspace package has no `/node_modules/` in its realpath, so vitest inlines it. A native import of the built lint entry takes 0.80–0.86 s, against 12–14 s through the transform.\n- **No repeated work.** Each file imports its entry once. The in-process cases after the first reuse the module. Each spawned child answers a different question (CJS, ESM, the positive control). That leaves the \"whole-package import\" class: the in-process case's job is to prove what a cold import of the package entry loads (the barrel in `lazy-deps`, the kernel-safe `./runtime` entry in `runtime-lazy-deps`, which reaches the whole gate graph). Hollowing that import would change what the file proves. The precedent is `packages/spec/src/shared/alias-integrity.test.ts`, which declares the same class for a floor of vitest's transform of the whole package.\n- **The number.** Item 2 of the ruling: the card's slowest CI reading x 1.25, rounded up to the next 10 s. 18.0 x 1.25 = 22.5 and 19.2 x 1.25 = 24.0, so both are 30. No refresh PR has landed on `main` since the card's census (`scripts/test-shard-timings.json` was last refreshed by #23141 on 2026-10-13), so the card's readings are the newest.\n\n## A fix tried and taken back\n\nThe branch's first commit (`85d66753`) started the dist probes together in `beforeAll` and awaited each one in its own case, after the in-process cases. Run alone, the files dropped to 13.5 s and 12.1 s. In the package's own run, though, they rose from 5.2 s to 12.7–14.2 s and from 5.3 s to 12.3–13.9 s. Moving the in-process import ahead of every other worker's meant each file now paid the cold spec-bundle transform itself, where before another file had already warmed it. The cost only moved, and these two rows got worse. The second commit (`aed22b27`) restores both bodies byte-identical to `main`, so the PR's diff is the two header lines alone.\n\n## Readings of the declarations\n\n- `readTestBudget` on each file, the one-liner from PR #23595: exit 0, returning `{ seconds: 30, cls: \"whole-package import\", line: 2 }` for both.\n- `declaredBudgetInTree('@objectstack/lint', FILE)`, the refresh's own resolution: 30 and 30.\n- Negative control: the same line with the class spelled `whole-packge import` is refused at `typo:2: the class \"whole-packge import\" is neither class the ruling names`.\n\n## Tests and gates (head `aed22b27`)\n\n- `pnpm --filter @objectstack/lint test`: 140 files, 6781 tests, all passed (`VERDICT command-exit 0`). `pnpm --filter @objectstack/lint typecheck`: exit 0 (`tsc --noEmit`, then `check:test-typecheck: OK`).\n- `node scripts/pm/dispatch-gates.mjs --commands --repo objectstack-ai/objectstack` on this branch's diff derives 51 commands. 48 exited 0. Three exited 3 with PREREQUISITE NOT MET, so they read NOT MEASURED, not pass. The three are `check-plugin-teardown-shape.mjs --self-test` (a shallow clone), `check:dual-build-cjs-loads` and `check:lean-entry-closure` (the workspace is not fully built here). `--ran` reconciles: `51 derived famil(ies) accounted for — 48 run, 3 NOT-MEASURED`. CI runs every family on a fresh, full checkout.\n\n## Changeset\n\nNone. The edit is two comment lines in two test files. `@objectstack/lint` ships `dist`, `README.md` and `CHANGELOG.md`. On the built tree, the header string has 0 hits in those paths. The positive control `runRuntimeAuthoringRules` has 10 hits in `dist`. `npm pack --dry-run` lists 23 files and no test file. So `skip-changeset` applies.\n\n## Acceptance notes\n\n- **A lever outside this PR's surface, measured but not taken.** The claim limits this PR to the two test files and `packages/lint` test helpers. In a paired A/B, `test.server.deps.external: [/\\/packages\\/spec\\/dist\\//]` in `packages/lint/vitest.config.ts` hands those bundles to Node. Run alone, the files drop from 16.97 to 6.86 s and from 15.37 to 6.45 s. The whole package's lock hold drops from 98 s to 60 s. All 6781 tests still pass, and no file under `packages/lint/src` calls `vi.mock` or `vi.doMock`. In the package's own run the two files move only from 5.22 to 4.55 s and from 5.31 to 4.81 s. The config's header warns that any key there re-specifies every file in the package, and `packages/cli/vitest.config.ts` records a measurement against externalising more workspace `dist/` for speed there. So this is a package-wide decision for the seat, not a rider on two rows.\n- On this shared box, the whole-package `pnpm --filter @objectstack/lint test` run read the two files at 16.7 s and 17.6 s while the 51-command gate battery ran beside it. That is load, not the files.\n\n---\n_Generated by [Claude Code](https://claude.ai/code/session_01PaFAtTG4vuRcRwFYo3F5z5)_\n"
+}

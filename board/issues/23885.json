@@ -1,0 +1,31 @@
+{
+  "number": 23885,
+  "kind": "issue",
+  "title": "hourly full run: red on main (CI)",
+  "state": "open",
+  "state_reason": null,
+  "draft": null,
+  "author": {
+    "login": "github-actions[bot]",
+    "id": 41898282,
+    "type": "Bot"
+  },
+  "labels": [
+    "bug",
+    "domain:devx",
+    "pm:blocked",
+    "priority:p1"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-16T11:27:26Z",
+  "updated_at": "2026-10-16T13:53:21Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 3,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/23885",
+  "body": "os-hourly-full-run-ci — machine-findable marker for this generated card. ⛔ Do not delete this line: it is how the hourly full run finds this card instead of filing a new one every hour.\n# hourly full run: red on main (CI)\n_Swept 2026-10-16T13:25:47.675Z · [run log](https://github.com/objectstack-ai/objectstack/actions/runs/38904808867) · commit `abb6df0e0109f32c8a51f94a4deaaa4518a0b5a2` · conclusion `failure`._\n`CI` runs the FULL battery on `main` every hour (#16467). A `push` run on\n`main` tests only the packages the merge touched, and a merge-queue build tests only what the group\ncontained — so this hourly run is the only thing that says whether the WHOLE tree is green, and\nthis card is the only channel that reports it. Nothing is blocked by it.\n⛔ The remedy is never to narrow, skip or delete the failing check to make the hourly run green.\nFix what it names and let the next hourly run refresh this card; a card nobody reopens is closed by\nthe next green run being uneventful, not by editing this one.\n## What landed since the last green hourly run\nRange: `f7e836da1e` (run 38884415435, the last green `CI` schedule run) .. `abb6df0e01` — [compare](https://github.com/objectstack-ai/objectstack/compare/f7e836da1ed344aaa6936b9de8b173d0f326b9ec...abb6df0e0109f32c8a51f94a4deaaa4518a0b5a2)\n- `6422da58e8` feat(spec,automation): FlowRuntimeState.unboundCause classifies an unbound flow row beside its reason (#23854)\n- `7a6ba03109` docs(deployment): name the npm 10 `edgesOut` install failure and its npm 11 / overrides.vitest remedies (#23864)\n- `34b740f2d1` fix(runtime,cli): one file-URL filename rule for both hosts — FILE: strips case-insensitively, file://NAME opens NAME on the CLI host (#23862)\n- `a35f7a6764` feat(spec)!: delete checkPageComponentViewData; the component-props rule is the one judge of a page component's retired api data binding (#23784)\n- `41e84c0103` fix(cli): the os dev watcher prints why a recompile was refused (#23867)\n- `6db53acd66` docs(os-dev): admit the ruled ceiling raise in the ratchet block and point at the ratchet header (#23868)\n- `105902f10a` feat(spec)!: retire the view form's visibleOn and the page component's visibility as keys; their ADR-0089 renames leave the load path (F4 of #23543) (#23836)\n- `c5cf546a6f` fix(runtime): the standalone host refuses an opaque-scheme OS_DATABASE_URL, and a .wasm.db ending no longer rescues an unrecognised scheme (#23861)\n- `adad73f714` feat(spec): a select option declares its lifecycle kind (open / won / lost); every stage-field option must declare it (#23846)\n- `6f7ad7900f` docs: guest has no bind door until ADR-0138 D3 item 5's door is built (ADR-0090 D9 line, two docblocks) (#23780)\n- `944f03850e` ci(spec-shape-gate): the workflow header says objectui deleted its copy and names the commit that last has it (#23823)\n- `94114c1f26` fix(plugin-audit): a user's own UI-state write writes no ledger row (#23866)\n- `d0fe050489` fix(spec): the Permission Set, Position and view form help texts Setup shows are plain admin copy (#23870)\n- `497518c3f6` docs: re-measure the example CRM size (30 files, 1,844 lines, ~17.5k tokens) and state the commit it was measured at (#23876)\n- `77efc66223` feat(platform-objects)!: Setup's organization, team, business-unit and user records carry no Discussion feed (enable.feeds: false) (#23869)\n- `570f01d270` docs(adr-0069): record ruling C′'s enforcement and the API-key admission seam (#23875)\n- `2034975a47` fix(driver-turso): a Turso remote database enforces the storage.notNull a field declares (#23893)\n- `d5666be876` refactor(rest): move registerEmailEndpoints into email-routes.ts (#23050 slice 8) (#23882)\n- `a13fd4df69` test(lint): the two lazy-deps contract files declare their whole-package-import budget (#23888)\n- `0744f94366` feat(scripts): a third test-budget class, \"compiles the package type graph once\" (#23897)\n- `dd11563f61` feat(spec): settings info_banner translation slot — banners.ID.{title,text} and its two resolvers (#23886)\n- `0cb45e9e0a` fix(runtime): an explicit sqlite / sqlite-wasm selection refuses a URL that is not a file path, on both hosts (#23896)\n- `abb6df0e01` fix(cli): three more read-only arms claim no row or table, and name the journal-mode switch on a SQLite file (#23895)\n_Filed by `.github/workflows/scheduled-full-run-card.yml`. Generated by [Claude Code](https://claude.ai/code)_"
+}

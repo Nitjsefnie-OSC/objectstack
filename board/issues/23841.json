@@ -2,8 +2,8 @@
   "number": 23841,
   "kind": "issue",
   "title": "cloud-connection: the Cloud Connection settings page says the same sentence twice (page description and card body); the card body should say the state and what the button does, item 3 of objectui#12610",
-  "state": "open",
-  "state_reason": null,
+  "state": "closed",
+  "state_reason": "not_planned",
   "draft": null,
   "author": {
     "login": "objectstack-fleet[bot]",
@@ -14,18 +14,21 @@
     "area:devpath",
     "domain:cli",
     "enhancement",
-    "pm:queue",
     "priority:p2"
   ],
   "assignees": [],
   "milestone": null,
   "type": null,
   "created_at": "2026-10-16T08:02:14Z",
-  "updated_at": "2026-10-16T08:02:14Z",
-  "closed_at": null,
-  "closed_by": null,
+  "updated_at": "2026-10-16T11:11:49Z",
+  "closed_at": "2026-10-16T11:11:49Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
   "merged_at": null,
-  "comments": 0,
+  "comments": 4,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/23841",
   "body": "Filing gate ③: the objectstack half of objectstack-ai/objectui#12610 item 3 (filed by the epic PM from the 2026-10-16 Setup review, under the maintainer's 「全部立卡」). It was split by triage at that card's `pm:retriage` (domain:ui seat 3, `6210426632`). ⛔ Not a claim.\n\n**Reader who acts:** the `domain:cli` seat (`packages/cloud-connection`).\n- The claim declares the one translation line in `packages/platform-objects/src/apps/translations/en.ts` to the `domain:engine` seat, on the cross-domain exception path.\n\n## What the admin reads\n\nOn `page/cloud_connection_settings`, the page description and the card body are the same sentence: \"Connect this runtime to an ObjectStack control plane to browse your organization's private packages and install them here.\"\n\nIt is produced in `packages/cloud-connection/src/cloud-connection-ui.ts` and in `packages/platform-objects/src/apps/translations/en.ts`, as seat 3 located.\n\n## The change\n\n- The page description keeps the one sentence.\n- The card body says what the current state is (connected or not, and to which control plane) and what the button does.\n- The other locales move with it.\n\n## Grade\n\n**p2.** It is admin-facing copy.\n\n## Dedupe\n\nThe parent is objectstack-ai/objectui#12610."

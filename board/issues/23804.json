@@ -2,8 +2,8 @@
   "number": 23804,
   "kind": "issue",
   "title": "Audit log: sys_user_preference writes are not audit events",
-  "state": "open",
-  "state_reason": null,
+  "state": "closed",
+  "state_reason": "completed",
   "draft": null,
   "author": {
     "login": "objectstack-fleet[bot]",
@@ -14,19 +14,22 @@
     "area:access",
     "bug",
     "domain:services",
-    "needs-user-decision",
     "priority:p2"
   ],
   "assignees": [],
   "milestone": null,
   "type": null,
   "created_at": "2026-10-16T03:45:34Z",
-  "updated_at": "2026-10-16T05:57:30Z",
-  "closed_at": null,
-  "closed_by": null,
+  "updated_at": "2026-10-16T11:23:28Z",
+  "closed_at": "2026-10-16T11:22:09Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
   "merged_at": null,
-  "comments": 4,
+  "comments": 11,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/23804",
-  "body": "## Source\n\nRead in the console's Setup app on 2026-10-16 (objectstack `18.0.0-next.1` serving HotCRM): Audit Logs (`sys_audit_log`, 407 rows) opens on thirteen consecutive rows `update · sys_user_preference · TAnQGzKwsF3QeY3X · Dev Admin` between 10:58 and 11:01 — one per list preference change (a column hidden, a sort toggled, a favourite pinned: `ui.recent`, `ui.favorites`, `ui.flow.palette.recents`), written by the console's own UI state store. The System Overview dashboard counts them as \"Config Changes / Events\": 123 of the 189 events in seven days are `update`, most of them this object. The rows that matter (login, permission and sharing changes, record deletes) are buried under a user's clicks.\n\n## Target\n\n1. The audit plugin (`packages/plugins/plugin-audit/src/audit-plugin.ts`) does not record writes to `sys_user_preference`; the exclusion is declared on the object (an `audit: false` posture on the platform object, or an allowlist the plugin reads), not hard-coded by name in the plugin.\n2. The same posture applies to the other per-user UI stores the console writes on every interaction (recent items, favourites, palette recents) — one declaration, read by the plugin.\n3. The System Overview dashboard's \"Config Changes\" tile reads `config_change` actions only, which it already does; with the exclusion its \"Events by User\" chart stops counting preference writes.\n\n## File surface\n\n`packages/plugins/plugin-audit/src/audit-plugin.ts` (the write hook and the object filter), `packages/platform-objects/src/…/sys-user-preference.object.ts` (the posture flag), the spec if the flag is new (`packages/spec`, declared before it is read), tests beside each.\n\n## Acceptance\n\n1. Tests: an update to `sys_user_preference` writes no `sys_audit_log` row; an update to `sys_sharing_rule` still does; a new object with the flag set is skipped.\n2. On a dev instance, after ten list-preference changes, `sys_audit_log` gains zero rows (the epic PM reads it in Setup).\n3. `pnpm --filter @objectstack/plugin-audit test` green; the spec gate green if the flag is new.\n\n## Constraints\n\n- Compliance posture: the exclusion covers UI preference stores only; no business or security object may opt out through the same flag without an ADR — the flag's docblock says so.\n\n## Evidence\n\nScreenshots on the temporary branch `claude/console-home-login-design-20261016` of objectstack-ai/objectui (commit `01244b886`, never merged): [setup-audit-logs.png](https://github.com/objectstack-ai/objectui/blob/01244b886/docs/design/setup-review-2026-10-16/setup-audit-logs.png?raw=true).\n\n<sub>Filed by the epic PM session `session_cdb7a717-def7-4e71-9988-f089fbaa18ff` from the 2026-10-16 second review pass: objectui main `8415d9f11`, HotCRM `63db83e2`, the vite console on :5180 against `objectstack serve --dev` on :4001, the Studio pillars and all 43 Setup pages walked in the maintainer's browser pane at 1024 × 768 (en) with a 1280 × 900 re-check (zh). The maintainer asked for every finding to be filed, verbatim: 「全部立卡」.</sub>"
+  "body": "Ruled: 6212163130 · letter B · 2026-10-16T09:13Z\n\n## Source\n\nRead in the console's Setup app on 2026-10-16 (objectstack `18.0.0-next.1` serving HotCRM): Audit Logs (`sys_audit_log`, 407 rows) opens on thirteen consecutive rows `update · sys_user_preference · TAnQGzKwsF3QeY3X · Dev Admin` between 10:58 and 11:01 — one per list preference change (a column hidden, a sort toggled, a favourite pinned: `ui.recent`, `ui.favorites`, `ui.flow.palette.recents`), written by the console's own UI state store. The System Overview dashboard counts them as \"Config Changes / Events\": 123 of the 189 events in seven days are `update`, most of them this object. The rows that matter (login, permission and sharing changes, record deletes) are buried under a user's clicks.\n\n## Target\n\n1. The audit plugin (`packages/plugins/plugin-audit/src/audit-plugin.ts`) does not record writes to `sys_user_preference`; the exclusion is declared on the object (an `audit: false` posture on the platform object, or an allowlist the plugin reads), not hard-coded by name in the plugin.\n2. The same posture applies to the other per-user UI stores the console writes on every interaction (recent items, favourites, palette recents) — one declaration, read by the plugin.\n3. The System Overview dashboard's \"Config Changes\" tile reads `config_change` actions only, which it already does; with the exclusion its \"Events by User\" chart stops counting preference writes.\n\n## File surface\n\n`packages/plugins/plugin-audit/src/audit-plugin.ts` (the write hook and the object filter), `packages/platform-objects/src/…/sys-user-preference.object.ts` (the posture flag), the spec if the flag is new (`packages/spec`, declared before it is read), tests beside each.\n\n## Acceptance\n\n1. Tests: an update to `sys_user_preference` writes no `sys_audit_log` row; an update to `sys_sharing_rule` still does; a new object with the flag set is skipped.\n2. On a dev instance, after ten list-preference changes, `sys_audit_log` gains zero rows (the epic PM reads it in Setup).\n3. `pnpm --filter @objectstack/plugin-audit test` green; the spec gate green if the flag is new.\n\n## Constraints\n\n- Compliance posture: the exclusion covers UI preference stores only; no business or security object may opt out through the same flag without an ADR — the flag's docblock says so.\n\n## Evidence\n\nScreenshots on the temporary branch `claude/console-home-login-design-20261016` of objectstack-ai/objectui (commit `01244b886`, never merged): [setup-audit-logs.png](https://github.com/objectstack-ai/objectui/blob/01244b886/docs/design/setup-review-2026-10-16/setup-audit-logs.png?raw=true).\n\n<sub>Filed by the epic PM session `session_cdb7a717-def7-4e71-9988-f089fbaa18ff` from the 2026-10-16 second review pass: objectui main `8415d9f11`, HotCRM `63db83e2`, the vite console on :5180 against `objectstack serve --dev` on :4001, the Studio pillars and all 43 Setup pages walked in the maintainer's browser pane at 1024 × 768 (en) with a 1280 × 900 re-check (zh). The maintainer asked for every finding to be filed, verbatim: 「全部立卡」.</sub>\n"
 }

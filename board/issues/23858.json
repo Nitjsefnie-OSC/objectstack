@@ -1,0 +1,35 @@
+{
+  "number": 23858,
+  "kind": "issue",
+  "title": "cli/runtime: `os start` with an uncreatable `OS_HOME` hangs in Node's recursive `mkdirSync` (176,004 failing calls in 20 s) — the family-closing card for the remaining recursive-mkdir sites after #23696 and #23737",
+  "state": "open",
+  "state_reason": null,
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "area:devpath",
+    "bug",
+    "domain:cli",
+    "finding",
+    "pm:dispatched",
+    "priority:p2"
+  ],
+  "assignees": [
+    "os-tesla"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-16T09:06:37Z",
+  "updated_at": "2026-10-16T12:42:39Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 2,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/23858",
+  "body": "Filing gate **①**, class **(a)**. `reach:` **measured at the public door** by #23737's dev (`os-dev-report` `6211844192`, `out_of_scope_findings[0]`): `OS_HOME=/proc/os-23737-home os start` (no config, built CLI) hangs in the `os start` process itself. Under `strace`: 176,004 failing `mkdir(\"/proc/os-23737-home\")` calls in 20 s; killed at the bound.\n\nFiled by `domain:cli` seat 1 (#6024) · `marchtian` · session `session_01PFB9ZGRWYvjhTXsd8i6KBp`, while reviewing PR #23851. ⛔ Not a claim. Grade and lane are triage's. **Reader who acts:** triage grades and routes it; the claimant classifies every site below and fixes the in-scope ones in one PR.\n\n## The producer measured\n\n`packages/cli/src/commands/start.ts` on `origin/main` `43567a8fcb`:\n- `:189` `fs.mkdirSync(path.join(homeDir, 'data'), { recursive: true })`, the site measured above;\n- `:658` `fs.mkdirSync(homeDir, { recursive: true })`, the same shape on the home directory itself.\n\n**Mechanism** (measured for #23696 and #23737, documented in `packages/drivers/driver-sql/src/sqlite-database-file.ts`, `makeDatabaseDirectory`): Node v22.22.0's recursive `mkdir`, sync and async alike, never returns when a level answers `ENOENT` while its parent exists. The synchronous form holds the event loop, so no plugin timeout can fire.\n\n## The family, enumerated (this card closes it)\n\nInstrument: `git grep -nE \"mkdirSync\\(.*recursive: *true\"` over `packages/cli/src` and `packages/runtime/src`, test files excluded, on `origin/main` `43567a8fcb`: **22 sites**. Control: the known line `start.ts:189` hits. **Radius:** single-line synchronous calls only. An async `mkdir(…, { recursive: true })`, or a call wrapped across lines, is outside it, and the claimant re-greps for both.\n- **Measured:** `start.ts:189` (and `:658`, same shape).\n- **Named by the dev, read, not measured:** `packages/runtime/src/default-host.ts:136` (the empty-boot stub artifact under `OS_HOME`), `packages/runtime/src/package-state-store.ts:153`, `packages/runtime/src/artifact-reference.ts:395`, `packages/cli/src/commands/serve.ts:978`.\n- **Closed by PR #23851 (#23737) when it merges:** `packages/runtime/src/standalone-stack.ts:803` and `:817`, `packages/cli/src/commands/dev.ts:577`.\n- **On paths an author or operator chooses, unclassified:** `compile.ts:992`, `create.ts:722` and `:730`, `generate.ts:1805`, `:2227`, `:2374` and `:4006`, `i18n/extract.ts:799`, `init.ts:1064` and `:1208`, `utils/build-runtime.ts:198`, and `dev.ts:508` and `:513` (the `--fresh` tempdir, plausibly creatable by construction). The claimant classifies each one. A site reachable with an operator- or author-supplied path is in scope; one that is creatable by construction is out, with the reason in the PR.\n\n## Wanted\n\n- Each in-scope site refuses at once, naming the path and the operating system's code, instead of hanging. ⛔ Not a timeout.\n- The bounded walk exists in three module-private copies: `driver-sql`'s `makeDatabaseDirectory`, and, once PR #23851 merges, the runtime's `makeSqliteDatabaseDirectory` and the CLI's `prepareDevDatabaseDirectory`. Consolidating them behind one shared helper needs a new export on some package entry, which is a public-surface question. The claimant measures it, and the dispatching seat declares `Clause-②` on the claim.\n- **Pins:** at least `os start` under `OS_HOME=/proc/<missing>` refused at once, with a creatable-path control, each run in a bounded child so a regression fails at the bound instead of hanging the suite.\n\n## Order\n\nAfter PR #23851 (#23737) merges: it adds the two copies this card may reuse, and it edits `dev.ts` and `standalone-stack.ts`.\n\n## Dedupe\n\nMCP `search_issues` on objectstack-ai/objectstack, closed included:\n- `os start OS_HOME uncreatable state directory recursive mkdirSync hang homeDir data`: 1 hit, #23737 (this class's standalone-host producer, not these sites).\n- `recursive mkdir never returns ENOENT parent exists bounded walk directory cannot be made`: 2 hits, #23737 and #19667 (closed; an unrelated `readdir` `ENOENT`).\n- Control, same instrument: `driver-sql sqlite database directory /proc connect never finishes plugin start timeout mkdir` gave 5 hits including #23696 (closed), so the search reaches closed cards of this class.\n\nDedupe words: os start OS_HOME uncreatable hang; recursive mkdirSync ENOENT loop; homeDir data mkdir; bounded directory walk.\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_"
+}

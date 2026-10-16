@@ -1,0 +1,33 @@
+{
+  "number": 23914,
+  "kind": "issue",
+  "title": "Malformed JSON request body is silently parsed as {}: a truncated POST /data/:object/query answers 200 with the whole table, and a truncated PATCH answers 200 with an empty update",
+  "state": "open",
+  "state_reason": null,
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "area:api",
+    "bug",
+    "domain:cli",
+    "pm:queue",
+    "priority:p1",
+    "target:v18"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-16T12:32:00Z",
+  "updated_at": "2026-10-16T12:49:15Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 1,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/23914",
+  "body": "**Filing gate ①**: a product defect with a named landing and a reproduction. Reach: the public HTTP door `POST /api/v1/data/:object/query`, measured live twice by two independent agents on `main` `94114c1f`.\n\n**Reader who acts:** the REST/transport lane seat owning `packages/plugins/plugin-hono-server` and `packages/adapters/hono`. An unparseable JSON body must be refused with a 400 at the transport, never handed on as `{}`.\n\n## What\n\nWhen a request declares `Content-Type: application/json` and the body is not valid JSON, the HTTP layer swallows the parse error and runs the handler with `body = {}`. On the query door this is the #3899 silent-widening class: a malformed filter answers **200 with the whole table** instead of a 400. On the write door, a malformed `PATCH` answers **200** and performs an empty update.\n\n## Reproduction (fresh `objectstack dev --seed-admin` showcase boot, admin session)\n\nSend each body from a file (`curl -H 'Content-Type: application/json' --data-binary @b.txt …`) so shell quoting plays no part.\n\n1. `POST /api/v1/data/showcase_account/query` with `{\"where\": {\"status\": \"churned\"}}` → 200, 2 rows. Correct.\n2. Same request with the closing brace missing: `{\"where\": {\"status\": \"churned\"}`\n   - expected: 400 (an invalid-JSON / validation code);\n   - actual: **200 with every row** (14 of 14 on a fresh DB; 26 of 26 on a DB with more seed).\n3. `{ not json` → 200, every row.\n4. A valid where-body sent as `text/plain` → 200, every row. `parseBody()` yields `{}` and the filter is dropped.\n5. `PATCH /api/v1/data/showcase_account/ID` with `{\"name\": \"HACKED\"` (truncated)\n   - expected: 400;\n   - actual: **200**, with no field changed and `updated_at` bumped. The client is told a write succeeded that never happened.\n6. `POST /api/v1/data/showcase_account` with a truncated body containing `name` → 400 `VALIDATION_FAILED` \"Account Name is required\". The error is misleading: the body was discarded, and no parse error is named.\n\n## Mechanism\n\n- `packages/plugins/plugin-hono-server/src/adapter.ts` (~L691–710): `let body = {}`; on `application/json`, `try { body = await c.req.json() } catch { try { body = await c.req.parseBody() } catch {} }`. Both failures are swallowed.\n- `packages/adapters/hono/src/index.ts` (~L322–329) `readDispatchBody`: `try { return JSON.parse(await raw.clone().text()) } catch { return {} }`. The same behaviour on the second transport.\n- `packages/runtime/src/domains/meta.ts` (~L1314) documents a `c.req.json().catch(() => ({}))` catch-all.\n- No HTTP handler emits an invalid-JSON code; a grep for `INVALID_JSON` / \"Malformed JSON\" finds only CLI and driver code. A new code needs an ADR-0112 ledger row.\n\n## Contract it violates\n\n`docs/qa/platform-checklist/areas/api-backend.json` → `api-backend.query-contract-matrix` (P0), negative: \"silent WIDENING is the catastrophic failure mode (#3899): a malformed query body must never degrade into an unfiltered 200 full read\". Item title: \"malformed input 400s with the exact code\".\n\n## Dedupe\n\nMCP `search_issues` on objectstack-ai/objectstack, closed included:\n- `malformed JSON request body silently treated as empty object instead of 400` → 4 hits (#23491, #7867, #3398, #7543). #23491 is a PATCH non-record body 500 on the dispatcher, a different bug.\n- `invalid JSON body parseBody fallback hono adapter swallow` → 2 hits (#23365, #16545; both about error-envelope rendering).\n- `unparseable request body becomes {} query widens returns all rows` → 0 hits.\n- `INVALID_JSON body syntax error 400` → 1 hit (#3398, unrelated).\n- The first runner's three queries → 10 hits, no match.\n\nNo existing card covers this.\n\nQA-source: #23913 · api-backend.query-contract-matrix · clause 6 (silent-widening negative)"
+}

@@ -2,8 +2,8 @@
   "number": 23809,
   "kind": "issue",
   "title": "Spec: a select option can declare its lifecycle kind (open / won / lost) so stage paths draw terminal states apart",
-  "state": "open",
-  "state_reason": null,
+  "state": "closed",
+  "state_reason": "completed",
   "draft": null,
   "author": {
     "login": "objectstack-fleet[bot]",
@@ -14,7 +14,6 @@
     "area:records",
     "domain:spec",
     "enhancement",
-    "pm:dispatched",
     "priority:p2"
   ],
   "assignees": [
@@ -23,11 +22,15 @@
   "milestone": null,
   "type": null,
   "created_at": "2026-10-16T03:56:32Z",
-  "updated_at": "2026-10-16T08:15:18Z",
-  "closed_at": null,
-  "closed_by": null,
+  "updated_at": "2026-10-16T11:25:20Z",
+  "closed_at": "2026-10-16T11:15:41Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
   "merged_at": null,
-  "comments": 2,
+  "comments": 6,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/23809",
   "body": "## Source\n\nRead on 2026-10-16 in the console (objectui main `8415d9f11`) with HotCRM `63db83e2`. The lead record's stage path draws \"New ✓ → Contacted → Qualified → Converted → Unqualified\": the lead's `status` options (`src/sales/objects/lead.object.ts`) are a flat list, and Unqualified, which ends a lead's life, is painted as a fifth step after Converted. The opportunity record's path draws \"Prospecting … Negotiation · Closed Won · ✗ Closed Lost\" with the two closed states set apart, because the console recognises the values `closed_won` / `closed_lost` by name. `packages/spec/src/data/field.zod.ts` (around line 1935) says it itself: no select option carries a terminal marker, so the renderer guesses from value spelling and every other object gets a path that treats its lost state as a step.\n\n## Target\n\n1. The select option shape gains `kind`, a small closed enum of lifecycle categories: \"a step on the way\", \"the successful end\", \"the unsuccessful end\". The spelling is the spec seat's to settle, choosing one vocabulary for the whole platform between the sales pair `open | won | lost` and the neutral `open | done | cancelled` (Jira's status-category shape), so that a case's Resolved / Cancelled and a task's Completed fit the same three words as a deal's Closed Won / Closed Lost. Declared once on the option, read by every renderer of a `stageField`: the record path, the kanban column order, the \"closed\" filters, the dashboard \"won / lost\" measures.\n   - On a plain select the key is optional and an absent kind reads as the open category.\n   - When an object's `stageField` names the field, every option of that field must declare `kind` explicitly: publish refuses a stage field with any option whose kind is missing, naming the field and the option. No default there, because a default would hand an AI that forgot the key the same wrong path drawn today, only declared. Maintainer ruling 2026-10-16 (agreeing in chat to these two tightenings, the mandatory kind under `stageField` and the vocabulary choice), verbatim: 「同意」.\n2. The console's name-based guess (`closed_won` / `closed_lost`) stays as the fallback for packages that do not declare the kind, and is retired in the next major.\n3. HotCRM declares `kind: 'lost'` on the lead's `unqualified` and `kind: 'won'` on `converted`, and the same on the opportunity's two closed stages, in the same change set (a hotcrm follow-up card references this one).\n4. The field inspector in Studio shows the kind as a third column of the picklist options editor (the objectui follow-up).\n\n## File surface\n\n`packages/spec/src/data/field.zod.ts` (the option schema and its docblock), the spec's generated docs and metadata forms, `packages/spec` contract tests; the objectui path renderer and Studio inspector follow in their own cards once the field is published.\n\n## Acceptance\n\n1. Spec tests: an option with a terminal kind parses; an unknown kind is refused; a plain select without kinds parses and reads as open; an object whose `stageField` names a select with one option lacking `kind` is refused at publish with a message that names the field and the option; `kind` on a non-select field is refused.\n2. The generated metadata forms list the field; `pnpm --filter @objectstack/spec test` and the spec gates green.\n3. The four-axis note on this card (business pull: two HotCRM objects already encode the semantics by naming; AI-safety: a declared kind beats a spelling convention) is read by the spec seat before it lands.\n\n## Constraints\n\n- Contract-first: the spec declares before any consumer reads; no console-only workaround.\n\n## Evidence\n\nScreenshots on the temporary branch `claude/console-home-login-design-20261016` of objectstack-ai/objectui (commit `b72c97985`, never merged): [hotcrm-lead-record-header-and-stage.jpg](https://github.com/objectstack-ai/objectui/blob/b72c97985/docs/design/hotcrm-review-2026-10-16/hotcrm-lead-record-header-and-stage.jpg?raw=true) · [hotcrm-opportunity-record.jpg](https://github.com/objectstack-ai/objectui/blob/b72c97985/docs/design/hotcrm-review-2026-10-16/hotcrm-opportunity-record.jpg?raw=true).\n\n<sub>Filed by the epic PM session `session_cdb7a717-def7-4e71-9988-f089fbaa18ff` from the 2026-10-16 walk of HotCRM's core pages as a user: objectui main `8415d9f11`, HotCRM `63db83e2`, the vite console on :5180 against `objectstack serve --dev` on :4001, the maintainer's browser pane at 1024 × 768 (en). The maintainer asked for the findings to be filed on the repository each belongs to, verbatim: 「相关问题也在对应的项目上创建任务」.</sub>\n\n<sub>Body refreshed 2026-10-16T04:10Z: Target 1 and Acceptance 1 tightened per the maintainer's 2026-10-16 ruling (kind mandatory under `stageField`, vocabulary settled by the spec seat); the rest unchanged.</sub>\n"

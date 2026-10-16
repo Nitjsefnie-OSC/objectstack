@@ -2,8 +2,8 @@
   "number": 23816,
   "kind": "issue",
   "title": "driver-turso / os migrate organization-ownership: the v18 ceremony cannot run on a Turso remote database (deferred DDL, drift detection and migration entries are refused on the remote face), so every hosted tenant's v18 upgrade stops",
-  "state": "open",
-  "state_reason": null,
+  "state": "closed",
+  "state_reason": "completed",
   "draft": null,
   "author": {
     "login": "hotlong",
@@ -13,8 +13,6 @@
   "labels": [
     "bug",
     "domain:engine",
-    "needs:contract-review",
-    "pm:dispatched",
     "priority:p0",
     "target:v18"
   ],
@@ -24,11 +22,15 @@
   "milestone": null,
   "type": null,
   "created_at": "2026-10-16T04:43:38Z",
-  "updated_at": "2026-10-16T08:13:08Z",
-  "closed_at": null,
-  "closed_by": null,
+  "updated_at": "2026-10-16T09:50:05Z",
+  "closed_at": "2026-10-16T09:47:02Z",
+  "closed_by": {
+    "login": "hotlong",
+    "id": 50353452,
+    "type": "User"
+  },
   "merged_at": null,
-  "comments": 8,
+  "comments": 11,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/23816",
   "body": "Filing-gate category ① (a defect with a measured reach) and ③ (a maintainer direct order). Reach: the first v18 request to a hosted tenant on cloud's staging, measured 2026-10-16. The maintainer chose the route 「框架补 remote 支持」 and then directed 「相关任务都提到最高优先级」.\n\n**Reader:** the cloud#2899 executor (the maintainer's local session) dispatches a developer on this card today. Cloud's follow-up is a pin bump that carries the fix, tracked on cloud#2868.\n\n**Dedupe** (`gh api search/issues`, total_count, closed issues included):\n- `\"Schema drift detection is not supported by the Turso REMOTE\"`: 1 (#19891, closed: the refusal itself).\n- `turso remote detectManagedDrift`: 16, all closed (#19845, #19891, #20053, #20055, #20016, #20073 …). They made the remote face refuse instead of answering wrongly; none gives the ceremony a remote path.\n- `organization-ownership turso remote`: 20. The only open one is #15212 (NOT NULL per cleared table), which is a different subject.\n- `turso remote ceremony is:open`: 6, all seat posts except #15212.\n- No open card asks for the v18 ceremony to run on a Turso remote database.\n\n## What happens\nCloud's tenant first-serve upgrade (cloud#2868) runs `os migrate organization-ownership` (plan, then `--apply --backup-taken`) against each environment's database. Hosted environments are Turso databases reached over the remote transport (`libsql://`). On staging, at pin `534ca13eb5`, the first request to a v17 environment stops at the plan:\n\n```\n[tenant-v18-upgrade] environment 9930e6cf-… is NOT served: the v18 upgrade stopped at preflight {\"blocking\":[\"preflight: the ceremony's plan refused: Deferred schema DDL is not supported by the Turso REMOTE transport (this datasource's transport mode is `remote`) … answers NOT_IMPLEMENTED/501 …\"]}\n```\n\nEvery environment holding v17 data is unserved; evidence is in cloud#2899 comment 6208078528. Production's tenants are on the same transport, so production cannot take v18 until this is fixed.\n\n## Why, at `534ca13eb5` (read in source and measured on a remote face)\n- **Deferred DDL refused:** the ceremony arms deferred schema DDL unconditionally (`deferSchemaDdl: true` in the plan and the apply boots), and driver-turso's remote face refuses it (`setDeferredDdl: 'refused'`, #19842 / `e07843b5a6`).\n- **Drift detection and migration entries refused:** the apply's column drops go through `detectManagedDrift` + `applyMigrationEntries` (`packages/cli/src/utils/organization-ownership-column-drops.ts`), which the remote face also refuses (`detectManagedDrift: 'refused'`, `applyMigrationEntries: 'refused'`, #19891). Cloud's own overlay-index step uses `detectManagedDrift` too, and it was measured refused on a remote face.\n- **The embedded replica is not a way around it (measured, libsql 0.18.0 / sqld 0.24.32):**\n  - The replica face's writes go through Knex into the local file, and `sync()` only pulls. After an UPDATE, a DELETE, a ledger INSERT, a `DROP COLUMN` and a `DROP TABLE`, the primary was unchanged and the replica had diverged.\n  - On a fresh file, the replica cannot connect at all: `Can not sync a database without a wal_index`.\n  - The CLI's turso datasource (`runtime/src/standalone-stack.ts`) builds `{ url, authToken }` only, with no `syncUrl` entry point.\n- **Never measured before:** the ceremony and cloud's upgrade were rehearsed on `file:` databases only.\n\n## Wanted\nThe ceremony, plan and apply, completes on a Turso remote database. The lane judges the design. One shape that fits the measurements:\n- **Plan and apply without deferral:** on the remote face, the ceremony boots with schema sync skipped instead of arming deferral. The environment's own kernel has already run the additive sync, and the plan stays read-only.\n- **Remote drift detection:** the remote face gains `detectManagedDrift` and `applyMigrationEntries` for the entry kinds the ceremony emits (`drop_column`, `drop_index`, `recreate_index`), through the libsql client.\n\n**Acceptance:**\n- **Plan:** on a remote face (a local `sqld` reached as `libsql://127.0.0.1:<port>?tls=0`; `http://` is refused by the CLI's URL check), with a v17-shaped database, `os migrate organization-ownership --json` exits 0.\n- **Apply:** `--apply --backup-taken` completes with `blocking 0`. The column drops land on the server's own database, read back through a second connection. The `adr-0131-organization-ownership` marker is verified.\n- **Ablation:** the remote-face test turns red without the change.\n\nThe repro and probe scripts from the measurement are kept on the maintainer's machine and can be handed to the developer.\n\nRelated: cloud#2899 (operation card), cloud#2868 (tenant upgrade), cloud#2746 (the v18 move, merged), #19842, #19891.\n"

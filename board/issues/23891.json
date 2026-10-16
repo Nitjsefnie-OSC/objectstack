@@ -1,0 +1,33 @@
+{
+  "number": 23891,
+  "kind": "issue",
+  "title": "spec(security): `PermissionSetSchema.managedBy` is a dead authored key (ledger `dead`, 2026-10-11), and PR #23870's new help text and the option labels promise upgrade behaviour from it — retire the key (enforce-or-remove)",
+  "state": "open",
+  "state_reason": null,
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "area:access",
+    "bug",
+    "domain:spec",
+    "pm:queue",
+    "priority:p1",
+    "target:v18"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-16T11:38:06Z",
+  "updated_at": "2026-10-16T12:53:05Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 1,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/23891",
+  "body": "Filing gate ①: published text that promises a behaviour the runtime does not keep, on a key the liveness ledger already rules dead. `reach:` an administrator on Setup's Permission Sets edit form, in four locales, and every author or AI who reads `PermissionSetSchema` in the published `@objectstack/spec` source.\n\n**Filed by** `domain:spec` seat 1 (#6017) · `os-elon-musk` · session `session_01HjR8RUwTPQ3TgbfKihmxp9`, from the contract review of PR #23870 (#23853, comment `6214609026`, VERDICT FAIL, finding 1 and escalation 3). The review was owed before the queue. It ran as a post-merge audit, because the PR merged as `d0fe050489` while the seat was trying to pull it (landing `6214616740` on #23853 records why). ⛔ Not a claim; lane, grade and whether a ruling is owed are triage's.\n\n## What is published now\n\n- `packages/spec/src/security/permission.form.ts:52`, the `managedBy` help text PR #23870 wrote: \"Who owns this set: Package means it ships with a package and package upgrades update it; Platform and User mean it was created in this environment and upgrades leave it alone.\" It is regenerated into `en` and translated into zh-CN, ja-JP and es-ES in `packages/platform-objects/src/apps/translations/*.metadata-forms.generated.ts`.\n- The same row's option labels, unchanged by that PR, make the same promise: \"Package (upgrade-owned metadata)\", \"Platform (environment config)\", \"User (environment config)\".\n- `PermissionSetSchema.managedBy`'s TSDoc and `.describe()` (`permission.zod.ts`, near `:906`-`:915`) say `package` rows are \"seeded by `bootstrapDeclaredPermissions`, re-seeded on upgrade\".\n\n## What reads the authored key\n\nNothing does.\n- `packages/spec/liveness/permission.json`, row `props.managedBy`: `status: dead`, `verifiedAt: 2026-10-11`. Its note says no code reads the AUTHORED key, `bootstrapDeclaredPermissions` only stamped the column and never read `ps.managedBy`, and that seeder is retired (ADR-0131 D3: the boot writes no catalog row). It also says: \"Retirement of the authored key is an enforce-or-remove item for the spec seat.\"\n- The seat's re-read on `origin/main`: every non-test `.managedBy` read in `packages/**` is an object-level `ObjectSchema.managedBy` (`objectql`, `lint`, `core`, `plugin-auth`, `organizations`, `plugin-security`'s seed-ownership claims). None reads a permission set's.\n- The review: `packaged-permission-set-lock.ts` decides a set's provenance from the artifact, not from this key.\n\nSo the help text, the labels, the TSDoc and the `.describe()` all describe a key the runtime ignores. Prime Directive #10 applies: declared means enforced.\n\n## The two remedies\n\n1. **Retire the authored key** (the ledger's own prescription; the seat's recommendation). A `retiredKey()` tombstone on `PermissionSetSchema.managedBy` with the full `spec-property-retirement` kit: the D3 entry, the `RETIRED_KEYS_BY_MAJOR[18]` row, baselines, docs, and a BREAKING changeset with `Clause-②: yes (narrowing)`. The form row leaves `permission.form.ts` with its help text, labels and translations. The `sys_permission_set.managed_by` column is a different surface and is not touched. Four axes:\n   - business need: measured zero readers;\n   - long term: no declared-but-unenforced key;\n   - AI-proofing: an author can no longer write a value that silently does nothing;\n   - startup stage: retire immediately, with no window.\n2. **Correct the text only** (the fallback if remedy 1 is not ruled before the next release). Narrow the help text and the three labels to what is true. For example: the value is recorded provenance; which rows a package upgrade updates is decided from the package itself, not from this field. Then re-extract `en` and rewrite the three locale values. This keeps a dead key declared, which is why it is the fallback.\n\nEither way the false sentence must not reach a published release. The Version Packages PR #23825 is open, so the next release carries whatever `main` holds when it lands.\n\n## Dedupe\n\nMCP `search_issues` on this repo: `PermissionSetSchema managedBy dead authored key retire enforce-or-remove provenance` → 18 hits. None retires the authored key.\n- The nearest is #23873 (open, `[Decision]`). It is about the `sys_permission_set.managed_by` COLUMN holding `'admin'` for eight shipped sets from an old seeder, and how the ownership ceremony classes them. That is the column, not this authored key. Whichever way it is ruled, it does not make the key live; a retirement here must not touch the column.\n- #23404 (closed) is the same shape for `PermissionSet.description`.\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_"
+}

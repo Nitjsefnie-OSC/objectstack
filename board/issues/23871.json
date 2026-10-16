@@ -1,0 +1,39 @@
+{
+  "number": 23871,
+  "kind": "issue",
+  "title": "The v17 boot refusal sends the operator to the ownership ceremony without the composition it needs (NODE_ENV=development or OS_AUTH_SECRET), and names a bare --apply the ceremony refuses without --plan-file",
+  "state": "closed",
+  "state_reason": "completed",
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "area:access",
+    "bug",
+    "domain:cli",
+    "finding",
+    "priority:p1",
+    "target:v18"
+  ],
+  "assignees": [
+    "hotlong"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-16T10:31:12Z",
+  "updated_at": "2026-10-16T13:37:36Z",
+  "closed_at": "2026-10-16T13:18:25Z",
+  "closed_by": {
+    "login": "os-zhuang",
+    "id": 277994282,
+    "type": "User"
+  },
+  "merged_at": null,
+  "comments": 2,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/23871",
+  "body": "Filing gate: **① a product defect with a public door**, `finding` class (a): operator text that misleads. `reach:` the refusal `os dev` / `os serve` print on a v17-shape database (`organizationOwnershipRefusalMessage`, `packages/runtime/src/organization-ownership-boot-guard.ts`), followed as written, measured once on `@objectstack/*` 18.0.0-next.2. Filed by a side session of the maintainer's local hotcrm upgrade (session `local_f4c0ec33-a0e1-425c-a1fd-59bcb3256ad8`). ⛔ Not a claim; grade and lane are triage's.\n\n**Reader who acts:** triage grades and routes it. The text is `packages/runtime` (the boot guard); the composition it should name is `packages/cli` (`bootSchemaStack`'s auth gate, `describeSecurityPluginComposition` in `packages/cli/src/utils/schema-migration-plugins.ts`).\n\n**Dedupe:** REST issue search, all states, on objectstack-ai/objectstack: `organization-ownership NODE_ENV` → 3 hits; `organization-ownership \"OS_AUTH_SECRET\"` → 3; `\"v17 organization-ownership shape\"` → 6; `OrganizationOwnershipBootGuard` → 0; `\"organization-ownership\" boot refusal \"plan-file\"` → 13. None is this defect. The nearest:\n- #23359 / PR #23540 (closed): the apply's own blocker now names the uncomposed security plugin. This card is about the boot refusal that sends the operator there.\n- #23513 (closed): fixed a bare `--apply` in two other texts. It did not cover this one.\n\n## Reproduction\n\n- **Database:** a copy of the maintainer's local hotcrm `dev.db`, a long-lived SQLite dev database first created on 17.x.\n- **Release:** hotcrm on `@objectstack/*` 18.0.0-next.2.\n- **Safety:** every ceremony run was on the copy. The original was not touched.\n\n1. `objectstack dev` refuses to start. Its text, verbatim from `organizationOwnershipRefusalMessage`: \"Run 'os migrate organization-ownership' (review its plan), then 'os migrate organization-ownership --apply', and start again.\"\n2. The operator follows it from a shell: no `OS_AUTH_SECRET` (the dev boot never needed one), `NODE_ENV` unset.\n   - The ceremony boots its own stack, and the auth gate composes no security plugin (no secret, not a development boot).\n   - `--apply`'s `authored-conversion` step blocks, because the catalog resolves none of the platform's shipped sets and positions.\n3. **Control:** the same copy with `NODE_ENV=development`. The ceremony composes as the dev boot does, and that step passes. It then meets the next blocker, which is filed separately.\n\n## What is wrong with the refusal\n\nTwo things, in one sentence an operator copies:\n\n- **It does not say the ceremony must compose as the refusing boot does.**\n  - The dev boot composes the security plugin because it is a development boot.\n  - The ceremony composes it only behind the same auth gate: `OS_AUTH_SECRET`, or a development boot. A development boot means `--dev` or `NODE_ENV=development`, and `os migrate organization-ownership` has no `--dev` flag.\n  - Since PR #23540, a failed apply names the cause and says \"re-run where the security plugin is composed\". But the operator learns this only after a failed apply. And the no-secret reason it prints names `--dev`, which this command does not accept; #23540's acceptance notes record that gap. So no text tells the operator the spelling this command takes: `NODE_ENV=development`, or the deployment's `OS_AUTH_SECRET`.\n- **It names a bare `--apply`, which the command refuses.**\n  - Since #23437, `--apply` without `--plan-file` answers `plan-file-required`.\n  - The published CHANGELOG entry for this refusal already says `--apply --plan-file FILE`. The runtime string never got that.\n  - The guard's other refusal, for an unreadable column read, says \"run '… --apply'\" too.\n\n## Ask (the fixing seat's call)\n\n- The refusal names the sequence the command accepts: `os migrate organization-ownership --out PLAN`, review the file, then `--apply --plan-file PLAN` (with `--backup-taken`, or a yes at the prompt).\n- The refusal, or the ceremony when it runs, tells the operator to run the ceremony in the composition the server boots with, and how to spell that for this command. For a dev database that is `NODE_ENV=development`, or the deployment's `OS_AUTH_SECRET`.\n- Whether the guard can know which case applies (it runs inside the boot, which knows whether it is a development boot), or the ceremony gains its own spelling, is the fixing seat's call. ⛔ The ceremony still refuses when uncomposed: nothing is guessed.\n- Pin the refusal text, both sentences.\n\nRelated: #15194 (ADR-0131 epic) · #23461 (the boot refusal) · #23437 (S4, `--plan-file`) · #23359 / #23540 · #23513.\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_"
+}

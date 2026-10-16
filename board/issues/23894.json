@@ -1,0 +1,37 @@
+{
+  "number": 23894,
+  "kind": "pull_request",
+  "title": "docs(spec): the lookup picker reads its seven keys camelCase-only (docblock + six liveness notes)",
+  "state": "closed",
+  "state_reason": null,
+  "draft": false,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "documentation",
+    "protocol:data",
+    "size/s",
+    "tooling"
+  ],
+  "assignees": [
+    "os-elon-musk"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-16T11:51:51Z",
+  "updated_at": "2026-10-16T13:37:44Z",
+  "closed_at": "2026-10-16T13:37:42Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": "2026-10-16T13:37:42Z",
+  "comments": 3,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/pull/23894",
+  "body": "Fixes #23012\nClause-②: no\n\n## What changed\n\nProse only. No schema, `.describe()`, key or accepted value changes.\n\n- `packages/spec/src/data/field.zod.ts`: the docblock above the lookup picker keys was headed \"SNAKE_CASE TOLERANCE\". It said objectui reads `lookupColumns`, `lookupPageSize` and `allowCreate` as `snake ?? camel` and called them \"the three aliases that survive\". It now says the picker reads all seven keys camelCase-only. It keeps the history (objectui#7155, objectui#7357) and adds objectui#12157 as the round that retired the last three. It says a stored snake spelling is folded onto the declared key when the console ingests it (`normalizeSchemaReferenceKeys`). It still ends by pointing to the `lookupColumns` ledger row.\n- `packages/spec/liveness/field.json`: the six lookup picker notes (`lookupColumns`, `lookupPageSize`, `allowCreate`, `descriptionField`, `lookupFilters`, `dependsOn`) drop their \"(reads X || x)\" tails. Each carries the reading at `objectui @daeb77fc84` and `verifiedAt: 2026-10-16`. Where a reader outside the picker keeps a snake leg behind the declared key, the note names it as a cited read point: `resolveActionParams.ts#resolveActionParam` for `description_field` / `lookup_filters`, and `ObjectFieldInspector.tsx#readLookupFilters` / `#readDependsOn` for `lookup_filters` / `depends_on`.\n- `.changeset/23012-lookup-snake-tolerance-text.md`: a `patch` for `@objectstack/spec`. Its `files[]` ships both `src/**/*.zod.ts` and `liveness`, so both edits publish.\n\n## The reading, at objectui `daeb77fc84dd824e74c95b87cdede85afdb248e7` (objectstack's `.objectui-sha`)\n\n- `packages/fields/src/widgets/LookupField.tsx` reads each of the seven keys camelCase-only, in `declaredDisplayField`, `descriptionField`, `explicitAllowCreate`, `lookupColumns`, `lookupPageSize`, `lookupFilters` and `dependsOn`. `displayField` keeps `reference_field` behind it. That is objectui's own leg, not a spec key. No snake read of any of the seven is left in that file.\n- The fold holds as the card suggested. `packages/core/src/utils/reference-keys.ts#normalizeSchemaReferenceKeys` stamps an undeclared key onto the `FieldSchema` key that shares its alias probe (lowercased, separators removed). It never overwrites a declared value that is already there. `packages/app-shell/src/providers/MetadataProvider.tsx` runs it over every stored `object` item.\n- **Hypothesis 1 is only partly true.** Two readers outside the picker still rank a snake leg *behind* the declared key at the pin:\n  - `packages/fields/src/resolveActionParams.ts`, where a lookup action param is built: `descriptionField ?? description_field` and `lookupFilters ?? lookup_filters`.\n  - `packages/app-shell/src/views/metadata-admin/inspectors/ObjectFieldInspector.tsx` (`readLookupFilters`, `readDependsOn`): `lookupFilters ?? lookup_filters` and `dependsOn ?? depends_on`, as the designer's read of a stored document.\n\n  So the docblock does not claim \"no reader anywhere reads a snake spelling\". It is scoped to the picker readers it already named (LookupField / RecordPickerDialog), where the claim holds. The surviving legs are recorded, dated, in the `lookupColumns` ledger row and in the rows of the keys they read. None is a spelling this schema declares.\n\n## Acceptance notes\n\n- The `descriptionField`, `lookupFilters` and `dependsOn` notes were first left out of scope. They joined this PR in the seat's patch round (card comment 6215181639) and were rewritten the same way as the other three.\n\n## Gates (local, at `7aabf18a`; the same counts as at `250724e`)\n\n- `node scripts/pm/dispatch-gates.mjs --commands --repo objectstack-ai/objectstack` derived 79 commands for the 3 paths. 75 exited 0. 4 exited 3 (PREREQUISITE NOT MET, not measured): `check-plugin-teardown-shape.mjs --self-test` (shallow clone), `@objectstack/lint check:doc-formula-expressions` (`@objectstack/formula` not built), `check:dual-build-cjs-loads` and `check:lean-entry-closure` (workspace not built). `--ran` with exit codes: \"79 derived famil(ies) accounted for — 75 run, 4 NOT-MEASURED\".\n- `check:liveness` passed: \"1030 live · 1 experimental · 1 live-elsewhere · 112 dead · 12 planned = 1156 classified\". `check:docs` passed: \"227 generated files in sync\". `check:api-surface` reports the surface unchanged. `check:authorable-surface`, `check-spec-docblock-symbol-anchors` and `check:nul-bytes` passed. No generated file changed.\n- `vitest run scripts/liveness src/data/field` in `@objectstack/spec`: 27 files, 886 tests passed, at both heads. `pnpm --filter @objectstack/spec typecheck` exited 0 at `250724e`.\n\n---\n_Generated by [Claude Code](https://claude.ai/code/session_011kWYXHPKzsrE8KEgBk1bRD)_\n"
+}

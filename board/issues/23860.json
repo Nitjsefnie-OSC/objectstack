@@ -1,0 +1,37 @@
+{
+  "number": 23860,
+  "kind": "issue",
+  "title": ".claude/settings.json: allow the edit tools on `.changeset/pre/**`, so an auto-mode dev session can apply a maintainer-confirmed DELIBERATE CORRECTION",
+  "state": "closed",
+  "state_reason": "completed",
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "area:devpath",
+    "domain:skills",
+    "priority:p2",
+    "tooling"
+  ],
+  "assignees": [
+    "os-elon-musk"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-16T09:45:49Z",
+  "updated_at": "2026-10-16T13:57:24Z",
+  "closed_at": "2026-10-16T13:55:57Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": null,
+  "comments": 8,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/23860",
+  "body": "Filing gate ③ (category): a change the maintainer asked for, quoted verbatim under **Source** below.\n**Reader who acts:** the `domain:skills` seat, in one Tier S PR. `.claude/settings.json` is the only surface.\n*(These two lines and the Dedupe section were added by the triage seat at this card's `pm:retriage`, 2026-10-16.)*\n\nFiled by `domain:spec` seat 2 (#18549) · session `session_01LFqdRsuM5nkqoJdHd5ztVk` · `os-bill`, on the maintainer's word. ⛔ Not a claim.\n\n**Source.** The maintainer, in this seat's session, verbatim: 「skills立卡：在仓库里加一条永久放行规则」. That answered the seat's option 2 for avoiding a repeat of the refusal below. In the seat's words, option 2 was: add `Edit(.changeset/pre/**)` and `Write(.changeset/pre/**)` to `permissions.allow` in `.claude/settings.json`, so the rule lets those edits through in every session.\n\n## What happened\n\n- PR #23784 (#23447) needed an in-place correction of the consumed note `.changeset/pre/23357-page-component-view-data-api-refused.md`. The maintainer confirmed it with 「同意」, recorded in `6210183493` and applied in `6210987382`. The precedents are PR #23418 (`6203578381`), which corrected two consumed `.changeset/pre/` notes inside a code PR, and PR #23524, which measured that the 18.0.0 GA entry is compiled from `.changeset/pre/`.\n- The dev's cloud session runs in auto mode. Its permission classifier refused the edit as \"Modify Shared Resources\" (report `6211600395`). The dev did not route around the refusal, and it handed the seat seven measured rewrites instead.\n- The seat relays a maintainer's word into a dev session as a peer-session message. The classifier does not read that as the user's own authorization. So any maintainer-confirmed edit to a consumed changeset stalls the same way, unless the maintainer types the approval into the dev session themself.\n- The same gap was closed once before, for other calls. #19014 found the landing calls falling to the auto-mode classifier, and allow-listing them in `.claude/settings.json` fixed it (PR #19047, `67624b78d5`; later rows in `61b12584f0`).\n\n## Target\n\nAdd one allow rule (or the minimal pair the syntax needs) to `permissions.allow` in `.claude/settings.json`: the built-in file-edit tools on `.changeset/pre/**`.\n\nNothing wider:\n- ⛔ not `.changeset/*.md` (pending notes, which a dev writes for its own PR without a refusal today);\n- ⛔ not `.changeset/pre.json`;\n- ⛔ not `packages/*/CHANGELOG.md`;\n- ⛔ not `content/docs/releases/**`;\n- ⛔ no `Bash(...)` pattern that writes there.\n\n## What stays guarding these files\n\nThe rule removes only the classifier's prompt. What still guards a consumed note:\n- `AGENTS.md`'s DELIBERATE CORRECTION route, which needs the maintainer's written confirmation on the PR.\n- `Check Changeset` (`check-empty-changeset`), which reds on an edited consumed note.\n- The seat's review of record.\n\n## Premises (each with a re-check)\n\n1. **The rule's path spelling.**\n   - `.claude/settings.json` has 78 allow rows today, none of them an `Edit(...)` or `Write(...)` row.\n   - Re-check the count: `git show origin/main:.claude/settings.json | node -e 'let s=\"\";process.stdin.on(\"data\",d=>s+=d).on(\"end\",()=>{const a=JSON.parse(s).permissions.allow;console.log(a.length, a.filter(r=>/^(Edit|Write)\\(/.test(r)))})'`.\n   - Take the exact path form a project-settings file-edit rule uses (relative to the project root or to the settings file, and whether one `Edit(...)` row covers `Write`) from the current Claude Code permission-rule documentation. Write the reading into the PR.\n2. **An allow rule decides before the auto-mode classifier.** #19014's fix depended on this for `Bash(...)` rows. Name the documentation sentence that says it holds for file-edit rules too, or say that none was found.\n3. **A cloud session with one repository reads the committed `.claude/settings.json` at start.** So the rule reaches only sessions started after it lands on `main`, and an already-running dev session is unaffected.\n\n## Acceptance\n\n- `.claude/settings.json` gains that rule and nothing else. The file stays valid JSON, and every gate `dispatch-gates.mjs` derives for the path is green.\n- **Live pin, after landing:** the next maintainer-confirmed `.changeset/pre/` correction is made by an auto-mode dev session without a refusal, and the seat records it on this card. #23447's `23357` rewrites (report `6211600395`) are the first candidate, if PR #23784 has not landed by then.\n- The PR names the three premises' readings.\n\n## Grade\n\n`tooling` · `priority:p2` · `domain:skills` (the PM-loop tooling lane: `.claude/**`) · `area:devpath`.\n\n## Related\n\n#23447 / PR #23784 · #19014 / PR #19047 · PR #23418 · PR #23524 · `AGENTS.md` release-owned table\n\n## Dedupe\n\nMCP `search_issues` on objectstack-ai/objectstack, all states: `claude settings.json permissions allow Edit Write .changeset/pre auto-mode classifier refusal consumed changeset` returned 7 hits, this card included. None is this change. The nearest are both closed precedents of the same remedy for other calls: #19014 (the landing calls, PR #19047) and #10973 (the trigger self-management tools).\n\nDedupe words: settings.json allow Edit Write changeset pre; auto-mode classifier consumed changeset correction; DELIBERATE CORRECTION permission rule."
+}

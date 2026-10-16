@@ -1,0 +1,36 @@
+{
+  "number": 23875,
+  "kind": "pull_request",
+  "title": "docs(adr-0069): record ruling C′'s enforcement and the API-key admission seam",
+  "state": "closed",
+  "state_reason": null,
+  "draft": false,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "documentation",
+    "size/xs",
+    "skip-changeset"
+  ],
+  "assignees": [
+    "os-elon-musk"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-16T10:57:43Z",
+  "updated_at": "2026-10-16T12:05:12Z",
+  "closed_at": "2026-10-16T12:05:10Z",
+  "closed_by": {
+    "login": "os-zhuang",
+    "id": 277994282,
+    "type": "User"
+  },
+  "merged_at": "2026-10-16T12:05:10Z",
+  "comments": 3,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/pull/23875",
+  "body": "Fixes #23483\nClause-②: no\n\n## What this changes\n\nOne governed record edit, `docs/adr/0069-enterprise-authentication-hardening.md` alone (+8 / -0). No code, no test, no other ADR.\n\n1. **A sixth \"Enforcement seam summary\" entry: API-key admission.** It names `resolveApiKeyAdmission` in `packages/core/src/security/api-key.ts`, fed by `userAuthGates`, as the key half of D3's amended note. With it, \"Each row in D1-D6 names exactly one of these seams\" stays true for D3.\n2. **A dated status note under \"Implementation status (2026-07-04)\": \"Status (2026-10-14): ruling C′ is enforced.\"** It follows the ADR's dated-row and \"Correction (#4772)\" convention and leaves the 2026-07-04 table unchanged. It names PR #23440 (`0f059078ec`) and PR #23508 (`daafae6d6d`) and covers four facts:\n   - the closed `AuthGateCodeSchema` and the scopes `AUTH_GATE_SCOPES` declares;\n   - the `held` outcome of `resolveApiKeyAdmission`;\n   - every key-admitting seam asking the owner's posture;\n   - the forced-reset revocation, on by default.\n\n## Every sentence measured on `main` (`34b740f2d1`)\n\n- `packages/spec/src/kernel/execution-context.zod.ts:40`: `AuthGateCodeSchema = z.enum(['PASSWORD_EXPIRED', 'PASSWORD_RESET_REQUIRED', 'MFA_REQUIRED'])`. `:65`: `AUTH_GATE_SCOPES` is `Record<AuthGateCode, AuthGateScope>` (typed total), with `MFA_REQUIRED: 'account'` and both password codes `'credential'`.\n- `packages/core/src/security/api-key.ts`: `ApiKeyAdmission` has a `held` arm. Near `:822`, `userAuthGates` is asked for the owner, and `accountScopeAuthGate` picks the account-scope posture. The function returns `{ outcome: 'held', principal, gate }`. Before returning, `stampAdmittedKey` (`:832`-`:839`) stamps the held key's use — `last_used_at`, at most hourly, and, where the lifecycle policy anchors one, a no-expiry key's grace end as `expires_at` — so its inactivity window does not run out during the hold (pinned by `api-key-lifecycle.test.ts:220`-`:226`). Nothing is revoked, and the hold keeps no state of its own. `resolveApiKeyPrincipal` collapses `held` to `undefined`.\n- **Seam sweep.** Every non-test caller of `resolveAuthzContext` / `resolveApiKeyAdmission` passes `userAuthGateSourceOf(authService)`:\n  - runtime `resolve-execution-context.ts:254`;\n  - `rest-server.ts:3338`;\n  - `settings-service-plugin.ts:333`;\n  - `storage-service-plugin.ts:1251` and `:1428`;\n  - `service-datasource/admin-routes.ts:509`;\n  - `sharing-plugin.ts:973`;\n  - `marketplace-install-local-plugin.ts:3371`;\n  - MCP stdio (`plugin.ts:520`, `:691`, through `resolveStdioUserAuthGates`).\n\n  The parameter is typed required (`UserAuthGateSource | undefined`). The only `sys_api_key` lookup by hash on `main` is `api-key.ts:678`, inside `resolveApiKeyAdmission`. No seam is open.\n- `packages/plugins/plugin-auth/src/admin-user-endpoints.ts:697`: `revokeSessionsAndKeys = body.revokeSessionsAndKeys !== false` (on unless a literal `false` is passed). The `sys_user` action field has `defaultValue: true` (`sys-user.object.ts:306`). `forced-reset-revocation.ts` ends sessions through the D4 mechanism and sets `revoked: true` on every unrevoked key.\n- Both PRs are ancestors of `origin/main`: `merge-base --is-ancestor` exits 0 for each, and the control leg `origin/main~5` also exits 0.\n\n## Gates\n\nThe gates were derived with `node scripts/pm/dispatch-gates.mjs --commands --repo objectstack-ai/objectstack` at `683acf2c`: 19 families. All 19 exit 0. `check:doc-formula-expressions` first exited 3 (a prerequisite was not built); it was green after `turbo run build --filter=@objectstack/formula --filter=@objectstack/lint` under the verify lock. `--ran` reconciliation: \"19 derived famil(ies) accounted for — 19 run, 0 NOT-MEASURED (a DERIVED zero)\". `pnpm check:pm-governed-prose` was also run outside the derivation and exits 0.\n\n## Acceptance notes\n\n- D3's amended note names the key behaviour (\"an API key answers as the session does\") but not the symbol `resolveApiKeyAdmission`. The card's file surface is the summary entry and the status note, so the D3 note is left as ruled. The sixth entry points back to it (\"the key half of D3's amended note\").\n- Changeset: none. `docs/adr/**` publishes nothing (the os-dev fast-path no-publish rule), so this PR takes `skip-changeset`.\n- Tier H (`docs/adr/**`): the maintainer lands this PR after the seat's `CONTRACT_REVIEW_TIER` review of the governed text.\n\n## 维护者速读(草稿)\n\n**改了什么**:只改 ADR-0069 一个文件(+8 行)。「Enforcement seam summary」新增第 6 个强制点「API-key admission」(`resolveApiKeyAdmission`)。「Implementation status」表下新增一条 2026-10-14 的状态注记,写明裁决 C′ 已由 PR #23440 与 #23508 落地:posture 代码集是封闭的,并区分 account/credential 两种作用域;MFA 未达标用户的 API key 被「挂起」(`held`)而不是吊销——挂起不另存状态,姿态解除即恢复;挂起期间照常记录使用时间(`last_used_at`),以免闲置期限在挂起中耗尽;所有接收 API key 的入口都会查询属主的 posture;管理员强制重置密码时默认吊销该用户的会话与 API key。\n\n**为什么改**:ADR 原文说「D1-D6 每一行恰好对应一个强制点」,但强制点清单里缺少 API key 入口,而 D3 修订注记已经依赖这个入口,记录与代码不一致。现在两个阻塞项(#23455、#23456)都已合并,代码已经兑现,记录可以如实补上,不会写出代码没有兑现的强制。\n\n**风险与代价(含回滚)**:纯文档,不发布任何包,不影响运行时。风险只在于文字是否与代码一致;每一句都已对照 `main` 实测并附了行号。回滚只需 revert 这一个提交。\n\n**席位意见**:建议批准合并。新增的第 6 个强制点和 2026-10-14 状态注记,席位与契约复核都逐句对照 `main` 的代码核过。第一轮契约复核(`6214537670`)指出「挂起期间什么都不写」不实:挂起的 key 仍会记录使用时间。补丁轮只改了这一句,第二轮复核在新 head `18b3f3215b` 上 PASS(`6214838689`)。只改 ADR 一个文件,不发布任何包,回滚只需 revert 这一个提交。\n\n**你要做的**:看过席位的合约复核记录后,批准并合并本 PR(Tier H,需要维护者本人操作)。\n\n---\n_Generated by [Claude Code](https://claude.ai/code/session_01XgS6gBdsbPNicv9ELY6ne5)_\n\n"
+}

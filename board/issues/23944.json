@@ -1,0 +1,33 @@
+{
+  "number": 23944,
+  "kind": "issue",
+  "title": "API key refusal API_KEY_REVOKED says \"a revoked key never works again\", but the declared restore_api_key action brings the same key back to 200",
+  "state": "open",
+  "state_reason": null,
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "area:access",
+    "bug",
+    "domain:engine",
+    "pm:queue",
+    "priority:p2",
+    "target:v18"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-16T13:26:38Z",
+  "updated_at": "2026-10-16T14:03:02Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 1,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/23944",
+  "body": "**Filing gate ①**: a product defect with a named landing point. The runtime refusal text is wrong, which is one of the filing-gate exceptions (\"发版固化的错误文字\"). **Reach:** public HTTP, measured on a live boot: an `x-api-key` call against a revoked key returns this message, and the same key answers 200 after the declared restore.\n\n**Reader who acts:** the `domain:identity` (security/api-key) execution seat. One of two edits closes it:\n- reword the refusal in `packages/core/src/security/api-key.ts`; or\n- if revocation is meant to be terminal, retire `restore_api_key` from `packages/platform-objects/src/identity/sys-api-key.object.ts`.\n\nThe choice depends on what the API-key lifecycle decision (#23367) intended for restore.\n\n## What happens\n\nThe refusal for a revoked key reads:\n\n> `<label> was revoked, and a revoked key never works again. Create a new key (POST /api/v1/keys, or the API Keys page) and replace this one wherever it is configured.`\n\nThe same object declares a `restore_api_key` list-item action: `PATCH /api/v1/data/sys_api_key/{id}` with `{ revoked: false }`. Its confirm text says \"Existing clients holding the key will regain access\", and that is exactly what happens. A caller who reads the refusal is told to rotate a key that an admin can simply restore, and an operator who restores is contradicted by the product's own error text.\n\n## Reproduction\n\nRun on a stock showcase boot (`objectstack dev --ui --seed-admin`) at `2034975a`. Reproduced on three revoke/restore cycles:\n\n1. Sign in as a member. `POST /api/v1/keys` → 201, with the raw `key` returned once.\n2. `GET /api/v1/data/showcase_task` with header `x-api-key: KEY` → 200.\n3. As the key owner, `PATCH /api/v1/data/sys_api_key/ID` with `{\"revoked\": true}` (the `revoke_api_key` action) → 200.\n4. Repeat step 2 → **403 `API_KEY_REVOKED`** with the message above (\"…never works again…\").\n5. `PATCH /api/v1/data/sys_api_key/ID` with `{\"revoked\": false}` (the `restore_api_key` action) → 200.\n6. Repeat step 2 → **200**: the same key works again.\n\n**Expected:** the refusal and the lifecycle agree. Either the message says the key is revoked and can be restored by its owner or an admin, or rotated; or restore does not exist.\n**Actual:** the message asserts permanence that the declared action contradicts.\n\n## Mechanism\n\n- `packages/core/src/security/api-key.ts`, `lifecycleRefusalOf()` (about line 309): the revoked branch hard-codes `a revoked key never works again`.\n- `packages/platform-objects/src/identity/sys-api-key.object.ts` (about line 105): `restore_api_key` declares `bodyExtra: { revoked: false }`. The auth path re-reads `revoked` per call, so restore re-admits the key immediately.\n\n## Dedupe\n\n- MCP `search_issues` on objectstack-ai/objectstack, closed included: `API_KEY_REVOKED revoked key never works again restore_api_key message` → 3 hits: #23367 (the lifecycle decision), #7727 and #8053 (revoke route reachability, both closed). None is about the refusal text contradicting restore.\n- Dedupe words: API_KEY_REVOKED message; revoked key never works again; restore_api_key.\n\nQA-source: #23943 · identity-auth.api-key-ui-lifecycle · acceptance 2"
+}

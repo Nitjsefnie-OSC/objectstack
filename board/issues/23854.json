@@ -1,0 +1,37 @@
+{
+  "number": 23854,
+  "kind": "pull_request",
+  "title": "feat(spec,automation): FlowRuntimeState.unboundCause classifies an unbound flow row beside its reason",
+  "state": "closed",
+  "state_reason": null,
+  "draft": false,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "documentation",
+    "size/m",
+    "tests",
+    "tooling"
+  ],
+  "assignees": [
+    "os-elon-musk"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-16T08:57:33Z",
+  "updated_at": "2026-10-16T10:15:40Z",
+  "closed_at": "2026-10-16T10:15:38Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": "2026-10-16T10:15:38Z",
+  "comments": 3,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/pull/23854",
+  "body": "Fixes #23842\nClause-②: yes\n\n## What\n\n`FlowRuntimeState` (`packages/spec/src/contracts/automation-service.ts`) gains an optional, closed `unboundCause` beside `reason`. Its values are published as the tuple `FLOW_UNBOUND_CAUSES`, with the derived type `FlowUnboundCause`, so a consumer can enumerate them. This follows the `APPROVAL_STATUSES` / `ApprovalStatus` convention in the same contracts folder. `reason` stays the rendered sentence. Its docblock still says \"do not parse it\", and now points to `unboundCause` for anyone who needs to classify the row.\n\n`AutomationEngine.describeUnboundReason` (`packages/services/service-automation/src/engine.ts`) is the single producer of `reason`. Both the status door and `getTriggerBindingAudit()` read it. Each of its branches now returns `{ reason, cause }`, and `getFlowRuntimeStates()` spreads the two together, so on every row they are either both present or both absent. Neither the sentences nor the audit's shape changed.\n\n## The measured set of causes (4, not the card's example 2)\n\nI read every branch of `describeUnboundReason` at `3fed1eb00`. It composes four distinct causes, each with its own owner and remedy:\n\n| value | branch | owner / remedy |\n|---|---|---|\n| `deployment_policy` | `policyDisabledFlows` (the recorded `ScheduledWorkPolicy` refusal) | operator: the deployment switch or the host; not a defect |\n| `disabled_subflow` | `subflowDeclinedFlows` (ADR-0126 §7.3 arming gate) | admin: enable the packaged subflow, and the caller arms |\n| `missing_trigger` | no trigger of the declared type is registered | author: `requires: ['triggers']` / the trigger package |\n| `binding_failure` | the trigger is registered, but binding threw | engineering: the earlier boot warnings |\n\nNone of them is merged with another, because no two share a remedy. `missing_trigger` and `binding_failure` both have an engineering owner, but one is fixed by adding a dependency and the other by reading a stack trace. There is no catch-all `other`: the branch set is closed.\n\n## Wire mirrors\n\n`GET /automation/_status` (`packages/runtime/src/domains/automation.ts`) passes `getFlowRuntimeStates()` rows through verbatim and is typed against the contract, so it needs no change. No zod schema in `packages/spec/src/api` mirrors `FlowRuntimeState`: I searched for `triggerType` and `_status` and found only a docblock mention. I regenerated the `api-surface/contracts.json` and `export-origins/contracts.json` baselines with `gen:api-surface` and `gen:export-origins`. `check:generated` exit 0.\n\n## Tests (head `7ba22e988d`)\n\n- Pairing pins, one per cause:\n  - `engine.test.ts`: the status row for `deployment_policy`, `binding_failure` for a bind that throws, and `missing_trigger` in the two-doors test.\n  - `subflow-guard-every-door.test.ts`: `disabled_subflow`, and that the cause clears when the subflow is re-enabled and the caller arms.\n- Control: the DARK test now covers a bound row, a disabled row and a manual (trigger-less) flow, and asserts that none of them carries `reason` or `unboundCause`.\n- Spec: type identities pin `FlowRuntimeState['unboundCause']` to the tuple union. A runtime test checks that the values are unique and snake_case with no `other`, and that the docblock still forbids parsing `reason` and points at `unboundCause`.\n- `pnpm --filter @objectstack/service-automation exec vitest run`: 186 files / 2501 tests passed. Spec `automation-service.test.ts`: 18 passed. `typecheck` for both packages: exit 0.\n- Ablation: I replaced `return { reason: policyReason, cause: 'deployment_policy' };` with `return { reason: policyReason } as any;` through `scripts/ablation-replace.mjs` (anchor x1 → x0, blob changed). `engine.test.ts` went red on 2 pins: \"OFF: the status row names the policy…\" and \"the two doors answer the SAME sentence…\". After the restore, the blob equals HEAD (`4c735c08…`) and `git diff HEAD` is empty. No build was needed, because the suite imports `./engine.js` from source.\n\n## Gates\n\n`dispatch-gates --commands` on this diff gives 90 derived families. `--ran` reconciliation: 89 run, 1 NOT MEASURED. Every family I ran exited 0. `check:plugin-teardown-shape --self-test` exited 3 at first on the shallow clone and exited 0 after `git fetch --unshallow`. NOT MEASURED: `check:dual-build-cjs-loads`, which exited 3 because it needs a full `pnpm build`. That is left to CI. `check:dev-prereqs`: exit 0.\n\n## Acceptance notes\n\n- `getTriggerBindingAudit()` entries still carry only `reason`. Adding `cause` there would widen a second surface the card does not name, so I did not.\n- Downstream: the console chip and banner (objectstack-ai/objectui#12609) can read `unboundCause === 'deployment_policy'` once this ships in a published `@objectstack/spec`. The seat files that card. objectui is not touched here.\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\n---\n_Generated by [Claude Code](https://claude.ai/code/session_01PU9ijL7gdKme3dFxWKcBE6)_\n"
+}

@@ -1,0 +1,37 @@
+{
+  "number": 23847,
+  "kind": "issue",
+  "title": "driver-turso remote face: create table and add column never emit NOT NULL, so storage.notNull is unenforced and every such field reads as destructive drift",
+  "state": "closed",
+  "state_reason": "completed",
+  "draft": null,
+  "author": {
+    "login": "hotlong",
+    "id": 50353452,
+    "type": "User"
+  },
+  "labels": [
+    "bug",
+    "domain:engine",
+    "priority:p1",
+    "target:v18"
+  ],
+  "assignees": [
+    "os-tesla"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-16T08:33:21Z",
+  "updated_at": "2026-10-16T12:26:06Z",
+  "closed_at": "2026-10-16T12:24:36Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": null,
+  "comments": 7,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/23847",
+  "body": "Filing-gate category ① (a declared contract the remote face does not honour) and ③ (a maintainer direct order). Verbatim, 2026-10-16: 「相关任务你都统一派发处理吧」, and the ruling on PR #23843 「恢复警告并补测试」, which keeps this card as the precondition for the `OS_ARTIFACT_URL` gate judging remote databases again.\n\n**Reader:** triage routes it (expected `domain:engine`, driver-turso).\n\n**Dedupe** (`gh api search/issues` total_count, closed issues included):\n- `turso remote notNull`: 6, none on this.\n- `\"storage.notNull\" turso`: 12, none on this. The nearest is #17231 (closed: the migration generators and `multiple: true`).\n\n**What:** driver-turso's remote face creates tables and adds columns without ever emitting `NOT NULL`. `remote-transport.ts` `buildCreateTableSQL` / `ADD COLUMN`; driver-turso has zero `notNull` references at #23843's head, against thirteen files in driver-sql. A field declared `storage: { notNull: true }` is therefore nullable on a Turso remote database, while the local face's `SqlDriver.createColumn` honours it.\n\n**Reach:**\n- **Measured on the shared differ** (PR #23843 contract review, comment 6211456559): a TEXT nullable column whose field declares `storage.notNull` yields `[{op:'tighten_not_null',category:'destructive'}]`; without `storage` it yields `[]`.\n- **Any remote-face drift reader** therefore sees every such field as destructive drift on a freshly synced database.\n- **The declaration is not enforced** on remote databases. HotCRM uses it widely (e.g. `src/sales/objects/lead.object.ts`).\n\n**Done:** remote create table and add column honour `storage.notNull` exactly as `createColumn` does. A remote-face test shows a freshly synced remote database reports no `tighten_not_null`. An ablation turns that test red.\n\nRelated: #23816, #23843, and its sibling card on a remote remedy path for destructive drift.\n"
+}

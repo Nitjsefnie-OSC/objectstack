@@ -2,8 +2,8 @@
   "number": 23733,
   "kind": "issue",
   "title": "pm-dispatch: let an execution seat accept a card whose filer self-applied its lane, state and grade; triage spot-checks after",
-  "state": "open",
-  "state_reason": null,
+  "state": "closed",
+  "state_reason": "completed",
   "draft": null,
   "author": {
     "login": "objectstack-fleet[bot]",
@@ -12,7 +12,6 @@
   },
   "labels": [
     "domain:skills",
-    "pm:dispatched",
     "priority:p2"
   ],
   "assignees": [
@@ -21,11 +20,15 @@
   "milestone": null,
   "type": null,
   "created_at": "2026-10-15T22:31:44Z",
-  "updated_at": "2026-10-16T00:20:19Z",
-  "closed_at": null,
-  "closed_by": null,
+  "updated_at": "2026-10-16T09:51:02Z",
+  "closed_at": "2026-10-16T09:47:02Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
   "merged_at": null,
-  "comments": 6,
+  "comments": 7,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/23733",
   "body": "Filing gate ③: a direct task from the maintainer. In the seat 2 session (`session_016PVjjuVPte5XEJvaQx1E4t`, `domain:devx` seat 2, #20163), the maintainer ruled on 2026-10-15, verbatim:\n\n> 现在派,规则选 A；放宽:执行席可直接接收自贴标签的卡,只要车道按域表正确、正文有立卡门三件;分诊事后抽查\n\nAsked to confirm the scope, the maintainer picked **\"B 放宽(按我写的原文)\"**: relax the rule exactly as written. \"现在派\" was the one-off dispatch of #23720; it is done (claim `6203566765`). This card carries only the rule change.\n\n**Filed by** the `domain:devx` seat 2 (#20163) · `os-sales` · `session_016PVjjuVPte5XEJvaQx1E4t`. ⛔ Not a claim. Lane and grade are triage's.\n\n**Reader who acts:** the `domain:skills` seat. Every file below is under `.claude/**` (Tier S).\n\n## What happened\n\n#23720 was filed by objectui's filing seat at 20:01:15. The card carried `domain:devx`, `priority:p2`, `pm:queue` and `area:devpath`, all written in the creation minute. This seat read `SKILL.md:172` as forbidding a claim on lane and grade that triage had not produced. It held the card and raised `pm:retriage` at 20:53. The triage seat's first touch came at 21:52, confirming all three (`6203049029`), and the claim followed at 22:27 (`6203566765`). The card waited 2 h 26 min from filing to claim, about 1.5 h of it on this hold. The maintainer ruled the hold stricter than intended.\n\nThe pattern is common. Of 41 fleet-filed cards on this repo since 2026-10-12, 7 carried `domain:*` and/or `pm:queue` written in their creation minute: #23720, #23666, #23665, #23645, #23639, #23635, #23632. `scripts/pm/issue-create.mjs` accepts `--label` at creation, and its own self-test passes `--label pm:queue`.\n\n## The change, as ruled\n\nAn execution seat may accept a card whose labels the filer applied, provided **both**:\n1. the lane is correct by the domain table in `SKILL.md` (the `domain:*` ↔ paths table above line 172), and\n2. the body carries the filing gate's three required items: the category, the reader who acts, and the dedupe query with its hit count (closed included).\n\nIf either fails, the card stays triage's, as today. Triage spot-checks accepted cards after the fact.\n\n## Where the text has to change\n\n1. **`.claude/skills/pm-dispatch/SKILL.md:172`**: \"`domain:*` 只由分诊席产出,例外仅在飞卡衍生 sub-issue 承父卡域;无标签的卡 ⛔ 不得认领。\" Add the self-labeled case as a second exception, with the two conditions.\n   - `scripts/pm/check-skill-line-ratchet.mjs` (row at `SKILL.md:291`) lets this file's line count only go down. Without a ruling id that raises the cap, the wording has to fit net-zero. The ruling quoted above is not a cap-raising ruling.\n2. **`.claude/skills/pm-dispatch/references/execution-duties.md:10`**: the candidate rule (\"候选 = open、未 assign、无 `needs-user-decision`、无 `pm:retriage`…\"). Name the two conditions, and say what the seat does when one fails: leave the card for triage, or add `pm:retriage`, whichever the skills seat judges right.\n3. **`.claude/skills/pm-dispatch/references/triage-duties.md`**: the spot-check duty. The current sweep cannot see these cards. A self-labeled card that carries `domain:*`, `pm:queue` and `priority:*` matches none of disjuncts ①–④ (lines 12–15). The duty therefore needs its own way to find them. One example is: lane cards whose `domain:*` label event comes from the issue's creator in the creation minute, with no later triage-actor label event.\n\n## Executable criterion\n\n- On a card like #23720 (filer-applied `domain:*` + `pm:queue` + `priority:*`, lane correct by the table, three filing-gate items in the body), the execution-duties text makes it a candidate with no triage touch.\n- On a card missing either condition, the text says it is not a candidate and names where it goes.\n- The triage text names a step that lists self-labeled cards accepted since the last spot-check. #23720 would appear in that list.\n- `pnpm check:pm-skill-ratchet` passes.\n\n## Dedupe\n\nMCP `search_issues` on this repo, closed included, run at this filing:\n- `filer self-applied domain label pm:queue at creation execution seat accept triage first touch`: 0 hits.\n- `domain label only produced by triage seat issue-create labels candidate rule`: 25 hits; I read the top 10. None is this rule. Examples: #17984, #15407, #12553, #21915, #20411, all closed.\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_\n"

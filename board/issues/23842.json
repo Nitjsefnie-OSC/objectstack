@@ -2,8 +2,8 @@
   "number": 23842,
   "kind": "issue",
   "title": "spec(automation): `FlowRuntimeState` gains a structured discriminator beside `reason` (deployment policy vs a binding failure), so a consumer can classify a disabled packaged flow without parsing the sentence (objectui#12609)",
-  "state": "open",
-  "state_reason": null,
+  "state": "closed",
+  "state_reason": "completed",
   "draft": null,
   "author": {
     "login": "objectstack-fleet[bot]",
@@ -14,7 +14,6 @@
     "area:workflow",
     "domain:spec",
     "enhancement",
-    "pm:dispatched",
     "priority:p1",
     "target:v18"
   ],
@@ -24,11 +23,15 @@
   "milestone": null,
   "type": null,
   "created_at": "2026-10-16T08:02:39Z",
-  "updated_at": "2026-10-16T08:21:12Z",
-  "closed_at": null,
-  "closed_by": null,
+  "updated_at": "2026-10-16T10:17:38Z",
+  "closed_at": "2026-10-16T10:15:40Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
   "merged_at": null,
-  "comments": 1,
+  "comments": 4,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/23842",
   "body": "Filing gate ③: the classification half of objectstack-ai/objectui#12609 (filed by the epic PM from the 2026-10-16 Setup review, under the maintainer's 「全部立卡」). It was split by triage at that card's `pm:retriage` (domain:ui seat 3, `6210398091`, option B). ⛔ Not a claim.\n\n**Reader who acts:** the `domain:spec` seat, as a vertical seam: the contract in `packages/spec/src/contracts/automation-service.ts`, and its producer in `packages/services/service-automation`, declared to `domain:services`.\n\n## Governing text\n\n`FlowRuntimeState.reason`, verbatim: \"A free-form sentence, deliberately — the shape the two surfaces that already carry this reason use. Consumers RENDER it; ⛔ do not parse it.\" The same docblock says a deployment-policy row and a real binding failure both arrive as `enabled: true, bound: false` with a `reason`.\n\n## The gap\n\nThe console wants an \"Off by deployment policy\" chip on exactly the policy-disabled rows, and a one-time banner. It cannot tell those rows apart without parsing `reason`, which the contract forbids. objectui already obeys the rule: `PackagedFlowRow.reason` is rendered, never read (objectui#9217).\n\n## The change\n\n- An optional, closed discriminator beside `reason` on `FlowRuntimeState`. For example `unboundCause: 'deployment_policy' | 'binding_failure'`; the spec seat names it by the spec's conventions.\n- `service-automation` stamps it wherever it composes `bound: false` today.\n- `reason` stays the rendered sentence.\n- `Clause-②: yes` (widening), with a contract review at tier.\n\n## Grade\n\n**p1 + `target:v18`.** It is a widening of a spec contract (protocol-first class).\n\n## Downstream\n\nThe console half (the chip and the banner) is filed by this card's claimant on objectui once the field is in a published `@objectstack/spec`. objectstack-ai/objectui#12609 is narrowed meanwhile to what needs no classification.\n\n## Dedupe\n\nThe parent is objectstack-ai/objectui#12609."

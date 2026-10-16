@@ -1,0 +1,38 @@
+{
+  "number": 23886,
+  "kind": "pull_request",
+  "title": "feat(spec): settings info_banner translation slot — banners.ID.{title,text} and its two resolvers",
+  "state": "closed",
+  "state_reason": null,
+  "draft": false,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "documentation",
+    "protocol:system",
+    "size/m",
+    "tests",
+    "tooling"
+  ],
+  "assignees": [
+    "os-elon-musk"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-16T11:29:44Z",
+  "updated_at": "2026-10-16T12:56:19Z",
+  "closed_at": "2026-10-16T12:56:17Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": "2026-10-16T12:56:17Z",
+  "comments": 3,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/pull/23886",
+  "body": "Fixes #23855\nClause-②: yes\n\n## What changed\n\nThe platform translation contract gains a slot for a settings `info_banner` row, and the `resolveSettings*` family gains its two readers.\n\n- `packages/spec/src/system/translation.zod.ts` — `platformSettingsShape` declares `settings.NAMESPACE.banners.BANNER_ID.{title,text}`, keyed by the `info_banner` specifier's `id`, beside `groups` / `keys` / `actions`. It is built with the same `strictObject({ surface, history, aliases })` helper as its siblings. The convention list in the docblock names the two new paths.\n  - Leaf aliases: `label`, `name`, `heading` → `title`; `bannerText`, `body`, `description`, `message` → `text`.\n  - Namespace aliases: `banner`, `notices`, `alerts` → `banners`. A wrong key now gets a named remedy, not a bare `unrecognized_keys`.\n- `packages/spec/src/system/i18n-resolver.ts` — `resolveSettingsBannerTitle` and `resolveSettingsBannerText`. They walk the requested locale and then the declared fallback chain, and finally return the manifest literal (`label` / `bannerText`).\n- `packages/spec/src/system/settings-manifest.zod.ts` — `SpecifierSchema.id` TSDoc names `info_banner` among the specifiers whose text is looked up by `id`. TSDoc only: no `superRefine`, and the specifier's accept set is unchanged.\n- Generated: `api-surface/system.json` and `export-origins/system.json` (+2 exports each), `content/docs/references/system/translation.mdx`, strictness-ledger counts (`system/` 373 → 374).\n- `.changeset/23855-settings-banner-translation-slot.md` — `minor`, `Clause-②: yes (widening)`.\n\n## Spelling: why `title` / `text`\n\nThe specifier carries `label` and `bannerText`. The nearest house precedent is `groups`: a `group` specifier's `label` translates as `groups.ID.title`. So the banner's heading reuses that leaf name, `title`. For the body there is no sibling that holds the same field. `description` on a group is the specifier's `description`, a different field, so reusing it would invite confusion. `text` is the card's proposal and names the `bannerText` field it translates. The specifier's own spellings and the group's `description` are aliases, so the likely borrowings are refused with the right leaf.\n\n## Who reads it\n\nMeasured at `origin/main` `7a6ba03109`: `git grep \"resolveSettings[A-Z]\"` outside `i18n-resolver.ts` finds only the generated baselines and docblocks. The family has no caller in objectstack outside its own exports. The objectui console resolves by convention in its own hook. That hook was not measured here, because no objectui checkout exists in this container. The resolvers are the family's executable statement of the convention. Rendering the slot in the console is a follow-up card in objectui, filed at landing. This PR makes no claim that the console renders it yet.\n\n## Verification (head `1f081ab7c1` unless noted)\n\n- New pins: `packages/spec/src/system/settings-banner-translation.test.ts`, 8 tests.\n  - The slot parses on the platform face.\n  - `bannerText` / `label` / `description` on a banner and the singular `banner` group are each refused at the right path, naming `text` / `title` / `banners`.\n  - Each resolver resolves a hit, walks the fallback chain, and returns the manifest literal on a miss.\n- Ablations (fix committed first, mutation through `scripts/ablation-replace.mjs`, restore proven by blob == HEAD and an empty `git diff HEAD`):\n  - Rename the `banners` key out of the shape: 4 schema pins go red (accept, plus the three leaf-alias refusals). The singular-`banner` pin stays green, because its alias lives one level up.\n  - Point `resolveSettingsBannerTitle` at `groups.ID.description`: 2 resolver pins go red (hit, fallback chain).\n  - The same mutation on `resolveSettingsBannerText`: the same 2 go red.\n- Control, the four shipped bundles: a one-off probe parsed `settingsBuiltinTranslations` (`en`, `zh-CN`, `ja-JP`, `es-ES`) with `PlatformTranslationDataSchema`. All four parse.\n- `@objectstack/spec`: `typecheck` exit 0. The full `vitest run` at `63894195e5` (pre-merge) passed 748 files, 21985 tests. Rerun on the merged head: see the report.\n- `pnpm --filter @objectstack/spec check:generated` after a real build: all 14 artifacts up to date, before and after merging `origin/main`.\n- Derived gates (`dispatch-gates --commands`): 109 of 109 exit 0, reconciled with `--ran` (a derived zero, all exit codes recorded). Nine first exited 3 (prerequisite: unbuilt workspace or a shallow clone). After a workspace build and an unshallow fetch, all nine exit 0.\n\n## Acceptance notes\n\n- `.objectui-sha` at this base pins `daeb77fc84`. That is the card's pin, not the `1f23d5b070` the dispatch named. Noted, not acted on.\n- `beta_notice` (`feature-flags.manifest.ts`) already carries an `id`, so it is addressable as soon as #23839 adds its three locale copies. #23839 is not addressed here.\n\n---\n_Generated by [Claude Code](https://claude.ai/code/session_01MbQTsgWtBx7fxYsCN5UKgC)_\n"
+}

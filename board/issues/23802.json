@@ -2,8 +2,8 @@
   "number": 23802,
   "kind": "issue",
   "title": "Setup copy: ADR numbers and schema vocabulary leave the object, type and navigation descriptions admins read",
-  "state": "open",
-  "state_reason": null,
+  "state": "closed",
+  "state_reason": "completed",
   "draft": null,
   "author": {
     "login": "objectstack-fleet[bot]",
@@ -14,7 +14,6 @@
     "area:devpath",
     "domain:engine",
     "enhancement",
-    "pm:dispatched",
     "priority:p2"
   ],
   "assignees": [
@@ -23,11 +22,15 @@
   "milestone": null,
   "type": null,
   "created_at": "2026-10-16T03:43:59Z",
-  "updated_at": "2026-10-16T08:13:50Z",
-  "closed_at": null,
-  "closed_by": null,
+  "updated_at": "2026-10-16T09:18:10Z",
+  "closed_at": "2026-10-16T09:16:51Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
   "merged_at": null,
-  "comments": 3,
+  "comments": 5,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/23802",
   "body": "## Source\n\nRead in the console's Setup app on 2026-10-16 (objectui main `8415d9f11`, objectstack `18.0.0-next.1` serving HotCRM). Descriptions an administrator sees under a page title:\n\n- Business Units: \"Canonical Business Unit tree — hierarchical org/data-partition node (company / division / department / region / office). ADR-0057 D2.\" (`packages/platform-objects/src/identity/sys-business-unit.object.ts`)\n- Capability: \"Package-declared authorization capability — the DEFINITION side of ADR-0066 D1 (grants live on permission sets; requirements on resources)\" (the spec's type description, surfaced through `packages/platform-objects/src/apps/translations/en.metadata-forms.generated.ts`)\n- Permission Set `organization_admin_no_bypass`: \"… (ADR-0105 D4 / finding F2) …\"\n- Notification Events: \"Notification events — one row per emit() (ADR-0030 Layer 2 ingress)\" (`packages/platform-objects/src/audit/sys-notification.object.ts`)\n- Notification Preferences: \"Per-user × topic × channel notification toggle (mute/allow), with admin-global defaults.\" (`packages/services/service-messaging/src/objects/notification-preference.object.ts`)\n- Record Shares: \"Per-record sharing grant — extends OWD with explicit access\"; Approval Delegations: \"Self-service out-of-office rule: route this user's approver slots to a delegate within a time window.\"; Installed Apps: \"Note: The kernel API is additive only — uninstall removes the on-disk manifest so the package won't load on next boot…\".\n\nThese strings are the `description` / `label` fields of platform objects, spec types and Setup navigation entries, so they reach every locale through the generated translations.\n\n## Target\n\n1. Every description an admin reads in Setup is one sentence in the user's words: what the records are and what you do here. ADR numbers, \"D2 / D4 / finding F2\", \"Layer 2 ingress\", \"emit()\", \"kernel API\", \"additive only\", \"data-partition node\" move to the object's docblock or to a `docs` link field the console can render as \"Learn more\".\n2. The sentences for the objects above, as a starting point: Business Units \"Your company structure — divisions, departments, regions and offices — used to scope data and reports.\"; Capability \"What a permission set may grant beyond object access: Setup, Studio, user management and the like.\"; Notification Events \"Every notification the platform sent, one row per event.\"; Notification Preferences \"Which topics and channels each user receives; admins set the defaults.\"; Record Shares \"Records shared beyond their owner, one row per grant.\"; Approval Delegations \"Route your approvals to someone else while you are away.\"\n3. The generated translation files regenerate from the sources; the zh-CN and ja-JP files follow.\n\n## File surface\n\n`packages/platform-objects/src/identity/*.object.ts`, `packages/platform-objects/src/audit/*.object.ts`, `packages/platform-objects/src/apps/setup.app.ts` and `setup-nav.contributions.ts` (nav descriptions), `packages/services/service-messaging/src/objects/*.object.ts`, the spec type descriptions in `packages/spec` that the metadata-forms translations are generated from, the generated translation files. This crosses `domain:engine`, `domain:services` and `domain:spec`: the triage seat names the lane or splits the card (`pm:retriage`).\n\n## Acceptance\n\n1. A test (or a lint over the object and app sources) asserts no `description` or nav `label` under Setup contains `ADR-`, `D\\d\\b`, `finding F`, `emit()` or `kernel`.\n2. The console's Setup pages, re-read after the change, show the new sentences (the epic PM reads them).\n3. `pnpm --filter @objectstack/platform-objects test`, the translation generation gate and `pnpm check:i18n` green.\n\n## Constraints\n\n- Docblocks and ADR links in code stay; only user-facing strings move.\n\n## Evidence\n\nScreenshots on the temporary branch `claude/console-home-login-design-20261016` of objectstack-ai/objectui (commit `01244b886`, never merged): [setup-positions-metadata-page.png](https://github.com/objectstack-ai/objectui/blob/01244b886/docs/design/setup-review-2026-10-16/setup-positions-metadata-page.png?raw=true) · [setup-capability-metadata-page-small.jpg](https://github.com/objectstack-ai/objectui/blob/01244b886/docs/design/setup-review-2026-10-16/setup-capability-metadata-page-small.jpg?raw=true).\n\n<sub>Filed by the epic PM session `session_cdb7a717-def7-4e71-9988-f089fbaa18ff` from the 2026-10-16 second review pass: objectui main `8415d9f11`, HotCRM `63db83e2`, the vite console on :5180 against `objectstack serve --dev` on :4001, the Studio pillars and all 43 Setup pages walked in the maintainer's browser pane at 1024 × 768 (en) with a 1280 × 900 re-check (zh). The maintainer asked for every finding to be filed, verbatim: 「全部立卡」.</sub>"

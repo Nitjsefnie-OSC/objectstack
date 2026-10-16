@@ -1,0 +1,37 @@
+{
+  "number": 23848,
+  "kind": "issue",
+  "title": "os migrate apply cannot run on a Turso remote database (it arms deferred DDL), so destructive drift on a remote primary has no CLI remedy",
+  "state": "closed",
+  "state_reason": "completed",
+  "draft": null,
+  "author": {
+    "login": "hotlong",
+    "id": 50353452,
+    "type": "User"
+  },
+  "labels": [
+    "bug",
+    "domain:cli",
+    "priority:p1",
+    "target:v18"
+  ],
+  "assignees": [
+    "marchtian"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-16T08:33:22Z",
+  "updated_at": "2026-10-16T14:14:09Z",
+  "closed_at": "2026-10-16T14:12:42Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": null,
+  "comments": 8,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/23848",
+  "body": "Blocked-by: #23816\n\nFiling-gate category ① (a remedy the platform prints that cannot run) and ③ (a maintainer direct order). Verbatim, 2026-10-16: 「相关任务你都统一派发处理吧」, and the ruling on PR #23843 「恢复警告并补测试」, which keeps this card as the second precondition for the `OS_ARTIFACT_URL` gate judging remote databases again.\n\n**Reader:** triage routes it (expected `domain:cli`, `os migrate apply`, possibly together with driver-turso).\n\n**Dedupe** (`gh api search/issues` total_count, closed issues included):\n- `\"os migrate apply\" turso remote`: 27.\n- `remote destructive drift remedy`: 43.\n- Only #23816 / #23843 (the ceremony) and the closed refusal fixes #19842 / #19891 are near. None covers `os migrate apply` on the remote face.\n\n**What:** the remedy the platform prints for destructive drift, `os migrate apply --allow-destructive`, arms deferred schema DDL. driver-turso's remote face refuses that (`setDeferredDdl: 'refused'`, #19842), so on a Turso remote database destructive drift has no CLI remedy.\n- PR #23843 gives the ceremony a remote path (`deferredDdlUnsupported: 'skip-schema-sync'`, plus remote `detectManagedDrift` / `applyMigrationEntries`). `os migrate apply` and the other `os migrate` commands still arm deferral.\n- The remote `applyMigrationEntries` also skips column entries other than `drop_column` (e.g. `tighten_not_null`), so even an unrefused apply would leave those.\n\n**Reach:**\n- From source, at #23843's head. The deferral refusal itself is the measured #23816 symptom, on the same code path.\n- A deployment with a `libsql://` primary that the `OS_ARTIFACT_URL` gate refuses has no working remedy. The gate stays warn-and-boot on remote until this and the `storage.notNull` card land.\n\n**Done:**\n- `os migrate apply` (plan and `--allow-destructive`) runs on a Turso remote database, using the same posture as the ceremony or another the lane judges sound.\n- It applies the destructive entries the remote face can express and names the ones it cannot.\n- Measured on a remote face (`sqld` via `libsql://127.0.0.1:<port>?tls=0`), with a positive control on unchanged code and an ablation.\n\nRelated: #23816, #23843, and the sibling card on `storage.notNull` on remote create and add column.\n\n"
+}

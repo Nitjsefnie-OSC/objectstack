@@ -1,0 +1,39 @@
+{
+  "number": 23872,
+  "kind": "issue",
+  "title": "os migrate organization-ownership --apply: column-drops blocks on stale primary copies of the telemetry-routed objects with \"Run the ceremony with the release whose declaration drops it\", and the ceremony never reads the telemetry sibling",
+  "state": "closed",
+  "state_reason": "completed",
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "area:access",
+    "bug",
+    "domain:cli",
+    "finding",
+    "priority:p1",
+    "target:v18"
+  ],
+  "assignees": [
+    "hotlong"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-16T10:31:23Z",
+  "updated_at": "2026-10-16T13:37:47Z",
+  "closed_at": "2026-10-16T13:18:26Z",
+  "closed_by": {
+    "login": "os-zhuang",
+    "id": 277994282,
+    "type": "User"
+  },
+  "merged_at": null,
+  "comments": 3,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/23872",
+  "body": "Filing gate: **① a product defect with a public door**, `finding` class (a): operator text that misleads, and a ceremony that verifies without reading every table it judges. `reach:` `os migrate organization-ownership --apply`, the `column-drops` step. Measured once on `@objectstack/*` 18.0.0-next.2, under `NODE_ENV=development` (the composition the dev boot uses). Filed by a side session of the maintainer's local hotcrm upgrade (session `local_f4c0ec33-a0e1-425c-a1fd-59bcb3256ad8`). ⛔ Not a claim; grade and lane are triage's.\n\n**Reader who acts:** triage grades and routes it. The code is `packages/cli`:\n- `organization-ownership-column-drops.ts` (`dropColumnsThroughDrift`, which decides between `not-proposed` and `not-declared`);\n- `organization-ownership-apply.ts` (`runColumnDrops`, which writes the blocker text);\n- `commands/migrate/organization-ownership.ts` (the plan's single reader, built on `stack.driver`);\n- `telemetry-datasource.ts` (the sibling).\n\n**Dedupe:** REST issue search, all states, on objectstack-ai/objectstack: `organization-ownership telemetry` → 19 hits; `\"not-proposed\" column-drops` → 23; `telemetry sibling stale primary` → 20; `\"release whose declaration drops it\"` → 4. None is this defect. The nearest, all closed:\n- #22579: one-shot `os migrate` boots did not provision the sibling, so `apply` created lifecycle-classed tables in the primary database. That is one way the stale copies below get there.\n- #23399 and #23666: `not-proposed` from other causes (an injected column, a platform-global object).\n- #23446: the `not-declared` outcome.\n\n## Reproduction\n\n- **Database:** a copy of the maintainer's local hotcrm `dev.db`, a long-lived SQLite dev database first created on 17.x, with its `dev.telemetry.db` sibling.\n- **Release:** hotcrm on `@objectstack/*` 18.0.0-next.2.\n- **Safety:** every ceremony run was on the copy.\n\nWhat the primary database holds: four lifecycle-classed objects, `sys_audit_log`, `sys_flow_dispatch`, `sys_job_run` and `sys_metadata_audit`, each with an `organization_id` column. A development boot routes these objects to the `telemetry` sibling (ADR-0057 §3.6, `resolveTelemetryDbPath`), so the copies in the primary are stale: left by older releases or by pre-#22579 migrate runs.\n\n1. The plan lists all four as fate 1 (`column-drop`), with the column present.\n2. `--apply` reaches `column-drops`, which blocks on each one: \"sys_audit_log.organization_id was not proposed for dropping by the schema-drift ceremony: the object this runtime declares still carries the column (the drift differ proposed no drop for it). Run the ceremony with the release whose declaration drops it.\"\n3. **Control:** on the copy, the four stale tables were dropped from the primary by hand. The ceremony then verified and `objectstack dev` booted cleanly. ⛔ This is not a remedy to prescribe: dropping a physical table is destructive and stays with a human (`unmanaged-tables.ts`, header).\n\n## What is wrong\n\n- **The remedy is false.** This release's declaration does drop the column, and no release will propose this drop. As read from the source (not separately measured):\n  - the drift differ handed to the port is the primary driver's `detectManagedDrift`, which diffs only the objects that driver manages;\n  - these four live on the telemetry driver;\n  - the composition does declare them, so `dropColumnsThroughDrift` answers `not-proposed` and not `not-declared`.\n  - The real fact the operator needs: the table is a copy in a database the object no longer lives in.\n- **The ceremony never reads the sibling.** The plan has one reader, the primary datasource (`buildOrganizationOwnershipPlan({ reader })` on `stack.driver`). Two consequences:\n  - A sibling created by a 17.x boot can still carry `organization_id` on these tables, and the ceremony neither plans nor drops it.\n  - The boot guard does read each object's table through `getDriverForObject`, which is the sibling for these objects. Once the ceremony's marker verifies, the guard logs \"still carry a physical organization_id column, and the ceremony's marker is verified: the server starts\". So the marker certifies a column the ceremony never looked at.\n\n## Ask (the fixing seat's call)\n\n- **Stale copies.** The plan tells a lifecycle-classed object's table in the primary apart from the object's real home when a sibling is provisioned, and reports it as such: a stale copy, its row count, and the remedy that is true. No guessed drop, and no \"a later release\" text.\n- **The sibling.** The plan and `column-drops` read and drop through the datasource each object lives in, so the sibling's `organization_id` columns get their fate. Or the plan refuses, naming the sibling, until they do.\n- Measure the sibling half on a sibling created by a 17.x dev boot; this card did not.\n- Pins: the stale-copy case reports, and does not block with the release remedy; the sibling's column is planned. Control: a database with no sibling is unchanged.\n\nRelated: #15194 (ADR-0131 epic) · #22579 · #23399 · #23446 · #23666.\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_"
+}

@@ -1,0 +1,33 @@
+{
+  "number": 23937,
+  "kind": "pull_request",
+  "title": "test(spec): re-measure the two declared test budgets over 11 executed hourly runs",
+  "state": "open",
+  "state_reason": null,
+  "draft": false,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "size/xs",
+    "skip-changeset",
+    "tests",
+    "tooling"
+  ],
+  "assignees": [
+    "os-elon-musk"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-16T13:19:07Z",
+  "updated_at": "2026-10-16T14:24:34Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 2,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/pull/23937",
+  "body": "Part of #23180\nClause-②: no\n\nThe census reads two declared test budgets over their lines, and the refresh lane lists both files again. This PR re-measures them and raises each `// test-budget:` header line under ruling record `6181973363` item 2: the measured CI reading x 1.25, rounded up to the next 10 s. #23180 stays open for its other rows. This PR covers only these two declarations.\n\n## Re-measure\n\nThe window is the 25 newest hourly scheduled `ci.yml` runs, `38731551915` (2026-10-15 12:01Z) to `38897680323` (2026-10-16 12:01Z). Each run's `Test Core` aggregator job log has a \"Slowest 20 test files\" table. Both files appear in it in all 25 runs.\n\n- **Executed runs (11).** Both files are \"measured here\", and `@objectstack/spec` is in the executed-package list: `38731551915`, `38798542648`, `38806610561`, `38820912723`, `38833767749`, `38838260718`, `38848429828`, `38858901527`, `38865071010`, `38877591164` and `38891051243`.\n- **Replayed runs (14).** Both rows are \"replayed log\", and spec is in the cache-replayed line. `windowFiles` excludes replayed rows, so they are not used here. Every replayed reading is below the executed maximum anyway.\n\n| file | declared | executed readings (11 runs) | window max (run) | x 1.25 | new line |\n|:--|--:|:--|--:|--:|--:|\n| `scripts/build-schemas-check-mode.test.ts` | 940 | 602.13 to 983.27 s | 983.27 s (`38798542648`) | 1229.09 | **1230** |\n| `scripts/liveness/check-liveness.test.ts` | 410 | 268.30 to 425.63 s | 425.63 s (`38798542648`) | 532.04 | **540** |\n\nPer executed run (bscm / liveness / spec package, s):\n- `38731551915`: 925.47 / 402.21 / 1472.49\n- `38798542648`: 983.27 / 425.63 / 1560.24\n- `38806610561`: 931.76 / 391.73 / 1479.72\n- `38820912723`: 952.11 / 415.31 / 1519.43\n- `38833767749`: 862.23 / 364.91 / 1354.93\n- `38838260718`: 880.76 / 373.74 / 1390.17\n- `38848429828`: 931.96 / 408.38 / 1480.63\n- `38858901527`: 602.13 / 268.30 / 969.79\n- `38865071010`: 934.23 / 400.05 / 1482.89\n- `38877591164`: 682.05 / 287.41 / 1070.92\n- `38891051243`: 938.80 / 396.15 / 1490.03\n\n## Why a raise and not a fix (Zone 2 hypothesis 2)\n\nThe growth is not repeated work, and no fixture was added:\n\n- `build-schemas-check-mode.test.ts`, its producer `build-schemas.ts`, and `liveness/check-liveness.mts` have no commit between the budget's landing (`af255525c`) and `origin/main` `0744f9436`.\n- `check-liveness.test.ts` has one commit in that range: `23d0bc78` (#23776, 2026-10-16 03:14Z). It makes one existing case run the gate twice instead of once. That commit landed **after** the over-budget reading (run `38798542648`, head `9e0945cf`, 2026-10-15 20:01Z). Of the executed readings after it, the highest is 408.38 s, which is under the old 410 line.\n- The file's wall follows the run's load. Across the 11 executed runs, bscm is 0.62 to 0.64 of the spec package wall (969.79 to 1560.24 s), which moves with how much of the workspace the run executes. The old lines came from **three** executed runs (`38636949152`, `38651452634`, `38657693085`; PR #23613). This window has eleven, and the busiest of them reads above the old lines.\n- The earlier measurements on this card (report `6176173059`) found the floors. bscm's floor is about 96 real generator runs at about 9 s each. Liveness already has the per-run read memo from PR #23535. Neither file repeats a cause another case already covers.\n\nEach new line names the runs, the reading and why it rose, as item 2 requires.\n\n## Verification\n\nAt `1c32e6be`:\n\n- The refresh's own reader, `declaredBudgetInTree('@objectstack/spec', FILE)` from `scripts/measure-test-shard-timings.mjs`, exits 0 and returns `seconds: 1230` and `seconds: 540`, the class `spawns the real producer once per single-cause fixture`, at `line: 2`. A malformed line would refuse the whole weekly `--diff`, so both lines were read locally.\n- `check-liveness.test.ts`, run as one file under `os-verify-lock`: 71/71 passed, 220.19 s, `VERDICT command-exit 0`. That wall is from a shared box and is not a CI reading.\n- `build-schemas-check-mode.test.ts` was **not run locally**. It takes about 900 s and this PR changes only a comment line. CI runs it.\n- No ablation: no tested behaviour changed (comment line only).\n- Gates: the local subset from `dispatch-gates --commands` is in the dev report on #23180.\n\n## Acceptance notes\n\n- Only the two header lines change. Every `expect` is byte-identical. Nothing is deleted, no timeout is raised and no project is moved.\n- Publish: `@objectstack/spec`'s `files[]` (read at `1c32e6be`) lists `dist`, `json-schema`, `liveness`, `prompts`, `src/**/*.zod.ts` and top-level docs. It has no `scripts` entry, so both files ship in no tarball (PR #23613's `npm pack --dry-run` showed 0 files under `scripts/`). `skip-changeset` applies.\n\n---\n_Generated by [Claude Code](https://claude.ai/code/session_01VBiW3UCZSxPyRLHAMTnHHD)_\n"
+}
