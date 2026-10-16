@@ -122,13 +122,26 @@ const SNAPSHOT = { id: 'exp_1', title: 'Q1 travel', amount: 1200 };
 const SUBMITTER = 'employee_7';
 
 /**
- * One request, read the way the request page loads its record. The console
- * routes that `findOne` to `GET /approvals/requests/:id` (objectui's
- * `routeApprovalRecordReads`), whose handler answers `ApprovalService.getRequest`'s
- * row as it stands; this is that call, as the request's submitter, over a
- * find-only engine double holding the stored row.
+ * The `where` shapes the request read sends: equality, `$in`, `$or`, `$and`.
+ * Any other operator or combinator is REFUSED, so a read this double cannot
+ * answer fails the test instead of matching nothing.
  */
-async function servedRequestRow(): Promise<AnyRec> {
+function matchesWhere(row: AnyRec, where: AnyRec | undefined): boolean {
+  return Object.entries(where ?? {}).every(([k, v]) => {
+    if (k === '$or') return (v as AnyRec[]).some((w) => matchesWhere(row, w));
+    if (k === '$and') return (v as AnyRec[]).every((w) => matchesWhere(row, w));
+    if (k.startsWith('$')) throw new Error(`engine double: unsupported combinator ${k}`);
+    if (v != null && typeof v === 'object') {
+      const ops = Object.keys(v);
+      if (ops.length === 1 && ops[0] === '$in') return (v.$in as unknown[]).includes(row[k]);
+      throw new Error(`engine double: unsupported operator ${ops.join(', ')} on ${k}`);
+    }
+    return row[k] === v;
+  });
+}
+
+/** A find-only engine double over one stored request and its subject record. */
+function storedRequestEngine() {
   const tables: Record<string, AnyRec[]> = {
     sys_approval_request: [{
       id: 'req_1',
@@ -145,19 +158,23 @@ async function servedRequestRow(): Promise<AnyRec> {
     }],
     expense_report: [{ ...SNAPSHOT, organization_id: 't1' }],
   };
-  const matches = (row: AnyRec, where: AnyRec | undefined): boolean =>
-    Object.entries(where ?? {}).every(([k, v]) => {
-      if (k === '$or') return (v as AnyRec[]).some((w) => matches(row, w));
-      if (k === '$and') return (v as AnyRec[]).every((w) => matches(row, w));
-      if (v != null && typeof v === 'object' && '$in' in v) return (v.$in as unknown[]).includes(row[k]);
-      return row[k] === v;
-    });
-  const engine = {
+  return {
     async find(object: string, options?: AnyRec) {
-      return (tables[object] ?? []).filter((r) => matches(r, options?.where ?? options?.filter)).map((r) => ({ ...r }));
+      const rows = (tables[object] ?? []).filter((r) => matchesWhere(r, options?.where ?? options?.filter));
+      const page = typeof options?.limit === 'number' ? rows.slice(0, options.limit) : rows;
+      return page.map((r) => ({ ...r }));
     },
   };
-  const row = await new ApprovalService({ engine: engine as any })
+}
+
+/**
+ * One request, read the way the request page loads its record. The console
+ * routes that `findOne` to `GET /approvals/requests/:id` (objectui's
+ * `routeApprovalRecordReads`), whose handler answers `ApprovalService.getRequest`'s
+ * row as it stands; this is that call, as the request's submitter.
+ */
+async function servedRequestRow(): Promise<AnyRec> {
+  const row = await new ApprovalService({ engine: storedRequestEngine() as any })
     .getRequest('req_1', { userId: SUBMITTER, tenantId: 't1', positions: [], permissions: [] } as any);
   expect(row, 'the submitter reads their own request').not.toBeNull();
   return row as AnyRec;
