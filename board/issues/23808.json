@@ -1,0 +1,37 @@
+{
+  "number": 23808,
+  "kind": "issue",
+  "title": "spec: four metadata type descriptions an admin reads in Setup (api, doc, book, capability) carry ADR numbers and schema vocabulary; the spec half of #23802",
+  "state": "closed",
+  "state_reason": "completed",
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "area:devpath",
+    "domain:spec",
+    "enhancement",
+    "priority:p2"
+  ],
+  "assignees": [
+    "os-elon-musk"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-16T03:55:26Z",
+  "updated_at": "2026-10-16T06:37:37Z",
+  "closed_at": "2026-10-16T06:36:03Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": null,
+  "comments": 5,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/23808",
+  "body": "Filing gate ④: a split of #23802, cut by triage at that card's `pm:retriage` (filed by the epic PM from the 2026-10-16 Setup review, under the maintainer's 「全部立卡」). `packages/spec` is the spec seat's whatever needs it, so its half cannot ride #23802's `domain:engine` PR. ⛔ Not a claim.\n\n**Reader who acts:** the `domain:spec` seat.\n\n## What an admin reads\n\n`packages/spec/src/kernel/metadata-plugin.zod.ts`, `DEFAULT_METADATA_TYPE_REGISTRY`, on `origin/main`. Four `description` strings carry ADR vocabulary, and Setup surfaces them through `packages/platform-objects/src/apps/translations/en.metadata-forms.generated.ts`:\n\n- `api`: \"Declarative HTTP endpoint — a stable URL and policy layer over an existing pipeline (ADR…\"\n- `doc`: \"Package documentation — flat Markdown items (ADR-0046)\"\n- `book`: \"Documentation navigation spine — ordered groups with derived membership (ADR-0046 §6)\"\n- `capability`: \"Package-declared authorization capability — the DEFINITION side of ADR-0066 D1 (grants live on permission sets; requirements on resources)\"\n\nThe measurement: `grep -E \"description: '[^']*(ADR-|\\bD[0-9]\\b|finding F|emit\\(\\)|kernel)\"` over the registry's `{ type: '…' }` lines gives 4 hits.\n\n## The change\n\n- **Rewrite each as one sentence in an admin's words:** what the items are and what you do with them. #23802's Target gives the voice, for example capability: \"A permission a package defines; you grant it through permission sets.\"\n- **Keep ADR references** in the docblocks and comments, not in user-facing strings (#23802's constraint).\n- **Spec 辅助面 only:** the changeset is `patch`, and no accept/refuse result changes. Not the protocol-first class.\n\n## Acceptance\n\n- None of the four descriptions contains `ADR-`, `D\\d`, `finding F`, `emit()` or `kernel`. #23802's acceptance lint, which lands with that card, sees them once this is in.\n- The generated metadata-forms translations regenerate. If #23802 lands first, this PR regenerates `en.metadata-forms.generated.ts` and the zh-CN / ja-JP files, and the reverse holds too.\n\n## Grade and order\n\n- **p2,** inherited from #23802.\n- It runs in parallel with #23802.\n\n## Dedupe\n\nThe parent is #23802. This is its split, with no separate search: the four strings were measured in this act."
+}

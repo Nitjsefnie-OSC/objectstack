@@ -1,0 +1,37 @@
+{
+  "number": 23798,
+  "kind": "pull_request",
+  "title": "fix(plugin-approvals): sys_approval_request.record_id declares referenceDeletedWhen on cancel_reason = record_deleted",
+  "state": "closed",
+  "state_reason": null,
+  "draft": false,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "documentation",
+    "size/s",
+    "tests",
+    "tooling"
+  ],
+  "assignees": [
+    "os-elon-musk"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-16T03:12:32Z",
+  "updated_at": "2026-10-16T04:03:33Z",
+  "closed_at": "2026-10-16T04:03:32Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": "2026-10-16T04:03:32Z",
+  "comments": 2,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/pull/23798",
+  "body": "Fixes #23736\n\nClause-②: no\n\n## What\n\nOne key on `sys_approval_request.record_id`, beside its `referenceVia: 'object_name'`:\n\n    referenceDeletedWhen: { field: 'cancel_reason', value: 'record_deleted' }\n\nA request the platform cancelled because its record was deleted (`cancel_reason: record_deleted`) now says, in the served object definition, that the pointer names a record that no longer exists, so a renderer can draw the sibling option's label (`Related record deleted`) instead of a link. This is the services half of the objectui#12489 ruling, letter A (batch #352 item 4); the spec key is #23735 (`8776119bdc`). No page edit and nothing in objectui: the served page's Details tab draws the pair through `record:details`, and the renderer reads the key.\n\nLanding place: `packages/plugins/plugin-approvals/src/sys-approval-request.object.ts`, as the card expected. The producer is there; no other package needed a change.\n\nFiles: the object (3 lines: the key and a 2-line comment), the pin test beside it (`sys-approval-request-pointer-pair.test.ts`, +28 lines, one new describe with two tests), and `.changeset/23736-record-id-deleted-when.md`. Line budget: 43 additions, 0 deletions.\n\n## Measured assumptions\n\n1. **The line parses.** Measured on `origin/main` d3df3ba24b (the card cited 0b1179f332): the key is `field.zod.ts:1494`, its field-half refusal `:2294` (no `referenceVia` is refused), and the sibling half is `refuseDishonestReferenceDeletedWhen` in `object.zod.ts:1862` (the sibling must be a declared single-value `select` with inline `options` holding `value`). `record_id` declares `referenceVia: 'object_name'`; `cancel_reason` is `Field.select(APPROVAL_CANCEL_REASONS.map(...))` holding `record_deleted`. `ObjectSchema.create` parses the object at import and the pin re-parses the exported object with `ObjectSchema.safeParse`: success.\n2. **Clause-② no holds: the emitted declaration closure of `@objectstack/plugin-approvals` is byte-identical.** Built the package before (on the base) and after (on this head), `dist/index.d.ts` and `dist/index.d.mts`, the only two declaration files it emits:\n\n        before  8d6525557b9d3cc681e0cf1e06c8dac6f163ebe535b4f36f99d1a87690d88b1e  (both files)\n        after   8d6525557b9d3cc681e0cf1e06c8dac6f163ebe535b4f36f99d1a87690d88b1e  (both files)\n\n   Positive control: after the second build `dist/index.js` and `dist/index.mjs` each carry the `referenceDeletedWhen` line (1 hit each), so that build did pick the change up. The key is already in the declarations (45 hits in both builds, from the spec's field type), which is why they do not move. No export, type or accept set changes.\n\n## The pin, and its ablations\n\nThe pin: `fields.record_id.referenceDeletedWhen` equals `{ field: 'cancel_reason', value: 'record_deleted' }`; `cancel_reason` is a `select` declaring the `record_deleted` option; the exported object parses through `ObjectSchema`.\n\nBoth ablations ran through `scripts/ablation-replace.mjs` (anchor hit 1 time, blob changed, restore proven: blob equals HEAD and `git diff HEAD` empty), after the fix was committed. The pin's subject is this package's source (`./sys-approval-request.object.js`), so no rebuild is in the path. Direction in both: red.\n\n- **Delete the line** -> the presence test is red (1 failed, 5 passed):\n\n        AssertionError: expected undefined to deeply equal { field: 'cancel_reason', ...(1) }\n        - Expected: { \"field\": \"cancel_reason\", \"value\": \"record_deleted\" }\n        + Received: undefined\n\n- **Point `value` at an option that does not exist** (`record_gone`) -> the spec refuses the parse at import, so the whole file is red (0 tests run) with the located issue:\n\n        ZodError: code custom, path fields.record_id.referenceDeletedWhen.value\n        Field `record_id` on object `sys_approval_request` declares `referenceDeletedWhen.value: 'record_gone'`, but `select` field `cancel_reason` declares no option `record_gone`. Its option values: `record_deleted`.\n\nRestored tree: the pin file passes 6 of 6 (4 existing pointer-pair tests and the 2 new ones); the whole `@objectstack/plugin-approvals` suite passes 78 files, 1082 tests (`vitest run --maxWorkers=2`, under the shared verify lock, exit 0).\n\n## Gates (all at head 194e9effe7)\n\n- `pnpm --filter @objectstack/plugin-approvals typecheck`: exit 0 (the test-layer debt ledger holds at 8 files, 324 errors, 27 signatures: unchanged).\n- `eslint --no-inline-config` on the two changed source files: exit 0. Control-byte scan of all three changed files: no hits.\n- `node scripts/pm/dispatch-gates.mjs --commands --repo objectstack-ai/objectstack` derived 65 commands from the diff; every one was run with its exit code recorded before any pipe; `--ran` reconciles: 65 derived, 65 run, 0 NOT-MEASURED, 0 UNRUN. Two families first exited 3 (PREREQUISITE NOT MET: `check:i18n` and `check:dual-build-cjs-loads` read built output of packages not yet built). Their prerequisites were built (`turbo run build`, 61 and 75 tasks) and both were re-run: exit 0 (`check:i18n`: 10 packages in sync; `check:dual-build-cjs-loads`: 110 entry points load). The four other dist-reading families (`check:dts-closure`, `check:published-files`, `check:lean-entry-closure`, `check:sourcemap-no-sources-content`) were re-run on the fully built tree too: exit 0.\n- `origin/main` moved to 46ca793edb during the run (a version-packages commit and two others; under `packages/plugins/plugin-approvals` it touches only `CHANGELOG.md` and `package.json`, the version bump, and nothing under `packages/spec/src/data`). The three changeset gates were re-run against it: exit 0. No merge of main into this branch.\n- Everything CI runs beyond that set (the full `Lint & Repo Gates` farm, `Test Core`, `Build Core`) is left to the PR's check-runs; none was re-run locally.\n\n## Acceptance notes\n\n- `packages/spec/liveness/field.json` keeps `referenceDeletedWhen` as `planned`: its own note says it flips to `live` on the objectui#12489 step 4 renderer landing, citing this declaration as `producer`. That flip belongs to the renderer's landing, not to this PR; not edited here.\n- The key's field-level-security rule is #23735's: a caller who cannot read `cancel_reason` is served `record_id` without the predicate. Nothing to do here; recorded so the renderer card reads it.\n- No labels were written (the dispatch budget names none; this PR carries a changeset, so `skip-changeset` does not apply).\n\n---\n_Generated by [Claude Code](https://claude.ai/code/session_018VqJPGA1NDNSCZsnecsChP)_\n"
+}

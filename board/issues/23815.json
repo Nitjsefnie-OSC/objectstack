@@ -1,0 +1,38 @@
+{
+  "number": 23815,
+  "kind": "pull_request",
+  "title": "docs(spec): a form section's translation TSDoc names both addresses — objects.OBJECT._sections for an object form view, metadataForms for a metadata form",
+  "state": "closed",
+  "state_reason": null,
+  "draft": false,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "documentation",
+    "protocol:system",
+    "protocol:ui",
+    "size/s",
+    "tooling"
+  ],
+  "assignees": [
+    "os-elon-musk"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-16T04:37:01Z",
+  "updated_at": "2026-10-16T05:58:30Z",
+  "closed_at": "2026-10-16T05:58:28Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": "2026-10-16T05:58:28Z",
+  "comments": 2,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/pull/23815",
+  "body": "Fixes #23756\n\nClause-②: no\n\n## What changed\n\nThese are TSDoc and comment edits only, at the three locations the card and comment `6205162974` name, plus a fourth docblock the seat's review found (item 4). No `.describe()` text, schema or code changes. Measured at base `74b436263`.\n\n1. **`packages/spec/src/ui/view.zod.ts`, `FormSectionSchema.name`.** The TSDoc named one address, `metadataForms.TYPE.sections.NAME`. It now names both addresses and which form each one serves:\n   - **Object-bound form view:** `objects.OBJECT._sections.NAME`. OBJECT is the form's own `data.object`, else its view's. The i18n extractor (`walkObjectSections`) scaffolds the key, the translation linter (`collectViewRecord`) accepts it, and `translateView` serves it. A section without a `name` has no key and keeps its authored text.\n   - **Metadata-editing form** (`defineForm({ schemaId })`): `metadataForms.TYPE.sections.NAME`, read by `resolveMetadataFormLabels`. A nameless section is looked up there under a slug of its `label`.\n\n   The group-key comment on the same schema (the `:3862` site) also named `metadataForms.…` as the anchor. A section's `group` points at an object's `fieldGroups`, so its key is `deriveFieldGroupLayout`'s `key` at `objects.OBJECT._sections.KEY`, as `field-group-layout.ts` declares. The comment now says that.\n2. **`packages/spec/src/system/translation.zod.ts`, `_sections`.** The TSDoc named `record:details` as the only reader. It now names:\n   - the three authoring surfaces that put a name under this key: form-view `sections[].name`, `record:details` `sections[].name`, and object `fieldGroups[].key`;\n   - the three readers on `main`: `walkObjectSections`, which scaffolds the key from all three; `collectViewRecord`, which accepts a form view's names; and `translateView`, which overlays a served form view's `config.sections`;\n   - the `description` leaf, which the schema already declares;\n   - the metadata-form address, which is a different key.\n3. **`packages/spec/src/system/i18n-resolver.ts`, `translateFormSections`.** The docblock said \"Three rules, each the one its sibling translators already follow\". It now says that rules 1 (own `name` key) and 3 (a diverged string beats the catalog) are shared with `translateBulkActionDefs`, and that rule 2 (only authored copy is translated) belongs to sections alone. `resolveViewDescription` returns a catalog description the view never authored, and `translateBulkActionDefs` has no authored-copy guard.\n\n4. **`packages/spec/src/system/i18n-resolver.ts`, `resolveMetadataFormLabels`** (patch round, head `e7ac53b9a1`). The docblock said a section without a stable `name` keeps its section-level text, which contradicted item 1's new text and the function's own `translateSection`. It now says what the code does: the lookup key is the section's `name`, else a slug of its string `label` (lowercased, `&` → `and`, each run of non-alphanumerics → `_`, edge underscores trimmed). Only a section with neither keeps its section-level text, and its fields are translated either way. The changeset gained one sentence for it.\n\nEvery reader named above was found by its function name on `main` at `74b436263`:\n- `walkObjectSections`: `packages/cli/src/utils/i18n-extract.ts:914`\n- `collectViewRecord`: `packages/lint/src/validate-translation-references.ts:484`\n- `translateView` and `translateFormSections`: `i18n-resolver.ts`\n- `resolveMetadataFormLabels`: `i18n-resolver.ts:3926`\n- `defineForm`: `view.zod.ts:7145`\n\nThe card body also lists objectui's form renderers as a reader. This repo does not contain them, so the new text does not name them as a reader.\n\n## Changeset: `patch`, not `skip-changeset`\n\nThe dispatch hypothesis was that comments do not publish. That was measured false for this diff:\n- `@objectstack/spec`'s `files[]` includes `src/**/*.zod.ts` and `dist`.\n- After `pnpm --filter @objectstack/spec build`, the new `view.zod.ts` text (\"one of two addresses, decided by what the form edits\") and the new `translation.zod.ts` text (\"Three authoring surfaces name a section under this key\") both appear in `dist/**` bundles. The `i18n-resolver.ts` text appears only in `src`.\n- Positive control: unchanged TSDoc from the same docblock is also present in `dist/**`.\n\nSo the diff publishes text, and `.changeset/23756-section-translation-tsdoc.md` is a `patch` for `@objectstack/spec`. The `skip-changeset` label is not applied.\n\n## Generated artifacts\n\nNone carry this text. `git grep` for each replaced sentence returns zero hits after the edit. `check:docs` ran green against the rebuilt `dist`.\n\n## Verification (head `58c3d6070f`; the patch round's re-runs at `e7ac53b9a1` are in report `6208324935`)\n\n- `pnpm --filter @objectstack/spec run typecheck` passes.\n- `vitest run src/system/i18n-resolver.test.ts src/system/translation.test.ts src/ui/view.test.ts`: 3 files, 974 tests passed.\n- `node scripts/pm/dispatch-gates.mjs --commands` derived 79 families; 78 ran and exited 0.\n- `pnpm check:dual-build-cjs-loads` exited 3, which means its prerequisite was not met: it needs every workspace package's `dist`, and only spec's build closure was built here. It is NOT MEASURED locally and is left to CI.\n- `--ran` reconciliation: \"79 derived famil(ies) accounted for — 78 run, 1 NOT-MEASURED\".\n\n## Acceptance notes\n\n- `check-plugin-teardown-shape --self-test` needs the full history, because its positive control is pinned to a commit. It ran green after `git fetch --unshallow`.\n\n---\n_Generated by [Claude Code](https://claude.ai/code/session_01RD4nZChNGxRzyyWJtvZ8NJ)_\n\n"
+}

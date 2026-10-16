@@ -2,8 +2,8 @@
   "number": 23394,
   "kind": "issue",
   "title": "spec(liveness): flip `app.branding.children.logo` from `planned` to `live`; objectui `AppMark` renders it at the pin",
-  "state": "open",
-  "state_reason": null,
+  "state": "closed",
+  "state_reason": "completed",
   "draft": null,
   "author": {
     "login": "objectstack-fleet[bot]",
@@ -13,18 +13,23 @@
   "labels": [
     "documentation",
     "domain:spec",
-    "pm:queue",
     "priority:p3"
   ],
-  "assignees": [],
+  "assignees": [
+    "os-elon-musk"
+  ],
   "milestone": null,
   "type": null,
   "created_at": "2026-10-14T04:30:44Z",
-  "updated_at": "2026-10-14T04:55:21Z",
-  "closed_at": null,
-  "closed_by": null,
+  "updated_at": "2026-10-16T08:14:09Z",
+  "closed_at": "2026-10-16T08:12:06Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
   "merged_at": null,
-  "comments": 1,
+  "comments": 5,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/23394",
   "body": "Filing gate **③**, a task the maintainer directed. The maintainer, verbatim, on `domain:spec` seat 2's stand-down (2026-10-14), about this item and the one in the companion card: 「下班之前为什么不处理？你至少应该开卡。」\n\nFiled by the former `domain:spec` seat 2 shift · `zhuangjianguo` · session `session_01GZSPSQ5ArPjSJdxxuqwGoZ`. ⛔ Not graded (grading is triage's); ⛔ not a claim.\n\n**Reader who acts:** the `domain:spec` seat that claims it. It is one hand-edited ledger row in `packages/spec/liveness/app.json`, and no schema moves.\n\n## What is stale\n\n- At `main`, `packages/spec/liveness/app.json`, `app.branding.children.logo` reads `\"status\": \"planned\"` (`verifiedAt` 2026-09-27). Its note says \"AUTHORED, RENDERED BY NOTHING THAT SHIPS\" at the old pin `f8a9d0fb`, names the carrier objectui#10827, and ends \"Flip to `live` citing that reader at the pin that carries it.\"\n- objectstack-ai/objectui#10827 and objectstack-ai/objectui#12201 are both closed (completed).\n- At the current `.objectui-sha` pin, `1fb1ced36243`, `packages/app-shell/src/layout/AppMark.tsx` reads `branding.logo` and draws it as the app's one square icon. PR #23095's contract review (`6132258453`, OOS-1) verified the same reader at the earlier pin `7578323a5`: 22 px in the top-bar pill and the switcher rows, 26 px in the phone drawer, `object-contain`.\n- The parent container's `note` (\"`logo` reaches nothing mounted\") goes stale with it.\n- The verdict errs toward understating a live key. Its triage direction (#20146) was ENFORCE, and the reader has since shipped.\n\n## The change\n\n- Set the row to `live` with today's `verifiedAt`, citing `AppMark.tsx` at the pin the PR reads. Rewrite its `note` and the container `note` to say what renders it, and drop the \"carrier objectui#10827\" wording.\n- Gates: `check:liveness` (Spec property liveness), plus any baseline those gates name.\n\n## Dedupe\n\nThe REST issue list of this repo, all states, updated since 2026-10-11T00:00Z: 739 scanned, matched against `liveness` near `branding.logo` / `app.json`. That gives 2 hits, and neither is a card for this flip: PR #23095, which recorded it as owed, and the seat post #18549, whose ledger carries it as a line. The console pin bump #23392 (`domain:devx`) does not carry it either."

@@ -2,8 +2,8 @@
   "number": 23772,
   "kind": "issue",
   "title": "auth(spec,plugin-auth): a short-lived principal-session mint, an optional `IAuthService` member with its `AuthManager` implementation, the seam #22269's print service consumes (S2 of #22269)",
-  "state": "open",
-  "state_reason": null,
+  "state": "closed",
+  "state_reason": "completed",
   "draft": null,
   "author": {
     "login": "objectstack-fleet[bot]",
@@ -13,7 +13,6 @@
   "labels": [
     "domain:spec",
     "enhancement",
-    "pm:dispatched",
     "priority:p1",
     "target:v18"
   ],
@@ -23,11 +22,15 @@
   "milestone": null,
   "type": null,
   "created_at": "2026-10-16T00:56:50Z",
-  "updated_at": "2026-10-16T02:23:54Z",
-  "closed_at": null,
-  "closed_by": null,
+  "updated_at": "2026-10-16T03:25:44Z",
+  "closed_at": "2026-10-16T03:24:23Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
   "merged_at": null,
-  "comments": 3,
+  "comments": 4,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/23772",
   "body": "Filing gate ④: an execution card cut from #22269 (card ③ of #8346's B′ split). Triage split it at the `domain:services` seat's retriage request `6205245677`, taking the seat's option (ii), \"split along the lanes\". ⛔ Not a claim.\n\n**Reader who acts:** the `domain:spec` seat. This is a vertical seam: the contract member in `packages/spec/src/contracts/auth-service.ts`, its `plugin-auth` implementation, and the pins, all in one PR under the spec seat's contract review.\n\n## Governing text\n\n- **#8346's ruling B′ (`6051470224`), M2:** the render service renders the page \"under the requesting user's principal (a short-lived credential; no system principal)\".\n- **#22269's seat rulings (`6059363716`):**\n  - **OQ1 A:** \"The mint is declared as an optional `IAuthService` member, implemented by `AuthManager`.\"\n  - **OQ9 A:** \"Human principals only. The rest are refused `PERMISSION_DENIED` / `403`, and an `authGate` principal is refused too.\"\n- **The placement ruling `6204149204`** (maintainer 「22269 同意」): the credential may go to a remote browser endpoint, and the pins apply to both placements.\n\n## What lands\n\nSizes from the design report `6059301379`, row `7_size.S2`, about 560–640 lines in all:\n- `packages/spec/src/contracts/auth-service.ts`: one optional member on `IAuthService` (about +25), its test (about +15), and the api-surface regen.\n- `packages/plugins/plugin-auth`:\n  - `src/principal-session-mint.ts` (new, about 150);\n  - `auth-manager.ts` (about +30);\n  - the tests (new, about 320).\n- The changesets.\n\n## Pins\n\nFrom the report and the seat review:\n- **The better-auth refresh trap, on both lanes.** A minted session is never extended by the session-renewal path (`updateAge`).\n- **The TTL** is short and bounded.\n- **The revoke path.** The consumer (#22269) revokes in `finally`; this card pins the revoke it calls.\n- **The refusals,** before any mint:\n  - a non-human principal gets `PERMISSION_DENIED` / `403`;\n  - an `authGate` principal is refused.\n- **Cookie names** under `cookiePrefix` and `__Secure-`.\n- **Measured fact to build on:** today no API mints a session for a user outside a better-auth endpoint. The only `internalAdapter.createSession` callers are `admin-impersonate-endpoint.ts:228` and `impersonation-bearer-rotation.ts:251`. Impersonation acts as a different principal, so it is not this mint.\n\n## Contract and grade\n\n- **`Clause-②: yes`.** A new `IAuthService` member and a public `AuthManager` method. A contract-tier review is owed before the queue.\n- **p1 + `target:v18`,** inherited from #22269: the maintainer named PDF for 18.0 GA.\n\n## Order\n\n- This card is built in parallel with #22269.\n- Its PR lands first. #22269's PR reads the member and lands after it.\n\n## Dedupe\n\nMCP `search_issues` on this repo, closed included:\n- `short-lived principal session mint IAuthService member AuthManager print render credential`: 0 hits;\n- `principal session mint`: 0 hits;\n- the control, `print render service headless Chromium`: #22269 only."

@@ -1,0 +1,37 @@
+{
+  "number": 23801,
+  "kind": "issue",
+  "title": "release: the Docker image job fails at \"Build and push\" since Release #11838 (npm 18.0.0-next.2 published fine): `npm install -g @objectstack/cli` crashes in npm's peer resolution (\"Cannot read properties of null (reading 'edgesOut')\")",
+  "state": "closed",
+  "state_reason": "completed",
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "bug",
+    "ci/cd",
+    "domain:devx",
+    "priority:p1"
+  ],
+  "assignees": [
+    "os-sales"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-16T03:42:24Z",
+  "updated_at": "2026-10-16T05:11:43Z",
+  "closed_at": "2026-10-16T05:11:15Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": null,
+  "comments": 3,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/23801",
+  "body": "Filing gate: **① a red release step, measured.** The maintainer asked for this card (2026-10-16): 「11838 npm发成功了，docker失败了，立卡排查」 (Release #11838: the npm publish succeeded and the Docker image failed; file a card to investigate). Filed by the cloud seat `repo:cloud#1` (seat post #6026, session `session_01WVbr5J6u8BHh8EyFtcWciH`). ⛔ Not a claim; grade and lane are triage's.\n\n## What failed\n- **The run:** Release #11838, run `38841989023` (push to `main` at `e5136ff10f`, \"chore: version packages (next) (#23481)\").\n  - `Publish 18.0.0-next.2 to npm` succeeded. npm's `next` tag is now `18.0.0-next.2`.\n  - The **Docker image** job (`116791684282`) failed at **Build and push**.\n- **Its annotation:**\n  ```\n  buildx failed with: failed to build: failed to solve: process \"/bin/sh -c npm install -g @objectstack/cli@${OS_CLI_VERSION} \\\"pg@^8.0.0\\\" \\\"mysql2@^3.0.0\\\" && npm cache clean --force\" did not complete successfully: exit code: 1\n  ```\n  The step is `docker/Dockerfile` line 69 (`FROM node:22-slim`).\n- **The same step fails in the next three Release runs:** #11840 (`38845350311`), #11841 (`38845398889`) and #11842 (`38846177213`), Docker job red at Build and push in each. #11839's Docker job was skipped. The step's full log could not be read from this session (the log host is blocked by the egress proxy).\n\n## Reproduced outside CI (Node v22.22.0, npm 10.9.4, the Dockerfile's command into a scratch prefix)\n| Command | Result |\n|:--|:--|\n| `npm install -g @objectstack/cli@18.0.0-next.2 \"pg@^8.0.0\" \"mysql2@^3.0.0\"` | **exit 1**: `npm error Cannot read properties of null (reading 'edgesOut')` |\n| the same with `@objectstack/cli@18.0.0-next.1` | exit 1, same error |\n| the same with `@objectstack/cli@17.7.0` (npm `latest`) | exit 1, same error |\n| the next.2 command plus `--legacy-peer-deps` | **exit 0**: 526 packages, `os` / `objectstack` bins present |\n\n**The crash site** (npm debug log):\n```\nTypeError: Cannot read properties of null (reading 'edgesOut')\n    at #loadPeerSet (@npmcli/arborist/lib/arborist/build-ideal-tree.js:1289:38)\n    at async #loadPeerSet (build-ideal-tree.js:1297:11)\n    at async #buildDepStep (build-ideal-tree.js:904:11)\n```\n- **Just before the crash,** npm was fetching the peer set of `vitest` (`@vitest/coverage-*`, `@vitest/browser`, `@vitest/ui`, `happy-dom`, `jsdom`, `canvas`, `puppeteer-core`).\n- **The only `vitest` edge among the CLI's 50 `@objectstack/*` dependencies** is `@objectstack/metadata-core`'s **optional** peer `vitest: ^4.0.0` (`peerDependenciesMeta.vitest.optional: true`). It is present in 17.7.0, next.1 and next.2.\n- **What the reproduction implies:**\n  - Every version fails today, including ones whose images built before.\n  - So the trigger is probably a newer third-party release inside that peer graph meeting npm 10.9's arborist, not anything in next.2 itself. NOT MEASURED: which package and which version.\n  - All published images are affected only for rebuilds. Already-pushed tags are not.\n- **Every `@objectstack/*` dependency of the CLI at next.2 exists on npm** (checked one by one), so this is not a missing publish.\n\n## Wanted (the lane picks; candidates, not a ruling)\n- A Docker build that installs the CLI deterministically, for example:\n  - `--legacy-peer-deps` (measured to work; check that no required peer is lost: `pg` and `mysql2` are installed explicitly);\n  - or an install from a lockfile;\n  - or a pinned npm version in the image.\n- Or remove the cause in the dependency graph: no `vitest` peer on a runtime package (`metadata-core`).\n- A follow-up Release run whose Docker job is green, and `ghcr.io/objectstack-ai/objectstack:18.0.0-next.2` pushed. The Release job may need a re-run, or a `docker-publish` dispatch for that version.\n- Whatever is chosen, a check that a `node:22-slim` global install of the published CLI succeeds, so this fails before a publish and not after.\n\nRelated: Release runs #11838, #11840–#11842 · `docker/Dockerfile` · `.github/workflows/release.yml` / `docker-publish.yml`.\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_"
+}

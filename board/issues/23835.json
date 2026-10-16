@@ -1,0 +1,32 @@
+{
+  "number": 23835,
+  "kind": "pull_request",
+  "title": "docs(changeset): mark the 11 changesets 18.0.0-next.2 shipped without a CHANGELOG entry",
+  "state": "open",
+  "state_reason": null,
+  "draft": false,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "documentation",
+    "size/s",
+    "tooling"
+  ],
+  "assignees": [
+    "os-sales"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-16T07:47:35Z",
+  "updated_at": "2026-10-16T08:11:50Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 1,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/pull/23835",
+  "body": "Part of #23818\n\nClause-②: no\n\n## What this PR does\n\nThis PR gives each of the 11 changesets that 18.0.0-next.2 shipped without a CHANGELOG entry one lead line:\n\n`**Shipped in 18.0.0-next.2**, whose CHANGELOG missed this entry (#23818); listed here one prerelease late.`\n\nEach line goes right after the changeset's frontmatter. The frontmatter (package names and bump types) is byte-unchanged, and no other sentence is touched.\n\nThe basis is the maintainer's ruling, recorded on #23818 as comment 6209999534, verbatim:\n\n> 那 11 条怎么补记, 怎么简单怎么处理\n\nThis is the changeset half of #23818, split out of #23833 by the seat's decision. The other half is #23833, the merge-queue guard. That PR edits a workflow, so it is Tier H and waits for an authorised approval. This half is not governed (0 of 11 paths hit the register). It can land first, so the next.3 Version Packages PR can be refreshed without waiting for the guard. The commit is a cherry-pick of `15f51d126` from #23833, and its `git patch-id --stable` is identical (`36811cbc07`).\n\n#23818 stays open after this lands: the guard in #23833 is its other half.\n\n## The 11 changesets\n\n`23528-exposure-refusal-code`, `23609-legacy-org-read-seam`, `23610-page-isdefault-template-slots`, `23634-stack-datasource-default-refused`, `23712-draft-save-d99-address`, `23714-unique-violation-arm-relay`, `23723-sandbox-unreadable-rejection`, `23732-attachment-readable-ids`, `23735-reference-deleted-when`, `23740-form-section-columns-no-default`, `console-daeb77fc84dd`.\n\nThe card's premises were checked in a full-history clone:\n- each one's add commit is an ancestor of the next.2 version commit `e5136ff10f`;\n- none is consumed at that commit;\n- no `## 18.0.0-next.2` CHANGELOG section names any of them.\n\n## How it renders\n\nI ran `changeset version` in a throwaway full-history clone that was never pushed. The next.3 sections carry the lead line as the first line of 19 entries across 12 packages: spec 5, runtime 3, metadata-protocol 2, and one each in cli, console, driver-sql, metadata-core, metadata, objectql, platform-objects, plugin-hono-server and service-storage. Each entry keeps its original commit hash. `packages/spec`:\n\n```text\n- a69a40a: **Shipped in 18.0.0-next.2**, whose CHANGELOG missed this entry (#23818); listed here one prerelease late.\n\n  feat(spec)!: a page declares nothing the console does not honour — `isDefault: true` is refused off a record page bound to an object, ...\n```\n\n**Why 11 lead lines and not one shared changeset.** A shared note would render as a separate entry, and only for the packages its frontmatter names. A reader who greps `full-width` lands on the #23610 entry and would never see it. The lead line travels with each entry, so it is the simplest form that marks every one as shipped in next.2 at the place the reader lands.\n\n**The breaking classification is unchanged.** `check-adr-0087-registration`'s `breakingDeclaration` returns the same verdict for all 11 before and after. The four breaking ones (23610, 23634, 23712, 23740) lose only the `bang` signal, because their summary line moved down one line. Each keeps `**BREAKING` and/or its `Clause-②` narrowing arm.\n\n## Check Changeset will be red, and should stay red\n\nThe foreign-changeset rule (`check-empty-changeset.mjs --base`) refuses the 11 `M` rows. This is its DELIBERATE CORRECTION class, whose documented path is \"say so on the PR, naming the note and what changed under it, and get it confirmed\". In writing:\n- **The notes:** the 11 listed above.\n- **What changed:** one added lead line each. No sentence was removed or reworded.\n- **The confirmation:** the maintainer's ruling above (comment 6209999534 on #23818).\n\n`skip-changeset` must not be applied: this PR edits pending release notes, which is a release. `Check Changeset` is not a required context.\n\n## After this lands: #23825 (next.3)\n\n#23825 as cut is behind main by two changesets (#23814, #23817). It also renders these 11 without the lead line. Once this PR lands, it will conflict: it moves the 11 files into `.changeset/pre/`, and this PR edits them in place.\n\nRefresh it once, after this lands: dispatch `release.yml` with `refresh_version_pr: true` alone, the fleet relay's refresh stroke. That re-cuts next.3 from the then-current main, so it consumes the 11 with their lead lines plus everything since.\n\nUntil #23833 lands, no check refuses a stale queue build. So queue it only with no changeset-bearing PR ahead of it.\n\n## Local gates (head `af52476f3`, base `43567a8fc`)\n\n`node scripts/pm/dispatch-gates.mjs --commands --repo objectstack-ai/objectstack` derived 20 families. Each was run with its exit code captured before any pipe.\n- **19 exit 0.** These include `check-adr-0087-registration --base`, `check-changeset-no-major --base`, `check:nul-bytes`, `check:published-files` and `check:changeset-gate-self-tests`.\n- **1 exits 1, as expected:** `check-empty-changeset.mjs --base origin/main`, which refuses the 11 `M` rows (the section above).\n- **Reconciliation:** `--ran` reports 20 derived, 20 run, 0 NOT-MEASURED.\n- **Governance:** `check-governed-merges --branch` reports 0 of 11 paths governed, 22 changed lines (+22 / -0).\n\n---\n_Generated by [Claude Code](https://claude.ai/code/session_016PVjjuVPte5XEJvaQx1E4t)_\n"
+}

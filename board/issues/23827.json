@@ -1,0 +1,30 @@
+{
+  "number": 23827,
+  "kind": "issue",
+  "title": "[PM seat] repo:www.objectos.ai · seat 2 — 🟢 os-tesla",
+  "state": "open",
+  "state_reason": null,
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "pm:seat"
+  ],
+  "assignees": [
+    "os-tesla"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-16T06:30:33Z",
+  "updated_at": "2026-10-16T07:50:24Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 1,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/23827",
+  "body": "Seat post for the `repo:www.objectos.ai` execution seat, **seat 2**. The body is authoritative; the title and assignee are derived views. Single writer: the sitting PM. Seat 1 is objectstack-ai/objectstack#12224. Scope, gates and standing commitments for the repo are the ones that post records (§1 and §5); this post adds only what seat 2 holds.\n\n## 1. Current PM\n\n🟢 `os-tesla` (`GET /user`) · `session_017GeNDQH7E5S2rX8ajVAPxv` · seated 2026-10-16T06:30Z.\n\nAuthority: the maintainer, in this session's chat, 2026-10-15/16: 「你是第二个座位」. The seat opened on its own cards #233, #235 and #236, which were filed on the maintainer's 「立卡处理」 (2026-10-15).\n\nBranch permission: the maintainer approved per-card branches `claude/sharp-mendel-1087cg-issue-N` (session branch prefix), one draft PR per card (2026-10-16, this session's chat).\n\n## 2. Ledger\n\n- **Lane split with seat 1:** seat 2 takes #233, #235 and #236. Everything else on the board stays with seat 1: the positioning wave (#209, #228–#231), its PRs (#237, #244, #245, #255), and the slot Routine `trig_017aGwYCcm4ToQxSuQxU1gSi`.\n- **Slots for #236's posts:** Tue 2026-11-03 (A), Thu 2026-11-05 (B), Tue 2026-11-10 (C). Seat 1's wave holds 10-20, 10-22, 10-27, and 10-29 is held for #231. One post per day, merge on slot day.\n- **Rulings carried:** the tier-1 vocabulary change on #233 (maintainer, 2026-10-15: 「接受你的建议」); article cards dispatch at the ceiling tier (maintainer, 2026-10-15).\n- **Landed (2):**\n  - #235 → PR #258, squash `a69829e`, deploy run 38866614697 success.\n  - #233 → PR #259, squash `45d5ce9` after two patch rounds, deploy run 38869385070 success.\n  - The live probe was not measured for either, because this container's egress refuses `www.objectos.ai`.\n- **In flight:**\n  - #236 item A → PR #260, ACCEPTed, held in draft until its slot on Tue 2026-11-03 (reminder `trig_01JPbRDXApESZMEJ89XfDBxa`).\n  - #261 (post B, slot 11-05) and #262 (post C, slot 11-10): dispatched.\n  - #236 item D: waiting on seat 1's wave PRs.\n- **Filed this round:** #261 and #262 (split from #236); objectstack-ai/objectstack#23832 (upstream CRM size figures drifted).\n- **Open option, not a card:** the \"Why ObjectOS\" nav entry could point straight at `/compare/` (#235 dev's option B, PR #258 report). It is one line in `Header.astro`; take it the next time that file is in a seat-2 PR.\n\n## 3. Hot-file serial queue\n\n| File / region | Holder → next |\n|:--|:--|\n| `src/components/ArticleList.astro`, `src/lib/i18n.ts` articles lead | seat 1 #255 (Recommended grid) — seat 2 stays out |\n| `src/lib/home.ts` | #233 ✅ · #235 ✅ — free |\n| `src/pages/llms.txt.ts` | #233 ✅ · #235 ✅ — free |\n| `src/components/Header.astro`, `src/content-pages/registry.ts` | #235 ✅ — free |\n| published posts under `content/blog/` | seat 1's wave PRs first; #236 part D after them |\n\n## 4. Notes\n\n- **Merging to `main` publishes** (Cloudflare Pages on push). The verification layer is the seat's local union build plus a browser pass at real viewports, before merge. Gates, hand-derived from this repo's `package.json`: `pnpm content:lint`, `pnpm content:lint --published`, `pnpm check`, `pnpm build`, `pnpm seo:smoke`.\n- **Concurrency:** batch 3. Seat 1's maintainer ceiling (≤ 5 agents at once) is treated as shared across both seats.\n- **Patrol Routine:** `trig_016UKTfF2UAaamKNy2dH8RFS` (hourly, self-bound to this session).\n- **Write path:** the `fleet-write` relay (`objectstack-fleet[bot]`); attribution is the session ID in the text.\n"
+}

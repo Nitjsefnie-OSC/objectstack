@@ -2,8 +2,8 @@
   "number": 23745,
   "kind": "issue",
   "title": "spec(ui): a generic `record:json` record block — a bound record's value as indented JSON behind a REQUIRED, fail-closed `requiredPermissions` gate (objectui#12490, face 4 of objectui#12438 letter C)",
-  "state": "open",
-  "state_reason": null,
+  "state": "closed",
+  "state_reason": "completed",
   "draft": null,
   "author": {
     "login": "objectstack-fleet[bot]",
@@ -13,7 +13,6 @@
   "labels": [
     "domain:spec",
     "enhancement",
-    "pm:dispatched",
     "priority:p1",
     "target:v18"
   ],
@@ -23,11 +22,15 @@
   "milestone": null,
   "type": null,
   "created_at": "2026-10-15T23:46:04Z",
-  "updated_at": "2026-10-16T02:22:10Z",
-  "closed_at": null,
-  "closed_by": null,
+  "updated_at": "2026-10-16T03:59:17Z",
+  "closed_at": "2026-10-16T03:57:44Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
   "merged_at": null,
-  "comments": 4,
+  "comments": 6,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/23745",
   "body": "Filing gate: the spec half of face 4 of a maintainer ruling. The ruling is objectui#12438, letter C (`6190549995`, the maintainer's 「C (推荐)」). Item 4 there says: \"Each face = one spec row (objectstack `domain:spec`) + the served page's edit (`plugin-approvals`, `domain:services`) + the objectui block (`domain:ui`), chained with `Blocked-by:`\". Filed by the `domain:ui` seat 1 (`session_01JZnppgHRp4sREcouhkQYDB`) from the fit check on objectui#12490 (dev report `6204188267`). ⛔ Not a claim. The grade follows objectui#12490 (`priority:p3`).\n\n## Why a new block (the ruling's item 2: \"A NEW block is opened only where no existing block can carry the face\")\n\nThe face is the inbox side sheet's \"Raw data (JSON)\" panel, shown only to a caller holding the platform capability `studio.access`. It fails CLOSED: a caller whose capability set is unreported, or empty, sees nothing (objectui#5553; pin `ApprovalsInboxPage.rawPayloadGate.test.tsx`). The fit check measured, at objectstack `origin/main` `534ca13eb5` and at objectui's installed `@objectstack/spec` 18.0.0-next.1:\n- **No declared block draws a record value as JSON.** `PageComponentType` / `ComponentPropsMap` have no json, code or key-value block.\n- **`record:details` cannot honestly carry it.** It draws JSON only for a DECLARED `json` field. The read route serves the request snapshot under the undeclared key `payload`, which draws as `[Object]`. The declared column `payload_json` is never served under that name, so it draws empty.\n- **Neither declared gate carries a fail-closed `studio.access` gate:**\n  - `visibleWhen` has no capability root; `isPlatformAdmin` is a different signal.\n  - The record blocks' `requiredPermissions` is declared fail-OPEN (clause 5 of its describe). Measured: an unreported capability set renders the raw JSON, which breaks the sheet's pin.\n  - Flipping that clause for all four record blocks would re-open objectui#4656's ruled doctrine.\n\n## Proposed shape (from the fit check; the spec seat owns the final spelling)\n\n- **Page type.** `packages/spec/src/ui/page.zod.ts`: add `'record:json'` to `PageComponentType`.\n- **Props.** `packages/spec/src/ui/component.zod.ts`: add `RecordJsonProps = strictObject({ … })`, with this seat's surface, history and guidance sets, and register it in `ComponentPropsMap` as `'record:json'`:\n  - `field`: `z.string().regex(/^[a-z_][a-z0-9_]*$/)`. The key of the bound record whose value is drawn as indented JSON, in a panel that starts collapsed, with a copy control. It may be a declared field, or a key the record's read route serves beside them (`payload` on a `sys_approval_request` row). No value under the key ⇒ the block draws nothing.\n  - `label`: `I18nLabelSchema.optional()`. The collapsed panel's summary line; the renderer default is \"Raw data (JSON)\".\n  - `requiredPermissions`: `z.array(z.string()).min(1)`. **Required.** Capabilities the user must ALL hold. It fails CLOSED, unlike the record blocks' gate of the same name: a client that cannot resolve the user's capabilities draws nothing, and so does a user missing any of them, with no notice and no summary line. The gate is presentation only and authorises nothing; the read route still serves the value.\n- **Boundary to weigh.** `field` is not added to the page-field-unknown table, because its first value is a route-served key rather than a declared field. So a misspelled `field` draws nothing, and publish cannot catch it.\n- **Liveness and baselines** follow the spec's gates for a new member.\n\n## Chain\n\n- objectstack-ai/objectstack's services card (filed with this one) places the block on `sys-approval-request.page.ts`. It is `Blocked-by:` this card.\n- objectui#12490 is `pm:blocked` on the services card. Its step 4 (the renderer and the pins, `Clause-②: yes`) is dispatched once this spec is installable at objectui's pin.\n\nContract review at `CONTRACT_REVIEW_TIER` by face (`packages/spec/src/**`).\n\nDedupe: objectstack open titles read for \"record:json\", \"raw payload\", \"JSON block\" and \"requiredPermissions fail closed\" in this act: none.\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_"

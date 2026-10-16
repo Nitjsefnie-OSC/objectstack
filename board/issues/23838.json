@@ -1,0 +1,33 @@
+{
+  "number": 23838,
+  "kind": "issue",
+  "title": "platform-objects: the four identity objects declare no `enable.feeds`, so Setup's organization, team, business-unit and user records draw a Discussion feed; declare `enable.feeds: false` (item 1 of objectui#12614)",
+  "state": "open",
+  "state_reason": null,
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "area:identity",
+    "domain:engine",
+    "enhancement",
+    "pm:queue",
+    "priority:p1",
+    "target:v18"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-16T08:01:02Z",
+  "updated_at": "2026-10-16T08:01:02Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 0,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/23838",
+  "body": "Filing gate ③: the objectstack half of objectstack-ai/objectui#12614 (filed by the epic PM from the 2026-10-16 Setup review, under the maintainer's 「全部立卡」). It was split by triage at that card's `pm:retriage` (domain:ui seat 3, `6210522260`). The card's own constraint reads: \"If the posture must come from objectstack-ai/objectstack's object definitions (`enable.feeds`), the card reports it and files the flag change there.\" ⛔ Not a claim.\n\n**Reader who acts:** the `domain:engine` seat (`packages/platform-objects`).\n\n## Measured (seat 3's reading, re-read by triage on `origin/main`)\n\n- `packages/platform-objects/src/identity/sys-organization.object.ts`, `sys-team.object.ts`, `sys-business-unit.object.ts` and `sys-user.object.ts` each carry an `enable:` block with no `feeds` key. So they take the default, and the record page draws \"Discussion (0)\" with a comment composer.\n  - Control: the same `git grep \"feeds\\s*:\"` matches `feeds: false` in `packages/plugins/plugin-audit/src/objects/sys-comment-reaction.object.ts`.\n- **The console already obeys the flag:** objectui `RecordDetailView.tsx` reads `objectDef?.enable?.feeds !== false` (#2707).\n- **The server obeys it too:** `packages/plugins/plugin-audit/src/audit-writers.ts:2226` refuses a comment create on an object whose `enable.feeds` is `false`. Its docblock at `:2214` keeps an existing row readable after the flag flips off.\n\n## The change\n\n- Declare `enable.feeds: false` on the four objects.\n- **Pins:**\n  - a comment create on each of the four is refused with the existing refusal;\n  - a pre-existing comment row on one stays readable (the `:2214` rule);\n  - CONTROL: a business object without the flag still accepts comments.\n\n## Grade\n\n**p1 + `target:v18`.** Because the server enforces the flag, this narrows the comment door for four platform objects, and 「REST/数据门收窄亦算」 puts it in the protocol-first class.\n\n## Dedupe\n\nThe parent is objectstack-ai/objectui#12614. The four files were read in this act; no open card names `enable.feeds` on the identity objects."
+}

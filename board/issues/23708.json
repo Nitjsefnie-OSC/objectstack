@@ -2,7 +2,7 @@
   "number": 23708,
   "kind": "pull_request",
   "title": "feat(spec)!: a page declares nothing the console does not honour — isDefault only on a bound record page, a closed template set, regions its template places",
-  "state": "open",
+  "state": "closed",
   "state_reason": null,
   "draft": false,
   "author": {
@@ -23,10 +23,14 @@
   "milestone": null,
   "type": null,
   "created_at": "2026-10-15T17:36:50Z",
-  "updated_at": "2026-10-16T01:58:23Z",
-  "closed_at": null,
-  "closed_by": null,
-  "merged_at": null,
+  "updated_at": "2026-10-16T02:31:30Z",
+  "closed_at": "2026-10-16T02:31:28Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": "2026-10-16T02:31:28Z",
   "comments": 5,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/pull/23708",

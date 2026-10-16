@@ -1,0 +1,28 @@
+{
+  "number": 23829,
+  "kind": "issue",
+  "title": "Setup copy, the producers outside `domain:engine`: ADR numbers and schema vocabulary leave the approval, security, automation, sharing and view-form descriptions admins read (split from #23802)",
+  "state": "open",
+  "state_reason": null,
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "enhancement"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-16T06:56:28Z",
+  "updated_at": "2026-10-16T08:16:16Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 1,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/23829",
+  "body": "carries items 1–3 of #23802 for the producers outside `domain:engine`; #23802 keeps `packages/platform-objects`, `packages/metadata-core` and `packages/services/service-messaging` (the last declared to `domain:services` by triage 6207761541).\n\n**Filing gate ①:** a user-visible copy defect. **`reach:`** the console's Setup pages, read by the epic PM session on 2026-10-16 (#23802's Source section and screenshots): object and field descriptions an administrator reads under a page title or as field help carry ADR numbers, decision ids and schema vocabulary.\n\n**Filed by** the `domain:engine` seat 2 (#20966) · `os-tesla` · `session_01TQLy3Yq6vF4SDpTXdr3Uwi`, under the self-split rule for a queued card that holds another lane's items, while claiming #23802. ⛔ Not a claim. Lane, grade and `area:*` are triage's: the items below sit in `domain:services` packages and one in `packages/spec`, so triage routes or splits this card.\n\n**Reader who acts:** triage routes it; the seat of the lane it names implements it.\n\n## Measured on `origin/main` `1ecb08a1cc`\n\nDescriptions (object or field) matching `ADR-[0-9]`, `\\bD[0-9]+\\b`, `finding F`, `emit()` or `kernel` (single-line `description:` values in `*.object.ts`; multi-line values are NOT covered by this reading):\n\n- `packages/plugins/plugin-approvals/src/sys-approval-request.object.ts`: three field descriptions ending \"(ADR-0019)\".\n- `packages/plugins/plugin-security/src/objects/sys-audience-binding-suggestion.object.ts`: the object description \"(ADR-0090 D5/D9)\" and two field descriptions (\"ADR-0086 D3 provenance\", \"ADR-0090 D9\").\n- `packages/plugins/plugin-security/src/objects/sys-user-position.object.ts`: the object description \"Platform-owned (ADR-0057 D4, ADR-0090 D3)\".\n- `packages/services/service-automation/src/sys-automation-run.object.ts`: the object description \"(resumable, ADR-0019)\".\n- `packages/spec/src/ui/view.form.ts`: a view-form field description \"(ADR-0047, Airtable Interface parity)\", which reaches `packages/platform-objects/src/apps/translations/*.metadata-forms.generated.ts`.\n\nSchema vocabulary without an ADR number, named by #23802 with starting sentences in its Target 2:\n- `packages/plugins/plugin-sharing/src/objects/sys-record-share.object.ts`: \"Per-record sharing grant — extends OWD with explicit access\" → #23802 proposes \"Records shared beyond their owner, one row per grant.\"\n- `packages/plugins/plugin-approvals/src/sys-approval-delegation.object.ts`: \"Self-service out-of-office rule: route this user's approver slots to a delegate within a time window.\" → \"Route your approvals to someone else while you are away.\"\n- The permission set `organization_admin_no_bypass`'s description, \"(ADR-0105 D4 / finding F2)\", which #23802 quotes: its producer was not located by this reading (`packages/plugins/plugin-security/src/objects/default-permission-sets.ts` carries the phrase in a comment at about `:438`); the claimant locates it.\n\nNot checked by this reading: whether each object above is reachable from the Setup navigation (the claimant confirms it before editing), and multi-line description values.\n\n## Acceptance (mirrors #23802)\n\n1. Each description above is one sentence in the admin's words; ADR numbers and decision ids move to the docblock. Docblocks and ADR links in code stay.\n2. The package's own test suite pins that its Setup-visible descriptions carry none of the patterns above, in the same form #23802 lands (a unit test inside the package, not a new `check:*` script or CI gate).\n3. Each package's generated translation files regenerate from the sources; the zh-CN, ja-JP and es-ES files follow.\n\n## Dedupe\n\nMCP `search_issues` on this repository, closed included, at this filing: `Setup description ADR numbers admin copy approval request security audience binding automation run object description plain sentence` → 15 hits. #23802 (open, the parent) and #23808 (closed, its spec half for the four metadata type descriptions) are this family. None covers the producers above; the rest (#23385, #23483, #23403, #22682, #21455, #21517, #20761, #14508, …) are unrelated.\n\nDedupe words: Setup copy ADR numbers services; approval request ADR-0019 description; audience binding suggestion description; automation run description; record share description; view form ADR-0047.\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_"
+}
