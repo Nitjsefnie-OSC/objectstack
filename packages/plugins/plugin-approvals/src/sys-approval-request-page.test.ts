@@ -29,6 +29,7 @@ import { describe, it, expect } from 'vitest';
 import { ObjectStackDefinitionSchema, normalizeStackInput } from '@objectstack/spec';
 import { PageSchema } from '@objectstack/spec/ui';
 import {
+  COMPONENT_PROPS_INVALID,
   COMPONENT_PROPS_UNKNOWN_KEY,
   COMPONENT_TYPE_UNKNOWN,
   runAuthoringRules,
@@ -107,6 +108,14 @@ function pageBuildFindings(page: AnyRec) {
 
 /** The page with its decision node replaced. */
 const withDecisionNode = (node: AnyRec): AnyRec => ({ ...PAGE, slots: { ...SLOTS, actions: [node] } });
+
+/** The page with the Details tab's raw snapshot panel given other properties. */
+const withRawPanelProps = (properties: AnyRec): AnyRec => {
+  const [details, ...rest] = TAB_ITEMS;
+  const children = [(details.children as AnyRec[])[0], { type: 'record:json', properties }];
+  const items = [{ ...details, children }, ...rest];
+  return { ...PAGE, slots: { ...SLOTS, tabs: { ...SLOTS.tabs, properties: { ...SLOTS.tabs.properties, items } } } };
+};
 
 /** The subject-record snapshot a stored request row holds in `payload_json`. */
 const SNAPSHOT = { id: 'exp_1', title: 'Q1 travel', amount: 1200 };
@@ -271,6 +280,16 @@ describe('sys_approval_request detail page — what `os validate` judges a page 
   it('control: a property on the decision node is refused by the same call', () => {
     const findings = validateComponentProps({ pages: [withDecisionNode({ type: 'record:approval_decision', properties: { showProgress: true } })] });
     expect(findings.map((f) => f.rule)).toEqual([COMPONENT_PROPS_UNKNOWN_KEY]);
+  });
+
+  it('control: the raw snapshot panel without its required gate is refused by the same call', () => {
+    // The page schema's parse does not judge a node's props bag; the props
+    // row does, so this call is what holds the panel's gate in place.
+    const { requiredPermissions: _gate, ...ungated } = (TAB_ITEMS[0].children as AnyRec[])[1].properties as AnyRec;
+    const findings = validateComponentProps({ pages: [withRawPanelProps(ungated)] });
+    expect(findings.map((f) => [f.rule, f.path])).toEqual([
+      [COMPONENT_PROPS_INVALID, 'pages[0].slots.tabs.properties.items[0].children[1].properties.requiredPermissions'],
+    ]);
   });
 
   it('the build rules raise no error on the page, in a stack beside the two objects it binds', () => {
