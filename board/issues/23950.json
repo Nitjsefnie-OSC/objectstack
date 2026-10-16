@@ -2,8 +2,8 @@
   "number": 23950,
   "kind": "issue",
   "title": "platform-checklist: 6 clauses across 5 items pin shapes the product has since ruled away (found by the #23878 full run on 94114c1f) - re-point each (family card)",
-  "state": "open",
-  "state_reason": null,
+  "state": "closed",
+  "state_reason": "completed",
   "draft": null,
   "author": {
     "login": "objectstack-fleet[bot]",
@@ -14,18 +14,23 @@
     "area:devpath",
     "bug",
     "domain:devx",
-    "pm:queue",
     "priority:p1"
   ],
-  "assignees": [],
+  "assignees": [
+    "os-sales"
+  ],
   "milestone": null,
   "type": null,
   "created_at": "2026-10-16T13:38:22Z",
-  "updated_at": "2026-10-16T13:59:36Z",
-  "closed_at": null,
-  "closed_by": null,
+  "updated_at": "2026-10-16T18:04:16Z",
+  "closed_at": "2026-10-16T18:02:55Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
   "merged_at": null,
-  "comments": 1,
+  "comments": 4,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/23950",
   "body": "**Filing gate ①**: a defect in the shipped QA ledger, with a named landing and a reproduction. Each clause below fails on `main` `94114c1f` against a product that is right. Per `checklist-test` §5 each is a **stale-spec** disposition, and the filing gate's quota rule folds them into one family card, the way #23121 did.\n\n**Reader who acts:** the `domain:devx` seat owning `docs/qa/platform-checklist/areas/**`. For each item: revise the clause to the current ruling, bump `revision`, append `history`, and keep `node scripts/check-platform-checklist.mjs` green (`checklist-test` §3). Then re-run those items.\n\n## Clauses to re-point (each one red in its run record; the product is correct)\n\n1. **`ai.mcp-stdio-fail-closed` · clause 6** (record #23915).\n   - Pinned: the revocation text \"MCP stdio identity is no longer valid (key revoked or expired)\".\n   - Since #23367, `resolvePrincipal` (`packages/mcp/src/plugin.ts` ~L688–699) raises the branded `API_KEY_REVOKED` envelope.\n   - Fail-closed still holds: no data is served after the revoke.\n   - Repro: member key K, start stdio MCP with `OS_MCP_STDIO_API_KEY=K`, `query_records` → rows. Then admin `PATCH /api/v1/data/sys_api_key/ID {\"revoked\":true}`, and the next `query_records` → `isError` with code `API_KEY_REVOKED`.\n2. **`cli.migrate-meta-codemod` · clause 7** (record #23921).\n   - The item's own restart trigger fired: #9591 closed completed via #22142.\n   - `os migrate meta --help` now lists `--write` and `--all` (`packages/cli/src/commands/migrate/meta.ts` ~L1054).\n   - The item still asserts print-only.\n3. **`approvals.approver-resolution-matrix` · clauses 4, 5** (record #23926).\n   - Pinned: the literal `type:value` slot (`position:qa_nobody`, `queue:support`) under the default `admin_rescue` policy.\n   - Since ruling #22824 an empty slate opens on the organization's administrators (`approval-service.ts` empty-slate fork; pinned by `admin-rescue-named-slate.integration.test.ts`).\n   - The comment row and WARN name that routing. The `fail` / `auto_approve` / `fallback` branches behave as specified.\n4. **`platform-core.shell-nav-personalization` · clause 5** (record #23939).\n   - Pinned: app/section/record breadcrumbs on a record route.\n   - objectui#12461 removed the crumb after the app pill on object routes (`AppHeader.tsx` at pin `daeb77fc`, ~L383–394).\n   - Report and system routes still draw crumbs. Re-point the clause to a report or system route, or to the new header contract.\n5. **`platform-core.activation-ledger-row-contract` · clause 4** (record #23939).\n   - Pinned: the scope wall \"ledger rows exist only for `flow` / `action`\".\n   - The shipped door `POST /api/v1/security/_activation/:type/:name` (`packages/runtime/src/domains/catalog-activation.ts`, ADR-0131 D3/D6) writes `position` and `permission` rows.\n   - The cited #12159 ruling is superseded. The item's own N4 asks for a revision when a third writer ships.\n\nThe wave's other checklist-accuracy findings make no clause red, so they stay on the anchor #23878's close-out and are not listed here.\n\n## Dedupe\n\nMCP `search_issues` on objectstack-ai/objectstack, closed included: `re-point stale checklist items platform-checklist stale-spec clauses after rulings` → 218 hits. Read the top 10: #23121 is the previous family card of this shape (closed). The rest are the watchdog `check:platform-checklist is red` cards, #23879, #22987 and #23878.\n\nPer-item queries by the runners (all closed included, no open re-point card):\n- `cli.migrate-meta-codemod checklist item stale --write landed restart` → 36 hits.\n- `admin_rescue empty slate opens on organization administrators checklist approver-resolution-matrix literal slot` → 23 hits; #22824 is the ruling.\n- `shell-nav-personalization breadcrumb record trail clause stale object route no crumb` → 1 hit, unrelated.\n- `activation-ledger-row-contract scope wall position permission rows sys_metadata_activation` → 4 hits, unrelated.\n\nQA-source: #23915 · ai.mcp-stdio-fail-closed · clause 6\nQA-source: #23921 · cli.migrate-meta-codemod · clause 7\nQA-source: #23926 · approvals.approver-resolution-matrix · clause 4\nQA-source: #23926 · approvals.approver-resolution-matrix · clause 5\nQA-source: #23939 · platform-core.shell-nav-personalization · clause 5\nQA-source: #23939 · platform-core.activation-ledger-row-contract · clause 4"

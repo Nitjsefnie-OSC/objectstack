@@ -1,0 +1,39 @@
+{
+  "number": 24004,
+  "kind": "pull_request",
+  "title": "feat(spec)!: unexport normalizeVisibleWhen and VISIBILITY_ALIAS_KEYS from @objectstack/spec/shared; read visibleWhen directly",
+  "state": "closed",
+  "state_reason": null,
+  "draft": false,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "documentation",
+    "protocol:data",
+    "protocol:ui",
+    "size/m",
+    "tests",
+    "tooling"
+  ],
+  "assignees": [
+    "os-elon-musk"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-16T17:39:54Z",
+  "updated_at": "2026-10-16T19:51:56Z",
+  "closed_at": "2026-10-16T19:51:55Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": "2026-10-16T19:51:55Z",
+  "comments": 3,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/pull/24004",
+  "body": "Fixes #23877\n\nClause-②: yes\n\n## What\n\n`@objectstack/spec/shared` stops exporting `normalizeVisibleWhen` and `VISIBILITY_ALIAS_KEYS`. They were the ADR-0089 fold of the retired `visibleOn` / `visibility` keys onto `visibleWhen`, and the list of those two keys. Since the two keys became `retiredKey()` tombstones at 18, no schema called the fold. The replacement is to read `visibleWhen` directly.\n\n- `packages/spec/src/shared/visibility.ts` is deleted. The two exports were all it held (plus the private `WithVisibilityAliases` type and the docblocks that describe them), so the `export * from './visibility'` line leaves the `shared` barrel too.\n- `api-surface/shared.json` and `export-origins/shared.json` were regenerated with `gen:api-surface` / `gen:export-origins`. Each loses exactly the two rows. `api-surface-signatures.json` and `declaration-map/` never listed either name, so they did not move. `check:authorable-surface` did not move either, because no schema key changed.\n- ADR-0087 D3: the new semantic entry `visibility-alias-fold-unexported` follows the shape of `visibility-strict-options-unexported`, with no `conversionIds` (a TS surface, never stored). That older entry's `replacement` said the two \"stay exported\". It now points at the new entry.\n- Comments that named a removed symbol now name the mechanism instead: `kernel/public-auth-features.ts` (the `requiresFeature` lowering) and `ui/view.zod.ts` (the `groups` → `sections` fold).\n- A pin, `shared/visibility-fold-unexported.test.ts`: the `shared` barrel's runtime namespace does not carry either name. A surviving export (`lazySchema`) is the lit control.\n- The changeset is BREAKING `minor` on `@objectstack/spec` with `Clause-②: yes (narrowing)`, a FROM → TO table and the marker `registered visibility-alias-fold-unexported`. It also says it supersedes the pending F4 note's \"stay exported\" sentence (see Acceptance notes).\n\nNot touched: the stored-row conversions `view-visibleOn-to-visibleWhen` and `page-component-visibility-to-visibleWhen`, any schema's accept set, and objectui.\n\n## Zero pull, measured\n\n- objectstack @ `2e1562091c` (`git grep` over the whole tree, CHANGELOGs and `dist` excluded): there are no call sites. The only hits were the definition, the two baselines, the two precedent comments, the D3 entry `18.visibility-strict-options-unexported.ts:16-17`, and one sentence of the pending F4 changeset (see Acceptance notes).\n- objectui @ the `.objectui-sha` pin `f8267df93a`: there is one hit, a comment (`packages/core/src/utils/normalize-list-view.ts:374`), and no call. The positive control `visibleWhen` hits in the same tree.\n\n## Ablation\n\nThe fix was committed first. The mutation went through `scripts/ablation-replace.mjs` with a `trap` restore. It re-adds `export const VISIBILITY_ALIAS_KEYS = …` to `shared/index.ts`. Result: the anchor went 1 → 0, the blob went `e2d66ff65e0b` → `eee4d0b060de`, and `no longer exports VISIBILITY_ALIAS_KEYS` went red (`AssertionError: expected true to be false`, 1 failed | 2 passed). After the restore, the blob equals HEAD and `git diff HEAD` is empty. The first attempt was a no-op because its replacement still contained the anchor; the tool refused it before running anything. The pin imports `./index` from source, so no rebuild applies.\n\n## Verification (head `9d59f55e`, after merging `origin/main`; the final head `5626f603` adds two changeset lines on top of it)\n\n- `pnpm --filter @objectstack/spec build` passes. `check:generated` reports all 14 artifacts up to date (before regeneration it flagged exactly `api-surface/` and `export-origins/`, `./shared` − the two names).\n- `pnpm --filter @objectstack/spec typecheck` exits 0.\n- `pnpm --filter @objectstack/spec exec vitest run --maxWorkers=2`: 755 files, 22018 passed, 1 todo.\n- `node scripts/check-adr-0087-registration.mjs` passes: `[BREAKING+bang+clause-②-narrowing] registered visibility-alias-fold-unexported (new here)`.\n- `node scripts/check-platform-checklist.mjs --changed-from origin/main` reports OK: 24 anchors judged, 0 lost.\n- `dispatch-gates --commands` derived 88 families, all run, with exit codes captured before any pipe. 87 exited 0. One was NOT MEASURED (`check-plugin-teardown-shape --self-test`, exit 3: its fixture commit is beyond this shallow clone). `--ran` reconciled 88/88.\n- Re-run on `5626f603` for the changeset text: `check-adr-0087-registration`, `check-changeset-no-major`, `check-empty-changeset`, `check:doc-authoring`, `check:issue-citations`, `check:nul-bytes`, `check:pm-changeset-deadline-census`, `check:objectui-changeset`, `check:published-files`. All exited 0.\n\n## Acceptance notes\n\n- `packages/spec/src/data/field.zod.ts:10` had a comment saying `editability-boundary`'s only runtime import was `shared/visibility.ts`. In fact it is `shared/visibility-strict-options.ts`, and the deleted file would have left the comment pointing nowhere. The comment was re-pointed in place (one line, comment only). That file is outside the claim's listed surface, which is why this note exists.\n- The pending (unreleased, not in `pre.json`) changeset `.changeset/23543-f4-visibility-alias-keys-retired.md:42` says `normalizeVisibleWhen` and `VISIBILITY_ALIAS_KEYS` \"stay exported\", which this PR makes false for the same release. Correcting it in place makes `check-empty-changeset` red by design (it classes this as a deliberate correction to another PR's release note, which needs a person to confirm), and the file is outside this claim's surface. So this PR leaves it as authored, and its own changeset says it supersedes that sentence. If the seat wants it corrected in place, the one-line rewrite is: drop the first clause, and say the two leave `@objectstack/spec/shared` in a separate change of the same release (D3 entry `visibility-alias-fold-unexported`).\n- `packages/spec/scripts/build-skill-references.ts:274` mentions `visibility.ts` in a historical note about leaked transitive imports. It names no symbol and stays as is.\n\n---\n_Generated by [Claude Code](https://claude.ai/code/session_01T2YHPgcuCRcypzyAuxvAap)_\n"
+}

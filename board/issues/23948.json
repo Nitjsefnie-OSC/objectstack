@@ -2,8 +2,8 @@
   "number": 23948,
   "kind": "issue",
   "title": "os migrate organization-ownership never certifies a database whose packages declare sharing rules: it waits on the declared-rule-mirrors departure (D2) while the same release's boot still seeds them",
-  "state": "open",
-  "state_reason": null,
+  "state": "closed",
+  "state_reason": "completed",
   "draft": null,
   "author": {
     "login": "hotlong",
@@ -14,7 +14,6 @@
     "area:access",
     "bug",
     "domain:cli",
-    "pm:dispatched",
     "priority:p0",
     "target:v18"
   ],
@@ -24,11 +23,15 @@
   "milestone": null,
   "type": null,
   "created_at": "2026-10-16T13:36:18Z",
-  "updated_at": "2026-10-16T14:18:59Z",
-  "closed_at": null,
-  "closed_by": null,
+  "updated_at": "2026-10-16T17:07:47Z",
+  "closed_at": "2026-10-16T17:06:05Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
   "merged_at": null,
-  "comments": 2,
+  "comments": 6,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/23948",
   "body": "Filing-gate category ① (a defect with a measured reach) and ③ (a maintainer direct order). Verbatim, 2026-10-16: the option 「框架先放行这一项」, which reads: \"在启动流程还会种声明共享规则的版本上，仪式不把这些镜像当成阻断项，只列为提示；等 D2 随 #15204 落地后再恢复阻断\". Earlier orders: 「相关任务都提到最高优先级」 · 「算了，你如果能够派云卡片，相关任务你都统一派发处理吧」.\n\n**Reader:** triage routes it, expected `domain:cli` (the ceremony's inventory/apply). The executing lane seat claims it. Downstream, cloud's next pin bump carries the fix (objectstack-ai/cloud#2868).\n\n**Dedupe** (`gh api search/issues` total_count, closed issues included):\n- `bootstrapDeclaredSharingRules`: 36. The relevant one is #15204 (open epic, D2's home; blocked by #15196).\n- `declared-rule-mirrors`: 1130, which is noise. None asks for the certification gap at a release that still seeds.\n- `ADR-0131 D2 sharing rule mirrors is:open`: 9, the two epics (#15204, #15196) plus seat posts.\n- No card covers this.\n\n## What happens\nOn a v17 database where a package declares sharing rules, the v18 organization-ownership ceremony applies with `complete: true, blocking: 11` and never certifies (`verified_at` null). HotCRM declares 11 sharing rules (`sys_sharing_rule`, `managed_by='package'`, `customized=0`). The ceremony counts their rows as the departure `declared-rule-mirrors` (\"D2 retires bootstrapDeclaredSharingRules\"), and certification waits for them to leave.\n\n**At the same pin, the boot still writes them.** `plugin-sharing`'s `bootstrapDeclaredSharingRules` is unchanged at `f7e836da1ed3` and on `main`; one of the 11 rows was seeded by the first v18 kernel, before the ceremony ran. So the departure the ceremony waits for can never happen on that release. D2's retirement is scoped in the open epic #15204, which is blocked by #15196.\n\n**Reach:** measured on a local sqld remote face by objectstack-ai/cloud#2868 round 11 (comment on that card, \"Interim evidence from round 11\"). The world was v17 cloud `c8eca869` + framework `56bf27affb` with HotCRM 4.0.1, upgraded to cloud `main` (framework `f7e836da1ed3`) and HotCRM 5.0.0.\n- **Staging:** every hosted environment with HotCRM installed (10 on staging) holds these rows, so its tenant v18 upgrade cannot verify. Staging `9930e6cf` is very likely in that state; not yet measured there, because the HotCRM position conflict (cloud#2868 round 11) surfaces first.\n- **Production:** the 5 demo environments are the same, so production v18 waits on this.\n\n## Wanted\n- **At a release whose boot still seeds declared sharing rules:** the ceremony must not hold certification on the `declared-rule-mirrors` departure. List those rows as an advisory (named, counted) instead of blocking, so `adr-0131-organization-ownership` verifies.\n- **When D2 lands with #15204:** restore the blocking count, through the same release that stops the seeding.\n- **Mechanism:** the lane decides how the ceremony knows. Prefer a declared capability or constant that the seeder's retirement flips, over a version string.\n- **Escape:** if contract-first rules out any advisory here, return `needs_decision` with the alternatives.\n\n**Acceptance:**\n- on a v17-shaped database with a package's declared sharing rules (HotCRM 4.0.1 or a fixture), `--apply` reports `blocking 0` with the sharing-rule rows in `advisory`, and the marker verifies;\n- the existing framework test \"does not certify a ceremony whose departures have not left: the declared sharing-rule mirrors keep verified_at null\" is updated to the new rule, with a test that pins the restore condition;\n- an ablation turns the apply's `blocking` back to 11.\n\nRelated: #15204 (D2 epic), #15196, #23816 / #23843 (the remote ceremony), objectstack-ai/cloud#2868, objectstack-ai/cloud#2899.\n"

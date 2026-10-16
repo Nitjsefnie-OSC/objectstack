@@ -2,8 +2,8 @@
   "number": 23857,
   "kind": "issue",
   "title": "ADR-0139 E7 (comments): sys_comment gains a writer-stamped object_name + record_id pair with a backfill, and the comment-thread read gate emits one ReadableIds leaf per parent object over it (ruling on #23732, batch #354 item 2)",
-  "state": "open",
-  "state_reason": null,
+  "state": "closed",
+  "state_reason": "completed",
   "draft": null,
   "author": {
     "login": "objectstack-fleet[bot]",
@@ -12,20 +12,21 @@
   },
   "labels": [
     "domain:services",
-    "pm:dispatched",
     "priority:p2"
   ],
-  "assignees": [
-    "os-elon-musk"
-  ],
+  "assignees": [],
   "milestone": null,
   "type": null,
   "created_at": "2026-10-16T09:06:15Z",
-  "updated_at": "2026-10-16T12:37:32Z",
-  "closed_at": null,
-  "closed_by": null,
+  "updated_at": "2026-10-16T15:43:39Z",
+  "closed_at": "2026-10-16T15:26:55Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
   "merged_at": null,
-  "comments": 3,
+  "comments": 5,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/23857",
   "body": "Filing gate: **④ a ruled execution card** — the ruling on #23732 (batch #354 item 2, letter A on Q1, the maintainer's 「同意」; its comment id is the first line of that card's body), filed by the director seat (summon #43, `session_01QJC7i981TSs9L1CGJK59Ax`). ⛔ Not a claim. Facts were read at objectstack `origin/main` `3fed1eb00a`.\n\nCarries the comment-thread half of ADR-0139's execution-plan row E7. The attachment half landed as PR #23767 (`0b1179f332`, `Part of #23732`); the reaction gate stays on the bounded probe by D5.2 (Q2 of the same ruling). #23732 is `pm:blocked` on this card and closes `completed` when this card lands.\n\n## The work (ADR-0139 D3, D4, D5; ADR-0052 §5)\n\n1. **The pair.** `sys_comment` (`packages/plugins/plugin-audit/src/objects/sys-comment.object.ts`) gains `object_name` and `record_id`, writer-stamped from `thread_id` (`{object}:{record_id}`) on create and on the re-point rule, read-only to authors, indexed. `thread_id` stays the authored key: no ADR-0087 conversion, and no writer changes (objectui's `RecordDetailView` keeps writing `thread_id`).\n2. **The backfill.** One idempotent stored-row migration under the `os migrate` door, in the shape E6 landed (#23731 → PR #23814, `5b6c257b06`: a writer-stamped column plus a backfill). The changeset's first paragraph names the door and the rollout consequence, as #23731's did. A row the backfill has not reached keeps the bounded probe (fail closed), never a leaf.\n3. **The gate.** `installCommentReadVisibility` (`packages/plugins/plugin-audit/src/comment-access-hooks.ts`) emits one `ReadableIds` leaf per registered parent object, `{ object_name: P, record_id: { $in: ReadableIds.of(P) } }`, ANDed into the read's `where`, with no pre-scan and no caller-scoped parent read. D5's three classes keep the bounded fail-closed probe by name (a delegated caller; a parent narrowed by an object-scoped read middleware; a federated parent), chosen up front, ⛔ never reached by catching a refusal. No leaf without `canReadObject` (E5's guard). The consumer does not catch the composition refusal into a deny-all sentinel (D3).\n4. **Reactions.** The reaction gate (`sys_comment_reaction`, parent `sys_comment`) keeps the probe: D5.2 names `sys_comment` (`docs/adr/0139-engine-internal-semi-join-leaf-readable-parent-ids.md:212`). Recorded here as D5.2's class with the reading of 2026-10-16: member 1,763 of 2,300; administrator `total` 2,000 of 2,601. No code.\n\n## Pins\n\n- A member with more than 2,000 readable candidate comments is served every visible comment, and `count` equals the rows served — the plan row's bound case, measured before and after as E5 and the attachment half were (today: member 1,765 of 2,300; administrator `total` 2,000 of 2,601, the dev's scratch reading on #23732).\n- An unreadable parent's comments stay hidden.\n- Each D5 class keeps the probe at the gate.\n- A row the backfill has not reached is probed, not leafed.\n- A reaction read is unchanged (D5.2).\n\n## Notes carried\n\n- From 6206614195 on #23732: the checklist item `attachments-storage.read-inherits-parent-rls` should also name the gate's two whole-read probe states (no `canReadObject` or no security service; an engine that cannot classify), and the 500's driver name is in the log, not the response body. The comments item's revision in this card carries the same two points.\n- From the E5 and attachment reports: plugin-security's `explain` answers a SYSTEM context `allowed: false` while `canReadObject` answers true, so the gate writes no leaf without `canReadObject`. On `driver-mongodb` the switched gate fails 500 (O3, a ruled consequence of ADR-0139 D3).\n- The D5 classification now exists twice beside the engine's (`planParentReads`, `planAttachmentParentReads`); its carrier is #22788 (`domain:engine`), not this card.\n\n## Governing text\n\nADR-0139 header (「A is the end state」, `:16`), D3, D4 (`:177-187`), D5 (`:201-214`); ADR-0052 §5 (`:208`, the `object_name` / `record_id` pair); ADR-0112 (the refusal envelope); the ruling on #23732 named above.\n\n## Dedupe\n\nMCP `search_issues` on this repo, closed included, for \"sys_comment pointer pair object_name record_id backfill comment-thread read gate ReadableIds leaf\": 10 hits; the nearest are #23732 (the parent decision, now `pm:blocked` on this card), #23673 (E5, closed), #22861 (E2, closed) and #4630 (the `sys_comment` record-level gate, closed). None carries the comment pointer pair. Dedupe words: ADR-0139 E7 comment thread pointer pair object_name record_id backfill; installCommentReadVisibility ReadableIds leaf no pre-scan; sys_comment thread_id writer-stamped."

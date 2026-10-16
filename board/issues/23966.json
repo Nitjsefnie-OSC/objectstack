@@ -1,0 +1,37 @@
+{
+  "number": 23966,
+  "kind": "pull_request",
+  "title": "fix(create-objectstack): a failed install lists the install step in \"Next steps\"",
+  "state": "closed",
+  "state_reason": null,
+  "draft": false,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "documentation",
+    "size/m",
+    "tests",
+    "tooling"
+  ],
+  "assignees": [
+    "os-tesla"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-16T14:40:51Z",
+  "updated_at": "2026-10-16T15:26:54Z",
+  "closed_at": "2026-10-16T15:26:52Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": "2026-10-16T15:26:52Z",
+  "comments": 2,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/pull/23966",
+  "body": "Fixes #23865\n\nClause-②: no\n\n## What changed\n\n- **`packages/create-objectstack/src/index.ts`, the \"Next steps\" block only.** The install line is printed `if (!installed)` instead of `if (options.skipInstall)`. `installed` is the flag the install block already sets: it starts `false` and becomes `true` only after `${pm} install` returns, so `!installed` covers both a skipped install and one that was attempted and failed. Nothing else in the block changes. A four-line comment states why.\n- **`packages/create-objectstack/src/scaffold-next-steps-pm.test.ts`.** Three legs in a new `describe`, driving the real CLI through `tsx` under the file's existing stub-PATH harness. A new stub `pnpm` answers `--version` with exit 0 and `install` with an exit code the leg chooses, and logs each call's argv. Each leg proves from that log whether the install was attempted. There is no new seam in `index.ts`.\n  - Install attempted and failed (stub exits 1): the \"Next steps\" list names `pnpm install` on a line before `pnpm run dev`.\n  - CONTROL, install attempted and succeeded (stub exits 0): the list has no install step.\n  - CONTROL, `--skip-install`: the stub saw only `--version`, and the list names `pnpm install` before `pnpm run dev`, as before.\n  - The assertions read only the command list, the lines up to the blank line that ends it. The \"AI Skills\" block below it says \"After `pnpm install`:\" under `--skip-install`, so a match over the whole section could pass without the list naming the install.\n- **`.changeset/23865-next-steps-after-failed-install.md`:** `create-objectstack` `patch`, `Clause-②: no`. This is printed guidance only. No flag, exit code, prompt or scaffolded file changes.\n\n## Evidence (head `539f59772`)\n\n**Door, before and after.** The scaffolder ran from a scratch directory outside the repo, with `src/index.ts` run through `tsx`. PATH held only `node` and `npm`, so there was no pnpm, as in the filed case. The install was pointed at `npm_config_registry=http://127.0.0.1:9` with `npm_config_fetch_retries=0` and a fresh `npm_config_cache`, bounded by `timeout 180`. In both runs the install failed with `npm error FetchError: request to http://127.0.0.1:9/@objectstack%2fcli failed, reason: connect ECONNREFUSED 127.0.0.1:9`, then the scaffolder printed ``Dependency installation failed. Run `npm install` manually.``\n\nBefore, at BASE `8f4260fe6`:\n\n```text\n  Next steps:\n    cd my-app\n    npm run dev        # Start development server\n    npm run validate   # Verify metadata: schema + predicates + bindings\n                       # (run after every metadata edit — see AGENTS.md)\n```\n\nAfter, at `539f59772`:\n\n```text\n  Next steps:\n    cd my-app\n    npm install\n    npm run dev        # Start development server\n    npm run validate   # Verify metadata: schema + predicates + bindings\n                       # (run after every metadata edit — see AGENTS.md)\n```\n\n**Ablation, once, after committing the fix.** The command was `node scripts/ablation-replace.mjs --file packages/create-objectstack/src/index.ts --anchor '      if (!installed) {' --replacement '      if (options.skipInstall) {' -- pnpm --filter create-objectstack exec vitest run --maxWorkers=2 --reporter=verbose src/scaffold-next-steps-pm.test.ts`.\n\n- On disk: anchor x1 → x0, replacement x0 → x1, blob `a76503cfe4ef` → `2f7b9f0eb219`.\n- Result: `Tests 1 failed | 9 passed (10)`. The failing-install leg went red with `AssertionError: expected -1 to be greater than or equal to 0`, and both CONTROL legs stayed green.\n- Restore: the blob after restore, `a76503cfe4ef`, equals the HEAD blob, and `git diff HEAD` is empty. This was re-proven after a container restart.\n- The pins run `src/index.ts` through `tsx`, so no `dist/` is in the path and no rebuild leg applies.\n\n**Local verification at `539f59772`:**\n\n- `pnpm --filter 'create-objectstack^...' build`: `VERDICT command-exit 0`, and the tree was clean afterwards. This builds `@objectstack/spec`, whose `.d.ts` the typecheck needs for two existing test imports.\n- `pnpm --filter create-objectstack run typecheck`: exit 0. `tsc --listFiles` includes the edited test file.\n- `pnpm --filter create-objectstack test`: `Test Files 18 passed (18)`, `Tests 278 passed (278)`. The edited file alone ran 10 tests in 4.6 s, up from 7 in 3.0 s.\n- `pnpm exec eslint --no-inline-config` over the two changed `.ts` files: exit 0. The repo-wide run is CI's `Lint & Repo Gates`.\n- Gate families: `node scripts/pm/dispatch-gates.mjs --commands --repo objectstack-ai/objectstack` derived 61 commands. 58 exited 0 and 3 are NOT MEASURED:\n  - `pnpm check:dual-build-cjs-loads` and `pnpm check:lean-entry-closure` exited 3 with `PREREQUISITE NOT MET`. Both need a full workspace build.\n  - `pnpm check:type-check-debt` hit my 540 s per-command cap. Its coverage leg printed `OK` (one DEBT entry, which is not this package). Its re-measure leg was still waiting for the shared verify lock behind another session's build when the cap fired.\n  - The `--ran` reconciliation answered `61 derived, 58 run, 3 NOT-MEASURED, 0 UNRUN`.\n- Roster gates the derivation flagged in directories these paths touch (`node scripts/check-changeset-fixed.mjs`, `pnpm check:authz-resolver`, `pnpm check:error-code-casing`, `pnpm check:filter-alias-parity`): all exit 0.\n- `test:repo` was not run locally because the diff touches no test in that project. CI's `Test Core` runs it.\n\n## Acceptance notes\n\n- **Base.** `origin/main` has moved 6 commits past BASE `8f4260fe6`, to `6d1660dc3`. None of them touches `packages/create-objectstack` or `.changeset/config.json`, and `git merge-tree` reports a clean merge, so nothing was merged before opening. The queue rebuilds on current `main`.\n- **The \"AI Skills\" block is keyed the way the old install line was.** Under `--skip-install` it reads \"Not installed yet — they are read from @objectstack/skills in node_modules. After `npm install`:\". After a failed install it reads \"Read from @objectstack/skills in node_modules, at your @objectstack/spec version:\" (door transcript, BASE and head alike). The command it prints is still right: the install line now comes first in \"Next steps\", and the warning above already says \"`npm install` did not complete. Once it does, run:\". So this is wording, not a wrong command. The skills step is a hold-off for this card. Noted here, not filed.\n- **Out of scope:** the install step and its warning line, the Dockerfile pin, and the npm 10 crash family. #23801 and #23849 stay as they are and are not addressed here.\n\n---\n_Generated by [Claude Code](https://claude.ai/code/session_018t6a5rvqPRvEDMCVVW9kYT)_\n"
+}

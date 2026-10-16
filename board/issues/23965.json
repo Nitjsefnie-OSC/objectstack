@@ -1,0 +1,35 @@
+{
+  "number": 23965,
+  "kind": "issue",
+  "title": "app-showcase: `showcase_approver_bindings` is `status: 'draft'` on the belief that draft \"keeps it out of the runtime\" — draft flows fire, so every showcase_field_zoo edit opens an admin_rescue approval request on the org admins",
+  "state": "closed",
+  "state_reason": "completed",
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "area:workflow",
+    "bug",
+    "domain:services",
+    "priority:p2"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-16T14:39:58Z",
+  "updated_at": "2026-10-16T19:02:13Z",
+  "closed_at": "2026-10-16T18:46:51Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": null,
+  "comments": 5,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/23965",
+  "body": "**Filing gate ①** — a product defect in the reference app, with a named landing and a live reproduction. The authored intent (\"out of the runtime\") contradicts the platform's declared semantics, and the result is user-visible: an approval request lands in the admins' inbox on every edit.\n\nQA-source: #23926 · approvals.approver-resolution-matrix · observation (wave close-out on #23878; re-checked and filed under #23878)\n\n## What happens\n\n`showcase_approver_bindings` is an authoring specimen: one approval node per record-backed approver kind, every `value` left empty. Its docblock says it is shipped as `draft` so that it stays out of the runtime: \"Shipping that as a demo would re-teach the bug. `draft` keeps it out of the runtime while still loading in the designer\". On this platform, though, draft flows fire. The boot log says so on every start: \"9 flow(s) have status 'draft' (… showcase_approver_bindings …) — draft flows still fire their triggers; set status: 'active' to make intent explicit, or 'obsolete' to disable\". The engine arms its `record-after-update` trigger on `showcase_field_zoo`.\n\nSo any update to a Field Zoo record does the following:\n1. starts a run;\n2. reaches `by_user` with no approver;\n3. logs WARN \"resolved to no concrete approver … opening on this organization's administrators per onEmptyApprovers: 'admin_rescue'\";\n4. parks a pending `sys_approval_request` on the org admins.\n\nThat is exactly the \"silent dead slot\" demo the docblock says it avoids shipping.\n\n## Reach — measured through the public HTTP entry, 2/2 fresh boots\n\nEnvironment: objectstack `7277c07f` (main, 2026-10-16), `examples/app-showcase`, `OS_PORT=P objectstack dev --seed-admin -p P -d file:…/data.db --log-level info`, with a fresh DB per boot (ports 47311 and 47312). Seeded admin, bearer token.\n\n1. Boot log: `[record-change] bound flow 'showcase_approver_bindings' → afterUpdate on 'showcase_field_zoo'`, `Flow 'showcase_approver_bindings' bound to trigger 'record_change'`, and the draft-fires INFO line quoted above.\n2. `GET /api/v1/data/sys_automation_run?filter={\"flow_name\":\"showcase_approver_bindings\"}` → 0 rows.\n3. `PATCH /api/v1/data/showcase_field_zoo/ID` `{\"f_email\":\"qa14@example.com\"}` on the seeded \"Specimen — Full\" record → 200.\n4. Within 3 s:\n   - the same list returns **1 run, `paused` on node `by_user`**;\n   - `GET /api/v1/automation/showcase_approver_bindings/runs` shows trigger `record-after-update`, steps `start` → `by_user`;\n   - the server logs the `admin_rescue` WARN above;\n   - `GET /api/v1/data/sys_approval_request/areq_…` → `status: pending`, `process_name: flow:showcase_approver_bindings`, `current_step: by_user`, `pending_approvers` = the seeded admin.\n\n- **Expected:** the specimen does not run, as its docblock says.\n- **Actual:** it runs on every Field Zoo update and files an approval request on the admins each time.\n\n## Where (objectstack main `7277c07f`)\n\n- `examples/app-showcase/src/automation/flows/approver-bindings.flow.ts:33-36` is the docblock premise, `:49` is `status: 'draft'`, and `:53-58` is the live `record-after-update` start on `showcase_field_zoo`. The flow is registered at `examples/app-showcase/src/automation/flows/index.ts:5` and `:2015`.\n- The semantics it contradicts:\n  - `packages/services/service-automation/src/engine.ts:4674-4676` and `:4694`: only `obsolete` and `invalid` are disabled; `draft` stays enabled.\n  - `packages/services/service-automation/src/plugin.ts:1624-1628`: the boot line.\n  - `packages/lint/src/validate-flow-trigger-readiness.ts:129`: \"Draft flows DO fire\".\n- The same wrong premise also sits in the checklist, at `docs/qa/platform-checklist/areas/automation.json:985` (\"showcase_approver_bindings is draft on purpose\") and in `approvals.approver-resolution-matrix` knownGaps. Those are ledger-accuracy notes for the ledger owner and are not part of this card's diff.\n\n## Done when\n\n- The specimen no longer fires on a Field Zoo update and still loads in the designer (for example `status: 'obsolete'`, if the designer still opens it; the author confirms which), and the docblock states the real mechanism. Alternatively, it stays armed on purpose with approvers that resolve, and the docblock says it runs.\n- A showcase pin asserts the chosen behaviour, for example that a field-zoo update starts no `showcase_approver_bindings` run.\n\n**Reader who acts:** the app-showcase owner (`domain:devx` execution seat). The diff is in `examples/app-showcase/src/automation/flows/approver-bindings.flow.ts`.\n\n## Dedupe\n\nMCP `search_issues` on objectstack-ai/objectstack, all states: \"showcase approver bindings draft flow docblock fires triggers\" → 16 hits, top 10 read. #7571 (packaged flows read-only, closed) and #14622 (batch_reminders containment, closed) are neighbours. None covers this flow firing.\n\nRe-checked by a cloud QA session dispatched under #23878 (maintainer ruling there, 「派云卡片复核这 7 条，授权里全部立卡。有时间间隔就行」).\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_"
+}

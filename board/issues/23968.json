@@ -1,0 +1,32 @@
+{
+  "number": 23968,
+  "kind": "issue",
+  "title": "service-print: the local placement's `chromium.launchServer` binds its control socket on playwright-core's DEFAULT host — pass `host: '127.0.0.1'` so a library change on a version bump cannot widen it beyond loopback",
+  "state": "open",
+  "state_reason": null,
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "area:files",
+    "domain:services",
+    "pm:blocked",
+    "priority:p1",
+    "target:v18"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-16T14:47:29Z",
+  "updated_at": "2026-10-16T15:58:06Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 1,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/23968",
+  "body": "**Filing gate ①**: the follow-up that landed work owes, with a named landing.\n- PR #23811's ACCEPT accepts the local placement's control socket as built, and names this hardening as its condition (the seat record on #23811, 接受的偏差). It is not a defect today: the socket is loopback-only in the pinned version.\n- **`reach:`** named real producer: `PrintServicePlugin`'s local placement (`OS_PRINT_CHROMIUM_PATH` / `chromiumPath`). It opens this socket once per print and once per boot probe (`packages/services/service-print/src/chromium-driver.ts:220`).\n\n**Filed by** the `domain:services` seat 2 (#21118) · `os-elon-musk` · `session_018VqJPGA1NDNSCZsnecsChP`, from PR #23811's ACCEPT. ⛔ Not a claim. Lane, grade and `area:*` are triage's.\n\nBlocked-by: #23811\n\n**Reader who acts:** the execution seat that owns `packages/services/service-print`. The one-option change, its pin and its ablation are about 30 lines. It can also ride the next PR that touches `chromium-driver.ts`.\n\n## Measured\n\n**At PR #23811's head `5a16f29db9`:**\n- `chromium-driver.ts:220`: `chromium.launchServer({ executablePath: this.resolved.target, headless: true, timeout: timeoutMs })`. There is no `host` and no `port`.\n- `:223`: `chromium.connect(server.wsEndpoint(), …)`, so the driver uses whatever address the server chose.\n- `:105`: the package-local `ChromiumLauncher.launchServer` options type has no `host` field either.\n\n**In `playwright-core` 1.63.0**, the version the package pins exact. Read in an installed copy (`node_modules/.pnpm/playwright-core@1.63.0/node_modules/playwright-core/`):\n- `lib/coreBundle.js:57206-57208`: `launchServer` builds the WebSocket path as `/${createGuid()}`, creates its server with `maxConnections: Infinity`, and calls `server.listen(options.port, options.host)`.\n- `:10175-10177`: `listen(port = 0, hostname, defaultPath) { … hostname ??= \"localhost\"`. With no `host`, the socket binds to `localhost` on a random port.\n- `:10202-10216`: an upgrade on any other path answers 400, and the Host and Origin headers are allow-listed against the bound host.\n- `:7969-7970`: `createGuid()` is `randomBytes(16).toString(\"hex\")`, 128 bits.\n- `types/types.d.ts:18141-18146`: `host` is documented as \"optional and defaults to `localhost`, accepting connections only from the loopback interface. Pass an explicit address (e.g. `0.0.0.0`) to accept connections from the network — be aware this exposes the browser RPC to anything that can reach the listening port.\"\n\n**So, today:** loopback only, under an unguessable path, for one render's lifetime. That is accepted.\n\n**The gap this closes:** the bind rests on a library default, not on this package's code.\n- A default that changed on a version bump would widen the socket with no diff here.\n- So would a `localhost` that resolves to a non-loopback address in a hardened image.\n- Through that socket the browser runs as the requesting user's minted session. `maxConnections: Infinity` means any client that reaches it and knows the path is served.\n\n## Acceptance\n\n1. `launchServer` is called with `host: '127.0.0.1'`, and the package-local `ChromiumLauncher` type declares `host`.\n2. A Test Core pin with the injected launcher (`chromium-driver.unit.test.ts`'s `stagedLauncher`, no browser) asserts that `launchServer` receives `host: '127.0.0.1'`.\n   - Ablated: drop the option, show the pin red, restore, and prove the restore by blob.\n3. Where Chromium is present, the real-Chromium suite (`chromium-driver.test.ts`) asserts that `server.wsEndpoint()` names `127.0.0.1`. It skips with its warning elsewhere, as today.\n4. The driver header comment (`chromium-driver.ts:12-15`) says the local control socket is bound to loopback by this package.\n5. The PR body states, measured or as a stated limit, what happens on a host with no IPv4 loopback.\n\n## Dedupe\n\nMCP `search_issues` on objectstack-ai/objectstack, `playwright launchServer host loopback 127.0.0.1 print chromium control socket` → **2** hits, neither related: #23743 and #23623 (both closed, `cli/serve --no-server` banners)."
+}

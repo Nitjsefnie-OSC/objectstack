@@ -2,8 +2,8 @@
   "number": 23908,
   "kind": "issue",
   "title": "Console pin does not build on main: objectui daeb77fc imports checkPageComponentViewData, deleted from spec by #23784",
-  "state": "open",
-  "state_reason": null,
+  "state": "closed",
+  "state_reason": "completed",
   "draft": null,
   "author": {
     "login": "objectstack-fleet[bot]",
@@ -14,7 +14,6 @@
     "area:devpath",
     "bug",
     "domain:spec",
-    "pm:dispatched",
     "priority:p1",
     "target:v18"
   ],
@@ -24,11 +23,15 @@
   "milestone": null,
   "type": null,
   "created_at": "2026-10-16T12:24:21Z",
-  "updated_at": "2026-10-16T14:23:03Z",
-  "closed_at": null,
-  "closed_by": null,
+  "updated_at": "2026-10-16T16:36:10Z",
+  "closed_at": "2026-10-16T16:26:58Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
   "merged_at": null,
-  "comments": 4,
+  "comments": 6,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/23908",
   "body": "**Filing gate ①**: a product defect with a named landing and a reproduction (reach: the public build entry `pnpm objectui:build` on `main`, which fails on every run).\n\n**Reader who acts:** the spec-lane seat that owns the #23784 surface. It either restores a deprecated `checkPageComponentViewData` re-export, or coordinates the objectui import removal and moves `.objectui-sha` to that commit. It pairs with an objectui card filed by a seat that can reach objectstack-ai/objectui.\n\n## What\n\nOn `main` at `94114c1f`, the vendored console cannot be built at its own pin. `pnpm objectui:build` (→ `scripts/build-console.sh`, which injects THIS tree's `@objectstack/spec` via `OBJECTSTACK_SPEC_DIST`) fails in the objectui console's `vite build`:\n\n```\n[MISSING_EXPORT] \"checkPageComponentViewData\" is not exported by \"packages/spec/dist/ui/index.mjs\".\n  ../../packages/types/src/zod/layout.zod.ts:19\n✗ Build failed · ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL @object-ui/console build · exit 1\n```\n\nSo every fresh tree on `main` (a contributor's, a QA runner's, a release build that runs `objectui:build`) has no `/_console/` until this is resolved.\n\n## Reproduction\n\n1. Fresh checkout of `main` at `94114c1f` (`.objectui-sha` = `daeb77fc84dd824e74c95b87cdede85afdb248e7`).\n2. `pnpm install --frozen-lockfile && pnpm build` → 75/75 green.\n3. `pnpm objectui:build` → exit 1 with the `MISSING_EXPORT` above.\n\nExpected: the console builds at the pin (exit 0, `packages/console/dist/.objectui-sha` stamped `daeb77fc…`). Actual: the build dies at rendering chunks.\n\nControl: the same objectui pin builds clean (exit 0, 64588 KB dist, the single-zod canary and the spec-injection assertion both pass) when the injected spec comes from `a35f7a67^`, the commit just before the deletion.\n\n## Mechanism\n\n- `a35f7a67` (#23784, merged 2026-10-16 10:27Z) deleted `checkPageComponentViewData` from `packages/spec/src/ui` (the follow-up card #23447). `packages/spec/src/ui/object-refinement-check-exports.test.ts` now pins its absence (0 declarations).\n- objectui at the pin `daeb77fc` imports it in `packages/types/src/zod/layout.zod.ts:19` (line 25 on objectui `main` `a5bb7ac2`, read 2026-10-16 11:15Z). So objectui `main` has the same import, and **bumping the pin alone does not fix it**.\n- Fix direction (either order, both repos): objectui drops the import (the component-props rule replaced it), then this repo's pin moves to that commit. Alternatively, this repo restores a deprecated re-export until the pin moves. Which one is the spec-lane owner's call. The breaking deletion landed without a pin that builds against it.\n\n## Why nothing went red\n\nPer-PR CI does not build the console at the pin against the PR's spec. Read the `Console Pin Gate` on the hourly full battery after `a35f7a67` to confirm whether it caught this.\n\n## Dedupe\n\nMCP `search_issues` on objectstack-ai/objectstack, closed included: `checkPageComponentViewData console build objectui pin missing export` → 8 hits. Read: #23447 (closed, the deletion card itself), #22472, #20456, #5576, #7973, #6776, #7121, #6953. None reports the console build breaking. objectstack-ai/objectui is not reachable from this session (access denied), so it was not searched.\n\nQA-source: #23878 · platform-core.boot-health · console mount precondition (environment), found while preparing the browser legs of the full-checklist run. The run records link back here."

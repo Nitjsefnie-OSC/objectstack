@@ -2,8 +2,8 @@
   "number": 23904,
   "kind": "issue",
   "title": "Kernel build refuses an INSTALLED package page with isDefault on a non-record page (a69a40a572 / #23708): every hosted environment with HotCRM 4.0.1 fails to boot",
-  "state": "open",
-  "state_reason": null,
+  "state": "closed",
+  "state_reason": "completed",
   "draft": null,
   "author": {
     "login": "hotlong",
@@ -13,7 +13,6 @@
   "labels": [
     "bug",
     "domain:spec",
-    "pm:dispatched",
     "priority:p0",
     "target:v18"
   ],
@@ -23,11 +22,15 @@
   "milestone": null,
   "type": null,
   "created_at": "2026-10-16T12:19:08Z",
-  "updated_at": "2026-10-16T13:23:19Z",
-  "closed_at": null,
-  "closed_by": null,
+  "updated_at": "2026-10-16T17:12:33Z",
+  "closed_at": "2026-10-16T17:06:05Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
   "merged_at": null,
-  "comments": 4,
+  "comments": 7,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/23904",
   "body": "Filing-gate category ① (a defect with a measured reach) and ③ (a maintainer direct order). Verbatim, 2026-10-16: the option 「两条都做」, which reads \"框架立一张 p0 卡（我认领、派云端会话）：内核构建遇到已安装、已存储的旧元数据里被退役的声明时，按过渡窗口只警告、不拒绝启动；发布时照样拒\". The maintainer also directed earlier: 「相关任务都提到最高优先级」.\n\n**Reader:** the cloud#2899 executor (the maintainer's local session) claims it and dispatches a cloud developer session today. Downstream, cloud's next pin bump carries the fix (cloud#2868).\n\n**Dedupe** (`gh api search/issues` total_count, closed issues included):\n- `MisplacedDefaultPageError`: 2 (#23708, the change itself; #23610, its spec question).\n- `isDefault home page refused installed package kernel`: 12.\n- `retired declaration installed artifact kernel build refuse transition`: 34.\n- None asks for a transition for already-installed packages. The HotCRM-side change is objectstack-ai/hotcrm#2120, shipped in HotCRM 5.0.0.\n\n## What happens\n`a69a40a572` (#23708, `feat(spec)!`, merged 2026-10-16 02:00Z) refuses `isDefault: true` on any page that is not a bound record page. The refusal fires when a **kernel builds from an installed package**, not only when a package is authored or published.\n\nHotCRM 4.0.1, the version installed across hosted environments, declares `isDefault: true` on its `type: 'home'` page `sales_home_page`. On cloud's staging at framework `f7e836da1ed3` (it contains `a69a40a572`, because it had to contain objectstack#23843's fix `ae4dfafa15`), every environment with HotCRM 4.0.1 installed fails its kernel build:\n\n```\n[KernelManager] kernel build failed {\"environmentId\":\"9930e6cf-…\",\"err\":{\"name\":\"MisplacedDefaultPageError\",\"message\":\"Page \\\"sales_home_page\\\" of package \\\"app.objectstack.hotcrm\\\": `isDefault: true` is refused on a `type: 'home'` page: it marks the default record page of an object, and nothing reads it on any other …\"}}\n```\n\n**Reach:**\n- **Staging:** 10 of 36 environments have HotCRM 4.0.1 installed, and each one is unserved.\n- **Production:** the 5 demo environments hold HotCRM 4.0.1, so production cannot take a framework pin that contains `a69a40a572` until each one is upgraded.\n- **Not measured:** environment-authored (AI-built) pages stored in tenant databases with the same shape would fail the same way. Whether any exist was not measured.\n\n**Why the ordering matters:** `a69a40a572` sits before `ae4dfafa15` on `main`, so cloud has no pin that has the remote-ceremony fix without this refusal.\n\n**Workaround in use:** upgrading an environment's HotCRM to 5.0.0, which declares no `isDefault` on its home page. That is per environment and does not cover customer-authored metadata.\n\n## Wanted\nAn already-installed package or stored metadata item carrying a declaration a newer spec retires must not brick the environment's kernel. The lane picks the mechanism, likely the ADR-0087 transition pattern:\n- refuse at authoring, save and publish (unchanged);\n- on load of an installed or stored item, drop or ignore the retired declaration with a named warning (`MisplacedDefaultPageError` becomes a load-time advisory), so the kernel builds.\n\nApply the same review to the other load-time refusals in the same commit (closed template set, regions). If contract-first rules out any load-time tolerance, return `needs_decision` with the alternatives instead of building one.\n\n**Acceptance:**\n- a kernel built from HotCRM 4.0.1's published bundle (marketplace `pkgv` of 4.0.1, or the `v4.0.1` tag's `dist/objectstack.json`) boots, with the named warning;\n- the same page saved or published through the authoring door is still refused;\n- an ablation of the load-time path turns the boot red.\n\nRelated: #23708, #23610, objectstack-ai/hotcrm#2120, objectstack-ai/cloud#2868, objectstack-ai/cloud#2899.\n"

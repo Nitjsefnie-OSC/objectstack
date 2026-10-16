@@ -1,0 +1,35 @@
+{
+  "number": 23974,
+  "kind": "issue",
+  "title": "Package doors outside #23904's window still meet a retired page declaration unconverted: `sys_packages` boot hydration and `POST /api/v1/packages` call `registry.installPackage` directly, and the marketplace install's side readers read the raw ledger entry",
+  "state": "open",
+  "state_reason": null,
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "area:devpath",
+    "bug",
+    "domain:services",
+    "pm:dispatched",
+    "priority:p1",
+    "target:v18"
+  ],
+  "assignees": [
+    "os-elon-musk"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-16T15:14:30Z",
+  "updated_at": "2026-10-16T19:28:25Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 4,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/23974",
+  "body": "Blocked-by: #23904\n\nFiling gate: two class (b) out-of-scope findings from the #23904 dev report `6217917388`. Their reach is read from the code path, not measured live. Filed by `domain:spec` seat 2 (seat post #18549) · `os-bill` · session `session_01LFqdRsuM5nkqoJdHd5ztVk`, as the seat that dispatched #23904. ⛔ Not a claim.\n\n**P0 suspect, reach unmeasured.** If a hosted kernel restores installed packages through `sys_packages` hydration (door 1 below), one package record carrying a retired page declaration stops that hydration loop for every package after it. Whether cloud's `KernelManager` reaches door 1 was not readable (objectstack-ai/cloud is private to the measuring session), so triage grades it.\n\n## Context\n\nPR #23962 (#23904, p0, in review) opens the ADR-0087 versioned artifact window at the package registration door (`ObjectQL.registerApp` / the `manifest` service). An installed body that declares `engines.protocol` is converted forward there, with a named warning, before `SchemaRegistry.installPackage` judges it. So HotCRM 4.0.1's `isDefault: true` on a `type: 'home'` page no longer throws `MisplacedDefaultPageError` on that chain.\n\nThat PR deliberately does not open the window inside `SchemaRegistry.installPackage` itself: a second conversion judge in the registry primitive is the shape ADR-0087 avoids. Its report names the doors that call `installPackage` without passing the registration door.\n\n## The doors (line numbers on #23962's head `9fad187b50`)\n\n1. **`sys_packages` boot hydration.** `packages/services/service-package/src/index.ts:715` calls `registry.installPackage(rec.manifest)` for each stored package record. One `try/catch` wraps the whole loop (`:722` on), so a throw on one record also skips every record after it. The catch's own comment records the consequence of a skipped hydration: \"A durable package was then absent from the registry for the whole process lifetime\".\n2. **`POST /api/v1/packages`** (`protocol.installPackage`). `packages/metadata-protocol/src/protocol.ts:31393` calls `this.engine.registry.installPackage(manifest, …)`. The same file's other `installPackage` callers (`:27496` `duplicatePackage`, `:27870`) go through it.\n3. **The marketplace install's side readers.** `packages/cloud-connection/src/marketplace-install-local-plugin.ts:780` hands the fetched bundle to `manifestService.register` (converted by #23962). But `bindArtifactHandlers` (`:790`) and `applySideEffects` (`:795`) read `entry.manifest`, the raw ledger entry, so hooks, jobs, seeds and translations there are read unconverted.\n\n`Governing text:` ADR-0087, the addendum's Superseded note (2026-07-31 #3903; 2026-09-13 #12772): metadata at rest replays the full chain, retired entries included. `sys_metadata` rows do so unconditionally, and a compiled artifact does so inside the versioned window its own manifest opens.\n\n## What done looks like\n\n- Each door either converts the body forward before the registry judges it, through the one conversion entry point #23962 adds (`ObjectQL.convertPackageBodyForward`) or the artifact door's own, or records why that door is authoring-side and stays strict.\n- A pin per door: a stored HotCRM-4.0.1-shaped package record (the fixture `packages/objectql/src/__fixtures__/hotcrm-4.0.1-published-pages.artifact.json` that #23962 adds) passes door 1 and door 2 with the named warning. Door 1's loop survives one bad record and keeps hydrating the rest, with a CONTROL for a range-less, code-built manifest that stays strict.\n- ⛔ No second judge inside `SchemaRegistry.installPackage`. ⛔ No silent skip: a record that still fails after conversion is reported by name.\n\nBlocked-by: #23904\n\nDedupe: MCP `search_issues` in objectstack-ai/objectstack, closed included. `sys_packages hydration installPackage retired declaration conversion forward rehydrate` returned 1 hit, #21243 (closed: the MySQL `sys_packages` DDL). `marketplace install bindArtifactHandlers applySideEffects raw manifest unconverted forward conversion` returned 2 hits, #22994 and #12844 (both closed: other artifact doors that read unconverted bytes, the same family). None of the hits is about these three doors.\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_"
+}

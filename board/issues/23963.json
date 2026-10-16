@@ -1,0 +1,35 @@
+{
+  "number": 23963,
+  "kind": "issue",
+  "title": "automation: a resume that answers 404 RUN_NOT_FOUND because the run's flow (or parked node) is gone leaves its sys_automation_run row `paused` forever — the engine calls the pause \"gone for good\", the row says resumable, and retention never prunes it",
+  "state": "closed",
+  "state_reason": "completed",
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "area:workflow",
+    "bug",
+    "domain:services",
+    "priority:p2"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-16T14:38:10Z",
+  "updated_at": "2026-10-16T18:33:07Z",
+  "closed_at": "2026-10-16T18:28:48Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": null,
+  "comments": 5,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/23963",
+  "body": "**Filing gate ①** — a product defect with a named landing and a live reproduction (persisted state disagrees with the engine's own verdict).\n\nQA-source: #23940 · automation.trigger-status-contract · acceptance 5 (observation beside a passing clause; re-checked and filed under #23878)\n\n## What happens\n\nA suspended run whose flow has been removed (or whose parked node was edited away) is refused on resume with **404 `RUN_NOT_FOUND`**. The engine's own comment classifies that as the terminal \"this pause is gone for good\" class. But the refusal path returns without touching the run's `sys_automation_run` row, so the row keeps `status: 'paused'`:\n\n- through any number of further resume attempts,\n- after the owning package is uninstalled,\n- after a cold restart.\n\n`sys_automation_run` retention prunes only terminal statuses, and its docblock says paused rows \"are live resumable state and are never pruned\". So nothing ever clears the row except an operator who happens to call `POST /api/v1/automation/:name/runs/:runId/cancel` by hand. Every run list and paused-run count keeps showing a run that the engine already knows can never continue.\n\n## Reach — measured through the public HTTP entry, 2/2 fresh boots\n\nEnvironment: objectstack `7277c07f` (main, 2026-10-16), `examples/app-showcase`, `OS_PORT=P objectstack dev --seed-admin -p P -d file:…/data.db --log-level info`, with a fresh DB per boot (ports 47311 and 47312). Seeded admin, bearer token from `POST /api/v1/auth/sign-in/email`. API-only; no console involved.\n\n1. `POST /api/v1/packages` `{\"manifest\":{\"id\":\"com.qa.stalea\",\"name\":\"QA stale\",\"version\":\"1.0.0\",\"type\":\"app\"},\"enableOnInstall\":true}` → 201\n2. `PUT /api/v1/meta/flow/stalea_probe?package=com.qa.stalea` with a screen flow: nodes `start` → `collect` (type `screen`, one required text field `x`) → `end` → 200\n3. `POST /api/v1/automation/stalea_probe/trigger` `{\"params\":{}}` → 200, `data.status: \"paused\"`, a `runId`\n4. `GET /api/v1/data/sys_automation_run/RUNID` → `status: \"paused\"`\n5. `DELETE /api/v1/meta/flow/stalea_probe?package=com.qa.stalea` → 200\n6. `POST /api/v1/automation/stalea_probe/runs/RUNID/resume` `{\"inputs\":{\"x\":\"v\"}}` → **404** `{\"code\":\"RUN_NOT_FOUND\",\"message\":\"Flow 'stalea_probe' not found for run 'RUNID'\"}`\n7. `GET /api/v1/data/sys_automation_run/RUNID` → **`status: \"paused\"`**, read twice 3 s apart. A filtered list `{status:'paused', flow_name:'stalea_probe'}` returns 1 row.\n8. `DELETE /api/v1/packages/com.qa.stalea` → 200. On boot 2, after a cold restart on the same DB, step 7 still answers `paused` (node `collect`).\n\n- **Expected:** once the engine answers the terminal 404 for a flow-gone or node-gone suspension, the row leaves `paused`. It becomes a terminal status (`cancelled`, `failed` or similar, with the reason recorded), or it is deleted the way a completed resume deletes it, so retention and the run lists see the truth.\n- **Actual:** it stays `paused` indefinitely.\n- **Control:** `POST /api/v1/automation/stalea_probe/runs/RUNID/cancel` → 200 `cancelled: true`, and the row then reads 404. So the terminal transition exists; the refusal path just never takes it.\n\n## Where (objectstack main `7277c07f`)\n\n- `packages/services/service-automation/src/engine.ts:7765-7772`: the two \"never-dispatched\" exits (`Flow '…' not found for run`, `Suspended node '…' no longer exists`) `return { success:false, code:'RUN_NOT_FOUND' }` and leave the suspended row as it is. The comment at `:7744-7750` names them \"this pause is gone for good\".\n- `engine.ts:4784` `withdrawFlow`: removing a flow deactivates its trigger and drops it from the map. It does not touch runs parked on it, so the orphan is created here and only discovered on resume.\n- `packages/services/service-automation/src/sys-automation-run.object.ts:65-67`: retention `onlyWhen` lists terminal statuses only (`:24`: paused rows \"are never pruned\"), so nothing ages the orphan out.\n- Not affected: approvals' `RESUME_TARGET_LOST` (`plugin-approvals` `assertRunResumable`) fires only when no suspended row exists. But `hasSuspendedRun` still answers true for an orphan like this one, so an approval decision on such a run passes the pre-flight and fails afterwards.\n\n## Done when\n\n- The flow-gone and node-gone resume exits move the run to a terminal status (or delete it, as a completed resume does) in the same call that answers 404, with the reason on the record. A pin covers both causes: after the 404, the `sys_automation_run` read no longer reports `paused`.\n- Optionally, `withdrawFlow` settles runs parked on the withdrawn flow at withdrawal time. The resume-time settle above is the floor either way.\n\n**Reader who acts:** the `service-automation` owner (`domain:services` execution seat), in the engine's resume path.\n\n## Dedupe\n\nMCP `search_issues` on objectstack-ai/objectstack, all states: \"suspended flow run stays paused after resume 404 RUN_NOT_FOUND flow deleted sys_automation_run\" → 49 hits, top 10 read. #21724 (resume refusal codes, closed) and #20677 (ledger-disabled re-arm, closed) are neighbours. None covers the row left `paused` after the terminal refusal.\n\nRe-checked by a cloud QA session dispatched under #23878 (maintainer ruling there, 「派云卡片复核这 7 条，授权里全部立卡。有时间间隔就行」).\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_"
+}

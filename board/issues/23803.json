@@ -2,8 +2,8 @@
   "number": 23803,
   "kind": "issue",
   "title": "Setup navigation: one audit entry, Packages and Installed Apps agree, User Preferences and Identity Links leave the main nav",
-  "state": "open",
-  "state_reason": null,
+  "state": "closed",
+  "state_reason": "completed",
   "draft": null,
   "author": {
     "login": "objectstack-fleet[bot]",
@@ -14,7 +14,6 @@
     "area:devpath",
     "domain:engine",
     "enhancement",
-    "pm:dispatched",
     "priority:p2"
   ],
   "assignees": [
@@ -23,11 +22,15 @@
   "milestone": null,
   "type": null,
   "created_at": "2026-10-16T03:44:47Z",
-  "updated_at": "2026-10-16T13:41:49Z",
-  "closed_at": null,
-  "closed_by": null,
+  "updated_at": "2026-10-16T15:56:52Z",
+  "closed_at": "2026-10-16T15:55:01Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
   "merged_at": null,
-  "comments": 6,
+  "comments": 11,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/23803",
   "body": "## Source\n\nRead in the console's Setup app on 2026-10-16 (objectstack `18.0.0-next.1` serving HotCRM; nav from `packages/platform-objects/src/apps/setup.app.ts` with contributions from `setup-nav.contributions.ts` and `packages/plugins/plugin-audit/src/audit-plugin.ts`). The sidebar has 43 entries in 9 groups; among them:\n\n- Diagnostics › \"Audit Logs\" (`sys_audit_log`, a record list with the views Recent / Writes / Auth / 3 more) and \"Audit Log Browser\" (`component/audit/log`, a filter form over the same rows) show the same data two ways.\n- Apps › \"Packages\" lists HotCRM and HotCRM Service as \"Read-only · code\" packages; \"Installed Apps\" says \"No marketplace apps installed in this runtime yet\" — the two pages disagree about what is installed because one means packages and the other means marketplace installs, and neither says so.\n- Advanced › \"User Preferences\" (`sys_user_preference`: rows `ui.recent`, `ui.favorites`, `ui.flow.palette.recents` per user) and \"Identity Links\" (`sys_account`: provider ids and user hashes) are internal stores an admin never edits by hand.\n- The audit plugin contributes its browser entry whether or not the record list is there.\n\n## Target\n\n1. One audit entry: \"Audit Log\" opens the browser (filters by action, object, actor, date); the record list's views (Writes, Auth, …) become the browser's presets; the `sys_audit_log` list stays reachable from the browser's \"Open as list\" link, not from the nav.\n2. \"Packages\" becomes the one place for what is installed: a Source column (code / marketplace / authored) and the marketplace page's install actions; \"Installed Apps\" retires or becomes a filter preset of Packages. The marketplace entry stays.\n3. \"User Preferences\" and \"Identity Links\" leave the main navigation; they stay reachable from the User record page (a \"Preferences\" and an \"Identity links\" tab) and from the search.\n4. The sidebar then has 39 entries; group order unchanged.\n\n## File surface\n\n`packages/platform-objects/src/apps/setup.app.ts`, `setup-nav.contributions.ts`, `packages/plugins/plugin-audit/src/audit-plugin.ts` (its nav contribution and `audit-nav-contribution.test.ts`), the `sys_user` record page tabs if they live in platform-objects views, translations.\n\n## Acceptance\n\n1. Tests: the rendered Setup nav has one entry whose target is an audit surface; no top-level entry targets `sys_user_preference` or `sys_account`; Packages' view declares the Source column.\n2. The console's Setup sidebar, re-read after the change, matches (the epic PM reads it).\n3. `pnpm --filter @objectstack/platform-objects test`, `pnpm --filter @objectstack/plugin-audit test` green.\n\n## Constraints\n\n- Objects, routes and record pages stay; only navigation entries and one view column change.\n\n## Evidence\n\nScreenshots on the temporary branch `claude/console-home-login-design-20261016` of objectstack-ai/objectui (commit `01244b886`, never merged): [setup-audit-logs.png](https://github.com/objectstack-ai/objectui/blob/01244b886/docs/design/setup-review-2026-10-16/setup-audit-logs.png?raw=true).\n\n<sub>Filed by the epic PM session `session_cdb7a717-def7-4e71-9988-f089fbaa18ff` from the 2026-10-16 second review pass: objectui main `8415d9f11`, HotCRM `63db83e2`, the vite console on :5180 against `objectstack serve --dev` on :4001, the Studio pillars and all 43 Setup pages walked in the maintainer's browser pane at 1024 × 768 (en) with a 1280 × 900 re-check (zh). The maintainer asked for every finding to be filed, verbatim: 「全部立卡」.</sub>"

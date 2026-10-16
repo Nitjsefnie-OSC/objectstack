@@ -1,0 +1,38 @@
+{
+  "number": 23967,
+  "kind": "issue",
+  "title": "meta read: a view stored with no `label` is served with `label` = its qualified name (`recheck_gate.default`), invented by the read-side translator, so the console view tab shows the machine name",
+  "state": "closed",
+  "state_reason": "completed",
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "area:api",
+    "bug",
+    "domain:cli",
+    "priority:p1",
+    "target:v18"
+  ],
+  "assignees": [
+    "os-tesla"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-16T14:43:27Z",
+  "updated_at": "2026-10-16T19:43:02Z",
+  "closed_at": "2026-10-16T19:33:30Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": null,
+  "comments": 6,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/23967",
+  "body": "**Filing gate ①**: a user-visible defect with a named landing and a live reproduction. A machine name is shown where the platform's own code says no label was authored.\n\nQA-source: #23942 · studio-authoring · observation (cloud slice comment on #23878; re-checked and filed under #23878)\n\n## What happens\n\nThe spec declares `label` optional on a view (`packages/spec/src/ui/view.zod.ts:5154`, `I18nLabelSchema.optional()`), with no default. When a view is stored without one, the REST read path still serves a `label`: its translation step writes back `view.label ?? view.name`, so the document carries `label: \"OBJ.default\"`. The console's object page renders that string as the view tab, as served (objectui `ObjectView.tsx` `viewTabLabel`), so the user sees `recheck_gate.default`. A machine name is shown even though the object has a label (\"QA Gate\" / \"QA Gates\").\n\nThe REST layer already knows this fallback is not a label. For view-container slots it drops it explicitly (`meta-item-read-gate.ts:3005-3008`: \"A `label` that equals `input.name` where `input` had none is the translator's fallback, not a translation, and is dropped\"). The single-item read and the list read keep it. A consumer therefore cannot tell an authored label from an invented one without comparing it to `name`, which is the tolerant-consumer shape PD #12 forbids.\n\n## Reach — measured, 2/2 fresh loads\n\nEnvironment: objectstack `7277c07f` (main, 2026-10-16), `examples/app-showcase` booted from a main worktree, `OS_PORT=47321 objectstack dev --ui --seed-admin -p 47321 -d file:…/data.db`. Console: objectui `daeb77fc` (the `.objectui-sha` pin), built against `@objectstack/spec` from `a35f7a67^` (`34b740f2`), because the pin does not build on main (#23885 / #23908). `check:console-sha` matches. Playwright with `/opt/pw-browsers/chromium`, form sign-in as the seeded admin.\n\n1. `POST /api/v1/packages` `{\"manifest\":{\"id\":\"com.qa.recheck\",\"name\":\"QA Recheck\",\"version\":\"1.0.0\",\"type\":\"app\",\"namespace\":\"recheck\"},\"enableOnInstall\":true}` → 201.\n2. `PUT /api/v1/meta/object/recheck_gate?package=com.qa.recheck`: label \"QA Gate\", pluralLabel \"QA Gates\", fields `name` and `kind` → 200.\n3. `PUT /api/v1/meta/view/recheck_gate.default?package=com.qa.recheck` `{\"name\":\"recheck_gate.default\",\"object\":\"recheck_gate\",\"viewKind\":\"list\",\"isDefault\":true,\"config\":{\"type\":\"grid\",\"columns\":[\"name\",\"kind\"]}}`, with **no label** → 200.\n4. `GET /api/v1/meta/view/recheck_gate.default/layers`: `overlay` and `effective` carry **no** `label`.\n5. `GET /api/v1/meta/view/recheck_gate.default`: `item.label: \"recheck_gate.default\"`. It is appended as the last key, after `_diagnostics`.\n6. Browser: `/_console/apps/com.example.showcase/recheck_gate` shows the header \"QA Gates\", and the only view tab reads **`recheck_gate.default`**. Same on two fresh loads.\n\nThe same fill reaches stock form views. `GET /api/v1/meta/view` lists `showcase_task.form`, `showcase_task.tabbed`, `showcase_contact.create` and others with `label` equal to their name.\n\n- **Expected:** a view with no authored label is served with no `label` (or `null`), as the container slots already are. The console then falls back to a human string (the object's plural label, or its \"All records\" wording).\n- **Actual:** the served document asserts a label nobody wrote, and it is the machine name.\n\n## Where\n\n- objectstack main `7277c07f`:\n  - `packages/spec/src/system/i18n-resolver.ts:481` is `const fallback = view.label ?? view.name;` in `resolveViewLabel`.\n  - `:1186`: `translateView` writes it back unconditionally (`return { ...view, label, … }`).\n  - `packages/rest/src/meta-item-read-gate.ts:2881`: the single-item read runs it through `translateMetadataDocument`. `:2823` does the same for the list read.\n  - `:3023` (`if (key === 'label' && input.label == null && value === input.name) continue;`) drops it for container slots only.\n  - The resolver's own pin, `packages/spec/src/system/i18n-resolver.test.ts:294-303`, pins the resolver's return value, not the served document.\n- objectui main `023087f63` is the consumer half: `packages/app-shell/src/views/ObjectView.tsx:956`, `const text = view.label || view.name || view.id;`. Even with the server fixed, a label-less view would still fall back to the machine name here, so the console needs a human fallback too. That is a follow-up on objectstack-ai/objectui, filed when this contract lands.\n\n## Done when\n\n- The single-item and list meta reads serve a view with no authored label without an invented `label`, the same way the container path does. A REST pin asserts that `GET /meta/view/NAME` for a label-less stored view carries no `label` equal to `name`. Translated labels still resolve.\n- A consumer card on objectstack-ai/objectui is opened for `viewTabLabel`'s fallback (human string, never the qualified name).\n\n**Reader who acts:** the REST/i18n read-path owner (`domain:services` or `domain:spec` execution seat; triage picks). The diff is in `packages/spec/src/system/i18n-resolver.ts` `translateView` / `resolveViewLabel` or in the REST read gate's view translation.\n\n## Dedupe\n\n- MCP `search_issues` on objectstack-ai/objectstack, all states: \"served view label falls back to view name translateView resolveViewLabel tab shows object.default\" → 11 hits, all read. #4854 (view labels never resolve a translation, closed), #21006 and #22614 (closed) are neighbours. None covers the invented label.\n- objectstack-ai/objectui#12693 (machine names in Studio: Explain chips, Columns chips) does not carry the view tab, so this is not folded there.\n\nRe-checked by a cloud QA session dispatched under #23878 (maintainer ruling there, 「派云卡片复核这 7 条，授权里全部立卡。有时间间隔就行」).\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_"
+}

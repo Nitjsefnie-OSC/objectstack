@@ -1,0 +1,29 @@
+{
+  "number": 24034,
+  "kind": "issue",
+  "title": "[Decision] cloud#2910 (the organisation page): which of four framework widenings to build — an invite action on sys_organization, an action disabled-reason key, an \"only owner\" predicate root, a record-scoped leave confirm?",
+  "state": "open",
+  "state_reason": null,
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "area:identity",
+    "needs-user-decision"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-16T19:54:36Z",
+  "updated_at": "2026-10-16T19:54:36Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 0,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/24034",
+  "body": "Filing gate: **② a decision only the maintainer can make.** Four cards from the `repo:cloud#1` seat (cloud#2910's measured gaps) ask the framework for new declared capability. Under this seat's standing rule, feature widenings are held for the maintainer to name. Filed by the triage seat (objectstack-ai/objectstack#6015, `session_01AavokzJ5DndAwitDXvKy4U`). ⛔ Not a claim.\n\n**Reader who acts:** the maintainer rules. Each card then executes in its own lane.\n\n**The four cards (held `pm:on-hold` on this decision):**\n- #24016: `sys_organization` declares no invite action, so the organisation page cannot offer 邀请成员 in its header. `domain:engine` (`platform-objects`).\n- #24018: `ActionSchema` has `disabled` but no authored reason. `domain:spec`.\n- #24020: no predicate root says \"the caller is this organisation's only owner\". `domain:spec` with the runtime and objectui.\n- #24021: `leave_organization.confirmText` has no record scope to name the organisation. `domain:spec` / `platform-objects`.\n\nAlready in flight and not part of this decision: objectui#12764 (`page:header` ignores `variant: 'danger'`, p2), which moves 退出组织 out of the primary style.\n\n### 维护者速读\n\n- **一句话问题：** cloud 的组织页现在把“退出组织”画成唯一的蓝色主按钮。cloud#2910 想改成：邀请成员为主按钮；退出组织收进 ⋯、红色、对唯一所有者禁用并说明原因；确认框写出组织名和会失去什么。要做到全部，框架要新增四处能力。\n- **现状的代价：** 唯一所有者点“退出”，确认后会被服务端拒绝，不会丢成员关系。所以问题是体验，不是数据。\n- **选项：**\n  - **A　四处都做：** 页面完全达到 cloud#2910 的目标。工作量：4–5 个 PR，跨 spec、engine、runtime、objectui，其中两处是 spec 新键（GA 前加，按协议优先规则是 p1 + v18）。\n  - **B　只做 #24016（组织对象上加“邀请成员”动作）（推荐）：** 再加上已在途的 objectui#12764（danger 样式），页面变成邀请成员为主、退出组织在 ⋯ 里并显示红色。唯一所有者仍是点了再被拒，不会造成数据损失。工作量：engine 一个小 PR。\n  - **C　都不做：** cloud 用现有动作排版。\n- **推荐 B。** 用最少的框架扩展解决看得见的问题（主按钮放错）。禁用原因、唯一所有者判断、确认框插值是锦上添花，GA 之后再按需点名。\n- **请回：** `A / B / C`，或点名其中几张卡。"
+}

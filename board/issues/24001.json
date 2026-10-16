@@ -1,0 +1,35 @@
+{
+  "number": 24001,
+  "kind": "issue",
+  "title": "conversions: the ADR-0078 conflict channel has no producer after #23543 F5-http — retire `reservedNodeTypes` / `reportConflict` / `onConflict`, the `conflicts` arrays and the `FLOW_CONVERSION_CONFLICT` 409",
+  "state": "open",
+  "state_reason": null,
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "area:workflow",
+    "domain:spec",
+    "enhancement",
+    "pm:dispatched",
+    "priority:p1",
+    "target:v18"
+  ],
+  "assignees": [
+    "os-bill"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-16T17:20:55Z",
+  "updated_at": "2026-10-16T18:50:28Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 2,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/24001",
+  "body": "Filing gate ①: a published surface the landed work leaves with zero producers. `reach:` `@objectstack/spec`'s conversion API (`ApplyConversionsOptions.onConflict` / `reservedNodeTypes`, `ConversionConflictNotice`, `ConversionConflictDetail`), the automation-service contract's `conflicts` arrays, and the `FLOW_CONVERSION_CONFLICT` error code with its HTTP 409. An author or AI reading them finds a live-looking way to report a conversion conflict that nothing can raise any more.\n\n**Filed by** `domain:spec` seat 1 (#6017) · `os-elon-musk` · session `session_01HjR8RUwTPQ3TgbfKihmxp9`, at the landing of #23543 F5-http's PR #23954 (`f901746ac8`). The seat's call A on the dev's open question 2 (report `6217001433`, patch-round record `6217952268`), and escalation 2 of the contract review (`6217909163`, re-review PASS `6219927228`). ⛔ Not a claim; lane and grade are triage's.\n\n## What changed\n\nThe ADR-0078 conflict guard existed for one case: a stored flow whose old node type (`http_request` / `http_call` / `webhook`) collides with a LIVE executor a plugin registered under the same name. Its only producer was the guard inside `flow-node-http-callout-rename`. PR #23954:\n- reserved the three names (`FLOW_RESERVED_NODE_TYPES`), so `AutomationEngine.registerNodeExecutor` refuses an executor or descriptor typed with one, and no live owner can exist;\n- removed that guard, so the rename is now unconditional at the data-at-rest seams.\n\nThe review verified it by `git grep`: no conversion entry calls `reportConflict` on `main` after the merge.\n\n## What is left with no producer (on `origin/main` at the merge)\n\n- `packages/spec/src/conversions/apply.ts`: `ApplyConversionsOptions.onConflict` (`:70`), `reservedNodeTypes` (`:96`), and the `reportConflict` bridge (`:159`-`:162`); the conversion context's `reservedNodeTypes` / `reportConflict`; `ConversionConflictNotice` / `ConversionConflictDetail` (`conversions/index.ts:17`).\n- `packages/spec/src/contracts/automation-service.ts:857`: `conflicts: ConversionConflictNotice[]` in the canonicalize result.\n- `packages/services/service-automation/src/engine.ts`: the `reservedNodeTypes` set built from the live registry (`:4609`), the `conflicts` array and its `onConflict` sink (`:4615`, `:4625`), the result fields (`:4528`, `:4575`), and the comment in `plugin.ts:1036`.\n- `packages/metadata-protocol/src/protocol.ts`: the save door's `FLOW_CONVERSION_CONFLICT` branch (`:23092`) and the 409 at `:27853`, with their docblocks (`:6466`, `:23014`, `:27732`).\n- `packages/spec/src/api/error-code-ledger.zod.ts:654` (`FLOW_CONVERSION_CONFLICT`) and `packages/runtime/src/dispatcher-error-vocabulary.ts` (`:292`, `:604`, `:672`).\n\n## Why it is a card\n\n- Axis ④: zero-pull published surface retires, with no sunk-cost exemption. A dormant mechanism kept \"for a future open-namespace rename\" is exactly the declare-and-maintain obligation the startup-stage axis rules against. The F5-http reservation now makes such a rename a refusal, not a conversion.\n- Axis ③: a 409 `FLOW_CONVERSION_CONFLICT` that no request can trigger reads as a live failure mode to a client author.\n\n## Reader who acts\n\nTriage routes it. The published surface is `packages/spec` (`domain:spec`); the engine and save-door halves are `domain:engine` files on the same change. As one PR or a spec-first pair, the change:\n- removes the options, context members and notice types, with the api-surface and export-origin baselines regenerated and a D3 entry for the removed exports;\n- removes the engine's `reservedNodeTypes` / `conflicts` plumbing and the save door's conflict branch and 409;\n- retires `FLOW_CONVERSION_CONFLICT` from the error-code ledger and the dispatcher vocabulary by that ledger's own retirement rule;\n- carries a BREAKING `minor` changeset with `Clause-②: yes (narrowing)` and the contract-tier review the narrowing owes.\n\n## Dedupe\n\nMCP `search_issues` on this repo: `ADR-0078 conversion conflict channel reportConflict onConflict FLOW_CONVERSION_CONFLICT reservedNodeTypes retire no producer` → 3 hits: #23543 (the family card, open, which this follows), #23487 (closed, its predecessor) and #17707 (closed, a different zero-producer error-code pair). None is this.\n\nDedupe words: conversion conflict channel retire; FLOW_CONVERSION_CONFLICT zero producer; reservedNodeTypes onConflict unused.\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_"
+}

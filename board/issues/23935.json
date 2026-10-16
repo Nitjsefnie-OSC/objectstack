@@ -2,8 +2,8 @@
   "number": 23935,
   "kind": "issue",
   "title": "Add the @objectstack/spec patch changeset PR #23780 owed: its position.zod.ts anchor docblock ships in dist/*.d.ts (contract review 6214176883 FAIL on the changeset; merged by the maintainer, follow-up recognised)",
-  "state": "open",
-  "state_reason": null,
+  "state": "closed",
+  "state_reason": "completed",
   "draft": null,
   "author": {
     "login": "objectstack-fleet[bot]",
@@ -12,18 +12,23 @@
   },
   "labels": [
     "domain:spec",
-    "pm:queue",
     "priority:p3"
   ],
-  "assignees": [],
+  "assignees": [
+    "os-bill"
+  ],
   "milestone": null,
   "type": null,
   "created_at": "2026-10-16T13:16:40Z",
-  "updated_at": "2026-10-16T13:16:40Z",
-  "closed_at": null,
-  "closed_by": null,
+  "updated_at": "2026-10-16T18:34:23Z",
+  "closed_at": "2026-10-16T18:16:55Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
   "merged_at": null,
-  "comments": 0,
+  "comments": 2,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/23935",
   "body": "Filing gate: **③ a bookkeeping follow-up of a landed PR** (the no-escalation class: changeset tidying with no product-visible behaviour change). Filed by the director seat (summon #43 continuation 2, `session_01QJC7i981TSs9L1CGJK59Ax`) on the maintainer's 「同意」 to the recognition row for PR #23780 in this session's chat. ⛔ Not a claim.\n\n## What happened\n\nPR #23780 (`Fixes #23373`, merged by `os-zhuang` on 2026-10-16 as `6f7ad7900`) changed four texts under ruling C of #23267 and carried `skip-changeset`. Its contract review 6214176883 (`CONTRACT_REVIEW_TIER`) found every ① judgment RIGHT and judged ② **FAIL**: the changed `EVERYONE_POSITION` / `GUEST_POSITION` anchor docblock in `packages/spec/src/identity/position.zod.ts` ships twice in `@objectstack/spec` — in the tarball by `files[]` (`src/**/*.zod.ts`) and in `dist/*.d.ts` (tsup `dts` on) — so the hover text an author or an AI reads changed, and a patch changeset was owed. The `@objectstack/lint` comment edits owe nothing (`dist` strips them). The maintainer merged the PR by hand with that record standing, recognised the row in the director seat's chat, and took this follow-up.\n\n## What done looks like\n\n- One `.changeset/*.md`: `@objectstack/spec` **patch**, `Clause-②: no`, saying the anchor docblock on `EVERYONE_POSITION` / `GUEST_POSITION` now reads that packages suggest `everyone` bindings only and that no door binds `guest` until ADR-0138 D3 item 5's door is built (the sentence PR #23780 landed).\n- No other file. The changeset-family gates (`check-empty-changeset`, `check-changeset-no-major`, `check-adr-0087-registration`) pass on the PR.\n\n## Lane and re-check\n\n`domain:spec` (the published package is `@objectstack/spec`). Before writing: `git log --oneline -1 origin/main -- packages/spec/src/identity/position.zod.ts` names PR #23780's merge, and `git grep -n \"no door binds\" origin/main -- packages/spec/src/identity/position.zod.ts` hits.\n\n## Dedupe\n\nOpen `domain:spec` cards whose title names PR #23780, position.zod or a changeset at filing (REST, first 100): #23887. Dedupe words: #23780 changeset owed position.zod.ts docblock dist d.ts spec patch skip-changeset FAIL ②."

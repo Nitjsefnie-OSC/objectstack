@@ -2,8 +2,8 @@
   "number": 23928,
   "kind": "issue",
   "title": "A failing `parallel` drops every branch step from the run log: a sibling branch that already delivered its notification leaves no step, and the summary reports acted 0 (the #13803 defect, still open for `parallel`)",
-  "state": "open",
-  "state_reason": null,
+  "state": "closed",
+  "state_reason": "completed",
   "draft": null,
   "author": {
     "login": "objectstack-fleet[bot]",
@@ -14,20 +14,21 @@
     "area:workflow",
     "bug",
     "domain:services",
-    "pm:dispatched",
     "priority:p1"
   ],
-  "assignees": [
-    "os-elon-musk"
-  ],
+  "assignees": [],
   "milestone": null,
   "type": null,
   "created_at": "2026-10-16T13:06:17Z",
-  "updated_at": "2026-10-16T14:05:40Z",
-  "closed_at": null,
-  "closed_by": null,
+  "updated_at": "2026-10-16T15:38:40Z",
+  "closed_at": "2026-10-16T15:37:05Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
   "merged_at": null,
-  "comments": 2,
+  "comments": 5,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/23928",
   "body": "**Filing gate ①** — product defect with a named location, measured through a public door (record write over `/api/v1/data`, then `GET /api/v1/automation/:name/runs`) on `main` @ `2034975a`. reach: public HTTP, measured 3×.\n\n**Reader who acts:** the `domain:services` execution seat. Fix `packages/services/service-automation/src/builtin/parallel-node.ts` (the `execute` catch arm), the way #14185 fixed `loop-node.ts` for #13803.\n\n## What happens\n\nA `parallel` node whose branch fails returns `{ success: false }` and **no `childSteps`**. Every branch's steps are lost: the failed branch's own failing step, and also the steps of sibling branches that **completed and had side effects**. The run summary then reports `selected: 0, acted: 0` for a run that really did deliver a notification.\n\nThis is the harm #13803 named for `loop`: an operator reads `acted: 0` on a failed run, concludes \"nothing happened, safe to re-run\", and the non-idempotent branch (notify, http, writes) runs twice. #14185 fixed `loop` only, through the `PARTIAL_STEPS` brand in `partial-steps.ts` and `runRegion`'s `partialSteps` sink. `parallel-node.ts` uses neither.\n\n## Reproduction (stock showcase, isolated boot, `OS_PORT` exported)\n\n1. `POST /api/v1/data/showcase_task` with `{title, project: <a showcase_project id>, assignee: \"admin@objectos.ai\", status: \"in_review\"}`. Then `PATCH /api/v1/data/showcase_task/:id` with `{status: \"done\"}`. The `task_status_flow` state machine only lets `in_review` move to `done`.\n2. That fires `showcase_fan_out_notify`, a `parallel` with two branches. Branch 0 is `notify_owner`, an inbox notify. Branch 1 is `slack_post`, an http POST to Slack, which fails with `fetch failed` on any runner without Slack egress or a token.\n3. `GET /api/v1/automation/showcase_fan_out_notify/runs`: take the run whose `trigger.recordId` is the task.\n4. **Expected:** the step log carries the branch steps, tagged `parentNodeId: 'fan_out'`, `regionKind: 'parallel-branch'`, `branch: 0|1`. That means `notify_owner` with status `success`, and `slack_post` with status `failure` and its error. The summary then counts the delivered notify, which is what a dying `loop` has done since #14185.\n5. **Actual:** `steps` = `[start:success, fan_out:failure]`, nothing else. `summary` = `{selected: 0, acted: 0, failed: 1}`. Yet `GET /api/v1/data/sys_notification` shows the branch-0 notification `\"✅ Done: <task title>\"`, written by the same run at the same instant.\n\nMeasured runs: `run_083b2a4c…` (first boot), then `run_162833ed…` and `run_d44707cd…` (second boot, fresh DB). The run's notification is at 13:04:33.839Z for the last one. The Studio flow-designer Runs panel renders the same run as `fan_out PARALLEL failure` with no branch rows beneath it, so an operator gets no trace of the delivered branch there either.\n\n## Mechanism\n\n- `parallel-node.ts` `execute`: `branchSteps = await Promise.all(branches.map(… engine.runRegion(branchRegion, …, {parentNodeId, branch: i, regionKind: 'parallel-branch'})))`. No `partialSteps` sink is passed to `runRegion`.\n- On a rejection the `catch` returns `{ success: false, error: \\`parallel '…': branch failed — …\\` }` without `childSteps`. The other branches' resolved step arrays are discarded with the `Promise.all` frame, and so are the failing branch's region steps that `runRegion` would hand to a sink.\n- `loop-node.ts` shows the fix shape: `childSteps` doubles as the `partialSteps` sink (#13803 / #14185). A returning executor can carry `childSteps` on its `{success: false}` result. A throwing one carries them with `attachPartialSteps` (`partial-steps.ts`). Which one fits here depends on keeping `fault`-edge routability unchanged, the constraint `partial-steps.ts` records. Collecting each branch with `Promise.allSettled`, or a per-branch sink, preserves the completed siblings.\n\n## Dedupe\n\nMCP `search_issues` on this repo, closed included:\n- `parallel node failed branch steps discarded run log partialSteps` → 2 hits (#14414, #15230: the branch/iteration tagging, both closed and unrelated).\n- `parallel branch failure run summary acted 0 notification sent but no step recorded` → 5 hits (#7747, #16274, #14414, #15230, #14392: none about parallel failure steps).\n- `dead container body steps discarded parallel 13803` → 0 hits.\n\n#13803 (closed by #14185) is the `loop`-only precedent. Its card and fix name `loop` alone, and `parallel-node.ts` is untouched by it.\n\nQA-source: #23940 · automation.flow-node-type-matrix · acceptance[4] container-region body steps (observed on the failed `showcase_fan_out_notify` runs; the clause's spot-check passed on a successful nested run)\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_\n"
