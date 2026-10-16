@@ -20,7 +20,9 @@
  *      component-type vocabulary, the props rows and the build rules — with a
  *      control for each half that can go red;
  *   4. its label is translated in every shipped locale, `en` byte-equal to
- *      the page literal, and served as the translation (not the fallback).
+ *      the page literal, and served as the translation (not the fallback);
+ *   5. the Details tab's `record:json` panel names a key the request read
+ *      really serves — no publish check judges that `field`, so this does.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -35,6 +37,7 @@ import {
   validateComponentTypes,
 } from '@objectstack/lint';
 import { ApprovalsServicePlugin } from './approvals-plugin.js';
+import { ApprovalService } from './approval-service.js';
 import { SysApprovalRequestDetailPage } from './sys-approval-request.page.js';
 import { SysApprovalRequest } from './sys-approval-request.object.js';
 import { SysApprovalAction } from './sys-approval-action.object.js';
@@ -105,6 +108,52 @@ function pageBuildFindings(page: AnyRec) {
 /** The page with its decision node replaced. */
 const withDecisionNode = (node: AnyRec): AnyRec => ({ ...PAGE, slots: { ...SLOTS, actions: [node] } });
 
+/** The subject-record snapshot a stored request row holds in `payload_json`. */
+const SNAPSHOT = { id: 'exp_1', title: 'Q1 travel', amount: 1200 };
+const SUBMITTER = 'employee_7';
+
+/**
+ * One request, read the way the request page loads its record. The console
+ * routes that `findOne` to `GET /approvals/requests/:id` (objectui's
+ * `routeApprovalRecordReads`), whose handler answers `ApprovalService.getRequest`'s
+ * row as it stands; this is that call, as the request's submitter, over a
+ * find-only engine double holding the stored row.
+ */
+async function servedRequestRow(): Promise<AnyRec> {
+  const tables: Record<string, AnyRec[]> = {
+    sys_approval_request: [{
+      id: 'req_1',
+      organization_id: 't1',
+      process_name: 'flow:expense_review',
+      object_name: 'expense_report',
+      record_id: 'exp_1',
+      submitter_id: SUBMITTER,
+      status: 'pending',
+      current_step: 'finance',
+      pending_approvers: 'finance_user',
+      payload_json: JSON.stringify(SNAPSHOT),
+      created_at: '2026-08-01T00:00:00Z',
+    }],
+    expense_report: [{ ...SNAPSHOT, organization_id: 't1' }],
+  };
+  const matches = (row: AnyRec, where: AnyRec | undefined): boolean =>
+    Object.entries(where ?? {}).every(([k, v]) => {
+      if (k === '$or') return (v as AnyRec[]).some((w) => matches(row, w));
+      if (k === '$and') return (v as AnyRec[]).every((w) => matches(row, w));
+      if (v != null && typeof v === 'object' && '$in' in v) return (v.$in as unknown[]).includes(row[k]);
+      return row[k] === v;
+    });
+  const engine = {
+    async find(object: string, options?: AnyRec) {
+      return (tables[object] ?? []).filter((r) => matches(r, options?.where ?? options?.filter)).map((r) => ({ ...r }));
+    },
+  };
+  const row = await new ApprovalService({ engine: engine as any })
+    .getRequest('req_1', { userId: SUBMITTER, tenantId: 't1', positions: [], permissions: [] } as any);
+  expect(row, 'the submitter reads their own request').not.toBeNull();
+  return row as AnyRec;
+}
+
 describe('sys_approval_request detail page — served through the manifest', () => {
   it('the plugin manifest carries the page in `pages`', async () => {
     const manifest = await registeredManifest();
@@ -150,9 +199,17 @@ describe('sys_approval_request detail page — the slot map', () => {
     expect((SysApprovalRequest.fields as AnyRec).record_id?.referenceVia).toBe('object_name');
   });
 
-  it('tabs: Details is record:details, Timeline is sys_approval_action as a related list on request_id', () => {
+  it('tabs: Details is record:details then the raw snapshot panel, Timeline is sys_approval_action as a related list on request_id', () => {
     expect(TAB_ITEMS.map((t) => t.label?.en)).toEqual(['Details', 'Timeline']);
-    expect(TAB_ITEMS[0].children).toEqual([{ type: 'record:details' }]);
+    const details = TAB_ITEMS[0].children as AnyRec[];
+    expect(details.map((n) => n.type)).toEqual(['record:details', 'record:json']);
+    expect(details[0]).toEqual({ type: 'record:details' });
+    // The panel: the parsed request snapshot, gated on the platform-scope
+    // capability the inbox side sheet's raw panel is gated on. Its label is
+    // copy, so only its locales are held here.
+    const { label, ...panel } = details[1].properties as AnyRec;
+    expect(panel).toEqual({ field: 'payload', requiredPermissions: ['studio.access'] });
+    expect(Object.keys(label).sort()).toEqual(Object.keys(ApprovalsTranslations).sort());
     const [timeline] = TAB_ITEMS[1].children as AnyRec[];
     expect(timeline.type).toBe('record:related_list');
     expect(timeline.properties).toMatchObject({ objectName: 'sys_approval_action', relationshipField: 'request_id' });
@@ -177,6 +234,23 @@ describe('sys_approval_request detail page — the slot map', () => {
     expect(nodesOf(SLOTS).map((n) => n.type).filter((t) => t === 'record:discussion' || t === 'record:chatter')).toEqual([]);
     const actions = (SysApprovalRequest.actions ?? []) as AnyRec[];
     expect(actions.find((a) => a.name === 'approval_comment')?.locations).toEqual(['record_section']);
+  });
+});
+
+describe('sys_approval_request detail page — the raw snapshot panel draws a key the request read serves', () => {
+  // `record:json`'s `field` is not judged against the object's fields at
+  // publish (the key it exists for is served beside them), so a key the
+  // request read does not serve draws nothing, and nothing says so.
+  it('the request read serves the parsed snapshot under the panel\'s `field`, and never the stored column', async () => {
+    const panels = nodesOf(SLOTS).filter((n) => n.type === 'record:json');
+    expect(panels).toHaveLength(1);
+    const { field } = panels[0].properties as AnyRec;
+    const row = await servedRequestRow();
+    expect({ field, served: row[field] }).toEqual({ field, served: SNAPSHOT });
+    // `payload_json` is the declared column the stored row holds; the read
+    // serves its parse as `payload`, never the column under its own name.
+    expect(Object.keys(SysApprovalRequest.fields)).toContain('payload_json');
+    expect(row).not.toHaveProperty('payload_json');
   });
 });
 

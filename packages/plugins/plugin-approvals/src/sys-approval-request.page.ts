@@ -38,6 +38,11 @@ import type { Page } from '@objectstack/spec/ui';
  *    authored rather than `details` because the console builds the tab strip
  *    from `tabs` when both are present; the details body therefore lives in
  *    the first tab here, and the page authors no `details` slot.
+ *  - The Details tab ends with the request snapshot's raw JSON: a
+ *    `record:json` block on `payload`, the parsed snapshot the request read
+ *    (`GET /approvals/requests/:id`) serves; the stored column `payload_json`
+ *    is never served under its own name. It is a platform operator's debug
+ *    view, gated on `studio.access`, and never the approver's read path.
  *  - `discussion: []` removes the generic discussion thread. A request's
  *    thread is its timeline, and its reply is the declared `approval_comment`
  *    action, which the service stores as a `sys_approval_action` row the
@@ -82,7 +87,17 @@ export const SysApprovalRequestDetailPage: Page = {
           {
             label: { en: 'Details', 'zh-CN': '详情', 'ja-JP': '詳細', 'es-ES': 'Detalles' },
             icon: 'file-text',
-            children: [{ type: 'record:details' }],
+            children: [
+              { type: 'record:details' },
+              {
+                type: 'record:json',
+                properties: {
+                  field: 'payload',
+                  label: { en: 'Raw data (JSON)', 'zh-CN': '原始数据（JSON）', 'ja-JP': '生データ（JSON）', 'es-ES': 'Datos sin procesar (JSON)' },
+                  requiredPermissions: ['studio.access'],
+                },
+              },
+            ],
           },
           {
             label: { en: 'Timeline', 'zh-CN': '时间线', 'ja-JP': 'タイムライン', 'es-ES': 'Cronología' },
