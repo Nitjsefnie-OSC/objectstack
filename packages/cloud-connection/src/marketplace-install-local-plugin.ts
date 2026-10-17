@@ -2525,6 +2525,12 @@ export class MarketplaceInstallLocalPlugin implements Plugin {
      * refused first, with the install route's `422 OS_PROTOCOL_INCOMPATIBLE`
      * ({@link refuseProtocolIncompatibleEntry}): ahead of the side effects,
      * because both of those answers are decided after them.
+     *
+     * [#24040] An entry the handshake admits is then converted forward once
+     * (ADR-0087 D2, {@link convertPackageBodyForward}), as the install and the
+     * rehydrate convert it, so the side effects reload the same translations
+     * and seed the same datasets the other two loads of that body do. A body
+     * with no declared range comes back unchanged.
      */
     private handleReseed = async (c: any, ctx: PluginContext): Promise<Response> => {
         const admission = await this.requireInstallCapability(c, ctx, 'Reseeding sample data');
@@ -2548,7 +2554,15 @@ export class MarketplaceInstallLocalPlugin implements Plugin {
         const incompatible = this.refuseProtocolIncompatibleEntry(c, entry);
         if (incompatible) return incompatible;
 
-        const summary = await this.applySideEffects(ctx, entry.manifest, { seedNow: true, c, door: 'reseed' });
+        // [#24040] ADR-0087 D2 — a reseed is a load of the ledger body too: the
+        // body is converted forward ONCE here ({@link convertPackageBodyForward}),
+        // after the handshake above judged the entry as stored, exactly as the
+        // install and the rehydrate convert it, and that converted body is what
+        // the side effects reload (its translations) and seed (its datasets).
+        // The ledger keeps the body as installed: `entry` is written back below
+        // with its `manifest` untouched.
+        const converted = this.convertPackageBodyForward(ctx, entry.manifest);
+        const summary = await this.applySideEffects(ctx, converted, { seedNow: true, c, door: 'reseed' });
         // [ADR-0123 D2 / D4] A walled session with no active organization: the
         // reseed is a tenant-scoped write with no organization to write under.
         if (summary.seeded.mode === 'refused') {
@@ -2779,20 +2793,23 @@ export class MarketplaceInstallLocalPlugin implements Plugin {
     };
 
     /**
-     * ADR-0087 D2 for this plugin's two loads of a ledger body — the install
-     * and the rehydrate. The body is data at rest (a published artifact), so it
-     * replays the versioned forward conversion inside the window its own
-     * `engines.protocol` opens, through the engine's ONE registration-door entry
-     * point (`ObjectQL.convertPackageBodyForward`), reused here, never
-     * re-derived: a body with no declared range comes back by reference, and the
-     * named warning is the engine's own.
+     * ADR-0087 D2 for this plugin's three loads of a ledger body — the install,
+     * the rehydrate and the reseed ({@link handleReseed}, #24040). The body is
+     * data at rest (a published artifact), so it replays the versioned forward
+     * conversion inside the window its own `engines.protocol` opens, through the
+     * engine's ONE registration-door entry point
+     * (`ObjectQL.convertPackageBodyForward`), reused here, never re-derived: a
+     * body with no declared range comes back by reference, and the named warning
+     * is the engine's own.
      *
-     * Converted once per load and handed to EVERY reader of that load —
-     * `manifest.register`, {@link bindArtifactHandlers}, {@link applySideEffects}
-     * and the sample-data heal — so none of them reads the raw bytes while the
-     * registry holds the converted copy. `register` meets the same entry point
-     * again, which hands an already-converted body back by reference with no
-     * second warning.
+     * Converted once per load and handed to EVERY reader of that load — on the
+     * install and the rehydrate `manifest.register`, {@link bindArtifactHandlers},
+     * {@link applySideEffects} and the rehydrate's sample-data heal; on the
+     * reseed {@link applySideEffects} alone, since it neither registers nor
+     * binds — so none of them reads the raw bytes while the registry holds the
+     * converted copy. On the two loads that register, `register` meets the same
+     * entry point again, which hands an already-converted body back by reference
+     * with no second warning.
      *
      * An engine without that door (not ObjectQL) is handed the body as before.
      */
