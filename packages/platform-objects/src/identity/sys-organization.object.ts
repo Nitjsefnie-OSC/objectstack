@@ -207,6 +207,7 @@ export const SysOrganization = ObjectSchema.create({
       requiresFeature: 'multiOrgEnabled',
       // Names what is lost (#24021's copy half, ruling 6228318638 item 2).
       confirmText: 'Leave this organization? You will lose access to its environments and members.',
+      disabled: "'org_owner' in current_user.positions && record.owner_count == 1",
       successMessage: 'You have left the organization',
       refreshAfter: true,
     },
@@ -397,6 +398,18 @@ export const SysOrganization = ObjectSchema.create({
       required: false,
       group: 'Group Structure',
       description: 'Display order among sibling organizations. Presentation only.',
+    }),
+
+    owner_count: Field.summary({
+      label: 'Owners',
+      readonly: true,
+      summaryOperations: {
+        object: 'sys_member',
+        field: 'id',
+        function: 'count',
+        filter: { role: { $contains: 'owner' } },
+      },
+      group: 'System',
     }),
 
     // ── System ───────────────────────────────────────────────────
