@@ -2,8 +2,8 @@
   "number": 24127,
   "kind": "issue",
   "title": "[Decision] checklist-test files one open qa-run issue per re-run: 40 of 42 open qa-run issues are re-runs that verified ledger edits. Keep, one record per batch, or file only on a problem?",
-  "state": "open",
-  "state_reason": null,
+  "state": "closed",
+  "state_reason": "completed",
   "draft": null,
   "author": {
     "login": "objectstack-fleet[bot]",
@@ -13,18 +13,23 @@
   "labels": [
     "area:devpath",
     "domain:skills",
-    "pm:queue",
     "priority:p2"
   ],
-  "assignees": [],
+  "assignees": [
+    "marchtian"
+  ],
   "milestone": null,
   "type": null,
   "created_at": "2026-10-17T01:34:49Z",
-  "updated_at": "2026-10-17T07:55:46Z",
-  "closed_at": null,
-  "closed_by": null,
+  "updated_at": "2026-10-17T14:00:38Z",
+  "closed_at": "2026-10-17T13:58:40Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
   "merged_at": null,
-  "comments": 3,
+  "comments": 8,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/24127",
   "body": "Filed by the `domain:devx` seat 2 (#20163) · `os-sales` · `session_016PVjjuVPte5XEJvaQx1E4t`, at the maintainer's word in this session's chat, verbatim: 「这个技能有问题吧？创建了一堆无用的卡。」, then 「你开个决策卡吧」. ⛔ Not a claim. The change lands in `.claude/skills/checklist-test/**`, a `domain:skills` file (Tier S).\n\n### 维护者速读\n\n- **一句话问题：** `checklist-test` 规定每跑一次就开一张 `qa-run` issue，跑完不收口就一直开着。今天各 PR 为了验证清单修订做的单项重测，开出了一大堆 issue。现在开着的 42 张 `qa-run` 里，有 40 张是这么来的；其中 32 张只测了 1 项，28 张全部通过。\n- **选项：**\n  - **A** 维持现状，席位按时收口，全通过的立刻关。\n  - **B**（分诊建议）单项重测合成每批一张记录，比如 #24036 每个半边一张，开头放一张\"项 → 判定\"索引表。\n  - **C**（你的提法）验证类重测全部通过时不开 issue，证据写进 PR 正文；只有出问题才开卡。整轮测试（发版候选、整区测试、你点名的目标）仍然每轮一张记录。\n- **推荐 C**，备选 B。\n- **请回：** `A / B / C`。\n\n### Facts (read at 2026-10-17T01:30Z, `labels=qa-run`, open)\n\n- **42 open records.** 40 come from this seat's dispatches on 2026-10-16 and 2026-10-17. The other 2 are #23163 and #23166, from 2026-10-13.\n  - #23950 (PR #24000): #23995–#23999.\n  - #23992 (PR #24012): #24011.\n  - #24036 half A (PR #24118): 8 area records, #24104–#24109, #24111 and #24114. Each is a scoped re-run, all PARTIAL and NOT-RUN by design.\n  - #24036 half B (running): 26 one-item records, #24074–#24125.\n- **32 of the 40 are one-item `(1/1)` records.** 28 of those are all-PASS. Of the rest, 1 is a FAIL whose defect was already extracted (objectstack-ai/objectui#12744), and 3 are PARTIAL.\n- **The re-runs were verification:** each checked a clause the same PR re-pointed. The evidence is already in two other places: the item's `history` row, which names the PR, and the PR body.\n- **The seat's share:** the dispatches said \"post the `qa-run` record(s) the skill prescribes\", and the seat had not done the §5 close-out. Six records from landed work were closed at 2026-10-17T01:25Z, with their close-out lines. Half B was told to stop filing records while this card is open.\n\n### Governing text\n\n- `.claude/skills/checklist-test/SKILL.md` §4: each run files an issue with `POST …/issues`, label `qa-run` only, and the title `QA run · <selector> (<judged>/<total>) · <sha8> · <date> · <counts>`.\n- Its Guardrails: 「一个选择器、一次运行、一张 issue」.\n- §5: 「开着的 `qa-run` 数 = 未清的收口债 … ⛔ 永不靠关掉记录让它变好看」. A record closes only when every `fail` has a disposition (Extracted / Parked-on / Superseded-by / Carried-forward) and every `partial` gap is named.\n- §5 retest triggers: (1) a release candidate, a full Tier 1 re-run; (2) a QA-extracted fix landing, with the affected items added to the wave anchor's retest list; (3) a maintainer-named target. A ledger re-point's verification re-run is none of the three, yet each such re-run files a record today.\n- `docs/qa/platform-checklist/RUNNER.md` \"The record title\" holds the title grammar that `qa-rollup` parses.\n\n### Options\n\n| Option | What changes | What an author, a runner or a seat sees | Effort |\n|:--|:--|:--|:--|\n| **A** keep | Nothing in the skill. The seat closes all-PASS records at once and closes the rest out per §5. | N issues are still filed per batch, then closed in bulk. The issue list churns, and the open count drops only if every seat closes out on time. | 0 PRs; recurring seat writes |\n| **B** one record per batch | §4 and the Guardrails allow ONE record per dispatched batch (one PR) covering many selectors, with an item → verdict index table first. | One issue per PR batch instead of one per item. Per-item lookup means reading that record's index. | One `domain:skills` PR, about 1 h |\n| **C** file only on a problem | Verification re-runs of a ledger edit file no `qa-run` issue when every clause passes. The per-item evidence goes in the PR body. A `fail` that is a product defect becomes a defect card, as today; one caused by a stale clause is fixed in the same diff. Sweeps (release candidate, area or `all` run, maintainer-named target) still file one record per run, B's shape. | Verification re-runs leave no issue. Their evidence is in the PR and the item's `history` row. The open `qa-run` count then means real sweep close-out debt again. | One `domain:skills` PR, about 1 h. It must say whether `qa-rollup` should read PR-body evidence (recommend: no) |\n\n### Four-axis analysis\n\n- **Long-term fit (leads):** the open `qa-run` count is meant as a health signal (§5). A verification re-run that passed has no close-out debt, so an open issue for it is noise in that signal. C keeps the signal true, B halves the noise, and A depends on discipline.\n- **Business pull:** measured. 40 issues in about 8 hours from three dispatches, and the maintainer read the open-issue list as cluttered.\n- **AI-proofing:** under C, a passing re-run cannot be dropped silently, because the PR body must carry the per-item table, and the item's `history` row names the PR that the reviewing seat reads. A failure still becomes a card. B leaves AI dispatches filing one issue per batch, and A leaves the open count dependent on every seat remembering §5.\n- **Startup focus:** C is a doc change that removes writes and adds no gate. B is the same size. A costs nothing to change, but the cost recurs.\n\nos-decision-facets\n- ① 项目长远合理性：C 让「开着的 qa-run 数」重新只代表整轮测试的收口债；B 把噪音减半；A 靠每个席位按时收口。\n- ② 实际业务拉动：实测约 8 小时、3 次派发开出 40 张；维护者在 issue 列表里直接看到了这堆卡。\n- ③ 防 AI 犯错：C 要求 PR 正文带逐项表，条目的 history 行指向这个 PR，失败照样开卡，通过的重测丢不掉；A 靠每个 AI 席位都记得收口。\n- ④ 创业阶段不扩散：B 和 C 都只改文档、减少写入、不加门禁；A 改动为零，但每批都要重复收口。\nPrior rulings read: qa-run,checklist-test,run-record,close-out,收口 → 0 hits (`check-prior-rulings.mjs`); none; thread: none (new card)\n\n**Recommendation: C.** Fallback: **B**.\n**Confidence gap:** whether `qa-rollup` or another reader counts verification re-runs is not measured here. The skills seat checks it before the edit.\n\n### After the ruling\n\n- **C or B:** one `domain:skills` card edits `.claude/skills/checklist-test/SKILL.md` §4, §5 and the Guardrails, plus RUNNER.md if the title grammar needs a batch form. Until it lands, this seat's dispatches follow the ruled letter.\n- **Any letter:** this seat closes out its 40 open records under the ruled rule: all-PASS records with one close-out line, and the PARTIAL and FAIL ones per §5.\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_"

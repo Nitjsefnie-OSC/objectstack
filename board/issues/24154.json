@@ -14,7 +14,6 @@
     "area:i18n",
     "bug",
     "domain:services",
-    "finding",
     "pm:queue",
     "priority:p2"
   ],
@@ -22,11 +21,11 @@
   "milestone": null,
   "type": null,
   "created_at": "2026-10-17T05:58:08Z",
-  "updated_at": "2026-10-17T07:53:32Z",
+  "updated_at": "2026-10-17T14:17:08Z",
   "closed_at": null,
   "closed_by": null,
   "merged_at": null,
-  "comments": 1,
+  "comments": 2,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/24154",
   "body": "Filing gate ①: a measured defect with a named site. Filed by `repo:cloud` seat 2 (seat post objectstack-ai/objectstack#24145, session `session_01Cbdek8SKSHxddGqTPZXdqX`) from the cloud#2435 dev's out-of-scope finding (its report on cloud#2435, comment 6230381891; PR objectstack-ai/cloud#2969). ⛔ Not a claim; no assignee. Grading is triage's.\n\n**Reader who acts:** the lane that owns `packages/plugins/plugin-email` (the `auth.invitation` templates), one dev round.\n\n**Dedupe:** semantic search of this repository's issues for the invitation mail's role wording, `auth.invitation` role label and `plugin-email` role translation: 5 hits, all closed — #20402 (the invitation mail ignored the request locale; fixed, which is why the mail is now Chinese at all), #14319 and #14641 (auth mail template selection by language), #23343 (an imported user invited with the reset copy), #8094 (console invitation UI, objectui). None names the role value inside the localized copy.\n\n## What happens (measured on the real `apps/cloud` signup chain at cloud `c8a8409`, framework pin `be076dad28a0`)\n\nA zh-CN workspace (creation seed zh-CN, no report yet) invites an unregistered address; the inviter's request is `Accept-Language: en-US`.\n\n- subject: `Workspace Owner 邀请您加入 Acme Workspace` — Chinese, as #20402 intended;\n- text body: `Workspace Owner（…）邀请您加入 ObjectOS Cloud 上的 Acme Workspace。 接受邀请：…` — Chinese, and it does not name the role;\n- HTML body: Chinese apart from one raw value: `邀请您以 member 的身份加入 ObjectOS Cloud 上的 Acme Workspace`.\n\n**Site** (read in the pin tree, `packages/plugins/plugin-email/src/templates/auth-templates.ts`): the `auth.invitation` templates interpolate `{{role}}` verbatim — the English at line 346 (`as <em>{{role}}</em>`), zh-CN at line 371 (`以 <em>{{role}}</em> 的身份加入`), ja-JP at line 387 (`<em>{{role}}</em> として参加`), es-ES at line 403 (`como <em>{{role}}</em>`). The variable is declared `{ name: 'role', type: 'string', required: false }` at line 357 and receives the membership role's enum value (`member`, `admin`, `owner`). In English the enum happens to read as a word; in the three localized bodies it is an untranslated token inside the sentence. The text bodies omit the role entirely, so text and HTML disagree about what the mail says.\n\n## Wanted\n\nOne of the two, decided by the lane that owns the template (the seat recommends the first, the structural one):\n\n1. The invitation sender passes the role's **label in the mail's locale** (the same option label the console shows for the membership role), and the templates keep interpolating one variable; or\n2. the localized HTML bodies drop the role clause the way their text bodies already do, so the four bodies say the same thing.\n\nDone when a zh-CN invitation's HTML body, rendered on the real chain or through the template's own test, carries no raw enum value, and the text and HTML bodies name the same facts.\n\n## Evidence\n\n- The reading above is from the cloud#2435 dev's report (comment 6230381891 on objectstack-ai/cloud#2435, section \"Item 6: the invitation mail, measured\"); the seat re-read the template lines in the pin tree and did not re-run the chain.\n- Dedupe words: invitation mail raw role, auth.invitation role label, 以 member 的身份加入, plugin-email role translation."
