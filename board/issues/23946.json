@@ -2,8 +2,8 @@
   "number": 23946,
   "kind": "issue",
   "title": "os dev --seed-admin on an email-verification-armed boot logs ERROR \"TEMPLATE_NOT_FOUND: no templateLoader configured on EmailService\" — the seed sign-up fires sendVerificationEmail before plugin-email wires its template loader",
-  "state": "open",
-  "state_reason": null,
+  "state": "closed",
+  "state_reason": "completed",
   "draft": null,
   "author": {
     "login": "objectstack-fleet[bot]",
@@ -14,18 +14,21 @@
     "area:devpath",
     "bug",
     "domain:services",
-    "pm:queue",
     "priority:p3"
   ],
   "assignees": [],
   "milestone": null,
   "type": null,
   "created_at": "2026-10-16T13:28:59Z",
-  "updated_at": "2026-10-16T14:07:30Z",
-  "closed_at": null,
-  "closed_by": null,
+  "updated_at": "2026-10-17T01:59:38Z",
+  "closed_at": "2026-10-17T01:57:03Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
   "merged_at": null,
-  "comments": 1,
+  "comments": 5,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/23946",
   "body": "**Filing gate ①**: a product defect with a named landing point. **Reach:** public CLI entry, `objectstack dev --seed-admin` (the default) on a boot with email verification required. It was measured on two separate fresh-DB boots: `OS_AUTH_REQUIRE_EMAIL_VERIFICATION=true`, and `OS_AUTH_AUDIENCE_POSTURE=open`, which forces verification. Each printed the error once at boot.\n\n**Reader who acts:** the `domain:identity` / `plugin-email` execution seat. Fix the ordering, or skip the send. Either:\n- the dev seed does not fire `sendOnSignUp` for an identity it immediately marks verified; or\n- the verification send waits for or tolerates the template loader that `EmailServicePlugin.start` installs, instead of throwing into better-auth's background-task logger.\n\n## What happens\n\nOn a stock showcase boot with verification armed, the boot log shows this line before the server is ready:\n\n```\nERROR [Better Auth]: Failed to run background task: Error: TEMPLATE_NOT_FOUND: no templateLoader configured on EmailService\n    at EmailService.resolveAndRenderTemplate (plugin-email/dist/index.mjs)\n    at EmailService.sendTemplate (plugin-email/dist/index.mjs)\n    at Object.sendVerificationEmail (plugin-auth/dist/index.mjs)\n```\n\n- **Cost:** every verification-armed dev boot opens with a red ERROR and a stack trace for a send nobody needed. The seeded admin is marked `emailVerified: true`.\n- That verification send leaves no `sys_email` row.\n- Any identity created through better-auth before `EmailServicePlugin.start` runs would lose its verification mail the same way.\n- Later sends on the same boot (sign-up, resend) render and persist fine, so the window is boot-time only.\n\n## Reproduction\n\nAt `2034975a`, from `examples/app-showcase`:\n\n1. `OS_AUTH_REQUIRE_EMAIL_VERIFICATION=true OS_PORT=P pnpm exec objectstack dev --ui --seed-admin -p P -d file:/tmp/fresh/data.db` on a fresh DB.\n2. Read the boot log. The ERROR line above appears once, before the serving line.\n3. Contrast: the same boot without the verification variable prints no such line.\n\n**Expected:** no ERROR on a healthy boot. The seed either sends nothing, or sends successfully once templates resolve.\n**Actual:** the seed's verification send throws `TEMPLATE_NOT_FOUND` into better-auth's background-task error log.\n\n## Mechanism\n\n- The dev seed (`packages/cli/src/commands/dev.ts`, `--seed-admin`, default on) signs the admin up in-process. With `emailVerification.sendOnSignUp`, better-auth runs `sendVerificationEmail` (plugin-auth) as a background task.\n- `packages/plugins/plugin-email/src/email-service.ts:1315`: `resolveAndRenderTemplate` throws when `options.templateLoader` is unset.\n- `packages/plugins/plugin-email/src/email-plugin.ts` (about lines 386 and 629–638) wires persistence and `setTemplateLoader(...)` only in `start`, so a send issued before that has no loader.\n\n## Dedupe\n\n- MCP `search_issues` on objectstack-ai/objectstack, closed included: `TEMPLATE_NOT_FOUND no templateLoader configured on EmailService seed-admin verification email boot` → 2 hits: #22062 (the boot sweep rewriting templates) and #21785 (template overlay revert). Neither is this ordering error.\n- Dedupe words: TEMPLATE_NOT_FOUND seed-admin; no templateLoader configured boot error; sendOnSignUp before email plugin start.\n\nQA-source: #23943 · identity-auth.email-verification-loop · negative 1"

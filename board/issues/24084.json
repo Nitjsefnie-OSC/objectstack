@@ -1,0 +1,36 @@
+{
+  "number": 24084,
+  "kind": "pull_request",
+  "title": "fix(showcase): the Status × Priority matrix subtitle names the estimated hours its cells hold",
+  "state": "closed",
+  "state_reason": null,
+  "draft": false,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "size/s",
+    "skip-changeset",
+    "tests"
+  ],
+  "assignees": [
+    "os-elon-musk"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-16T23:56:30Z",
+  "updated_at": "2026-10-17T00:30:47Z",
+  "closed_at": "2026-10-17T00:30:44Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": "2026-10-17T00:30:44Z",
+  "comments": 1,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/pull/24084",
+  "body": "Fixes #23931\nClause-②: no. The text of an example app's report changes. No export, type or accept set moves.\n\n## What\n\nThe showcase report `showcase_status_priority_matrix` (\"Status × Priority (Matrix)\") showed the subtitle \"Task counts cross-tabulated by status and priority.\" Its cells are `values: ['est_hours']`, which is a `sum` of `estimate_hours`. The subtitle now reads **\"Estimated hours cross-tabulated by status and priority.\"** The measure, the dataset and the renderer are unchanged.\n\n## Why hours and not counts\n\nThe subtitle was wrong. The measure was not.\n\n- `est_hours` is declared in `examples/app-showcase/src/ui/datasets/chart-gallery.dataset.ts` as `{ name: 'est_hours', label: 'Estimated Hours', aggregate: 'sum', field: 'estimate_hours' }`.\n- The matrix has summed hours since the report was first written. At `e136adaaeb`, the commit that added the showcase, it had `columns: [{ field: 'estimate_hours', label: 'Hours', aggregate: 'sum' }]` next to the same \"Task counts\" text. The ADR-0021 dataset migration (`7f2510ca30`, \"cell values identical\") and the D2 true pivot (`b9062c990e`) both kept `est_hours`. So the description was wrong from the first commit, and the cells were never counts.\n- A count matrix over the same two dimensions already exists. The Chart Gallery's `pivot_tasks` widget (`src/ui/dashboards/chart-gallery.dashboard.ts:93`) has `dimensions: ['status', 'priority'], values: ['task_count']`. Rebinding this report to `task_count` would duplicate that widget and remove the showcase's only hours cross-tab.\n- The sibling reports already use this wording: \"Estimated hours grouped by task status.\" and \"Estimated hours by status, plotted as a bar chart.\"\n\n## Translation bundle\n\nThere is nothing to update. Reports have no translation group: `packages/spec/src/system/translation.zod.ts` maps the retired `reports` key to \"reports have no translation group, omit them\". The showcase bundle `src/system/translations/index.ts` has no report entry. A repo-wide grep finds the old string only at `src/ui/reports/index.ts:29`.\n\n## Pin\n\n`examples/app-showcase/test/report-description-measure.test.ts` checks every showcase report that has a top-level `description` and `values`. It reads the bound dataset's own declarations. It does not compare the subtitle against a copy of the expected text.\n\n1. The description must name a bound measure by its declared `label`, which is the name the cell header shows. For a `count` measure, count words are also accepted.\n2. The description may speak of counts only when a bound measure is a `count`.\n3. An anti-vacuity check: the matrix must be among the graded reports.\n\nJoined reports bind measures per block and have no top-level `values`, so the filter leaves them out. No test is skipped. The test reads its subject from source (`../src/ui/reports/index.js`), so no build sits between a mutation and the run.\n\n**Ablation (one-off; no permanent file).** On the committed fix at `93d1e79c8d`, `scripts/ablation-replace.mjs` put today's text back and ran the file:\n\n- Mutation on disk: anchor 1 to 0, replacement 0 to 1, blob `28b7ce4486cc` to `1054fbd9a08b`.\n- Red, as expected: `× showcase_status_priority_matrix: the description names a bound measure` and `× showcase_status_priority_matrix: the description claims no count its cells do not hold`, giving `Tests  2 failed | 5 passed (7)`.\n- Restore proven: blob equals HEAD (`28b7ce4486cc`) and `git diff HEAD` is empty.\n\n## Verification at `103c1b6e7d` (after merging `origin/main` `8133cc7805`)\n\n- `pnpm --filter @objectstack/example-showcase typecheck` exits 0. `tsc --listFiles` includes the new test file (1 hit).\n- `pnpm --filter @objectstack/example-showcase exec vitest run --maxWorkers=2` exits 0: `Test Files  34 passed (34)`, `Tests  422 passed (422)`.\n- `node scripts/pm/dispatch-gates.mjs --commands --repo objectstack-ai/objectstack` derives 42 commands. All 42 exited 0 on this head. The `--ran` reconciliation reports `42 derived, 42 run, 0 NOT-MEASURED, 0 UNRUN`, a derived zero with every exit code recorded. On the pre-merge head `93d1e79c8d`, `check:dual-build-cjs-loads` first answered PREREQUISITE NOT MET (exit 3), because eight packages outside this diff had no `dist/`. After building them it exited 0, and that first run is not counted as a measurement.\n- `test:repo` was not run locally. It belongs to CI, which runs it under `Test Core`, and this diff touches no file of that project.\n\n## Scope and exclusions\n\n- The dataset (`chart-gallery.dataset.ts`) and the renderer are not touched. Both are correct.\n- There is no changeset: `@objectstack/example-showcase` is `\"private\": true` and publishes nothing, so this PR carries `skip-changeset`.\n\n## Acceptance notes\n\n- The pin checks report-level subtitles only. Block labels inside the joined report (`Open Tasks` binds `est_hours`, `Completed Tasks` binds `task_count`) name a population, not a quantity, so the pin does not grade them. This is a boundary note, not a defect claim.\n\n---\n_Generated by [Claude Code](https://claude.ai/code/session_018VqJPGA1NDNSCZsnecsChP)_\n"
+}

@@ -1,0 +1,32 @@
+{
+  "number": 24129,
+  "kind": "issue",
+  "title": "spec(ai): `BlueprintViewSchema` and `StrictView` declare `filters` (ViewFilterRule[]) and `sort`, so an AI-built view carries its own filter (ruling A on cloud#2932)",
+  "state": "open",
+  "state_reason": null,
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "area:ai",
+    "domain:spec",
+    "pm:queue",
+    "priority:p1",
+    "target:v18"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-17T01:44:55Z",
+  "updated_at": "2026-10-17T01:44:55Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 0,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/24129",
+  "body": "Filed by the director seat (summon #43 continuation 3, `session_01QJC7i981TSs9L1CGJK59Ax`) on the maintainer's ruling A on objectstack-ai/cloud#2932 (batch #358 item 5, 「2932 同意」; the ruling record is that card's `Ruled:` line). ⛔ Not a claim. Filing gate ①: a measured gap in a published declaration with a named producer and consumer.\n\n## What is measured (objectstack `origin/main` `be076dad28a0`)\n- `packages/spec/src/ai/solution-blueprint.zod.ts:113` `BlueprintViewSchema` and `:341` `StrictView` carry `object`, `name`, `label`, `type`, `columns`, `groupBy` — no `filters`, no `sort`. A plan can say 「overdue only」 in a view's name and nowhere else, so `apply_blueprint` ships an unfiltered grid and `verify_build` passes it (objectstack-ai/cloud#2922: 12 rows shown where the plan promised 3, on staging).\n- `ViewFilterRuleSchema` (`packages/spec/src/ui/view.zod.ts`) is the declared rule format `ListView.filter` already uses; views declare `sort` too. Nothing new is invented.\n- objectstack-ai/cloud PR #2931 carries a temporary `.extend()` of both schemas in cloud (`tools/plan-view-intent.ts`), the bounded exception ruling A allows until this card lands; its removal card is filed on the cloud board in the same act and is `Blocked-by:` this card.\n\n## Scope\n1. `BlueprintViewSchema`: `filters` (an array of `ViewFilterRuleSchema`, optional) and `sort` (the shape `ListView` declares) in the loose shape.\n2. `StrictView`: the same two keys in the strict, model-facing shape — nullable per the strict pattern, so the model states a view's filter or says null; the descriptions tell the model that a view named by a condition (「overdue」, 「my open」) must carry the matching filter.\n3. The strict/loose conformance test (`solution-blueprint.test.ts`, the key-set parity) extended to the view shape; the published strict JSON schema regenerates.\n4. `Clause-②: yes (widening)`; `minor` changeset for `@objectstack/spec`. No consumer other than cloud's `propose_blueprint` / `apply_blueprint` is affected (measured on the card: the blueprint schema's only producer and consumer).\n\n## Done when\n- Both schemas declare the keys; the parity test is green; the published strict JSON schema carries `filters` and `sort` on views.\n- The cloud removal card can start (the pin bump then deletes the cloud extension and imports from `@objectstack/spec/ai`).\n\nRelated: objectstack-ai/cloud#2932 (the ruling), objectstack-ai/cloud#2922 and its PR #2931 (the defect and the interim fix), objectstack-ai/cloud#2150 (the precedent: navigation `viewName`, spec first, then the pin)."
+}

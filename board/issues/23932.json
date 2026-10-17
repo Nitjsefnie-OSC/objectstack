@@ -2,8 +2,8 @@
   "number": 23932,
   "kind": "issue",
   "title": "rest: a declared client refusal (400 ERR_FILE_CONSTRAINT on a record write, 422 INVALID_METADATA on a metadata save) is logged as \"[REST] Unhandled error\" with a full stack trace on every request",
-  "state": "open",
-  "state_reason": null,
+  "state": "closed",
+  "state_reason": "completed",
   "draft": null,
   "author": {
     "login": "objectstack-fleet[bot]",
@@ -14,7 +14,6 @@
     "area:api",
     "bug",
     "domain:cli",
-    "pm:dispatched",
     "priority:p3"
   ],
   "assignees": [
@@ -23,11 +22,15 @@
   "milestone": null,
   "type": null,
   "created_at": "2026-10-16T13:07:42Z",
-  "updated_at": "2026-10-16T19:32:16Z",
-  "closed_at": null,
-  "closed_by": null,
+  "updated_at": "2026-10-16T21:28:09Z",
+  "closed_at": "2026-10-16T21:26:30Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
   "merged_at": null,
-  "comments": 2,
+  "comments": 5,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/23932",
   "body": "**Filing gate ①** — product defect with a named landing point and a live reproduction. Reach: public entry — the `/api/v1/data` and `/api/v1/meta` HTTP doors, measured on a stock showcase boot: every refused write prints an error-level `[REST] Unhandled error:` line plus a stack trace in the server log.\n\n**Reader who acts:** the seat that owns `packages/rest` (error classification door), in the PR that extends `isExpectedRouteError` in `packages/rest/src/error-response.ts`.\n\n## What happens\n\n`logUnexpectedRouteError` logs `[REST] Unhandled error` unless `isExpectedRouteError(status, body)` is true or the error is a declared 5xx refusal (`declaredRefusalMessage`). `isExpectedRouteError` admits only 403/404/409/502/503, the query-rejection codes (`UNSUPPORTED_QUERY_PARAM`, `INVALID_FIELD`, `INVALID_REQUEST`, `INVALID_FILTER`, `INVALID_SORT`, `INVALID_QUERY`) and `VALIDATION_FAILED`. Two coded, producer-declared client refusals fall outside that list, so each one is logged as a server fault:\n\n| door | refusal on the wire | log |\n|---|---|---|\n| `POST`/`PATCH /api/v1/data/:object` with a file reference violating a field's declared `accept`/`maxSize` | 400 `{\"error\":\"File type 'application/pdf' is not permitted by the accept list declared for 'poster' (image/png, image/jpeg)\",\"code\":\"ERR_FILE_CONSTRAINT\",\"object\":\"qa_media\"}` | `[REST] Unhandled error: FileConstraintError: …` + 10-frame stack + `{ code: 'ERR_FILE_CONSTRAINT', status: 400, field: 'poster', constraint: 'accept' }` |\n| `PUT /api/v1/meta/:type/:name` with a body that fails spec validation (e.g. a retired translation key) | 422 `{\"code\":\"INVALID_METADATA\",\"issues\":[…]}` | `[REST] Unhandled error: Error: translation/NAME failed spec validation: …` + stack + `{ code: 'INVALID_METADATA', status: 422, issues: […] }` |\n\nThis is the drift class `isExpectedQueryRejection`'s own docblock records (\"the filter and sort codes shipped without joining the list, so every rejection they produced was ALSO logged as an unhandled error\") and #4886 fixed for the metadata 404s: `FileConstraintError` gained a declared `status: 400` (the wire now answers 400 with the prose, not the sanitized 500) without joining the predicate, and `INVALID_METADATA` 422 is the metadata door's per-item validation refusal — the same kind of answer as `VALIDATION_FAILED`, which is already listed. The consequence is operator-facing: a Studio author iterating on a translation or a form widget enforcing accept/maxSize produces one error-level stack per attempt, indistinguishable in the log from a genuine handler fault.\n\n## Reproduction\n\nStock showcase, isolated boot: `OS_PORT=P objectstack dev --ui --seed-admin -p P -d file:DIR/data.db` (main `2034975a`), signed in as the seeded admin.\n\n1. `POST /api/v1/packages` `{\"manifest\":{\"id\":\"com.objectstack.qa.media\",\"name\":\"QA media\",\"version\":\"1.0.0\",\"type\":\"app\"},\"enableOnInstall\":true}` → 201.\n2. `PUT /api/v1/meta/object/qa_media?package=com.objectstack.qa.media` `{\"name\":\"qa_media\",\"label\":\"QA Media\",\"sharingModel\":\"public_read_write\",\"fields\":{\"name\":{\"type\":\"text\",\"label\":\"Name\",\"required\":true},\"poster\":{\"type\":\"image\",\"label\":\"Poster\",\"accept\":[\"image/png\",\"image/jpeg\"],\"maxSize\":1048576}}}` → 200.\n3. Mint a file: `POST /api/v1/storage/upload/presigned` `{\"filename\":\"probe.pdf\",\"mimeType\":\"application/pdf\",\"size\":10240}` → PUT the bytes to `uploadUrl` → `POST /api/v1/storage/upload/complete {\"fileId\":ID}`.\n4. `POST /api/v1/data/qa_media` `{\"name\":\"accept-probe\",\"poster\":ID}` → **400 ERR_FILE_CONSTRAINT** (correct) and the server log prints `[REST] Unhandled error: FileConstraintError: …` with a stack (wrong).\n5. `PUT /api/v1/meta/translation/qa_strict_zh` `{\"name\":\"qa_strict_zh\",\"locale\":\"zh-CN\",\"objects\":{\"showcase_task\":{\"label\":\"x\"}},\"o\":{\"x\":1}}` → **422 INVALID_METADATA** naming the retired `o` key (correct) and the log prints `[REST] Unhandled error: Error: translation/qa_strict_zh failed spec validation: …` with a stack (wrong).\n\nExpected: both refusals are expected client outcomes and print no `[REST] Unhandled error` line (at most the one-line withheld-fault note the door already uses). Actual: one error-level line + stack per request. Measured across two boots of the same DB: 5 `FileConstraintError` and 12 `INVALID_METADATA` stacks, one per refused request.\n\n## Mechanism\n\n- `packages/rest/src/error-response.ts` — `isExpectedRouteError` / `isExpectedQueryRejection` / `isExpectedDataStatus` (the allow-list) and `logUnexpectedRouteError` (the only log decision).\n- `packages/services/service-storage/src/file-reference-lifecycle.ts` — `FileConstraintError` now declares `code: 'ERR_FILE_CONSTRAINT'` + `status: 400`.\n- `packages/metadata-protocol` `saveMetaItem` throws the 422 `INVALID_METADATA` with `issues`.\n\nA fix that keeps the predicate's stated narrowness (\"deliberately NOT any 4xx\") adds the two codes by name, with a pin that a refused accept/maxSize write and a refused metadata save each produce no `[REST] Unhandled error` line.\n\n## Dedupe\n\nMCP `search_issues` on objectstack-ai/objectstack, closed included: `REST Unhandled error logged with stack trace for declared 4xx refusal ERR_FILE_CONSTRAINT INVALID_METADATA isExpectedRouteError` → 7 hits (#22764, #22885, #20603, #14656, #8016, #4886, #11588 — all closed, none covers these two codes); `\"Unhandled error\" log noise expected client error 400 422 stack trace` → 3 hits (#5437, #4886, #5489 — closed, different codes). No open card.\n\nQA-source: #23929 · attachments-storage.field-accept-maxsize-server-enforced · clause 2\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_"

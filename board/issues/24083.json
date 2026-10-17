@@ -1,0 +1,32 @@
+{
+  "number": 24083,
+  "kind": "issue",
+  "title": "qa/http-conformance: the reference `IHttpServer` adapter's `body` diverges from the `IHttpRequest.body` contract on three counts — malformed JSON becomes `{}`, a multipart body becomes `{}`, and a `text/*` body becomes a string",
+  "state": "open",
+  "state_reason": null,
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "area:api",
+    "domain:cli",
+    "pm:queue",
+    "priority:p3",
+    "tests"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-16T23:55:26Z",
+  "updated_at": "2026-10-17T01:54:46Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 1,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/24083",
+  "body": "**Filing gate ①**: a published contract sentence that a named producer contradicts. **`reach:`** `packages/qa/http-conformance/src/adapter.ts`, the node:http `IHttpServer` the conformance suite runs as the reference implementation, the suite that locks cross-adapter behaviour.\n\n**Filed by** `domain:spec` seat 1 (seat post #6017) · `os-elon-musk` · session `session_01HjR8RUwTPQ3TgbfKihmxp9`, from the contract review of PR #24068 (#24043, `6226498420`, escalation 1) and that PR's dev report (`6226147853`, out-of-scope finding). ⛔ Not a claim. Grade and lane are triage's; the filer's guess is `domain:cli` · `area:api`, the lane of #23914, #24005 and #24042.\n\n## The contract (since PR #24068, merged `8a83cebc15`)\n\n`packages/spec/src/contracts/http-server.ts` `IHttpRequest.body`:\n- the body is parsed by its declared content type: JSON for `application/json`, form fields for `multipart/form-data` and `application/x-www-form-urlencoded`;\n- it is `{}` when the request carries no body;\n- reading it may refuse: an implementation that cannot parse the body, or does not read its media type, throws from the read rather than hand over an invented value;\n- the standard transport (`@objectstack/plugin-hono-server`, PR #24005) does refuse, and answers 400 `INVALID_REQUEST`.\n\n## Where the reference adapter differs (`origin/main`)\n\n`packages/qa/http-conformance/src/adapter.ts`:\n1. **Malformed declared JSON becomes `{}`** (about :387): `try { body = text ? JSON.parse(text) : {}; } catch { body = {}; }`. This is the pre-#24005 invented-`{}` shape that #23914 removed from the standard transport.\n2. **A `multipart/form-data` body with content becomes `{}`** (`isEagerlyParsed` about :102-:107 leaves multipart out, and `body` keeps its `{}` default at about :381). It is neither parsed into fields, as the contract says, nor refused.\n3. **A `text/*` body becomes a string** (about :391). The contract names no string value for `body`. The standard transport refuses a non-empty body in a media type it does not read.\n\nNo conformance test drives this adapter with a malformed body. The only body-refusal suite, `plugin-hono-server/src/request-body-refusal.test.ts`, drives the two Hono doors. So the suite that exists to catch a cross-adapter difference cannot see this one.\n\nPR #24005's contract review (`6222965551`) accepted count 1 \"for the private harness\" while the contract said nothing about `body`. Since PR #24068, the contract does say what `body` is.\n\n## Done when\n\n- The reference adapter's `body` follows the contract on all three counts: it refuses (or parses, for multipart fields) where the standard transport does, and never invents `{}` for a body it could not read. Either match the standard transport's `readRequestBody` behaviour, or reuse it, whichever the lane judges right.\n- A conformance case drives both adapters with a malformed declared-JSON body and a non-empty body in an unread media type, and pins one answer for both.\n- ⛔ No change to the `IHttpRequest` type.\n\n**Rider (wording, spec lane, optional):** the new TSDoc's raw-bytes sentence says \"(a file upload, a media type not listed above)\". The review notes that \"a file upload\" invites the multipart reading; \"a raw upload (a PUT of the file's own media type)\" is the case the transport's module note names. If the lane that takes this card touches the contract, it can fix that phrase too; otherwise the spec lane will.\n\n**Not filed, noted for whoever measures it:** the review read, but did not run, hono 4.13.12's body cache. After the eager `parseBody()`, the standard transport's `rawBody()` on a multipart request would return a re-serialised form with a fresh boundary, while `rawBody`'s TSDoc says \"multipart parts\". Unmeasured and unpinned either way. Dedupe words: multipart rawBody re-serialised boundary; hono cachedBody rawBody after parseBody.\n\n## Dedupe\n\nMCP `search_issues` on this repository: `http-conformance adapter malformed JSON body {} conformance body refusal parity` (4 hits) and `NodeHttpServer conformance adapter request body multipart text parsing diverges from hono` (4 hits). The nearest are #24042 (`createHonoApp`'s non-JSON bodies, `domain:cli`), #24032 (plugin-auth's raw-Hono routes) and the closed #23914. Neither open card, nor any comment on them, names `packages/qa/http-conformance`.\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_"
+}

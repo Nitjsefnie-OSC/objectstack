@@ -1,0 +1,28 @@
+{
+  "number": 24114,
+  "kind": "issue",
+  "title": "QA run · cli (9/22) · c91af8ed · 2026-10-17 · 0 PASS / 9 PARTIAL / 0 FAIL / 0 BLOCKED / 13 NOT-RUN",
+  "state": "open",
+  "state_reason": null,
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "qa-run"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-17T01:05:46Z",
+  "updated_at": "2026-10-17T01:05:46Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 0,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/24114",
+  "body": "Targeted re-run for the ledger revisions of #24036 (half A), per `checklist-test` §3: an item whose revision changed a fixture, a step's request or an oracle is re-run once, scoped to what the revision changed. Clauses of those items that the revision did not touch are `skipped` (out of this run's scope), so an item is `pass` only where every clause was driven, and `partial` where the driven clauses passed and the rest were skipped.\n\n## Environment\n\n- framework: objectstack `c91af8ed6` (origin/main at run start), worktree branch `claude/issue-24036-ledger-a`; the branch changes ledger JSON only, no product code\n- console: objectui `f8267df93aba` (this repo's `.objectui-sha`), bundle built at that sha (`check-console-sha` OK)\n- app: showcase under `objectstack dev --ui --seed-admin`, posture `single`, file databases in the run's scratch directory. Boot A port 48731 (stock env, `OS_PORT` exported, `OS_LOG_LEVEL=info` after the first restart). Boot B port 48732 (fresh DB, `OS_SEARCH_PINYIN_ENABLED=false`, `OS_SERVER_TIMING=true`, `OS_AUTOMATION_SCHEDULED_WORK_ENABLED=1`, debug log; later `objectstack start` on the same DB). Port 48733: scratch showcase copy and minimal scratch stacks for build and boot-config legs. Port 48734: a fresh `create-objectstack@next` scaffold\n- seed: stock showcase seed plus the dev admin; QA personas minted by admin invite plus sign-up (`qa-…-24036@verify.test`); area recipes `qa-scratch-authz` (pinned sets `qa_att_reader`, `qa_att_baseline`, `qa_att_editor`), `qa-media-constraints`, `qa-flow-status-doors` and `search:qa-contributor-bound-member` as each item names them\n- window: 2026-10-16 23:08Z to 2026-10-17 01:00Z\n\n## Scope\n\n- selector `cli` (the bare form of `area:cli`): 22 runnable items per `node scripts/checklist-select.mjs area:cli --json`; each row below carries the revision the parser reported\n- judged 9 of 22; the 13 not-run items are the 13 items this card did not revise plus the revised items whose change was wording only (no re-run owed)\n\n## Per-item verdicts\n\n| item | rev | clauses driven | verdict | text oracle evidence |\n|---|---|---|---|---|\n| `cli.hook-body-extraction-gates` | r3 | clauses 0, 6 and the artifact sweep | partial | default build exit 0 with the 8-handler warning block, one reason per hook; --json bodyExtractionWarnings 8; --strict-body exit 1; find hook body api.read |\n| `cli.build-own-contract` | r5 | clause 5 advisory | partial | field key exit 2 / strict:false exit 1 (closed); visibleWhen key under strict:false exit 0 with the Undeclared authoring keys block, key gone from the artifact |\n| `cli.dev-automigrate-policy` | r2 | clauses 0-5 on the restaged drift | partial | off and omitted: three warnings, dump identical; safe: auto-reconciled replace_unique_index only, converged; production: ignore warning, dump unchanged; keyless dev reconciles, os start warns; driver pins 38 passed |\n| `cli.dev-boot-contract` | r5 | config-declared default variant | partial | named datasource + default mapping: Database line names its file; datasource named default refused at build |\n| `cli.migrate-duplicates-inventory` | r7 | step 5 blocker + clause 3 | partial | runtimeIndexPreflight overlay_active blocked, group view qa_dup_view keys empty, rowCount 2; summary 1 blocked / 2 rows; plan names neither |\n| `cli.doctor-health-report` | r3 | config-analysis rows both ways | partial | staged: circular, unused and orphan warnings; malformed view body: Config load skip row; restored: three check rows |\n| `cli.datasource-introspect-codegen` | r5 | step 4 wiring (list-tables, introspect re-run) | partial | customers and orders listed; draft written; namespace qa exit 2 prefix refusal, namespace showcase exit 0 |\n| `cli.scaffold-console-first-paint` | r4 | the port leg (create-objectstack@next) | partial | OS_PORT + -p 48734: console and health 200 there, nothing on 3000; served @objectstack/console 18.0.0-next.2 |\n| `cli.scaffold-first-run` | r5 | skills leg (create-objectstack@next) | partial | 10 skills synced from @objectstack/skills 18.0.0-next.2, set-equal to its dist/skills, no symlinks, no internal skill |\n\nNot run (outside this run's scope, not revised by #24036): 13 items.\n\n## Derived verdicts and gaps\n\n- 0 pass, 9 partial, 0 fail, 0 blocked, 13 not-run. No clause failed, so there is no reproduction rule to record and nothing to extract.\n- The item edits these runs measured land in the half-A pull request for #24036; the per-item `history` rows carry the full readings.\n- Fixture gaps met on the way are recorded in the items' own knownGaps where the revision touched them.\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_"
+}

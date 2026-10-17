@@ -1,0 +1,36 @@
+{
+  "number": 24089,
+  "kind": "issue",
+  "title": "os migrate organization-ownership: shipped permission sets stored with managed_by NULL (seeded before the column was written) are refused as authored; extend #23873's ruling A to NULL",
+  "state": "closed",
+  "state_reason": "not_planned",
+  "draft": null,
+  "author": {
+    "login": "hotlong",
+    "id": 50353452,
+    "type": "User"
+  },
+  "labels": [
+    "area:access",
+    "bug",
+    "domain:cli",
+    "priority:p0",
+    "target:v18"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-17T00:25:24Z",
+  "updated_at": "2026-10-17T01:04:04Z",
+  "closed_at": "2026-10-17T01:03:53Z",
+  "closed_by": {
+    "login": "hotlong",
+    "id": 50353452,
+    "type": "User"
+  },
+  "merged_at": null,
+  "comments": 2,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/24089",
+  "body": "Filing-gate category ① (a defect with a measured reach) and ③ (a maintainer direct order). Verbatim, 2026-10-16, the option 「框架沿用裁决A (推荐)」, which reads: \"给 objectstack 立 p0 卡：沿用 #23873 已经裁决的 A（按平台镜像接管，平台定义生效，旧行改写验证后删除），把识别条件从「只认 admin」扩大到「admin 或空值」\". Standing order: 「相关任务都提到最高优先级」.\n\n**Reader:** triage routes it; expected route `domain:cli` (organization-ownership inventory/apply). The executing lane seat claims it. Downstream, cloud's next framework pin carries it (objectstack-ai/cloud#2868).\n\n**Dedupe** (`gh api search/issues` total_count, closed included):\n- `LEGACY_SHIPPED_SET_SEEDS`: 1 hit, #23906, the change this extends (closed).\n- `shipped permission set managed_by null ceremony`: 10 hits. The nearest are #23874, #23988 and #22900 (closed) and the epics #15204/#15196. None covers a NULL `managed_by`.\n- `legacy shipped-set seeds null`: 14 hits, nothing on point.\n- The ruling this follows: #23873 (closed, ruled A).\n\n## What happens\n#23906 (`cdf37771d0`) adopts the shipped permission sets that a pre-2026-08-15 seeder stored as `managed_by = 'admin'`. Its `LEGACY_SHIPPED_SET_SEEDS` matches `managed_by = 'admin'` and a name in `SHIPPED_PERMISSION_SET_NAMES`.\n\nOlder installs carry the same shipped rows with `managed_by` **NULL**, created before the column was written at all. Measured on cloud staging: rows created 2026-06-23, re-seeded 2026-10-10, `created_by` NULL. The inventory's `AUTHORED` predicate (`managed_by notIn [package, platform, system]`) treats them as Setup-authored. When the stored body differs from the shipped definition, `authored-conversion` refuses:\n\n> The authored permission admin_full_access differs from the definition the catalog already holds under that name. The catalog's definition stays; rename the authored row (and the grants that name it), then re-run.\n\nThis is the wrong remedy, as #23873 established: the admins' grants hang on these names.\n\n**Reach, measured on cloud staging** with read-only reads of each tenant ledger and `sys_permission_set`, cloud#2868, 2026-10-16:\n- `os-58ptra` and `os-75621z` are refused at `authored-conversion` on 4 NULL rows each: `admin_full_access`, `organization_admin`, `member_default`, `viewer_readonly`.\n- Three more environments hold NULL shipped rows (`demo` 7, `os-0zpadn` 4, `os-05ayzz` 4). They are behind another blocker today and are expected to reach the same refusal.\n- Production's oldest environments are expected to hold the same shape. Not measured yet.\n- `admin`-stored rows (`os-6zmft7`, 7 rows) are covered by #23906 and are not part of this card.\n\n## Wanted\n- **Extend ruling A to NULL.** Treat a row whose name is in `SHIPPED_PERMISSION_SET_NAMES` and whose `managed_by` is `'admin'` **or NULL** as a legacy shipped-set seed:\n  - re-owned as `platform`;\n  - its grants named;\n  - deleted as a mirror;\n  - the shipped definition stands;\n  - the same per-row diff warnings as #23906.\n- **Category label and citation.** The category label and citation name both provenances.\n- **Precedence.** A row with any other non-seeded value stays authored, exactly as today.\n\n**Acceptance:**\n- On a v17-shaped database with NULL-`managed_by` shipped sets whose bodies differ, `--apply` adopts them (`legacySeedsAdopted` counts them), names their grants, and the marker verifies.\n- The existing #23906 tests keep passing.\n- A new test pins the NULL case.\n- An ablation that drops the NULL arm turns the refusal back on.\n- A non-shipped name with NULL `managed_by` is still converted as authored.\n\nRelated: #23873, #23906, #23874, objectstack-ai/cloud#2868, objectstack-ai/cloud#2899.\n"
+}

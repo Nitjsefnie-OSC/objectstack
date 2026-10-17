@@ -1,0 +1,36 @@
+{
+  "number": 24048,
+  "kind": "pull_request",
+  "title": "test(lint): load the linked @objectstack/spec dist with Node, not vite's transform",
+  "state": "closed",
+  "state_reason": null,
+  "draft": false,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "size/s",
+    "skip-changeset",
+    "tests"
+  ],
+  "assignees": [
+    "os-elon-musk"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-16T21:19:00Z",
+  "updated_at": "2026-10-16T22:51:34Z",
+  "closed_at": "2026-10-16T22:51:32Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": "2026-10-16T22:51:32Z",
+  "comments": 2,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/pull/24048",
+  "body": "Fixes #23900\n\nClause-②: no\n\n## What\n\n`packages/lint`'s vitest now loads the pnpm-linked `@objectstack/spec` dist with Node instead of inlining it through vite's transform:\n\n- `packages/lint/vitest.config.ts`: one `test.server.deps.external` entry, `/[\\\\/]packages[\\\\/]spec[\\\\/]dist[\\\\/]/`, which matches the module's realpath. Vitest's default `external` covers only node_modules, and a workspace link's realpath is `packages/spec/dist/...`, so before this every file whose graph reaches spec inlined about 33 MB of built `.mjs`. The header now says the config carries two settings and why each is package-wide.\n- `packages/lint/src/vitest-spec-external.test.ts` (new) is the positive control the card asks for. It checks that the spec module the tests import (root and `/data`, resolved from `packages/lint` exactly as the sources resolve it) is the same instance Node's own loader holds. It loads the ESM entry the `exports` map names with `createRequire` (Node 22's require(esm) shares the ESM loader's module map) and asserts export identity. When the dist is inlined, vite evaluates its own copy, so the identity assertions go red.\n- The two `// test-budget: 30 — whole-package import` lines on `lazy-deps.test.ts` and `runtime-lazy-deps.test.ts` are dropped (see the measurement below).\n\nThe import resolves through `exports` to `dist/` either way, so this changes only who evaluates the dist, never which bytes are under test.\n\n## Mock census (before the change)\n\n`git grep -nE \"vi\\.(mock|doMock|hoisted|unmock|importActual|importMock|spyOn)\\b\" -- packages/lint` at `2b274600b1`: **0** `vi.mock` / `vi.doMock` / `vi.hoisted` sites. The only hits are two `vi.spyOn(console, ...)`, which spy on a global and are unaffected. Control leg: the same `vi.mock(` spelling finds 30 files in `packages/cli/src`, so the zero is a real reading.\n\n## Positive control: what it proves and how it goes red\n\nBoth ablations ran through `scripts/ablation-replace.mjs` on the committed fix `be2f7c34`, with the anchor hit and the blob change proven on disk:\n\n| leg | config | `vitest-spec-external.test.ts` |\n|---|---|---|\n| fix | realpath pattern | 2/2 pass |\n| ablation 1 | `external` entry deleted | 2/2 fail, at the identity assertions (lines 48 and 54), after the `typeof` / `toBeDefined` lines pass |\n| ablation 2 | name-shaped `/@objectstack[\\\\/]spec/` (the trap `packages/cli/vitest.config.ts` records) | 2/2 fail, same lines |\n\nRestore proof: the `vitest.config.ts` blob on disk equals HEAD's (`4ecbe245f449`), and `git diff HEAD` is empty.\n\n## Measurement (paired, same box, under `os-verify-lock.sh`; shared-box seconds)\n\n| reading | before (`2b274600b1`) | after |\n|---|---|---|\n| package run, lock hold | 84 s (141 files / 6802 tests, green) | 53 s at `be2f7c34`, 54 s at `77f016c5` (142 files / 6804 tests, green; +1 file / +2 cases = the control) |\n| vitest `transform` / `import` | 23.74 s / 189.81 s | 8.05 s / 96.39 s |\n| `lazy-deps.test.ts` alone, two runs | 15.01 s, 15.19 s | 6.77 s, 6.79 s |\n| `runtime-lazy-deps.test.ts` alone, two runs | 14.25 s, 14.63 s | 6.79 s, 6.54 s |\n\n**Budget lines dropped, not re-measured.** Both files now run in 6.5 to 6.8 s alone, under the 10 s `FILE_BUDGET_SECONDS` line. The lines' stated reason (\"vitest's transform of ... every inlined @objectstack/spec dist bundle\") is no longer true. A budget is a CI reading x 1.25, and no CI reading after the change exists yet to re-measure from. If an hourly reading later puts either file over 10 s, that reading is the measurement a re-declaration needs (ruling `6181973363` item 2).\n\n## Acceptance notes\n\n- `@objectstack/formula` and `@objectstack/sdui-parser` (lint's other two workspace deps) are still inlined. The card scopes only spec, and they are not measured here.\n- Cost recorded in the config comment: an externalised module cannot be `vi.mock`ed. A later test that needs to mock spec has to move the entry.\n- ⛔ No test deleted, no timeout raised, no move to a slower or skipped project, no other package's config, no source change.\n\n## Verification\n\n- Head `e0d24934` (patch round): the control now imports `defineStack` from `@objectstack/spec` and `ObjectSchema` from `@objectstack/spec/data` by name. The root namespace import broke the repo's `no-restricted-imports` rule for `@objectstack/spec`. The identity check is unchanged.\n- ESLint over the four changed files, `node --stack-size=4000 node_modules/eslint/bin/eslint.js --no-inline-config ...`: exit 1 on `77f016c5` (one `no-restricted-imports` error at `vitest-spec-external.test.ts:29:8`), exit 0 on `e0d24934`.\n- Ablation legs re-run on `e0d24934` through `scripts/ablation-replace.mjs`. With the `external` entry deleted, and with the name-shaped `/@objectstack[\\\\/]spec/`, the control is 2/2 red at `:48:25` and `:54:26` (`Object.is` identity). Restore: the disk blob equals the HEAD blob `4ecbe245f449`, and `git diff HEAD` is empty.\n- `pnpm --filter @objectstack/lint test` at `e0d24934`: 142/142 files, 6804/6804 tests (`VERDICT command-exit 0`, lock held 54 s).\n- `pnpm --filter @objectstack/lint typecheck` (including `check:test-typecheck`) at `e0d24934`: `VERDICT command-exit 0`; the debt ledger is unchanged (2 files / 6 errors).\n- `node scripts/pm/dispatch-gates.mjs --repo objectstack-ai/objectstack --ran ...` at `e0d24934`: 51 derived, 50 run with exit 0, 1 NOT-MEASURED (`pnpm check:dual-build-cjs-loads` exited 3 because it needs a full-repo build; CI measures it), 0 unrun. Also ran `node scripts/check-console-intercept-disarm.mjs`: exit 0.\n- No publish: `@objectstack/lint`'s `files[]` is `dist`, README, CHANGELOG. None of the changed text is in the built `dist/` (0 hits), while a shipped symbol (`validateStackExpressions`) has 8 hits as the positive control.\n\nWritten by the `os-dev` cloud session `session_019oKRRCxbLy3xARM3CH99sf`, dispatched by `domain:spec` seat 1 (claim `6224227197`).\n\n---\n_Generated by [Claude Code](https://claude.ai/code/session_019oKRRCxbLy3xARM3CH99sf)_\n"
+}

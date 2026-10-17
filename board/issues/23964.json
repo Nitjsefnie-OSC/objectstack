@@ -2,8 +2,8 @@
   "number": 23964,
   "kind": "issue",
   "title": "spec(record-surface): `deriveRecordFlowSurface`'s shipped docblock closes the override list without `editMode`, which the same package declares and the renderer honours; the file header still says create/edit open a \"full page\"",
-  "state": "open",
-  "state_reason": null,
+  "state": "closed",
+  "state_reason": "completed",
   "draft": null,
   "author": {
     "login": "objectstack-fleet[bot]",
@@ -14,7 +14,6 @@
     "area:records",
     "documentation",
     "domain:spec",
-    "pm:dispatched",
     "priority:p3"
   ],
   "assignees": [
@@ -23,11 +22,15 @@
   "milestone": null,
   "type": null,
   "created_at": "2026-10-16T14:39:13Z",
-  "updated_at": "2026-10-16T20:03:09Z",
-  "closed_at": null,
-  "closed_by": null,
+  "updated_at": "2026-10-16T21:54:05Z",
+  "closed_at": "2026-10-16T21:51:42Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
   "merged_at": null,
-  "comments": 3,
+  "comments": 7,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/23964",
   "body": "Filing gate ① — a shipped sentence that is wrong (exception 「发版即固化的错误文字」: the function docblock ships in `@objectstack/spec`'s `dist/*.d.ts`). Reader who acts: the `domain:spec` seat, one docblock-only PR on `packages/spec/src/data/record-surface.ts`. Dedupe: `search_issues` on objectstack-ai/objectstack for 「record-surface.ts docblock full page create edit; sanctioned overrides omits editMode」 → 8 hits, none the same card: #23734 (closed, the bounded-modal derivation this docblock already records) and #23753 (closed, the same drift fixed in `skills/objectstack-ui/rules/navigation.md`) are the neighbours. Filed by the `domain:skills` seat 1 (`session_012PxNHU3dfov2hbpg9ycZ8q`) from PR #23795's contract review 6207254097 (flags D2 / OOS-1 and F3), which named this file and asked the seat to file.\n\n## Source\n\nTwo sentences in `packages/spec/src/data/record-surface.ts` at `origin/main` `161aee10` predate the two facts they now contradict.\n\n1. **The function docblock closes the override list without `editMode`.** L150–152, verbatim:\n\n   > Like the base derivation this is a DEFAULT only: explicit `navigation.mode` / `navigation.size`, `FormView.type` / `modalSize`, or an assigned page win (the sanctioned per-object overrides — no new authorable key, ADR-0085 §2).\n\n   The same package declares `editMode` on the object (`packages/spec/src/data/object.zod.ts` L2915: `editMode: z.enum(['modal', 'page']).optional()`), by a maintainer ruling its own docblock records (L2909–2913: 「Declared here by commit f11fc61c5's maintainer ruling … objectui had published the key to authors … while this strict parse rejected it」). The liveness ledger (`packages/spec/liveness/object.json` L55–57) names its consumer: 「objectui record-edit routing: app-shell recordFormNavigation branches on editMode !== 'page' and AppContent handleEdit routes modal form vs dedicated /record/:id/edit route」. objectui at `origin/main` `e6175b5` reads it at `packages/app-shell/src/utils/recordFormNavigation.ts` L116 (`objectDef.editMode !== 'page'`) and `packages/app-shell/src/views/RecordFormPage.tsx` L6. So the list this sentence calls 「the sanctioned per-object overrides — no new authorable key」 omits the one authorable per-object override that exists and is honoured, and an author reading the shipped `.d.ts` is told the create/edit surface can be forced only through a list-view key (`navigation.mode`) that the console honours for the view flow alone (objectui `packages/plugin-view/src/ObjectView.tsx` `handleRowClick`; read in 6207254097).\n\n2. **The file header still describes the pre-flow derivation.** L4–6 and L13, verbatim: 「how an object's create / edit / detail record opens by DEFAULT: a full page, or an overlay (drawer / modal)」 and 「(field-heavy → full page; otherwise a side drawer)」. Since `deriveRecordFlowSurface` landed (L154–170), a task flow never routes: field-heavy create/edit is a modal (full-screen on mobile, bounded on desktop after #23734). The header is a file comment, not shipped, but it is the same drift #23753 fixed in the published skill, inside the spec's own file.\n\n## Governing text\n\n- ADR-0085 §2 (`docs/adr/0085-object-semantic-roles-over-surface-hint-blocks.md`, 「2. The admission test for future keys」) and §5 「One shared derivation, every surface」 — the docblock cites §2 as the reason the list is closed.\n- `object.zod.ts` L2899–2915: the `editMode` declaration and the ruling that admitted it as 「an intent about the record, not pixel styling — any renderer can honour it」.\n- AGENTS.md Prime Directive #10 (never advertise or demo a capability the runtime does not deliver; keep the claim as narrow as the enforcement) and #13 (an accepted ADR binds until superseded — this card asks for no ADR change: the ruling that admitted `editMode` is already recorded in the schema docblock).\n\n## Premises, each with a re-check\n\n- `git show origin/main:packages/spec/src/data/record-surface.ts | grep -n \"no new authorable key\"` → 1 hit (L152). Control: `grep -n \"deriveRecordFlowSurface\"` in the same file → hits.\n- `git show origin/main:packages/spec/src/data/record-surface.ts | grep -c \"editMode\"` → 0. Control: `grep -c \"navigation.mode\"` → 2.\n- `git show origin/main:packages/spec/src/data/object.zod.ts | grep -n \"editMode: z.enum\"` → 1 hit (L2915). Control: `grep -n \"sharingModel\"` → hits.\n- `git show origin/main:packages/spec/liveness/object.json | grep -n '\"editMode\"'` → 1 hit (L55). Control: `grep -n '\"name\"'` → hits.\n- `git show origin/main:packages/spec/src/data/record-surface.ts | sed -n 4,6p` carries 「a full page, or an overlay」; `sed -n 13p` carries 「field-heavy → full page」.\n\n## Target\n\nDocblock text only, no behaviour change, no new key, no ADR edit:\n\n1. L150–152 name `editMode` (object, `'modal' | 'page'`) beside the existing overrides, or state the list as the overrides the derivation itself defers to and point to `editMode` as the object-level edit intent the renderer applies — whichever is true of the code; the sentence must not call the list closed while the package declares a key outside it.\n2. L4–6 and L13 describe the flow derivation (view → page or drawer; create/edit → modal, full-screen on mobile, bounded on desktop; light → drawer), or defer to the `deriveRecordFlowSurface` docblock.\n\nOut of scope here, pointed to its lanes: whether the derivation itself should read `editMode` (the `object.zod.ts` docblock says 「the spec derivation carries it from then on」 after objectui's mirror retires — a question for the spec seat with the objectui pin reading, not this docblock card); objectui's console ignoring the derived task-flow surface and deriving the view flow without a viewport (6207254097 F1 / F2, objectui lane, no measured `reach:` yet).\n\n## Acceptance\n\n1. The two sentences above are true of `deriveRecordSurface` / `deriveRecordFlowSurface` as they stand, and the override sentence names or points to `editMode`.\n2. `pnpm --filter @objectstack/spec build` then `pnpm --filter @objectstack/spec check:generated` exit 0 (`check:docs` reads docblocks; regenerate only what it proves stale). No `.zod.ts` change, so `Clause-②: no`."

@@ -2,8 +2,8 @@
   "number": 23543,
   "kind": "issue",
   "title": "spec(conversions): eight ADR-0087 D2 conversions stay on the 18 load path after #23487 — five families each need a ruling before they can retire",
-  "state": "open",
-  "state_reason": null,
+  "state": "closed",
+  "state_reason": "completed",
   "draft": null,
   "author": {
     "login": "objectstack-fleet[bot]",
@@ -12,21 +12,22 @@
   },
   "labels": [
     "domain:spec",
-    "pm:dispatched",
     "priority:p1",
     "target:v18"
   ],
-  "assignees": [
-    "os-elon-musk"
-  ],
+  "assignees": [],
   "milestone": null,
   "type": null,
   "created_at": "2026-10-14T20:50:06Z",
-  "updated_at": "2026-10-16T17:24:47Z",
-  "closed_at": null,
-  "closed_by": null,
+  "updated_at": "2026-10-17T00:38:32Z",
+  "closed_at": "2026-10-17T00:38:32Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
   "merged_at": null,
-  "comments": 40,
+  "comments": 41,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/23543",
   "body": "Ruled: 6182001882 · letter A/A/A/A/A/A · 2026-10-15T01:06Z\n\nFiling gate ③: questions left by a landing. PR #23523 (#23487, merged `5fd2c76d6`) retired 7 of the 15 overdue ADR-0087 D2 conversions from the 18 load path and KEPT 8, each with its reason and retire condition in its docblock (`packages/spec/src/conversions/registry.ts`), pinned by name in `conversions.test.ts` (`every entry whose window ran out before 18 is retired or kept by name`). The contract-tier review (`6177406940`, ③) confirmed that keeping each entry is safe without a ruling. Filed by `domain:spec` seat 3 (#18883) · `baozhoutao` · session `session_01D6F9axfoPzR7t8G1J7Ytzz`. ⛔ Not a claim; lane and grade are triage's.\n\n`reach:` an `@objectstack/spec` 18 author who still writes one of the old spellings below: today it is converged silently at load (with a notice) instead of refused with a prescription.\n\n**Reader who acts:** triage, to grade, split and route; some halves may be the maintainer's call (a default flip, a reserved-name ruling).\n\n## The five families (from the dev's `open_questions`, report `6176086002` and addendum `6177270333` on #23487)\n\n1. **`datasource-driver-mongo-to-mongodb`.** `'mongo'` is a registered alias of `mongodb` (`config-registry.zod.ts:183`), so there is no refusal for a retirement to hand the author to. Options: A, retire `'mongo'` as a value (refused with a prescription naming `mongodb`), then retire the entry; B, record the entry as permanent. Dev lean: A.\n2. **`retry-policy-converged`.** The `retryDelayMs` rename is already refused on every surface. The entry stays only for the job half: it materializes `maxRetries: 3` / `backoffMultiplier: 2` on a source `job.retryPolicy` that omits them, so retiring would silently drop such a job from 3 retries to 0. Options: A, retire once the job default flip is ruled for authored sources; B, record as permanent.\n3. **`flow-node-wait-event-config-lift` and `flow-node-connector-config-lift`.** `wait` and `connector_action` have no `config` contract, so once retired a loose key beside the declared block would pass silently. Refusing those loose keys would also refuse stored flows whose loose key the block shadows (the rehydration seam parses the same schema). Options: A, refuse the named loose keys under `config` and have the lift delete a shadowed loose key at rehydration, then retire; B, keep.\n4. **`view-visibleOn-to-visibleWhen` and `page-component-visibility-to-visibleWhen`.** The schemas still declare the deprecated key and fold it at parse (`view.zod.ts:3514`, `:3784`; `page.zod.ts:682`), so retiring the entry alone is unobservable. Options: A, retire the aliases themselves (`retiredKey` tombstones and the full `spec-property-retirement` kit, an objectui check), retiring the entries in the same change; B, keep. Three record / strict-exit suites ride `page-component-visibility` and re-point then.\n5. **`flow-node-http-callout-rename` and `page-kind-jsx-to-html`.** The old values are accepted silently: `FlowNodeSchema.type` is an open namespace (`flow.zod.ts:603`), and `'jsx'` is still a `PageSchema.kind` member that `COMPILED_PAGE_KINDS` reads (`page.zod.ts:1726`, `:985`). Options: A, refuse the three retired node types and retire `jsx` through `enumWithRetiredValues`, then retire both entries (the `http_*` half needs the open-namespace / reserved-names ruling, ADR-0018); B, keep.\n\n## What done looks like\n\nEach family has a ruling (retire, or recorded permanent), and each \"retire\" lands as its own PR that refuses the old spelling with its prescription and then sets `retiredFromLoadPath` on the entry, with the verdict-list pin updated.\n\n## Dedupe\n\nMCP `search_issues` on objectstack-ai/objectstack, query `ADR-0087 conversions kept on load path mongo driver alias retry policy converged wait connector config lift visibleOn visibility jsx http callout retire`: 4 hits, #22256, #21107, #7159, #4220, all closed and none about these entries' retirement.\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_\n"

@@ -2,8 +2,8 @@
   "number": 23899,
   "kind": "issue",
   "title": "read-only arms, the remainder of #23726: four more sentences say \"nothing was written\" / \"writes nothing\" on a SQLite file whose journal mode the connect switches (`os migrate plan` ×2, `summary-nulls` refusal, `secret rewrap` resumable note)",
-  "state": "open",
-  "state_reason": null,
+  "state": "closed",
+  "state_reason": "completed",
   "draft": null,
   "author": {
     "login": "objectstack-fleet[bot]",
@@ -15,7 +15,6 @@
     "bug",
     "domain:cli",
     "finding",
-    "pm:dispatched",
     "priority:p3"
   ],
   "assignees": [
@@ -24,11 +23,15 @@
   "milestone": null,
   "type": null,
   "created_at": "2026-10-16T12:06:34Z",
-  "updated_at": "2026-10-16T19:28:59Z",
-  "closed_at": null,
-  "closed_by": null,
+  "updated_at": "2026-10-16T22:42:21Z",
+  "closed_at": "2026-10-16T22:40:56Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
   "merged_at": null,
-  "comments": 2,
+  "comments": 5,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/23899",
   "body": "Filing gate ①, class (b): an operator-facing sentence that a measurement at the public door contradicts. It comes from #23726's dev (`os-dev-report` on #23726, `out_of_scope_findings` 1–4, PR #23895 head `7bdbb42af`). #23726 fixed the three sites its own table named; this card carries what that dev's census found beyond them. Seat ruling A on that PR's `open_questions[0]`.\n\n`reach:` measured at the public door for two of the four, on rollback-journal SQLite fixtures. Each run below moved header bytes 18–19 from 1,1 to 2,2 and the change counter by 1, with schema and rows unchanged:\n- `os migrate plan` on the CRM fixture plus one `sys_legacy_widget` table printed \"They are reported for information only — nothing here drops them, and a plan writes nothing.\"\n- `os secret rewrap --apply --yes`, a finished re-run (0 rows re-wrapped) on a provisioned file, printed \"… and a finished run writes nothing.\"\n\nFiled by `domain:cli` seat 2 (#22648) · `os-tesla` · session `session_018t6a5rvqPRvEDMCVVW9kYT`. ⛔ Not a claim. Grade and lane are triage's.\n\n## The mechanism (the same as #23622 / #23726)\n\nEach of these runs boots through the SQL driver before it prints, and the driver's connect switches a SQLite file to the journal mode it asks for (WAL by default). That rewrites the file header and no row. So \"nothing was written\" is false on a SQLite file still on a rollback journal, while \"no row or table was written\" is true. The established fix (PR #23608, PR #23725, PR #23895): claim \"no row or table\" (or the command's own noun), and add `JOURNAL_MODE_SWITCH_NOTE` (`packages/cli/src/utils/sqlite-occupancy.ts`) where the target is a SQLite file, tested with `describeDriverSqliteFile(stack.driver?.config)`.\n\n## The four sentences, read on `origin/main` `497518c3f`\n\n| # | Where | Sentence | Printed by | Measured |\n|:--|:--|:--|:--|:--|\n| 1 | `packages/cli/src/utils/unmanaged-tables.ts` `:508` | \"… nothing here drops them, and a plan writes nothing.\" | `os migrate plan`, when reserved-prefix tables no object declares are found | yes |\n| 2 | `packages/cli/src/utils/schema-migration-plugins.ts` `:1148` and `:1163` | \"Refused N write(s) during the declaration boot — a plan writes nothing\" and \"If those commands only read, nothing was written\" | `os migrate plan`, when a plugin write is refused during the declaration boot | read only |\n| 3 | `packages/objectql/src/summary-backfill.ts` `:295` | \"Refused before any row was read; nothing was written.\" | `os migrate summary-nulls --recompute-undefined-on-empty` with a name it cannot find, thrown after the boot | read only |\n| 4 | `packages/cli/src/utils/sys-secret-rewrap.ts` `:502` (`REWRAP_NOTES.resumable`), mirrored in `content/docs/deployment/cli.mdx` `:632` | \"… and a finished run writes nothing.\" | every `os secret rewrap` run, both modes, text and `--json` `report.notes` | yes |\n\nRows 1, 2 and 4 are `packages/cli`. Row 3 is `packages/objectql` (`domain:engine`'s file), so a claim on this card declares it on that lane's post, as #23726's claim did.\n\n## Done looks like\n\n- Each sentence claims no row or table (or names what it does vouch for), and the journal-mode note follows it on a SQLite target, by the rule above. One pin per text, a SQLite case and a non-SQLite case where the note is conditional.\n- Row 4's docs mirror moves with it.\n- No exit code, flag, refusal or `--json` field changes.\n\n## Neighbouring class, noted and not filed (承接者:无)\n\nWrite arms, not read-only ones, not measured: `packages/cli/src/commands/migrate/apply.ts` `:551` \"Aborted — no changes made.\" (declined after a `deferSchemaDdl` boot), and `packages/cli/src/utils/organization-ownership-apply.ts` `:1542`, `:2483`, `:2494`, `:2503`, `:2540` \"Nothing was written.\" (refusals after the apply boot). They are a different question (a write command's refusal), so they are not part of this card.\n\n## Dedupe\n\nMCP `search_issues` on objectstack-ai/objectstack, closed included, at this filing:\n- `os migrate plan says a plan writes nothing but SQLite journal mode switch changes the file header` → 32 hits. The family is #23562 → #23622 (closed) → #23726 (open, PR #23895), and #21745 (closed, `os migrate duplicates`). None names these four sentences.\n- `secret rewrap resumable note finished run writes nothing` → 3 hits: #23726, #21528, #7427. None names `REWRAP_NOTES.resumable`.\n- `summary-nulls recompute-undefined-on-empty refused before any row was read nothing was written` → 18 hits. #23726 is the only one in this family, and it names the dry-run line only.\n\nDedupe words: a plan writes nothing journal mode; unmanaged tables reserved prefix plan writes nothing; rewrap resumable finished run writes nothing; summary-nulls refused before any row was read nothing was written.\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_"

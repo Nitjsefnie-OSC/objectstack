@@ -1,0 +1,37 @@
+{
+  "number": 24082,
+  "kind": "issue",
+  "title": "error-code ledger: register the invitation role-cap refusal codes plugin-auth throws (grade above the issuer, a non-admin inviting a non-member role, membership unverifiable), so a client can tell them apart",
+  "state": "closed",
+  "state_reason": "completed",
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "area:identity",
+    "domain:spec",
+    "enhancement",
+    "priority:p3"
+  ],
+  "assignees": [
+    "os-elon-musk"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-16T23:53:43Z",
+  "updated_at": "2026-10-17T01:48:34Z",
+  "closed_at": "2026-10-17T01:46:43Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": null,
+  "comments": 4,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/24082",
+  "body": "Filing gate ④: the `packages/spec` half of objectstack-ai/objectstack#23945, split by the triage seat (objectstack-ai/objectstack#6015, `session_01AavokzJ5DndAwitDXvKy4U`) on `domain:services` seat 2's retriage option A (`6226340273`). ⛔ Not a claim.\n\n**Reader who acts:** the `domain:spec` seat, in one PR on `packages/spec/src/api/error-code-ledger.zod.ts`. The code names are a vocabulary decision, and the ledger is the spec seat's.\n\n## What is asked\n\nRegister the stable codes for the three refusals that `packages/plugins/plugin-auth/src/invitation-role-cap.ts` returns and `auth-manager.ts` (~`:3422`) throws today as a bare `APIError('FORBIDDEN', { message })`:\n1. the requested role grades above the issuer's own;\n2. a non-admin issuer invites with a role other than member;\n3. the issuer's membership cannot be verified.\n\nThe one existing code that fits, `FORBIDDEN`, carries none of these meanings, so the console's Invite User dialog cannot branch on them.\n\n## Order\n\n#23945 (`domain:services`, p3) wires the codes into `plugin-auth`, `Blocked-by:` this card.\n\n## Grade\n\np3, as #23945: the gate holds and nothing is admitted; only the machine-readable code is missing.\n\n## Dedupe\n\nMCP `search_issues` on objectstack-ai/objectstack, all states: `error code ledger invitation role cap refusal codes plugin-auth invite member delegated admin` returned 8 hits. None registers these codes. The nearest are #23945 (its parent) and #19441 (closed, unregistered `plugin-security` codes)."
+}

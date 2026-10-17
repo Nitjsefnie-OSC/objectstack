@@ -1,0 +1,28 @@
+{
+  "number": 24108,
+  "kind": "issue",
+  "title": "QA run · approvals (8/20) · c91af8ed · 2026-10-17 · 1 PASS / 7 PARTIAL / 0 FAIL / 0 BLOCKED / 12 NOT-RUN",
+  "state": "open",
+  "state_reason": null,
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "qa-run"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-17T01:03:19Z",
+  "updated_at": "2026-10-17T01:03:19Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 0,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/24108",
+  "body": "Targeted re-run for the ledger revisions of #24036 (half A), per `checklist-test` §3: an item whose revision changed a fixture, a step's request or an oracle is re-run once, scoped to what the revision changed. Clauses of those items that the revision did not touch are `skipped` (out of this run's scope), so an item is `pass` only where every clause was driven, and `partial` where the driven clauses passed and the rest were skipped.\n\n## Environment\n\n- framework: objectstack `c91af8ed6` (origin/main at run start), worktree branch `claude/issue-24036-ledger-a`; the branch changes ledger JSON only, no product code\n- console: objectui `f8267df93aba` (this repo's `.objectui-sha`), bundle built at that sha (`check-console-sha` OK)\n- app: showcase under `objectstack dev --ui --seed-admin`, posture `single`, file databases in the run's scratch directory. Boot A port 48731 (stock env, `OS_PORT` exported, `OS_LOG_LEVEL=info` after the first restart). Boot B port 48732 (fresh DB, `OS_SEARCH_PINYIN_ENABLED=false`, `OS_SERVER_TIMING=true`, `OS_AUTOMATION_SCHEDULED_WORK_ENABLED=1`, debug log; later `objectstack start` on the same DB). Port 48733: scratch showcase copy and minimal scratch stacks for build and boot-config legs. Port 48734: a fresh `create-objectstack@next` scaffold\n- seed: stock showcase seed plus the dev admin; QA personas minted by admin invite plus sign-up (`qa-…-24036@verify.test`); area recipes `qa-scratch-authz` (pinned sets `qa_att_reader`, `qa_att_baseline`, `qa_att_editor`), `qa-media-constraints`, `qa-flow-status-doors` and `search:qa-contributor-bound-member` as each item names them\n- window: 2026-10-16 23:08Z to 2026-10-17 01:00Z\n\n## Scope\n\n- selector `approvals` (the bare form of `area:approvals`): 20 runnable items per `node scripts/checklist-select.mjs area:approvals --json`; each row below carries the revision the parser reported\n- judged 8 of 20; the 12 not-run items are the 12 items this card did not revise plus the revised items whose change was wording only (no re-run owed)\n\n## Per-item verdicts\n\n| item | rev | clauses driven | verdict | text oracle evidence |\n|---|---|---|---|---|\n| `approvals.per-group-signoff` | r7 | clause 5 actorId | partial | foreign actorId 403 FORBIDDEN cannot act as, no action row; own actorId 200, actor admin |\n| `approvals.decision-action-matrix` | r5 | step 9 request-info caller | partial | pending approver request-info 200; after reassign the admin 403 not a pending approver, comment 200; Ada request-info 200 |\n| `approvals.ooo-delegation-reroute` | r6 | every clause (full re-run) | pass | baseline [admin]; delegation reroutes to [Ada] with ooo_substitute row; Ada notified approval.ooo_substituted; Ada approves with her token; expired delegation routes back |\n| `approvals.record-page-decisions` | r2 | step 3 route + clause 5 both sides | partial | served route record/ID; pending admin sees Approve and Reject; contributor member sees neither; admin routed away sees Override Approve and Override Reject |\n| `approvals.pending-count-surfaces` | r2 | clauses 0-2 on a member | partial | bell 9+, popover 12 total (2 notifications + 10 pending), Home Awaiting approval 10, inbox My Pending 10, API 10; View all opens the Showcase approvals page |\n| `approvals.email-action-token-door` | r3 | step 7 dead-slot leg | partial | reassign without from moves the caller slot and the token stays live; with from Ada the token renders No longer your approval |\n| `approvals.approver-resolution-matrix` | r4 | fixture residual + the runtime flow door | partial | field_zoo update opens no admin_rescue request (3 before, 3 after); runtime flow user leg pending [admin] |\n| `approvals.status-mirror-field` | r2 | scoped clauses (returned, maxRevisions, cascade not re-run) | partial | pending, 409 RECORD_LOCKED, approved, rejected, recalled mirrored; no-key flow leaves null; unknown field finalizes approved with the mirror WARN |\n\nNot run (outside this run's scope, not revised by #24036): 12 items.\n\n## Derived verdicts and gaps\n\n- 1 pass, 7 partial, 0 fail, 0 blocked, 12 not-run. No clause failed, so there is no reproduction rule to record and nothing to extract.\n- The item edits these runs measured land in the half-A pull request for #24036; the per-item `history` rows carry the full readings.\n- Fixture gaps met on the way are recorded in the items' own knownGaps where the revision touched them.\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_"
+}
