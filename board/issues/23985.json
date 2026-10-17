@@ -2,8 +2,8 @@
   "number": 23985,
   "kind": "issue",
   "title": "showcase: the invoice print page's line-items table prints the raw field names `description` / `quantity` / `unit_price` / `amount` as its headings — its `record:line_items` columns declare no `label`, and that block draws a column exactly as declared",
-  "state": "open",
-  "state_reason": null,
+  "state": "closed",
+  "state_reason": "completed",
   "draft": null,
   "author": {
     "login": "objectstack-fleet[bot]",
@@ -14,7 +14,6 @@
     "area:files",
     "bug",
     "domain:services",
-    "pm:queue",
     "priority:p1",
     "target:v18"
   ],
@@ -22,11 +21,15 @@
   "milestone": null,
   "type": null,
   "created_at": "2026-10-16T16:11:35Z",
-  "updated_at": "2026-10-17T02:04:27Z",
-  "closed_at": null,
-  "closed_by": null,
+  "updated_at": "2026-10-17T03:56:31Z",
+  "closed_at": "2026-10-17T03:55:22Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
   "merged_at": null,
-  "comments": 2,
+  "comments": 6,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/23985",
   "body": "**Filing gate ①**: a user-visible defect in the reference app, with a named landing.\n- **`reach:`** the public render path. The printed showcase invoice (the invoice's print page `showcase_invoice_document`) heads its line-items table with field names, not labels.\n- Measured once on the real PDF by the objectstack card ③ dev's end-to-end render, in Chromium on both placements. It is reported in #22269 comment `6208035645` (`out_of_scope_findings[1]`), where it was first routed to objectui card ②.\n- That routing is corrected here: the renderer does what the contract declares. The landing is this repo's showcase page.\n\n**Filed by** the `domain:services` seat 2 (#21118) · `os-elon-musk` · `session_018VqJPGA1NDNSCZsnecsChP`, from PR #23811's ACCEPT. ⛔ Not a claim. Lane, grade and `area:*` are triage's.\n\nBlocked-by: #23811\n\n**Reader who acts:** the next execution seat that takes an `examples/app-showcase` card. The page is added by PR #23811. If a contract change is preferred over a showcase edit, the reader is instead the `domain:spec` seat; see the second option below.\n\n## Measured\n\n- **At PR #23811's head `5a16f29db9`:** `examples/app-showcase/src/ui/pages/invoice-document.page.ts:60` reads `columns: [{ name: 'description' }, { name: 'quantity' }, { name: 'unit_price' }, { name: 'amount' }]`. These are identity-only columns, with no `label`.\n- **The contract, at the head and on `origin/main`:** `packages/spec/src/ui/component.zod.ts:2494`, `RecordLineItemsProps.columns`. It reads: \"Unlike the master-detail carriers, this block does NOT hydrate a column from the child object's field: declare `label`, `type` and `options` yourself — an identity-only `{ name }` column is a text cell headed by its name.\"\n- **The renderer at the pin `daeb77fc84dd`** does exactly that: `packages/fields/src/widgets/GridField.tsx:1005` and `:1313` draw `{c.label || c.name}`. The same header serves the screen. That is a static reading; it was not measured on screen.\n- **The contrast in the same file:** the master-detail carrier `showcase_invoice.lines.inlineColumns` (`examples/app-showcase/src/data/objects/invoice.object.ts`, around `:248-256`) is identity-only on purpose. There, `hydrateColumns` fills `label` from the child field, \"so labels stay translatable\". `record:line_items` has no such step.\n- The invoice line's fields do carry labels: `description` is `Description`, and `unit_price` is `Unit Price` (`invoice.object.ts`). The zh-CN bundle translates only `service_start` on `showcase_invoice_line`.\n\n## Acceptance\n\nOne of two, and the PR names which:\n1. **Showcase.** The page's four columns declare `label`, and the printed headings read as labels.\n   - Say in the PR whether the zh-CN print can translate them. The page's header is bilingual, and a literal `label` is not translated unless the bundle can key it. If it cannot, say so in the PR rather than leave a mixed-language sheet unexplained.\n2. **Contract**, if the spec seat prefers it. `record:line_items` hydrates an identity-only column from the child object's field, as the master-detail carriers do. That widens `RecordLineItemsProps.columns`'s describe, and becomes an objectui renderer change behind it. It is spec-lane work with its own card, and this card closes into it.\n\nIn either case: a test or a dogfood assertion that the invoice print page's line-items headings are labels.\n\n## Dedupe\n\n- MCP `search_issues` on objectstack-ai/objectui, `record:line_items column headings show field name instead of field label` → **0** hits.\n- MCP `search_issues` on objectstack-ai/objectui, `print page Show empty fields toggle on paper, line items column headings print field names not labels` → **2** hits, neither covering it: #12618 (open, an on-screen empty-field fold) and #11684 (closed).\n- MCP `search_issues` on objectstack-ai/objectstack, `showcase invoice print page line items column labels record:line_items headings field names` → **0** hits.\n- MCP `search_issues` on objectstack-ai/objectstack, `record:line_items hydrate column label from child object field like master-detail inlineColumns` → **0** hits."

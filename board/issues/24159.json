@@ -1,0 +1,36 @@
+{
+  "number": 24159,
+  "kind": "pull_request",
+  "title": "docs(forms): the sketch answers { id } and names form-routes.ts; re-point checklist item 14 anchor",
+  "state": "closed",
+  "state_reason": null,
+  "draft": false,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "documentation",
+    "size/s",
+    "skip-changeset"
+  ],
+  "assignees": [
+    "os-sales"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-17T07:04:03Z",
+  "updated_at": "2026-10-17T08:08:33Z",
+  "closed_at": "2026-10-17T08:08:31Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": "2026-10-17T08:08:31Z",
+  "comments": 1,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/pull/24159",
+  "body": "Fixes #24128\nClause-②: no\n\nTwo docs citations that the move of `registerFormEndpoints` into `packages/rest/src/form-routes.ts` (#24054, merge `c40a0dd9c8`) left stale, plus the sketch's submit answer from before #22437. Docs and checklist prose only: no product code, and no changeset, because nothing in any package's `files[]` changes.\n\n## 1. `content/docs/ui/forms.mdx`, the architecture sketch (the card)\n\n| line | old | new | source on `main` (`c40506aac`) |\n|---|---|---|---|\n| `:38` | `←   { object, id, record }` | `←   { id }` | `packages/rest/src/form-routes.ts:538`: `res.status(201).json({ id: result.id });` |\n| `:30` | `rest-server scans views     →` | `form-routes.ts scans views  →` | `packages/rest/src/form-routes.ts:178`–`:188`: `resolveFormBySlug` builds the `type: 'view'` request, calls `p.getMetaItems(viewsRequest)` and hands the list to `findPublicFormView` (`:128`–`:143`) |\n\n- The page already gave the new submit answer in two places, both read on the same commit: the response section (`:214`–`:217`, `{ \"id\": \"r7p8cUZoBJbFWudt\" }`) and the client example (`:270`, `return r.json(); // { id } — the created record's id only`). The sketch was the one answer that disagreed.\n- `rest-server.ts` keeps only a private `registerFormEndpoints` stub (`:9107`–`:9125`). It builds the host literal and calls `registerFormEndpoints.call(host, basePath)`. The scan itself is in `form-routes.ts`.\n- Columns kept: the second arrow on `:30` stays at character column 59, the same column as on `:31`, `:36` and `:37`. The new label is 26 characters padded with 2 spaces; the old one was 23 padded with 5. The arrow on `:38` stays at column 27.\n\n## 2. Declared rider: `docs/qa/platform-checklist/areas/access-security.json`, item 14 (`access-security.public-form-withdrawal-layers`)\n\nSource pointer: the `domain:cli` pointer on #24036, comment `6227883776`. It named this one sentence and the re-point owed.\n\n| field | old | new | source on `main` (`c40506aac`) |\n|---|---|---|---|\n| `acceptance[0].verify` (`:1599`) | `packages/rest/src/rest-server.ts#registerFormEndpoints reads the environment's view list alone and drops a candidate ...` | `packages/rest/src/form-routes.ts#registerFormEndpoints reads the environment's view list alone and drops a candidate ...` | `packages/rest/src/form-routes.ts:109`: `export function registerFormEndpoints(this: FormRouteHost, basePath: string): void {`. The withdrawn candidate is dropped at `:136`: `if (anonymousFormIntakeWithdrawnIn(views, view, c)) continue;` |\n| `revision` (`:1568`) | `2` | `3` | n/a |\n| `history` | two rows | an appended row: `revision: 3`, `date: 2026-10-17`, `ref: #24128`, naming the pointer as its source | n/a |\n\n- Nothing else in the item moved. `source[2]` already named `form-routes.ts#registerFormEndpoints`, because #24054 re-pointed that one. After this change the item cites `rest-server.ts#registerFormEndpoints` zero times and `form-routes.ts#registerFormEndpoints` twice.\n- The history row cites both symbols as bare names, not as anchors, like the item's earlier rows. A later deletion of the private stub therefore cannot turn the ledger red through history prose.\n- Anchor only: no clause, step, fixture or oracle changed. So no re-run is owed and no `qa-run` record is written.\n\n## Tests and gates (all on `d7e847a3e`, this PR's head)\n\n- `node scripts/check-platform-checklist.mjs`: exit 0, `OK — 16 areas, 327 items ...; symbol anchors: 853/863 ...; 18 file floors held`. Before the edit, on `c40506aac`, it read the same `853/863`. `--anchor-census` gives `areas/access-security.json` 83 before and after, and the per-file census is identical.\n- `node scripts/pm/dispatch-gates.mjs --commands --repo objectstack-ai/objectstack` derived 41 commands. All 41 ran, each with its exit code captured before any pipe, and all answered 0. `--ran` reports `41 derived, 41 run, 0 NOT-MEASURED, 0 UNRUN`.\n  - Three first answered exit 3 (`PREREQUISITE NOT MET`, nothing measured). `check:doc-formula-expressions` and `check:doc-security-posture` needed `@objectstack/lint` and `@objectstack/formula` built, and `check:skill-examples` needed `@objectstack/client` and `@objectstack/client-react` built. After `turbo run build` of those packages under the verify lock, each re-run answered exit 0.\n  - `check:docs` ran after `pnpm --filter @objectstack/spec gen:schema`, which writes the schema tree it reads.\n- `node scripts/pm/check-governed-merges.mjs --branch claude/issue-24128-form-routes-citations`: exit 0, `0 of 2 path(s) hit the register ... NOT governed`. Size: 14 changed lines (+10 / -4).\n- Left to CI, not run locally: the `Build Docs` job and the `Test Core` shards this path set schedules, and the type-check lanes (no TypeScript is touched).\n\n## Acceptance notes\n\n- The sketch's GET answer `{ form, objectSchema }` (`:32`) lists a subset. The route answers `slug`, `object`, `label`, `form` and `objectSchema` (`form-routes.ts:385`–`:391`). Every key the sketch lists is present, so it misleads nobody. It is outside this card's surface and was not changed.\n- No gate reads mdx prose against routes. `check:platform-checklist` kept accepting the old anchor through the private stub. That is how both citations stayed green after #24054. Observation only.\n\n---\n_Generated by [Claude Code](https://claude.ai/code/session_016PVjjuVPte5XEJvaQx1E4t)_\n"
+}

@@ -2,8 +2,8 @@
   "number": 24107,
   "kind": "issue",
   "title": "QA run · api-backend (11/27) · c91af8ed · 2026-10-17 · 0 PASS / 11 PARTIAL / 0 FAIL / 0 BLOCKED / 16 NOT-RUN",
-  "state": "open",
-  "state_reason": null,
+  "state": "closed",
+  "state_reason": "completed",
   "draft": null,
   "author": {
     "login": "objectstack-fleet[bot]",
@@ -17,11 +17,15 @@
   "milestone": null,
   "type": null,
   "created_at": "2026-10-17T01:02:52Z",
-  "updated_at": "2026-10-17T01:02:52Z",
-  "closed_at": null,
-  "closed_by": null,
+  "updated_at": "2026-10-17T06:21:11Z",
+  "closed_at": "2026-10-17T06:21:11Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
   "merged_at": null,
-  "comments": 0,
+  "comments": 1,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/24107",
   "body": "Targeted re-run for the ledger revisions of #24036 (half A), per `checklist-test` §3: an item whose revision changed a fixture, a step's request or an oracle is re-run once, scoped to what the revision changed. Clauses of those items that the revision did not touch are `skipped` (out of this run's scope), so an item is `pass` only where every clause was driven, and `partial` where the driven clauses passed and the rest were skipped.\n\n## Environment\n\n- framework: objectstack `c91af8ed6` (origin/main at run start), worktree branch `claude/issue-24036-ledger-a`; the branch changes ledger JSON only, no product code\n- console: objectui `f8267df93aba` (this repo's `.objectui-sha`), bundle built at that sha (`check-console-sha` OK)\n- app: showcase under `objectstack dev --ui --seed-admin`, posture `single`, file databases in the run's scratch directory. Boot A port 48731 (stock env, `OS_PORT` exported, `OS_LOG_LEVEL=info` after the first restart). Boot B port 48732 (fresh DB, `OS_SEARCH_PINYIN_ENABLED=false`, `OS_SERVER_TIMING=true`, `OS_AUTOMATION_SCHEDULED_WORK_ENABLED=1`, debug log; later `objectstack start` on the same DB). Port 48733: scratch showcase copy and minimal scratch stacks for build and boot-config legs. Port 48734: a fresh `create-objectstack@next` scaffold\n- seed: stock showcase seed plus the dev admin; QA personas minted by admin invite plus sign-up (`qa-…-24036@verify.test`); area recipes `qa-scratch-authz` (pinned sets `qa_att_reader`, `qa_att_baseline`, `qa_att_editor`), `qa-media-constraints`, `qa-flow-status-doors` and `search:qa-contributor-bound-member` as each item names them\n- window: 2026-10-16 23:08Z to 2026-10-17 01:00Z\n\n## Scope\n\n- selector `api-backend` (the bare form of `area:api-backend`): 27 runnable items per `node scripts/checklist-select.mjs area:api-backend --json`; each row below carries the revision the parser reported\n- judged 11 of 27; the 16 not-run items are the 16 items this card did not revise plus the revised items whose change was wording only (no re-run owed)\n\n## Per-item verdicts\n\n| item | rev | clauses driven | verdict | text oracle evidence |\n|---|---|---|---|---|\n| `api-backend.batch-transactional-discovery` | r5 | fixture create + rollback clause | partial | task without project 400 VALIDATION_FAILED alone and inside an atomic batch (sibling note not persisted); with project 200 |\n| `api-backend.enforce-or-remove-authoring-gates` | r4 | strip-by-design leg | partial | unknown key on RestServerConfig.routes parses to {}; routes.includeObjects refused with its prescription |\n| `api-backend.server-timing-admin-gated` | r4 | clauses 1-2 | partial | admin Server-Timing parse, db, serialize, handler, total; member none; json mode adds the detail header for the admin |\n| `api-backend.error-envelope-ledger` | r4 | step 6 BATCH_NOT_ATOMIC sample | partial | options atomic false 200 and row created; top-level atomic false 400 BATCH_NOT_ATOMIC |\n| `api-backend.bulk-write-contract` | r2 | the id-based door clauses | partial | updateMany/deleteMany by ids; invisible and nonexistent ids per-row RECORD_NOT_FOUND, foreign row unchanged; records [] total 0; member delete PERMISSION_DENIED then NOT_ATTEMPTED; 201 records 400 BATCH_TOO_LARGE, 0 rows |\n| `api-backend.route-ledger-live-parity` | r4 | clause 6 family walk | partial | 18 of 18 families answered non-routing-404; /api/v1/reports 404 ENDPOINT_NOT_FOUND like the control; 11 route-ledger files |\n| `api-backend.package-rest-lifecycle` | r3 | steps 2-6 and clause 4 | partial | 201 install (scope project), 409 RESOURCE_CONFLICT duplicate, PATCH 200, three malformed PATCHes 400 VALIDATION_ERROR, overwrite 201 with one row |\n| `api-backend.retired-def-refusal` | r2 | clauses 0-3 on the re-pointed doors | partial | zero-consumer imports exit 2 (generic); carrier keys manifest.loading and agent.lifecycle exit 2 with the tombstone text; invented key exit 2 unrecognized; runtime: agent 403 code-only, guessed and invented types 400 not a metadata type |\n| `api-backend.aggregate-contract-matrix` | r2 | secured leg | partial | contributor-bound member count by status [draft 1] vs admin [draft 3, paid 5, sent 5]; Mei 403 at the object gate; Ada equals admin |\n| `api-backend.rest-metadata-config-contract` | r4 | clause 4 masking | partial | client_liaison /meta/object/showcase_project lacks budget, budget_remaining, spent against the admin copy |\n| `api-backend.declarative-endpoint-execution` | r3 | feed answers re-read (wording revision) | partial | three declared endpoints, os build reports 3 APIs; feed authed 200 private max-age=30, anonymous 401, unmatched path 404 |\n\nNot run (outside this run's scope, not revised by #24036): 16 items.\n\n## Derived verdicts and gaps\n\n- 0 pass, 11 partial, 0 fail, 0 blocked, 16 not-run. No clause failed, so there is no reproduction rule to record and nothing to extract.\n- The item edits these runs measured land in the half-A pull request for #24036; the per-item `history` rows carry the full readings.\n- Fixture gaps met on the way are recorded in the items' own knownGaps where the revision touched them.\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_"

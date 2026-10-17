@@ -2,8 +2,8 @@
   "number": 24099,
   "kind": "issue",
   "title": "QA run · integration-system.notify-inbox-delivery (1/1) · 55a806a7 · 2026-10-17 · 0 PASS / 1 PARTIAL / 0 FAIL / 0 BLOCKED / 0 NOT-RUN",
-  "state": "open",
-  "state_reason": null,
+  "state": "closed",
+  "state_reason": "completed",
   "draft": null,
   "author": {
     "login": "objectstack-fleet[bot]",
@@ -17,11 +17,15 @@
   "milestone": null,
   "type": null,
   "created_at": "2026-10-17T00:43:03Z",
-  "updated_at": "2026-10-17T00:43:03Z",
-  "closed_at": null,
-  "closed_by": null,
+  "updated_at": "2026-10-17T06:22:19Z",
+  "closed_at": "2026-10-17T06:22:18Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
   "merged_at": null,
-  "comments": 0,
+  "comments": 1,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/24099",
   "body": "Run record for the re-run objectstack-ai/objectstack#24036 (half B) asks for after revising this item. Runner: an `os-dev` subagent dispatched by the `domain:devx` seat 2 PM (session `session_016PVjjuVPte5XEJvaQx1E4t`). Protocol: `.claude/skills/checklist-test/SKILL.md` + `docs/qa/platform-checklist/RUNNER.md`. Executed sequentially (no subagent tool in this runner).\n\n## Environment fingerprint\n\n- framework: `55a806a78c0442243a8ac22e7dbc6f7b2c4b3bb0` on branch `claude/issue-24036-ledger-b`, the commit the app was built from. Its product tree is `origin/main` `8a83cebc1`; the branch adds `docs/qa/platform-checklist/areas/*.json` only, and its later commits touch those files alone. Built with `pnpm install --frozen-lockfile` and `turbo run build` (75/75 tasks).\n- `.objectui-sha`: `f8267df93aba8fb09cc1cc0692eadc0c8c5a5e56` (no browser leg in this item).\n- boot: `OS_PORT=41921 objectstack dev --ui --seed-admin -p 41921 -d file:(run dir)/api2/data.db` from `examples/app-showcase`, its own port and file DB (the CLI also provisioned the sibling `data.telemetry.db`), stopped by its own process-group id afterwards. A second boot, `examples/app-todo` on port 41922 (its config does not require messaging), was used only to look for a messaging-less composition for the 501 half.\n- persona(s): the seeded admin; an assignee member and an unrelated third member, each minted through invite + `POST /api/v1/auth/sign-up/email` and signed in with their own session (identity proven with `get-session` before use)\n- timestamps: 2026-10-17, 00:19Z to 00:21Z\n\n## Scope\n\nSelector `integration-system.notify-inbox-delivery` resolves to 1 runnable item: `integration-system.notify-inbox-delivery` at revision 4, P1, surface mixed. No planned or blocked-hidden item.\n\n## Per-clause verdicts\n\n| # | clause (short) | verdict | evidence |\n|---|---|---|---|\n| 0 | notify node delivers an inbox row | pass | admin PATCH showcase_task \"PII access review\" assignee → the assignee id (200); assignee `GET /api/v1/notifications` 200: type task.assigned, title \"New task assigned: PII access review\", body \"You have been assigned …\", actionUrl `/showcase_task/5JI8jb6JWE2jYgrI` |\n| 1 | recipient-scoped | pass | third member `GET /api/v1/notifications` 200 `{notifications: [], unreadCount: 0}`; the third member's own `sys_inbox_message` read returns 0 rows |\n| 2 | mark-read persisted per receipt | pass | `POST /notifications/read {ids}` readCount 1; `?read=false` no longer lists it (unreadCount 0); `sys_notification_receipt` read by the assignee: one row (notification, assignee, channel inbox, state read); the backing `sys_inbox_message` row carries the same title and action_url. A second reassignment added one unread; `POST /notifications/read/all` readCount 1, then unread 0 |\n| 3 | 401 anonymous; 501 without messaging | **blocked(fixture)** | anonymous `GET /notifications` 401 `UNAUTHENTICATED` (pass). The 501 half has no boot: messaging is on the CLI's always-on slate, so even `examples/app-todo` (no messaging in `requires`) composed MessagingServicePlugin and answered an authed `GET /notifications` 200 `{notifications: [], unreadCount: 0}` |\n| 4 | unimplemented channel never fakes delivery | pass | scratch flow registered by `POST /api/v1/automation` (notify node, channels `['push']`, recipient the admin) and fired by `POST /automation/NAME/trigger` (200, notify node selected 1, acted 0): no `sys_inbox_message` row with the probe title; `sys_notification_delivery` holds no `push` row (0 of 10); server log `WARN [messaging] emit: channel 'push' is not registered; refused 1 delivery row(s) the dispatcher could only dead-letter …` |\n\n## Reproduction rules\n\nNo clause scored `fail`, so none is owed. No authentication or authorization hole was found; nothing here is withheld under the RUNNER rule-2 carve-out.\n\n## Derived item verdict\n\n`integration-system.notify-inbox-delivery` r4: **partial** (4 pass + 1 blocked(fixture) of 5 clauses).\n- Checklist-accuracy finding of this run, fixed on the branch before this record: knownGaps[2] offered \"a minimal non-showcase boot without the plugin\" for the 501 half. No `objectstack dev` boot lacks it (`PLATFORM_ALWAYS_ON_CAPABILITIES` carries messaging; app-todo measured), so the knownGap now says the half stays blocked(fixture) unless a host composes the kernel without the plugin.\n- Clause 4, the revision this run validates, holds as written: emit refuses up front with the WARN naming the channel, and no inbox or delivery row exists.\n- Fixture gap (parked on #24036): acceptance[3]'s 501 half has no `os dev` boot.\n\nChecklist-accuracy findings and fixture gaps from this run close out on objectstack-ai/objectstack#24036.\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_"

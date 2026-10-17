@@ -2,8 +2,8 @@
   "number": 24111,
   "kind": "issue",
   "title": "QA run · automation (10/22) · c91af8ed · 2026-10-17 · 0 PASS / 10 PARTIAL / 0 FAIL / 0 BLOCKED / 12 NOT-RUN",
-  "state": "open",
-  "state_reason": null,
+  "state": "closed",
+  "state_reason": "completed",
   "draft": null,
   "author": {
     "login": "objectstack-fleet[bot]",
@@ -17,11 +17,15 @@
   "milestone": null,
   "type": null,
   "created_at": "2026-10-17T01:05:02Z",
-  "updated_at": "2026-10-17T01:05:02Z",
-  "closed_at": null,
-  "closed_by": null,
+  "updated_at": "2026-10-17T06:20:47Z",
+  "closed_at": "2026-10-17T06:20:47Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
   "merged_at": null,
-  "comments": 0,
+  "comments": 1,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/24111",
   "body": "Targeted re-run for the ledger revisions of #24036 (half A), per `checklist-test` §3: an item whose revision changed a fixture, a step's request or an oracle is re-run once, scoped to what the revision changed. Clauses of those items that the revision did not touch are `skipped` (out of this run's scope), so an item is `pass` only where every clause was driven, and `partial` where the driven clauses passed and the rest were skipped.\n\n## Environment\n\n- framework: objectstack `c91af8ed6` (origin/main at run start), worktree branch `claude/issue-24036-ledger-a`; the branch changes ledger JSON only, no product code\n- console: objectui `f8267df93aba` (this repo's `.objectui-sha`), bundle built at that sha (`check-console-sha` OK)\n- app: showcase under `objectstack dev --ui --seed-admin`, posture `single`, file databases in the run's scratch directory. Boot A port 48731 (stock env, `OS_PORT` exported, `OS_LOG_LEVEL=info` after the first restart). Boot B port 48732 (fresh DB, `OS_SEARCH_PINYIN_ENABLED=false`, `OS_SERVER_TIMING=true`, `OS_AUTOMATION_SCHEDULED_WORK_ENABLED=1`, debug log; later `objectstack start` on the same DB). Port 48733: scratch showcase copy and minimal scratch stacks for build and boot-config legs. Port 48734: a fresh `create-objectstack@next` scaffold\n- seed: stock showcase seed plus the dev admin; QA personas minted by admin invite plus sign-up (`qa-…-24036@verify.test`); area recipes `qa-scratch-authz` (pinned sets `qa_att_reader`, `qa_att_baseline`, `qa_att_editor`), `qa-media-constraints`, `qa-flow-status-doors` and `search:qa-contributor-bound-member` as each item names them\n- window: 2026-10-16 23:08Z to 2026-10-17 01:00Z\n\n## Scope\n\n- selector `automation` (the bare form of `area:automation`): 22 runnable items per `node scripts/checklist-select.mjs area:automation --json`; each row below carries the revision the parser reported\n- judged 10 of 22; the 12 not-run items are the 12 items this card did not revise plus the revised items whose change was wording only (no re-run owed)\n\n## Per-item verdicts\n\n| item | rev | clauses driven | verdict | text oracle evidence |\n|---|---|---|---|---|\n| `automation.time-relative-trigger` | r3 | fixture switch + binding (the sweep not re-run) | partial | unset: showcase_task_due_reminder unbound by deployment policy; with OS_AUTOMATION_SCHEDULED_WORK_ENABLED=1 bound, triggerType time_relative |\n| `automation.trigger-type-matrix` | r4 | schedule and time_relative legs + the in_review walk | partial | default boot both unbound; switch on: 21 of 32 bound, digest ticked 3 times 60 s apart with trigger.type schedule; task done via in_review 200 |\n| `automation.flow-node-type-matrix` | r6 | step 3 chain + http recipe | partial | task create with project and in_review 201, PATCH done 200, record-change flows fired; self-ping http flow completed |\n| `automation.flow-error-handling` | r4 | step 2 handled case | partial | resilient_sync ran and completed on the in_review path |\n| `automation.connector-dispatch-matrix` | r3 | premise guard + steps 4-5 | partial | connector rows carry no baseUrl; declarative and MCP connector pings completed with OS_PORT exported |\n| `automation.flow-toggle-kill-switch` | r3 | steps 2, 6, 8 | partial | urgent create with project 201, urgent alert run +1 |\n| `automation.trigger-status-contract` | r2 | clause 4 | partial | without errorMessage 400 FLOW_FAILED details {summary}; with it details.errorMessage and summary |\n| `automation.packaged-flow-disable-durable` | r3 | clause 3 log corroboration | partial | toggle off, cold restart at info: the activation-ledger INFO line names the flow; _status enabled false bound false; re-enable 200 |\n| `automation.packaged-flow-subflow-disable-refusal` | r3 | step 4 still-armed probe | partial | task done via in_review 200; showcase_task_done_notify_owner ran and completed |\n| `automation.packaged-flow-clone-contract` | r3 | clause 6 (both halves) | partial | clone 200 draft; Organization flows rail lists and opens it; after a cold restart GET 200, listed again, one urgent create adds one clone run |\n\nNot run (outside this run's scope, not revised by #24036): 12 items.\n\n## Derived verdicts and gaps\n\n- 0 pass, 10 partial, 0 fail, 0 blocked, 12 not-run. No clause failed, so there is no reproduction rule to record and nothing to extract.\n- The item edits these runs measured land in the half-A pull request for #24036; the per-item `history` rows carry the full readings.\n- Fixture gaps met on the way are recorded in the items' own knownGaps where the revision touched them.\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_"

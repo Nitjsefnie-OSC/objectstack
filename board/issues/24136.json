@@ -1,0 +1,32 @@
+{
+  "number": 24136,
+  "kind": "issue",
+  "title": "plugin-security: organisation admins assign positions and permission sets to their own members inside the D12 boundary — gate branch, overrides, explain and my-delegable-scope, three-posture acceptance (ruling B on #23960)",
+  "state": "open",
+  "state_reason": null,
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "area:access",
+    "domain:services",
+    "pm:blocked",
+    "priority:p1",
+    "target:v18"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-17T02:52:27Z",
+  "updated_at": "2026-10-17T02:52:27Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 0,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/24136",
+  "body": "Blocked-by: #24135\n\nFiled by the director seat (summon #43 continuation 3, `session_01QJC7i981TSs9L1CGJK59Ax`) on the maintainer's ruling B on #23960 (batch #358 item 2, 「同意」 on the seat's revised recommendation; the ruling record is that card's `Ruled:` line). ⛔ Not a claim. Filing gate ①: a published decision (ADR-0131 D3) the runtime contradicts, measured at the HTTP door on #23960. The rule it enforces is written by #24135 first.\n\n## What is measured (objectstack `origin/main` `be076dad28a0`)\n- `delegated-admin-gate.ts:332`: a tenant-level admin (any set with the superuser wildcard — `organization_admin` is one) passes the gate and the per-table overrides refuse downstream; `organization_admin_no_bypass` (wall-less auto-grant, no wildcard) is refused by the gate itself. Measured on #23960: 403 on insert and delete of both assignment tables for both variants; 201/200 for the platform admin.\n- `default-permission-sets.ts:441`–: `sys_user_permission_set` and `sys_user_position` `allowCreate/allowEdit/allowDelete: false` on `organization_admin`; `deriveWallLessOrgAdmin` (`:1486`) copies them to the no-bypass variant. `rbac-objects.test.ts:63` pins the read-only.\n- `security-plugin.ts:4845` (`explainAccessForCaller`, D6 「who may explain another user」) and `rest/src/security-routes.ts` (`GET /security/my-delegable-scope`, `describeDelegableScope` `delegated-admin-gate.ts:461`) report delegated scopes only; the console's invite placement section and Setup's Add / Remove (objectui#12685) read these.\n- `invitation-placement.ts:14` and `auto-org-admin-grant.ts:37` argue the invitation surface's safety from the read-only overrides.\n\n## Scope (the boundary rule as #24135 writes it)\n1. **Gate, a third branch** (`assert()` `:281`–): a caller holding `organization_admin` / `organization_admin_no_bypass` for the organisation and not a platform administrator may insert or delete `sys_user_position` / `sys_user_permission_set` rows for a member of the same organisation (`organization-scope.js`) when every distributed set is inside the boundary — the set, or each set a position carries (reuse the walk at `:780`–`:783`): no wildcard superuser bits, no `adminScope`, every capability `scope: 'org'`. Outside the boundary: `PermissionDeniedError` naming the set and the failed condition. Platform administrators keep the status quo; delegates keep D12; everyone else is denied as today.\n2. **Overrides**: `allowCreate` and `allowDelete` true on both tables for `organization_admin` (and so the no-bypass variant); `allowEdit` stays false (assignment rows are added and removed, never edited). `rbac-objects.test.ts:63` becomes the boundary pin: an org admin cannot assign `admin_full_access`, a set with `adminScope`, or a set carrying a platform-scoped capability, to anyone including themselves.\n3. **Two doors**: `describeDelegableScope` / `my-delegable-scope` report the organisation administrator's assignable positions and sets (every organisation unit as placeable); `explainAccessForCaller` admits an org admin explaining a member of their organisation.\n4. **Arguments updated**: `invitation-placement.ts` and `auto-org-admin-grant.ts` headers state the boundary as the safety premise; a test that an org admin's invitation carries only in-boundary positions.\n5. No spec key; no new endpoint; the membership model unchanged; `Clause-②: no`; `minor` changeset for `@objectstack/plugin-security` (a shipped set's grants widen inside a declared boundary).\n\n## Done when\n- Gate tests (`delegated-admin-gate.test.ts`) cover the third branch for both variants, in-boundary and out-of-boundary sets, a position carrying a mixed bundle, self-assignment, a member of another organisation; `auto-org-admin-grant.test.ts`, `invitation-placement.test.ts`, `rbac-objects.test.ts` green with the rewritten pin.\n- Three-posture acceptance recorded on this card (a `docs/qa` checklist item, run once): `single`, `group`, `isolated` × platform admin / org admin / wall-less org admin / member × insert and delete on both tables × an in-boundary and an out-of-boundary set — the org admin's in-boundary writes answer 201/200, out-of-boundary 403 naming the condition.\n- Console check, no code expected: Setup's holders page offers Add / Remove to an org admin (objectui#12685 reads the grant); the invite dialog shows the placement section for an org admin (reads `my-delegable-scope`).\n- #23960's measurement re-run: the four writes that answered 403 answer 201/200 for an in-boundary set.\n\nRelated: #23960 (the ruling and the measurement), #24135 (the rule, lands first), ADR-0090 D12 (the delegated gate, #3663 / #3695 / #3722 as the precedent in the same file), ADR-0105 D4 / D8, objectui#12082 / PR objectstack-ai/objectui#12685."
+}

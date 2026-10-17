@@ -1,0 +1,33 @@
+{
+  "number": 24135,
+  "kind": "issue",
+  "title": "docs(adr): ADR-0090 D12 names the organisation administrator's assignment boundary (wall-bounded sets only) and ADR-0131 D3 notes it (ruling B on #23960)",
+  "state": "open",
+  "state_reason": null,
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "area:access",
+    "domain:spec",
+    "needs:contract-review",
+    "pm:queue",
+    "priority:p1",
+    "target:v18"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-17T02:51:50Z",
+  "updated_at": "2026-10-17T02:51:50Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 0,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/24135",
+  "body": "Filed by the director seat (summon #43 continuation 3, `session_01QJC7i981TSs9L1CGJK59Ax`) on the maintainer's ruling B on #23960 (batch #358 item 2, 「同意」 on the seat's revised recommendation; the ruling record is that card's `Ruled:` line). ⛔ Not a claim. Filing gate ①: a published decision the runtime contradicts, with the missing rule named. **Tier H** (`docs/adr/**`): lands only after an authorised approval with an at-tier `## Contract review` record.\n\n## What is measured (objectstack `origin/main` `be076dad28a0`)\n- ADR-0131 D3 (`docs/adr/0131-total-organization-ownership-no-null-organization-id.md:323`–`:326`): assignments 「are created and removed by that organization's admins for its own members」. ADR-0090 D12 (`docs/adr/0090-permission-model-v2-concept-convergence.md:514`): administration is a scoped capability with an allowlist per delegated scope; nothing names what the **built-in** `organization_admin` may assign.\n- The shipped set keeps `sys_user_position` and `sys_user_permission_set` read-only 「to prevent privilege escalation」 (`packages/plugins/plugin-security/src/objects/default-permission-sets.ts:441`–, pinned by `rbac-objects.test.ts:63`), because with no boundary an org admin could bind `admin_full_access` to themselves and leave the wall. Measured on #23960: every assignment write by an org admin answers 403; the v18 upgrade text (`18.walled-catalog-tenant-writes-retired.ts`, `replacement`) repeats D3.\n\n## Scope — the rule to write\n1. **ADR-0090 D12 amendment** (a dated note, the ADR's note-not-rewrite convention): an organisation administrator (a holder of `organization_admin` or `organization_admin_no_bypass` for the organisation, not a platform administrator) may create and remove `sys_user_position` / `sys_user_permission_set` rows for members of that organisation when every permission set distributed — the set itself, or each set a position carries — satisfies all three: (a) no `*` wildcard `viewAllRecords` / `modifyAllRecords`; (b) no `adminScope`; (c) every capability it carries is `scope: 'org'` in `packages/spec/src/security/capabilities.ts`. So `admin_full_access`, platform sets, `organization_admin` itself (`setup.access` is platform-scoped) and every delegated set are outside the boundary; organisation-administrator status is conferred only by membership grade (owner / admin → auto-grant), never copied by assignment. D12's three kinds of administrator become tenant-level, organisation-level, delegated; strict containment and the `everyone` / `guest` anchors unchanged.\n2. **ADR-0131 D3 note**: one dated line under D3 pointing at the D12 boundary as the rule D3's sentence runs under.\n3. The migration entry's `replacement` text stays as published (it becomes true); no `packages/spec` key.\n\n## Done when\n- Both notes are in; `check-adr-anchors` exit 0; `Clause-②: no` (ADR text only).\n- The execution card for the code (filed in the same act, `Blocked-by:` this card) can start.\n\nRelated: #23960 (the ruling), ADR-0090 D12 and its 2026-10-15 amendment (6181988435 on #23488), ADR-0105 D4 / D8, objectui#12082 / PR objectstack-ai/objectui#12685 (the console reads the grants)."
+}

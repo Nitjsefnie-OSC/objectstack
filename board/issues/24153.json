@@ -1,0 +1,36 @@
+{
+  "number": 24153,
+  "kind": "pull_request",
+  "title": "fix(example-todo): drop objectName from the two schedule start nodes",
+  "state": "closed",
+  "state_reason": null,
+  "draft": false,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "size/s",
+    "skip-changeset",
+    "tests"
+  ],
+  "assignees": [
+    "os-elon-musk"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-17T05:15:43Z",
+  "updated_at": "2026-10-17T06:35:20Z",
+  "closed_at": "2026-10-17T06:35:18Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": "2026-10-17T06:35:18Z",
+  "comments": 1,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/pull/24153",
+  "body": "Fixes #24067\nClause-②: no\n\n## What\n\n`examples/app-todo`'s two daily sweeps, `task_reminder` and `overdue_escalation`, stored `objectName: 'todo_task'` on a `type: 'schedule'` start node, a key the schedule binding never reads. This PR drops the key from both start nodes and adds a pin over the example's shipped stack. Clause-② is `no`: an example app's metadata loses a key nothing reads, and no export, type or accept set moves.\n\n## Premise verified first (on `origin/main` `9ffe8af094`)\n\n- `AutomationEngine.deriveTriggerBinding` (`packages/services/service-automation/src/engine.ts`) puts `config.objectName` into the record-change binding (`:3799`, `:3816`) and, as a fallback behind `timeRelative.object`, into the time-relative binding (`:3842`). Its `schedule` branch (`:3859` to `:3872`) builds `flowName`, `schedule`, `organization`, `condition` and `config`, and no object.\n- `ScheduleTrigger` (`packages/triggers/trigger-schedule/src/schedule-trigger.ts`) reads `binding.schedule` and `binding.organization`, and from `binding.config` only `schedule` and `organization`. It never reads `objectName`, and the run context it builds carries no object.\n- The spec's `resolveFlowTriggerKind` never reads `objectName`. Neither start node has a `record-*` `triggerType`, so both flows resolve to `schedule`.\n- Both sweeps name `todo_task` on their read steps: `get_upcoming_tasks` (`:61`) and `get_overdue_tasks` (`:166`). These are `get_record` nodes with `limit: 200`; the card calls them `get_records`, but they are the same nodes. They keep their `objectName`.\n- The only other readers are advisory: the engine's `validateFlowExpressions` schema hint (it logs and never throws) and `@objectstack/lint`'s `validate-expressions` hint. Under \"Evidence\" below, `objectstack validate` gives the same output before and after.\n\n## Changes\n\n- `examples/app-todo/src/flows/task.flow.ts`: drop `objectName` from both schedule start nodes. A comment on the first one says why.\n- `examples/app-todo/test/schedule-start-no-object-name.test.ts` (new): reads the flows from the example's default `defineStack` export, not from a hand list, and keeps those whose `resolveFlowTriggerKind` answer is `schedule`. It then asserts that none of them has `objectName` on its start node's `config`. Anti-vacuity: the selection must be non-empty, and each selected start node must carry `schedule`.\n\n**Selection, as a deviation from the dispatch wording.** The claim describes the pin's population as \"`type: 'schedule'` flows\". The pin selects by the spec resolver's `schedule` answer instead, because that is the predicate the engine binds by. Every `type: 'schedule'` flow is included unless its start node routes it to another trigger. The case that matters is a `timeRelative` sweep: its binding does fall back to `objectName`, so pinning the key away there would be wrong.\n\n## Evidence\n\n- Pin, on the fixed tree: `pnpm --filter @objectstack/example-todo exec vitest run --maxWorkers=2 test/schedule-start-no-object-name.test.ts` gives 2 passed.\n- Ablation through `scripts/ablation-replace.mjs` (wrap mode, with a restore trap). Each leg puts today's `objectName: 'todo_task'` back into one start node:\n  - Leg `0 8 * * *`: anchor count 1 to 0, blob `bf97d6a9016d` to `ef4f5551ce62`. **Red**, offenders `flow 'task_reminder' · start node config.objectName`. Restored: blob equals HEAD `bf97d6a9016d`, `git diff HEAD` empty.\n  - Leg `0 9 * * *`: blob `bf97d6a9016d` to `b6d8aab6cd15`. **Red**, offenders `flow 'overdue_escalation' · start node config.objectName`. Restored: blob equals HEAD, `git diff HEAD` empty.\n- Example suite on head `a60f8cde84`: `vitest run` gives 8 files and 240 tests passed. `typecheck` (`tsc --noEmit`) exits 0, and `tsc --listFiles` includes the new test.\n- `objectstack validate` on the example passes both before and after, and its 7 warnings are byte-identical. For the \"before\" reading, both keys were put back with nested `ablation-replace`, then restored to HEAD.\n- Same-family scan over `examples/`, `skills/`, `content/docs/` and `packages/create-objectstack/` found no other schedule start node with `objectName` (control: the same pattern finds 2 in the base tree's `task.flow.ts`).\n\n## Gates (local, head `a60f8cde84`)\n\n- `node scripts/pm/dispatch-gates.mjs --commands --repo objectstack-ai/objectstack` derives 41 commands. All 41 were run, and every exit code was captured before any pipe: **41 exit 0**.\n- `--ran` reconciliation: `41 derived, 41 run, 0 NOT-MEASURED, 0 UNRUN`.\n- On the first pass (head `73f5bf9968`), `check:dual-build-cjs-loads` and `check:i18n-coverage` refused with PREREQUISITE NOT MET (exit 3, nothing measured). I built the packages they named, and both then measured exit 0. The whole union was then re-run on the merge head.\n- CI owns the full set of families, the type-check lanes and the jobs scheduled by these paths.\n\n## Acceptance notes\n\n- No changeset: `@objectstack/example-todo` is `\"private\": true`, so this PR carries the `skip-changeset` label.\n- The card's last section leaves open whether the spec should refuse `objectName` on a schedule start node. That is the spec lane's call, and this PR does not touch it.\n- The head merged `origin/main` at `265ef64ba7`. Since then, `main` has advanced by one commit that touches only `plugin-approvals`, which this diff does not touch.\n\n---\n_Generated by [Claude Code](https://claude.ai/code/session_018VqJPGA1NDNSCZsnecsChP)_\n"
+}

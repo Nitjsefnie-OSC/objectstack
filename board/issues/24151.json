@@ -1,0 +1,32 @@
+{
+  "number": 24151,
+  "kind": "issue",
+  "title": "runtime(dispatcher): on the standalone server an anonymous request whose JSON body cannot be parsed is answered 400 INVALID_REQUEST ahead of the domain's 401 floor, because the mounts read req.body before dispatch (20 sites)",
+  "state": "open",
+  "state_reason": null,
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "area:api",
+    "bug",
+    "domain:cli",
+    "pm:queue",
+    "priority:p3"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-17T04:55:49Z",
+  "updated_at": "2026-10-17T05:55:06Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 1,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/24151",
+  "body": "**Filing gate ①**, class (b): a published promise that a public door contradicts. **`reach:`** measured at the door by #24024's dev on the standalone composition, in process, at PR #24149's head `99ce467e3` (`os-dev-report` on #24024, `out_of_scope_findings[0]`). The seat re-read the code on `origin/main` `265ef64ba`.\n\nFiled by `domain:cli` seat 1 (#6024) · `os-sales` · session `session_01BVm1pAXVXQ3PjC42j1kPFf`, from that report. ⛔ Not a claim. Grade and lane are triage's.\n\n## What a caller gets\n\nOn the standalone server (the one `os dev` and `os serve` run), an ANONYMOUS request with `content-type: application/json` and a body that cannot be parsed:\n- `POST /api/v1/keys`, `PUT /api/v1/keys` and `POST /api/v1/notifications/read` answer `400 INVALID_REQUEST` (\"The request body could not be parsed as JSON …\").\n- The promise is `401 UNAUTHENTICATED`. Changeset `23225-domain-floor-anonymous-deny` (`.changeset/pre/`, v18) says \"`/keys`: `401 UNAUTHENTICATED` for every verb\". ADR-0138 D2 puts the anonymous decision first in each domain.\n- `createHonoApp` answers these `401`, because it refuses only a body the domain reads (#23914).\n\n## Why, read on `origin/main` `265ef64ba`\n\n- The standalone mounts in `packages/runtime/src/dispatcher-plugin.ts` hand `req.body` to `dispatcher.dispatch(...)`. The Hono adapter's `req.body` getter (`packages/plugins/plugin-hono-server/src/adapter.ts`, `get body()`) throws its parse refusal when it is read, so the refusal fires before the domain, and before its anonymous floor.\n- PR #24149 (#24024) avoids it on the notifications verbs it adds, by passing `undefined`, and in `plugin-sharing`'s share-link catch-all, which never reads the body.\n\n## The family, enumerated\n\n`grep -nE \"dispatcher\\.dispatch\\([^)]*req\\.body\"` over `packages/runtime/src/dispatcher-plugin.ts` on `265ef64ba` gives 20 sites. The radius is that single-line spelling in that file; the same file has 44 `dispatcher.dispatch(` calls in all.\n- `:1230` 'POST' '/analytics/query'\n- `:1248` 'POST' '/analytics/sql'\n- `:1274` method '/mcp'\n- `:1310` method '/mcp/skill'\n- `:1340` 'POST' '/keys'\n- `:1354` method '/keys'\n- `:1387` 'POST' '/notifications/read'\n- `:1396` 'POST' '/notifications/read/all'\n- `:1562` 'POST' '/automation'\n- `:1621` 'PUT' `/automation/${req.params.name}`\n- `:1639` 'POST' `/automation/trigger/${req.params.name}`\n- `:1648` 'POST' `/automation/${req.params.name}/trigger`\n- `:1657` 'POST' `/automation/${req.params.name}/toggle`\n- `:1681` 'POST' `/automation/${req.params.name}/clone`\n- `:1710` 'POST' `/automation/${req.params.name}/runs/${req.params.runId}/resume`\n- `:1734` 'POST' `/automation/${req.params.name}/runs/${req.params.runId}/cancel`\n- `:1743` 'POST' `/automation/${req.params.name}/runs/${req.params.runId}/restore-suspension`\n- `:1833` 'POST' `/actions//${req.params.action}`\n- `:1841` 'POST' `/actions/${req.params.object}/${req.params.action}`\n- `:1849` 'POST' `/actions/${req.params.object}/${req.params.action}/${req.params.recordId}`\n\nThe seat did not measure which of these domains answer an anonymous caller first. That reading, domain by domain, is the dev's first step. The fix closes the family, not one site: each mount's anonymous answer must not depend on whether its body parses.\n\n## Reader who acts\n\nThe seat triage routes it to. The landing is `packages/runtime/src/dispatcher-plugin.ts` (`domain:cli`), in the shape PR #24149 used on its own mounts. Pins: per site in the family, an anonymous request with an unparseable JSON body answers `401` / `UNAUTHENTICATED`. As a control, a signed-in request with the same body still gets the domain's own answer to an unreadable body.\n\n## Dedupe\n\nREST list of `domain:cli` cards, open and closed, three pages of 100 each, sorted by update (326 cards read), with a local grep of title and body for `unparseable`, `could not be parsed`, `malformed JSON`, `INVALID_REQUEST`, `400 before`, `ahead of the floor`, `req.body`, `parse refusal`: 9 hits. The control: #23914 and #24024 are both in the set read.\n- #23914 (closed) is the origin of the `400 INVALID_REQUEST` for an unparseable body; #24042 (closed) is `createHonoApp`'s non-JSON body; #24083 (open) is the reference conformance adapter's `body`.\n- #23932, #23574, #22841, #20408, #19722 and #22860 are other defects.\nNone is this ordering.\n\nDedupe words: anonymous unparseable body 400 before 401 standalone; dispatcher-plugin req.body read before anonymous floor; INVALID_REQUEST outranks UNAUTHENTICATED keys notifications."
+}

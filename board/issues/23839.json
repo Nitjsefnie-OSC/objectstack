@@ -2,8 +2,8 @@
   "number": 23839,
   "kind": "issue",
   "title": "service-settings: the storage, knowledge and AI manifests carry their ⚠ warnings inside description and help strings; move each into an `info_banner` row (`bannerSeverity: warning`), item 2 of objectui#12610",
-  "state": "open",
-  "state_reason": null,
+  "state": "closed",
+  "state_reason": "completed",
   "draft": null,
   "author": {
     "login": "objectstack-fleet[bot]",
@@ -14,18 +14,21 @@
     "area:devpath",
     "domain:services",
     "enhancement",
-    "pm:blocked",
     "priority:p2"
   ],
   "assignees": [],
   "milestone": null,
   "type": null,
   "created_at": "2026-10-16T08:01:40Z",
-  "updated_at": "2026-10-17T01:30:48Z",
-  "closed_at": null,
-  "closed_by": null,
+  "updated_at": "2026-10-17T05:18:20Z",
+  "closed_at": "2026-10-17T05:17:03Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
   "merged_at": null,
-  "comments": 8,
+  "comments": 11,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/23839",
   "body": "Land-after: objectstack-ai/objectui#12671 at objectstack's `.objectui-sha` (claim `6216295088`).\nUnblocked 2026-10-16T13:14Z by `domain:services` seat 2. #23855 landed in PR #23886 (`dd11563f61`), so the four warnings now move with their translations into `settings.NAMESPACE.banners.BANNER_ID.{title,text}`. The PR stays draft until the console reads that slot, so no locale loses its translated warning in between.\n\nFiling gate ③: the objectstack half of objectstack-ai/objectui#12610 item 2 (filed by the epic PM from the 2026-10-16 Setup review, under the maintainer's 「全部立卡」). It was split by triage at that card's `pm:retriage` (domain:ui seat 3, `6210426632`). Splitting \"⚠\" out of a server string in the console would be the consumer-side tolerance objectui AGENTS.md #0.1 refuses. ⛔ Not a claim.\n\n**Reader who acts:** the `domain:services` seat (`packages/services/service-settings`).\n\n## What the admin reads (the walk on objectui `8415d9f11`)\n\n- **File Storage's subtitle:** \"… ⚠ Switching adapter does not migrate existing files — files uploaded under the previous adapter become unreachable through the new one.\"\n- **Knowledge's subtitle:** \"⚠ Switching adapter does NOT migrate existing indices.\"\n- **AI & Embedder's \"Log full prompts\" help text:** \"⚠ May leak PII\".\n\nThey are produced in `service-settings`' `storage.manifest.ts`, `knowledge.manifest.ts` and `ai.manifest.ts`, and in `src/translations/en.ts`, as seat 3 located.\n\n## The structured home already exists\n\n`packages/spec/src/system/settings-manifest.zod.ts` declares the `info_banner` specifier: `bannerText` (a markdown body) and `bannerSeverity: 'info' | 'success' | 'warning' | 'error'`. No spec change is needed.\n\n## The change\n\n- Each ⚠ sentence leaves its `description` / help string and becomes an `info_banner` row with `bannerSeverity: 'warning'`, placed in the section it concerns.\n- The translations move with it, for every locale `service-settings` ships.\n- **Pins:** each of the three manifests carries the warning only as an `info_banner`, and no `description` or help string contains \"⚠\".\n\n## Grade and order\n\n- **p2.** It is admin-facing copy. No setting's key, value or save behaviour changes.\n- It is independent of objectstack-ai/objectui#12610, which keeps items 1 and 4. The console's `info_banner` renderer draws the callout.\n\n## Dedupe\n\nThe parent is objectstack-ai/objectui#12610.\n\n"

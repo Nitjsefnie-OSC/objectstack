@@ -2,8 +2,8 @@
   "number": 24112,
   "kind": "issue",
   "title": "QA run · platform-core.metadata-authoring-roundtrip (1/1) · 55a806a7 · 2026-10-17 · 1 PASS / 0 PARTIAL / 0 FAIL / 0 BLOCKED / 0 NOT-RUN",
-  "state": "open",
-  "state_reason": null,
+  "state": "closed",
+  "state_reason": "completed",
   "draft": null,
   "author": {
     "login": "objectstack-fleet[bot]",
@@ -17,11 +17,15 @@
   "milestone": null,
   "type": null,
   "created_at": "2026-10-17T01:05:15Z",
-  "updated_at": "2026-10-17T01:05:15Z",
-  "closed_at": null,
-  "closed_by": null,
+  "updated_at": "2026-10-17T06:20:09Z",
+  "closed_at": "2026-10-17T06:20:09Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
   "merged_at": null,
-  "comments": 0,
+  "comments": 1,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/24112",
   "body": "Run record for the re-run objectstack-ai/objectstack#24036 (half B) asks for after revising this item. Runner: an `os-dev` subagent dispatched by the `domain:devx` seat 2 PM (session `session_016PVjjuVPte5XEJvaQx1E4t`). Protocol: `.claude/skills/checklist-test/SKILL.md` + `docs/qa/platform-checklist/RUNNER.md`. Executed sequentially (no subagent tool in this runner).\n\n## Environment fingerprint\n\n- framework: `55a806a78c0442243a8ac22e7dbc6f7b2c4b3bb0` on branch `claude/issue-24036-ledger-b`, the commit the app was built from. Its product tree is `origin/main` `8a83cebc1`; the branch adds `docs/qa/platform-checklist/areas/*.json` only, and its later commits touch those files alone. Built with `pnpm install --frozen-lockfile` and `turbo run build` (75/75 tasks).\n- `.objectui-sha`: `f8267df93aba8fb09cc1cc0692eadc0c8c5a5e56`. The console was built with `pnpm objectui:build` at that pin, and `check:console-sha` reads `Console dist matches the objectui pin (objectui@f8267df93aba)`.\n- boot: `OS_PORT=41927 objectstack dev --ui --seed-admin -p 41927 -d file:(run dir)/pc/data.db` from `examples/app-showcase`, its own port and file DB (the CLI also provisioned the sibling `data.telemetry.db`), stopped by its own process-group id afterwards.\n- browser: Playwright (playwright-core 1.63) on `/opt/pw-browsers/chromium`, signed in through the console form\n- persona(s): the seeded admin (`admin@objectos.ai`), identity proven with `GET /api/v1/auth/get-session` before the first cell\n- timestamps: 2026-10-17, 00:50Z to 00:53Z\n\n## Scope\n\nSelector `platform-core.metadata-authoring-roundtrip` resolves to 1 runnable item: `platform-core.metadata-authoring-roundtrip` at revision 3, P1, surface mixed. No planned or blocked-hidden item.\n\n## Per-clause verdicts\n\n| # | clause (short) | verdict | evidence |\n|---|---|---|---|\n| 0 | draft PUT persists and is listed | pass | writable package `com.example.qa-mar-…` by `POST /api/v1/packages`; `PUT /api/v1/meta/view/showcase_task.os_qa_view_RUNID?mode=draft&package=PKG` (a ListView body, viewKind list) 200 state=draft; `GET /api/v1/meta/_drafts` lists it. Controls for the revised spellings: the bare name `os_qa_view_RUNID` answers 422 `INVALID_METADATA` (name must be a dotted snake_case qualified name) |\n| 1 | publish-drafts promotes; console renders | pass | `/published` 404 before; `POST /packages/PKG/publish-drafts` 200 outcome published, publishedCount 1; `/published` 200 serving the authored body. Console: the Tasks list's view overflow (\"… N more\") lists \"QA MAR View RUNID\" after reload (screenshot) |\n| 2 | Studio authors through PUT /meta/page | pass | by hand at `/_console/apps/showcase_app/metadata/page/new`: label and name filled, Object set to the writable package's scratch object, Page type switched from the default list to record, Save (⌘S) → captured `PUT /api/v1/meta/page/qa_mar_record_page_RUNID?mode=draft` with object set, type record, kind full, regions seeded (page:header, record:highlights, page:tabs with record:details); the draft is listed in `/meta/_drafts` |\n| 3 | deny: read-only package create refused | pass | `PUT /api/v1/meta/object/qamar_widget_RUNID?package=com.example.showcase` 422 `WRITABLE_PACKAGE_REQUIRED` (\"that package is read-only … not a writable base\") |\n| 4 | deny: overlay on object 403; view overlay accepted | pass | `PUT /api/v1/meta/object/showcase_account` 403 `NOT_OVERRIDABLE`; `PUT /api/v1/meta/view/showcase_task.grid` 200 \"Saved customization overlay (env-wide, state=active)\", then reset by DELETE 200 |\n| 5 | malformed body refused, not stored | pass | the same ListView body with `config.columns: 42` → 422 `INVALID_METADATA` (config.columns invalid_union); GET 404 |\n\n## Automated pins run (RUNNER rule 6)\n\n- `packages/qa/dogfood/test/package-first-authoring.dogfood.test.ts` (automated.ref): 5 passed, run with webhook-materialization (6 passed across the two files), under the shared verify lock.\n\n## Reproduction rules\n\nNo clause scored `fail`, so none is owed. No authentication or authorization hole was found; nothing here is withheld under the RUNNER rule-2 carve-out.\n\n## Derived item verdict\n\n`platform-core.metadata-authoring-roundtrip` r3: **pass** (6 pass of 6 clauses).\n- The revised steps hold as written: the qualified name is required, `?mode=draft` is what lists the item in `/meta/_drafts`, and the page form defaults to list until the type is switched to record.\n\nChecklist-accuracy findings and fixture gaps from this run close out on objectstack-ai/objectstack#24036.\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_"
