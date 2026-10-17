@@ -109,9 +109,19 @@
 //
 // ## Usage
 //
-//   node scripts/rerun-safety-verdict.mjs \
+//   node scripts/rerun-safety-verdict.mjs [--leg <name>] \
 //     --pass1-log <file> --pass1-exit <n> \
 //     --pass2-log <file> --pass2-exit <n>
+//
+// `--leg` names the leg of the workflow's matrix this verdict belongs to
+// (#23880, ruling A: the passes run as legs, each over its own package set in
+// its own tree). It changes the LABEL only -- the header line and the error
+// annotation name the leg -- never the reading: each leg's verdict compares
+// that leg's two passes and says nothing about any other leg. Without it the
+// output is byte-for-byte what it was before legs existed. A name is lowercase
+// letters, digits and hyphens (`cli`, `rest-1-of-2`); anything else, an empty
+// value included, is refused rather than printed, because a verdict labelled
+// with a blank leg is four verdicts nobody can tell apart.
 //
 // Exit status: 0 only for RERUN-SAFE; 75 for a stall (EX_TEMPFAIL, the same
 // code run-with-stall-guard uses and for the same reason -- rerun it); 1 for
@@ -455,10 +465,13 @@ function passLine(n, p) {
   return lines;
 }
 
-export function renderVerdict(v, { pass1, pass2 }) {
+// The label a verdict carries: the workflow's name, and the leg when there is one.
+const labelOf = (leg) => (leg ? `Rerun Safety (leg ${leg})` : 'Rerun Safety');
+
+export function renderVerdict(v, { pass1, pass2, leg = null }) {
   const lines = [];
   lines.push('='.repeat(72));
-  lines.push(`Rerun Safety verdict: ${v.code}`);
+  lines.push(`${labelOf(leg)} verdict: ${v.code}`);
   lines.push('='.repeat(72));
   lines.push(v.headline);
   lines.push('');
@@ -469,6 +482,38 @@ export function renderVerdict(v, { pass1, pass2 }) {
   lines.push(...passLine(2, pass2));
   lines.push('='.repeat(72));
   return lines.join('\n');
+}
+
+/**
+ * The `::error::` annotations a red verdict prints: the headline, labelled like
+ * the header, then every detail line. Empty for RERUN-SAFE (exit 0).
+ */
+export function annotationLines(v, { leg = null } = {}) {
+  if (v.exit === 0) return [];
+  return [`::error::${labelOf(leg)}: ${v.code} -- ${v.headline}`, ...v.detail.map((d) => `::error::${d}`)];
+}
+
+// A leg name: what the workflow's matrix spells (`dogfood`, `cli`, `rest-1-of-2`).
+const LEG_NAME_RE = /^[a-z0-9][a-z0-9-]*$/;
+
+/**
+ * `--leg <name>` from argv: `{ leg: null }` when absent, `{ leg }` when well
+ * formed, `{ error }` when given without a usable value -- missing, empty, the
+ * next flag, or outside the leg-name grammar.
+ */
+export function parseLeg(argv) {
+  const i = argv.indexOf('--leg');
+  if (i === -1) return { leg: null };
+  const value = argv[i + 1];
+  if (value === undefined || !LEG_NAME_RE.test(value)) {
+    return {
+      error:
+        `--leg needs a leg name (lowercase letters, digits and hyphens, e.g. rest-1-of-2), got ` +
+        `${value === undefined ? 'nothing' : JSON.stringify(value)}. A verdict with a blank or garbled ` +
+        'leg cannot be told apart from the other legs\' verdicts, so it is not printed.',
+    };
+  }
+  return { leg: value };
 }
 
 // ---------------------------------------------------------------------------
@@ -504,9 +549,12 @@ const SELF_TEST_BATTERIES = Object.freeze({
   'verdict: a pass-1 failure pass 2 never finished is not re-measured, never recovered': 1,
   'render: the verdict line names MEASURED, PARTIALLY MEASURED or NOT MEASURED': 1,
   'render: a timeout-only newly failing task carries the twice-on-its-own instruction': 1,
+  'leg: an unlabelled verdict renders and annotates exactly as before legs': 2,
+  'leg: a labelled verdict names its leg in the header and the annotation': 3,
+  'leg: --leg is read, and a missing, empty or malformed name is refused': 6,
 });
 
-const SELF_TEST_BATTERY_FLOOR = 23;
+const SELF_TEST_BATTERY_FLOOR = 26;
 
 // Set by `selfTest()` only after its verdict is printed, and read at the
 // dispatch: a `return` above that line prints nothing and still exits 0 -- a
@@ -855,6 +903,48 @@ function selfTest() {
     );
   }
 
+  // -- the leg label (#23880, ruling A) -------------------------------------
+  {
+    // The 2026-10-17 night (run 39001012611) printed exactly these two lines;
+    // with no --leg they must stay what they were.
+    const args = { pass1: passOf(1, NIGHT_1014_PASS1), pass2: passOf(124, '') };
+    const v = verdict(args);
+    const label = 'leg: an unlabelled verdict renders and annotates exactly as before legs';
+    check(label, renderVerdict(v, args).split('\n')[1] === 'Rerun Safety verdict: INCOMPLETE', renderVerdict(v, args).split('\n')[1]);
+    check(
+      label,
+      annotationLines(v)[0] === '::error::Rerun Safety: INCOMPLETE -- INCOMPLETE -- a pass did not finish, so the rerun property was NOT MEASURED',
+      annotationLines(v)[0],
+    );
+  }
+  {
+    const args = { pass1: passOf(1, NIGHT_1014_PASS1), pass2: passOf(1, NIGHT_1014_PASS2) };
+    const v = verdict(args);
+    const label = 'leg: a labelled verdict names its leg in the header and the annotation';
+    const header = renderVerdict(v, { ...args, leg: 'rest-1-of-2' }).split('\n')[1];
+    check(label, header === 'Rerun Safety (leg rest-1-of-2) verdict: RERUN_UNSAFE_ON_BROKEN_BASELINE', header);
+    const notes = annotationLines(v, { leg: 'cli' });
+    check(
+      label,
+      notes[0] === '::error::Rerun Safety (leg cli): RERUN_UNSAFE_ON_BROKEN_BASELINE -- RERUN-UNSAFE, on top of a suite that is already broken on main' &&
+        notes.length === v.detail.length + 1,
+      notes[0],
+    );
+    // The label is a label: the reading under it is the unlabelled one, line for line.
+    const body = (text) => text.split('\n').slice(2).join('\n');
+    check(label, body(renderVerdict(v, { ...args, leg: 'cli' })) === body(renderVerdict(v, args)), 'the body changed with the label');
+  }
+  {
+    const label = 'leg: --leg is read, and a missing, empty or malformed name is refused';
+    const base = ['--pass1-log', 'a', '--pass1-exit', '0'];
+    check(label, parseLeg(base).leg === null && !parseLeg(base).error, JSON.stringify(parseLeg(base)));
+    check(label, parseLeg(['--leg', 'rest-2-of-2', ...base]).leg === 'rest-2-of-2', JSON.stringify(parseLeg(['--leg', 'rest-2-of-2', ...base])));
+    check(label, Boolean(parseLeg([...base, '--leg']).error), 'a trailing --leg was accepted');
+    check(label, Boolean(parseLeg(['--leg', '', ...base]).error), 'an empty leg was accepted');
+    check(label, Boolean(parseLeg(['--leg', '--pass1-log', 'a']).error), 'the next flag was taken as the leg');
+    check(label, Boolean(parseLeg(['--leg', 'rest 1', ...base]).error), 'a leg with a space was accepted');
+  }
+
   // -- the floor -----------------------------------------------------------
   const declared = Object.keys(SELF_TEST_BATTERIES);
   let floorBroken = 0;
@@ -907,6 +997,11 @@ function main(argv) {
     return status;
   }
 
+  const { leg, error: legError } = parseLeg(argv);
+  if (legError) {
+    console.error(`rerun-safety-verdict: ${legError}`);
+    return 2;
+  }
   const pass1Log = readArg(argv, '--pass1-log');
   const pass2Log = readArg(argv, '--pass2-log');
   const pass1Exit = Number(readArg(argv, '--pass1-exit'));
@@ -914,7 +1009,7 @@ function main(argv) {
 
   if (!pass1Log || !pass2Log || !Number.isInteger(pass1Exit) || !Number.isInteger(pass2Exit)) {
     console.error(
-      'usage: rerun-safety-verdict.mjs --pass1-log <f> --pass1-exit <n> --pass2-log <f> --pass2-exit <n>',
+      'usage: rerun-safety-verdict.mjs [--leg <name>] --pass1-log <f> --pass1-exit <n> --pass2-log <f> --pass2-exit <n>',
     );
     return 2;
   }
@@ -935,18 +1030,16 @@ function main(argv) {
 
   const args = { pass1: passOf(pass1Exit, t1), pass2: passOf(pass2Exit, t2) };
   const v = verdict(args);
-  console.log(renderVerdict(v, args));
-  if (v.exit !== 0) {
-    console.log(`::error::Rerun Safety: ${v.code} -- ${v.headline}`);
-    for (const d of v.detail) console.log(`::error::${d}`);
-  }
+  console.log(renderVerdict(v, { ...args, leg }));
+  for (const line of annotationLines(v, { leg })) console.log(line);
   return v.exit;
 }
 
-// This module EXPORTS `readPass` / `failingTasks` / `verdict` / `renderVerdict`
-// so the workflow's verdict step and any future reader can use them, so its top
-// level must not run on import -- an importer would otherwise be ended
-// mid-import by the dispatch below (`pnpm check:entry-guard`).
+// This module EXPORTS `readPass` / `failingTasks` / `verdict` / `renderVerdict` /
+// `annotationLines` / `parseLeg` so the workflow's verdict step and any future
+// reader can use them, so its top level must not run on import -- an importer
+// would otherwise be ended mid-import by the dispatch below
+// (`pnpm check:entry-guard`).
 if (isEntrypoint(import.meta.url)) {
   process.exitCode = main(process.argv.slice(2));
 }
