@@ -27078,7 +27078,9 @@ export class ObjectStackProtocolImplementation implements
      * `sys_metadata` keys on (type,name,org), so a same-name copy would collide
      * with the source — and rewriting every intra-package reference (lookup
      * `reference`, view `object`, expressions, etc.) to the new names. Per-item
-     * best-effort; one failure never aborts the whole clone.
+     * best-effort; one failure never aborts the whole clone. The copy's package
+     * record is not an item: when its install is refused, that refusal refuses
+     * the whole duplicate, before any item is written.
      *
      * Every copied object is named in the target namespace: `iojn_customer`
      * becomes `iojn2_customer`, and an object whose name lacks the source
@@ -27132,12 +27134,10 @@ export class ObjectStackProtocolImplementation implements
         // covers the WRITE. It does not cover this method, for two reasons that
         // are both about where the refusal lands:
         //
-        //   ① the `installPackage` call below sits inside a `catch {}` that is
-        //     deliberately best-effort (a manifest row is not worth aborting a
-        //     copy for), so a refusal raised THERE would be swallowed here and
-        //     the caller would read `success: true` on a package with no
-        //     manifest row — a silent partial state, strictly worse than the
-        //     201 this card set out to close;
+        //   ① a refusal of the `installPackage` call below is rethrown before
+        //     any item is copied, so it would not be lost — but it names
+        //     `manifest.id`, the key of a manifest this door builds, never the
+        //     `targetPackageId` the caller wrote (the closing paragraph below);
         //   ② the refusal has to precede the MUTATIONS, and the manifest write
         //     is not the first of them. #14451 already established the position
         //     for this door's other precondition: `duplicatePackage` mints the
@@ -27527,8 +27527,41 @@ export class ObjectStackProtocolImplementation implements
                 };
                 delete dupManifest.scope;
                 await this.installPackage({ manifest: dupManifest } as InstallPackageRequest);
-            } catch {
-                /* best-effort — the per-item package binding still works without a manifest row */
+            } catch (e: any) {
+                // [#24041] ⭐ A REFUSED PACKAGE RECORD REFUSES THE DUPLICATE —
+                // the refusal itself, rethrown unchanged, before any item is
+                // copied (ruling B, claim amendment 6227008947).
+                //
+                // This catch used to drop it and copy anyway. A refused install
+                // leaves no registry record and no `sys_packages` row, so the
+                // copy's items were live, bound to an id no package record
+                // holds, absent from `GET /packages`. After a namespace conflict
+                // they also sat inside a namespace another package owns — the
+                // very state ADR-0048 Phase 1's install-time gate in
+                // `SchemaRegistry.installPackage` exists to refuse. The sibling
+                // verb {@link importUnmanagedPackage} states the rule this door
+                // now keeps: "There is no half-copied app."
+                //
+                // Nothing needs undoing: this call is the duplicate's FIRST
+                // mutation (everything above it reads), and a refused install
+                // leaves nothing behind — the registry judges before it writes,
+                // and a failed persist undoes the registry write before it
+                // throws (#21243). So the door answers the refusal's own status:
+                // `422 NAMESPACE_CONFLICT` with the registry's remedy (choose
+                // another namespace), or the primitive's `500` for a store fault.
+                //
+                // Logged once, because neither the primitive nor the HTTP door
+                // logs it. A store fault's driver text rides only on the error's
+                // `cause`, which no answer quotes, so the error itself is handed
+                // to the log for that one; a client refusal's sentence is
+                // already the whole story.
+                console.warn(
+                    `[protocol.duplicatePackage] refused: the package record for '${request.targetPackageId}' `
+                    + `(copy of '${request.sourcePackageId}') was not installed, so nothing was copied: `
+                    + `${typeof e?.code === 'string' ? `${e.code}: ` : ''}${e?.message ?? e}`,
+                    ...(declaresClientRefusal(e) ? [] : [e]),
+                );
+                throw e;
             }
         }
 
