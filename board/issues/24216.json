@@ -1,0 +1,33 @@
+{
+  "number": 24216,
+  "kind": "pull_request",
+  "title": "feat(platform-objects): sys_organization declares a record_header invite action; leave_organization folds to the overflow and names what is lost",
+  "state": "open",
+  "state_reason": null,
+  "draft": true,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "documentation",
+    "size/m",
+    "tests",
+    "tooling"
+  ],
+  "assignees": [
+    "os-project-manager"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-17T19:30:18Z",
+  "updated_at": "2026-10-17T20:18:02Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 2,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/pull/24216",
+  "body": "Fixes #24016\n\n#24021's copy half rides here (ruling 6228318638 item 2); that card's record-scope key is not added.\n\nClause-②: no\n\n## What\n\n`sys_organization` declares the invite action ruling 6228318638 (letter B′ on #24034, item 1) names, so an organization record page's `page:header` can list it. A `page:header` resolves action ids against its own object only.\n\n- **`invite_user` at `record_header`**: `type: 'api'`, `target: '/api/v1/auth/organization/invite-member'`, `recordIdParam: 'organizationId'`, `requiresFeature: 'organization'`, `requiresMembershipReach: 'invite_member'`, `variant: 'primary'`, `order: -1`. Its params are `email` and `role`, both required, with the role picker on `INVITATION_ROLE_OPTIONS`, as `sys_invitation.invite_user` declares them. Its description and success message match the other three mirrors (`sys_user`, `sys_invitation`, `sys_member`).\n- **`leave_organization`** keeps `variant: 'danger'` and gains `order: 1`. Its `confirmText` now names what is lost: \"Leave this organization? You will lose access to its environments and members.\" The zh-CN, ja-JP and es-ES bundles carry translated text.\n- No new spec key.\n\n## Measurements behind the choices\n\n- **H1, the params.** `email` and `role` are not fields of `sys_organization`. A field-backed param resolves against the action's own object unless `objectOverride` names another. So both params carry `objectOverride: 'sys_invitation'`, the device `sys_member`'s mirror already uses for `email`. Apart from that the shape is `sys_invitation`'s (required, same options). The existing \"every field-backed param resolves to a real field\" pin now covers all four mirrors.\n- **H2, the gates.** Both keys are declared on `ActionSchema` (`requiresFeature`, `requiresMembershipReach` in `packages/spec/src/ui/action.zod.ts`) and are already used by all three mirrors. The lowered `visible` matches theirs byte for byte; that is pinned.\n- **H3, the order.** I read objectui `9753811`'s `page:header` renderer (`packages/components/src/renderers/layout/containers.tsx`). It stable-sorts by `order` (unset = 0) and promotes the first non-destructive `variant: 'primary'` action. Then the first `maxVisible` authored actions (default 3) go inline and the rest fold into the `⋯`, with destructive ones in its last band. With only the invite added, the row was invite, set_active, **leave**, and `change_slug` folded. So `leave_organization` stayed inline as the third button. For it to \"fall to the overflow\" it needs a declared position: `order: 1` sorts it last, so the inline row is invite, set_active, change_slug and leave folds. This reuses the spec's existing `order`, so no new key.\n- **H4/H5, the bundles.** `en.objects.generated.ts` is rewritten from source on every extract. The translated locales keep their values in merge mode, so the new leaves were seeded in English by `pnpm i18n:extract`. I set them to the sibling `sys_invitation.invite_user` translations and translated the new `leave_organization.confirmText`, then re-ran the extract. It is idempotent and drops the seeded source-hash entries. `pnpm check:i18n`: all 10 packages in sync.\n\n## Outside the claim's file surface\n\n`packages/spec/src/kernel/public-auth-features.ts` gains one row: `sys_organization.actions.invite_user` in `PUBLIC_AUTH_FEATURES.organization.gatedInputs`. This is a ledger entry, not a key. `platform-objects/src/feature-gate-guard.test.ts` requires every `features.*` gate in the objects to be booked there, and it went red without the row. The ruled `requiresFeature: 'organization'` cannot land without it. `pnpm --filter @objectstack/spec check:generated` reports all 14 artifacts up to date, and the changeset adds a `@objectstack/spec` patch.\n\n## Tests\n\n- New `sys-organization-invite-action.test.ts` pins:\n  - the record-header placement: location, endpoint, `recordIdParam`;\n  - the invite is the only primary action and sorts first;\n  - `leave_organization` stays `danger` and sorts past the inline budget.\n- `invite-entry-toolbar.test.ts` and `invite-user-action-copy.test.ts` now include `sys_organization` as a fourth mirror for endpoint, gates, inputs, param resolvability, copy, translated bundles and served metadata. The list-toolbar location pin stays on the three toolbar mirrors.\n- Ablation: deleting `leave_organization`'s `order: 1` through `scripts/ablation-replace.mjs` landed (anchor 1 to 0, blob `919503b9` to `70b55e52`). The test \"sorts last, past the inline budget once the invite leads\" went red (1 failed, 4 passed). The file was restored to the HEAD blob and `git diff HEAD` was empty.\n- `pnpm --filter @objectstack/platform-objects test`: 74 files, 1162 tests passed. `typecheck`: exit 0. `src/kernel/public-auth-features.test.ts`: 24 passed. All on `9aa48a7e5`, after merging `origin/main`, which brought #24200 and #24204; the bundles regenerated byte-identical.\n- Local gates on `9aa48a7e5`: `node scripts/pm/dispatch-gates.mjs --commands` derives 86 commands. All 86 exited 0, and `--ran` reports \"86 run, 0 NOT-MEASURED (a DERIVED zero)\".\n\n## Acceptance notes\n\n- `leave_organization` folds only when the header has more than 3 visible authored actions. That is the case for an admin in multi-org: invite, set_active, change_slug, leave. A plain member does not see the invite, so leave stays inline as a red outline button. It is never the primary (objectui#12764). Moving it to the overflow unconditionally would take `component: 'action:menu'`. I did not do that: the ruling speaks in terms of order, and cloud#2910 overrides order and variant per its own posture (ruling item 5).\n- The invite is gated on the `organization` capability, as the ruling says, while its record-header siblings use `multiOrgEnabled`. In single-org mode the invite is the only header action.\n\n---\n_Generated by [Claude Code](https://claude.ai/code/session_01Eey1448sFJ5Z95gbXZh2tG)_\n"
+}

@@ -2,7 +2,7 @@
   "number": 24174,
   "kind": "pull_request",
   "title": "docs(skills): `previous` is `null` on insert in objectstack-data and objectstack-formula, no longer unbound",
-  "state": "open",
+  "state": "closed",
   "state_reason": null,
   "draft": false,
   "author": {
@@ -12,7 +12,6 @@
   },
   "labels": [
     "documentation",
-    "needs-user-decision",
     "size/s",
     "tooling"
   ],
@@ -22,10 +21,14 @@
   "milestone": null,
   "type": null,
   "created_at": "2026-10-17T13:33:52Z",
-  "updated_at": "2026-10-17T14:08:58Z",
-  "closed_at": null,
-  "closed_by": null,
-  "merged_at": null,
+  "updated_at": "2026-10-17T14:25:23Z",
+  "closed_at": "2026-10-17T14:22:47Z",
+  "closed_by": {
+    "login": "os-zhuang",
+    "id": 277994282,
+    "type": "User"
+  },
+  "merged_at": "2026-10-17T14:22:47Z",
   "comments": 2,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/pull/24174",

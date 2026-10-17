@@ -1,0 +1,38 @@
+{
+  "number": 24183,
+  "kind": "issue",
+  "title": "rest(export): `format=json` ignores `?fields=`, so a list view's JSON export carries every readable field instead of the view's columns",
+  "state": "closed",
+  "state_reason": "completed",
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "area:api",
+    "bug",
+    "domain:cli",
+    "priority:p1",
+    "target:v18"
+  ],
+  "assignees": [
+    "marchtian"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-17T15:27:47Z",
+  "updated_at": "2026-10-17T19:11:26Z",
+  "closed_at": "2026-10-17T19:10:02Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": null,
+  "comments": 7,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/24183",
+  "body": "**Filing gate ①:** a product defect with a named landing and a named real producer. **`reach:`** objectui's list-view export (`packages/plugin-list/src/ListView.tsx`, `handleExport`) sends `format=json` with `fields` set to the view's visible columns. The server drops that list for JSON.\n\n**Filed by** the `domain:cli` seat 1 (#6024) · `os-sales` · `session_01BVm1pAXVXQ3PjC42j1kPFf`, from the at-tier contract review `6235720861` on PR #24178 (#24143), out-of-scope finding 1, escalated to this seat as a filing candidate. ⛔ Not a claim. Lane, grade and `area:*` are triage's.\n\n**Reader who acts:** the `domain:cli` seat, in `packages/rest/src/data-action-routes.ts`, at the export handler's JSON branch.\n\n## Measured (code, `origin/main` `cb8756b00`)\n\n- **The contract:** the route's doc comment declares `fields=a,b,c` for every format, with no format caveat (`data-action-routes.ts`, the `GET /data/:object/export` block, about `:752`).\n- **CSV and XLSX honour it:** `fields` selects the header and each row's cells (`formatRowCells`).\n- **JSON does not:**\n  - The read query (`findArgs`, about `:1075`) carries no field projection.\n  - Each row is written as `JSON.stringify(formatRowForJson(row, metaMap, timezone))` (about `:1165`).\n  - `formatRowForJson` (`export-format.ts`, about `:404`) formats known keys and keeps every key the read returns.\n\n  So `?format=json&fields=title` answers every readable field. After PR #24178 lands, the hidden-field drop on the default columns also does not reach JSON.\n- **The producer:** objectui `packages/data-objectstack/src/index.ts` (`exportDownload`, about `:5002-5093`) sets `format=json` and `fields` from the request. `ListView.tsx`'s `handleExport` routes `csv | xlsx | json` to it with `fields` taken from the view's `effectiveFields`. A user who exports a list view as JSON gets columns the view does not show.\n- **Not a read-boundary hole:** the rows are what the reader's own read returns, so field-level security still applies. This is a dropped projection, the shape AGENTS.md's route rule 5 names: the full set comes back, and no status tells the caller its `fields` was ignored.\n- **Not measured at the door:** this is a code reading plus the named producer. The first dev re-measures once, on `examples/app-showcase`, with `GET /api/v1/data/showcase_task/export?format=json&fields=title`.\n\n## Done when\n\n- `format=json` with `?fields=` answers each row with exactly the named keys (plus whatever the CSV arm also always writes, if anything; measure it, don't assume it). An explicit list keeps its order.\n- `format=json` without `?fields=`: decide in the claim whether it follows the CSV default columns (schema fields, minus `hidden`, ∩ FLS-readable, after #24178) or stays the read's full row. Record that decision and pin it.\n- Pins through the real route for both, with an ablation that reddens the projection pin.\n- `Clause-②`: whatever the diff shows. A JSON export that now serves fewer keys is a served-set narrowing.\n\n## Dedupe\n\nMCP `search_issues` on objectstack-ai/objectstack, closed included:\n- `export format json ignores fields parameter column projection`: 1 hit, #21229 (closed, the grid's `exportOptions` typing).\n- `JSON export returns every field instead of the requested fields`: 3 hits, #21229, #8010 (closed, `ListView.exportOptions` typing) and #7532 (closed, a dotted projection entry widening `/data` query responses).\n\nNone of these is the export door's JSON branch.\n\nDedupe words: export format=json fields ignored; JSON export every field; export projection json."
+}

@@ -1,0 +1,37 @@
+{
+  "number": 24209,
+  "kind": "pull_request",
+  "title": "fix(platform-objects): System Overview's six metric tiles declare layout.h 1, one row tall, where they declared 2",
+  "state": "closed",
+  "state_reason": null,
+  "draft": false,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "documentation",
+    "size/s",
+    "tests",
+    "tooling"
+  ],
+  "assignees": [
+    "os-project-manager"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-17T18:52:50Z",
+  "updated_at": "2026-10-17T19:57:14Z",
+  "closed_at": "2026-10-17T19:57:13Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": "2026-10-17T19:57:12Z",
+  "comments": 2,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/pull/24209",
+  "body": "Fixes #24126\n\nClause-②: no\n\n## What changed\n\nThe `system_overview` dashboard that `@objectstack/platform-objects` ships (`SystemOverviewDashboard`, the Setup app's landing board) authored its six `type: 'metric'` tiles at `layout.h: 2`. They now declare `layout.h: 1`.\n\n- `packages/platform-objects/src/apps/dashboards/system_overview.dashboard.ts`: 6 lines, +6/-6. Only `h` moved. Every `x`, `y` and `w`, the chart and table widgets (`h: 4`), the widget ids, filters and bindings are untouched.\n- `packages/platform-objects/src/apps/dashboards/system-overview-tile-layout.test.ts` (new, +72): a pin beside the existing tile-semantics test. Every `type: 'metric'` widget on the board declares `layout.h` of 1, read off `type` rather than a list of ids so a later KPI tile is held to it too. It carries its opposite direction: the read must find exactly the six tiles, and the chart and table widgets must stay taller than a tile.\n- `.changeset/24126-system-overview-metric-height.md` (new): `patch` for `@objectstack/platform-objects`.\n\nWhy: the maintainer's ruling B on objectstack-ai/objectui#12704. The console draws a widget over the grid rows its `h` names, each row floors at 5rem and grows to its content, and a metric card fills its box, so an `h: 2` tile drew a box about twice the height of its content. The platform draws what the metadata declares (ADR-0078 forbids an `h` that is read and not honoured), so the authored size is corrected, not the renderer. No `packages/spec` change, no renderer change, no other dashboard.\n\n## Evidence\n\n- `pnpm --filter @objectstack/platform-objects exec vitest run --maxWorkers=2` at `b66de4d25`: 74 files, 1139 tests, all passed (lock verdict `command-exit 0`).\n- `pnpm --filter @objectstack/platform-objects typecheck`: exit 0. The new test file is inside the `tsconfig.test.json` program (`--listFiles` names it); the three test-layer errors that program reports are all in `feature-gate-guard.test.ts` and are the pinned debt in `test-typecheck-debt.json`, which this PR leaves byte-identical to `origin/main`.\n- One-shot reverse verification of the new pin, run on the committed change: all six `h: 1 },` mutated back to `h: 2 },` through `scripts/ablation-replace.mjs` (anchor 6 to 0, blob changed on disk), the new test file run: 1 failed, 2 passed. The failure names all six tiles (`widget_total_users` through `widget_config_changes`, each `layout.h=2`); both controls stayed green. Direction: red, as expected. The test imports the dashboard by relative source path, so no rebuild stands between the mutation and the run. Restore proven: blob equal to the `HEAD` blob (`53aa021f4618`) and `git diff HEAD` empty.\n- Gate derivation with no paths (`node scripts/pm/dispatch-gates.mjs --commands --repo objectstack-ai/objectstack`, merge base `f792290df`, 3 changed paths): 63 families. `--ran` reconciliation: 62 run with exit 0, 1 NOT MEASURED, 0 unrun. The one: `node scripts/check-plugin-teardown-shape.mjs --self-test` exits 3, `PREREQUISITE NOT MET`, because its pinned positive control is a commit this shallow clone cannot reach; deepening would mutate the `.git` shared by every agent in the container, and the gate does not read any file this PR touches. Three build-gated gates (`check:i18n`, `check:lean-entry-closure`, `check:dual-build-cjs-loads`) first exited 3 for missing `dist/`, then exited 0 after their prerequisite builds (`check:i18n`: \"all bundles in sync, no undeclared authoring keys\").\n\n## Acceptance notes\n\n- **Empty-row hypothesis, falsified.** I expected that keeping every `y` while `h` drops to 1 would leave rows 1 and 3 empty (tiles at `y: 0` and `y: 2`, charts at `y: 4`, `y: 8`). It does not. The console mounts `DashboardRenderer` (`packages/app-shell/src/views/DashboardView.tsx`), which places widgets by span only: `gridColumn: span w` and `gridRow: span h` with no explicit row or column start, over `gridAutoRows: 'minmax(5rem, auto)'`; its own comment reads \"Widgets are auto-placed by span only\", and array order is visual order. `layout.y` is read nowhere in that path; `layout.x` only feeds column-count inference when `columns` is absent (here `columns: 12` is declared). Read at objectui `97538115b` (HEAD when measured) and at `5e15928b4`, the pin this repo ships (`.objectui-sha`): the placement lines are identical. The only reader of `x` and `y` as positions is `DashboardGridLayout` (react-grid-layout), a component a host mounts directly; its `dashboard-grid` node key is retired and the console does not mount it. So with `h: 1` the six tiles auto-flow into two content-height rows, then the charts, then the table: no empty band. Measured by reading, not by a browser run.\n- **Pin hypothesis.** No existing `platform-objects` test asserted these widgets' layout, so nothing flipped. The only other `h: 2` copy is the inline fixture in `packages/objectql/src/protocol-packaged-dashboard-base.test.ts`; it builds its own body and never imports the shipped board, so it is untouched.\n- **Overlay.** An org that already published an overlay of `system_overview` is served that overlay as stored (ADR-0126 Regime O), so it keeps the tile heights it was saved with; the changeset says so.\n- **Not measured here:** the rendered tile height (the card's 88 to 96 px at 1024 and 1280 px) needs the console at the objectui pin plus objectui's regression pin from objectstack-ai/objectui#12704, which the card places after this change. This PR does not claim it.\n- **Observation, not filed:** because `y` is not a placement input on the console's view path, the spec's required `layout.y` is only honoured by `DashboardGridLayout`. Read-only, no wrong answer reproduced; carrier: none.\n\nLabels: none requested for this card; the diff publishes `@objectstack/platform-objects`, so no `skip-changeset`.\n\n---\n_Generated by [Claude Code](https://claude.ai/code/session_01JtSQQ3EWsbNPzyYMug1tXy)_\n"
+}

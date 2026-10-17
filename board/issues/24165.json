@@ -2,8 +2,8 @@
   "number": 24165,
   "kind": "issue",
   "title": "spec(contracts): the verified MCP access token result carries organizationId, the organization an OAuth consent bound (slice 1 of #24137, ruled A at 6232069920)",
-  "state": "open",
-  "state_reason": null,
+  "state": "closed",
+  "state_reason": "completed",
   "draft": null,
   "author": {
     "login": "objectstack-fleet[bot]",
@@ -12,7 +12,6 @@
   },
   "labels": [
     "domain:spec",
-    "pm:dispatched",
     "priority:p1"
   ],
   "assignees": [
@@ -21,11 +20,15 @@
   "milestone": null,
   "type": null,
   "created_at": "2026-10-17T09:50:53Z",
-  "updated_at": "2026-10-17T14:17:48Z",
-  "closed_at": null,
-  "closed_by": null,
+  "updated_at": "2026-10-17T17:41:31Z",
+  "closed_at": "2026-10-17T17:39:50Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
   "merged_at": null,
-  "comments": 1,
+  "comments": 6,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/24165",
   "body": "Carries item 5, first slice, of #24137 (the `packages/spec` contract type); #24137 keeps the runtime read and its pins, and #24137's second upstream slice (`plugin-auth`'s consent binding) is filed beside this one.\n\n**Filing gate ③**, a maintainer-directed task: ruled at `6232069920` on #24137, letter A, the maintainer's word 「同意」, recorded by the triage seat. Filed by `domain:cli` seat 1 (#6024) · `os-sales` · session `session_01BVm1pAXVXQ3PjC42j1kPFf`. ⛔ Not a claim.\n\n## What the ruling binds, for this slice\n\nFrom `6232069920`, verbatim: \"**Binding:** at consent, `plugin-auth` records the consenting user's current organization through the installed OAuth provider's declared seam (`postLogin.consentReferenceId` / `customAccessTokenClaims`). The access token carries it as the claim **`organization_id`**.\" Its execution plan names this slice: \"The `packages/spec` contract type for the verified-token result. Spec seat, `Clause-②: yes (widening)`.\"\n\n## The change\n\n- `packages/spec/src/contracts/auth-service.ts`, `verifyMcpAccessToken` (about `:297`, read on `origin/main` `52c04b360`): its result type `{ userId: string; scopes: string[]; clientId?: string }` gains the bound organization, as an optional `organizationId` member. It is absent for a token minted before the binding existed, and for an M2M token.\n- `Clause-②: yes (widening)`: a published contract type gains a member. The describe text / JSDoc says what it is: the organization the user's OAuth consent bound, read from the token's `organization_id` claim, and re-checked against a current membership by the caller on every request (ruling item 2).\n\n## Reader who acts\n\nThe `domain:spec` seat (`packages/spec` is always its; this card self-labels `domain:spec` under the filer exception, so triage spot-checks the route). The `plugin-auth` slice waits on this one (its `Blocked-by:`), and #24137 waits on both.\n\n## Dedupe\n\nMCP `search_issues` on this repository, closed included: `OAuth MCP access token organization claim consent bind organization verifyMcpAccessToken` gave 4 hits. #24137 is the parent. #20791 is the MCP distribution check, #16418 (closed) the M2M principal, and #16549 (closed) the OAuth agent ceiling. None is this contract member.\n\nDedupe words: verifyMcpAccessToken organizationId contract; OAuth token organization_id claim spec auth-service; MCP access token bound organization."
