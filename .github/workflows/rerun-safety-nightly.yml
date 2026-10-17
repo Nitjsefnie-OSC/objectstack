@@ -57,6 +57,44 @@
 # own plan, and the spec's `test` script regenerates its migration registry
 # itself. It also stops pass 2 from rebuilding `dist/` over whatever pass 1 left
 # there, which is a working-tree state this job exists to see, not to repair.
+#
+# ## Why four legs (#23880, the maintainer's ruling A)
+#
+# One runner stopped holding two full passes. On 2026-10-17 (run 39001012611)
+# setup and build took 6.7 minutes, pass 1 took 110.5 and pass 2 was stopped by
+# its time share 47 minutes in: INCOMPLETE, the rerun property NOT MEASURED, for
+# the sixth night running. Pass 1 alone needs more than the 79 minutes a pass can
+# have here ((170 - 6.7 - 5) / 2), and raising the 170-minute bound is ruled out.
+#
+# So the job is a matrix of LEGS. Each leg is its own runner and its own
+# checkout, and runs the whole instrument over its own package set: install,
+# build, pass 1, the on-disk report, pass 2 in the same tree, and a verdict that
+# names the leg. The split:
+#
+#   dogfood        @objectstack/dogfood, alone
+#   cli            @objectstack/cli, alone (2205.79 s of measured task time in
+#                  scripts/test-shard-timings.json, the heaviest package)
+#   rest-K-of-2    every other workspace package, split in two by
+#                  scripts/partition-test-shards.mjs from that dataset -- the
+#                  partitioner and call shape Test Core uses, with the two
+#                  whole-package legs excluded
+#
+# Estimated per pass at that dataset (bd4276a91): rest 1 and rest 2 each carry
+# about 4717 s of task time, so at --concurrency=4 a pass is bounded by about 36
+# and 28 minutes (sum / 4 + 3/4 of the heaviest task), and 58 and 45 minutes when
+# every task runs as slowly as the slowest one the 10-17 log shows (pass 2's
+# metadata-protocol, 1.59x its weight); cli is 37 minutes, 58 at 1.59x; dogfood's
+# three CI shards ran 15.3 minutes in all. Each fits under 79 with the reserve.
+#
+# ⛔ The plan step below refuses a matrix that does not put EVERY workspace
+# package's `test` task in exactly one leg -- a package in no leg is coverage
+# this instrument silently stopped taking, and a package in two is a reading
+# taken twice under two names.
+#
+# ⚠ THE ACCEPTED COST, stated in the ruling: a test in one leg that leaves state a
+# test in ANOTHER leg reads is no longer measured -- the two never share a tree.
+# A suite that pollutes its own package's tree, the #4065 class, still is. And
+# each leg pays its own setup and build, about three extra laps a night.
 name: Rerun Safety
 
 on:
@@ -69,9 +107,27 @@ permissions:
 
 jobs:
   rerun-safety:
-    name: Full suite twice in one working tree
+    name: Full suite twice in one working tree (${{ matrix.leg }})
     runs-on: ubuntu-latest
-    # Two full passes of everything, dogfood included. Generous, but bounded —
+    strategy:
+      # ⛔ Every leg runs to its own verdict. A red leg is a reading about ITS
+      # packages; cancelling the other legs on it would turn their readings into
+      # NOT MEASURED for a reason that has nothing to do with them.
+      fail-fast: false
+      # A whole-package leg names its `package`; a rest leg names its `shard` of
+      # the partition. RERUN_WHOLE_PACKAGE_LEGS and RERUN_REST_LEG_COUNT below
+      # must agree with this list, and the plan step refuses when they do not.
+      matrix:
+        include:
+          - leg: dogfood
+            package: '@objectstack/dogfood'
+          - leg: cli
+            package: '@objectstack/cli'
+          - leg: rest-1-of-2
+            shard: '1/2'
+          - leg: rest-2-of-2
+            shard: '2/2'
+    # Two full passes of THIS LEG's packages. Generous, but bounded —
     # an unbounded job is what let a hung Test Core sit for GitHub's 6h default
     # while the PR read as "still running" rather than broken. Since #4314 the
     # primary stall detector is run-with-stall-guard on each pass (labeled red
@@ -106,14 +162,22 @@ jobs:
     # verdict step still runs, reads the pass's 124/137 exit (or a log with no
     # turbo summary) as INCOMPLETE -- NOT MEASURED, and the job concludes
     # `failure`, never a silent `cancelled`. That bound decides only WHO reports
-    # a slow night; how two full passes fit again is a capacity decision
-    # recorded on #23880.
+    # a slow night. How two passes fit again was the capacity decision on
+    # #23880, and its answer is the legs (see "Why four legs" above): the bound
+    # is unchanged and now applies to each leg's own job.
     timeout-minutes: 170
     env:
       JOB_TIMEOUT_MINUTES: 170
       # The verdict and the steps after it take seconds; the reserve also covers
       # `timeout --kill-after=2m`, the grace a pass gets between SIGTERM and SIGKILL.
       PASS_RESERVE_MINUTES: 5
+      # The leg this job is: printed by the verdict, and in the job's name.
+      RERUN_LEG: ${{ matrix.leg }}
+      # The packages that are a leg of their own, and how many rest legs share
+      # everything else. Every rest leg excludes every whole-package leg from
+      # the partition, so these two values and the matrix above are one plan.
+      RERUN_WHOLE_PACKAGE_LEGS: '@objectstack/dogfood @objectstack/cli'
+      RERUN_REST_LEG_COUNT: 2
     steps:
       - name: Record the job's deadline
         run: echo "JOB_DEADLINE_EPOCH=$(( $(date +%s) + JOB_TIMEOUT_MINUTES * 60 ))" >> "$GITHUB_ENV"
@@ -145,6 +209,96 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+
+      # THIS LEG'S PACKAGES, and the proof that the legs together are the whole
+      # workspace. Every leg computes the FULL plan -- the whole-package legs plus
+      # every rest leg's share, from the same `turbo ls` and the same timings --
+      # and refuses unless each workspace package is in exactly one leg. That is
+      # cheap (the partitioner reads two JSON files) and it is the only place the
+      # matrix, the two env values above and the partitioner meet, so a leg
+      # added to one and not the others is red here, not a package quietly
+      # tested by nobody.
+      #
+      # The rest legs call the partitioner exactly as Test Core does (ci.yml,
+      # "Compute this shard's package set"): `turbo ls --output=json`, then
+      # `--shard K/N` with `--exclude` for each package that runs elsewhere. The
+      # list is always the FULL one -- this workflow runs only on `schedule` and
+      # `workflow_dispatch`, which is the event select-shard-packages.sh answers
+      # with the full list too.
+      #
+      # ⛔ An item with a space is a file-level SLICE (`<package> k/n`). A leg
+      # cannot run one -- a slice reaches vitest only through OS_TEST_SHARD,
+      # which these passes do not set -- so it is refused rather than handed to
+      # `--filter`, where it would select nothing. Today's map slices only the
+      # CLI, which is a leg of its own.
+      #
+      # Before `Build packages`, on purpose: a red build still lets pass 2 and
+      # the verdict run, exactly as before the legs, because both read this
+      # step's outcome rather than the build's.
+      - name: Compute this leg's package set
+        id: plan
+        env:
+          LEG_PACKAGE: ${{ matrix.package }}
+          LEG_SHARD: ${{ matrix.shard }}
+          LEG_TOTAL: ${{ strategy.job-total }}
+        run: |
+          set -o pipefail
+          export LC_ALL=C
+          read -r -a WHOLE <<< "$RERUN_WHOLE_PACKAGE_LEGS"
+          if [ "$LEG_TOTAL" -ne $(( ${#WHOLE[@]} + RERUN_REST_LEG_COUNT )) ]; then
+            echo "::error::The matrix runs $LEG_TOTAL legs, but RERUN_WHOLE_PACKAGE_LEGS names ${#WHOLE[@]} package(s) and RERUN_REST_LEG_COUNT is $RERUN_REST_LEG_COUNT. Change the three together."
+            exit 1
+          fi
+          EXCLUDES=()
+          for PKG in "${WHOLE[@]}"; do EXCLUDES+=(--exclude "$PKG"); done
+
+          pnpm exec turbo ls --output=json > "$RUNNER_TEMP/turbo-ls.json"
+          printf '%s\n' "${WHOLE[@]}" > "$RUNNER_TEMP/leg-plan.txt"
+          for K in $(seq 1 "$RERUN_REST_LEG_COUNT"); do
+            node scripts/partition-test-shards.mjs "$RUNNER_TEMP/turbo-ls.json" \
+              --shard "$K/$RERUN_REST_LEG_COUNT" "${EXCLUDES[@]}" \
+              > "$RUNNER_TEMP/leg-rest-$K.txt"
+            cat "$RUNNER_TEMP/leg-rest-$K.txt" >> "$RUNNER_TEMP/leg-plan.txt"
+          done
+
+          if grep -n ' ' "$RUNNER_TEMP/leg-plan.txt"; then
+            echo "::error::The partition handed a rest leg a file-level slice (above). A leg runs whole packages only: stop slicing that package for this run, or give it a leg of its own."
+            exit 1
+          fi
+          jq -r '.packages.items[].name' "$RUNNER_TEMP/turbo-ls.json" | sort > "$RUNNER_TEMP/leg-workspace.txt"
+          sort "$RUNNER_TEMP/leg-plan.txt" > "$RUNNER_TEMP/leg-plan.sorted.txt"
+          TWICE="$(uniq -d "$RUNNER_TEMP/leg-plan.sorted.txt")"
+          NOWHERE="$(comm -23 "$RUNNER_TEMP/leg-workspace.txt" <(uniq "$RUNNER_TEMP/leg-plan.sorted.txt"))"
+          UNKNOWN="$(comm -13 "$RUNNER_TEMP/leg-workspace.txt" <(uniq "$RUNNER_TEMP/leg-plan.sorted.txt"))"
+          if [ -n "$TWICE$NOWHERE$UNKNOWN" ]; then
+            [ -z "$TWICE" ] || echo "::error::In more than one leg: ${TWICE//$'\n'/ }"
+            [ -z "$NOWHERE" ] || echo "::error::In no leg, so never run twice: ${NOWHERE//$'\n'/ }"
+            [ -z "$UNKNOWN" ] || echo "::error::Not a workspace package: ${UNKNOWN//$'\n'/ }"
+            exit 1
+          fi
+          echo "Plan: $(wc -l < "$RUNNER_TEMP/leg-workspace.txt") workspace packages, each in exactly one of $LEG_TOTAL legs."
+
+          if [ -n "$LEG_PACKAGE" ]; then
+            if ! printf '%s\n' "${WHOLE[@]}" | grep -qxF -- "$LEG_PACKAGE"; then
+              echo "::error::Leg $RERUN_LEG runs $LEG_PACKAGE, which RERUN_WHOLE_PACKAGE_LEGS does not name, so the rest legs would run it too."
+              exit 1
+            fi
+            echo "$LEG_PACKAGE" > "$RUNNER_TEMP/leg-packages.txt"
+          else
+            K="${LEG_SHARD%/*}"
+            if [ "$LEG_SHARD" != "$K/$RERUN_REST_LEG_COUNT" ] || [ ! -f "$RUNNER_TEMP/leg-rest-$K.txt" ]; then
+              echo "::error::Leg $RERUN_LEG names shard '$LEG_SHARD', which is not one of the $RERUN_REST_LEG_COUNT rest legs."
+              exit 1
+            fi
+            cp "$RUNNER_TEMP/leg-rest-$K.txt" "$RUNNER_TEMP/leg-packages.txt"
+          fi
+          # ⛔ Never an empty set: `turbo run test` with no --filter runs the whole workspace.
+          if [ ! -s "$RUNNER_TEMP/leg-packages.txt" ]; then
+            echo "::error::Leg $RERUN_LEG has no packages."
+            exit 1
+          fi
+          echo "Leg $RERUN_LEG runs the test task of these $(wc -l < "$RUNNER_TEMP/leg-packages.txt") package(s), twice:"
+          cat "$RUNNER_TEMP/leg-packages.txt"
 
       - name: Build packages
         run: pnpm build
@@ -201,8 +355,12 @@ jobs:
           # vitest's own "use the default" signal. Needs turbo.json's
           # globalPassThroughEnv entry or turbo strips it — see the script header.
           export VITEST_MAX_WORKERS="$(node scripts/vitest-worker-cap.mjs)"
+          # This leg's packages, one `--filter` each (the plan step refused an
+          # empty set, so this can never be a whole-workspace run).
+          mapfile -t PKGS < "$RUNNER_TEMP/leg-packages.txt"
+          FILTERS=("${PKGS[@]/#/--filter=}")
           budget=$(( (JOB_DEADLINE_EPOCH - $(date +%s)) / 60 - PASS_RESERVE_MINUTES ))
-          echo "Pass 1 may run ${budget} minutes before the job's own timeout would end it."
+          echo "Pass 1 of leg ${RERUN_LEG} may run ${budget} minutes before the job's own timeout would end it."
           status=0
           if [ "$budget" -lt 1 ]; then
             : > "$RUNNER_TEMP/rerun-pass1.log"
@@ -210,7 +368,7 @@ jobs:
           else
             node scripts/run-with-stall-guard.mjs --log "$RUNNER_TEMP/rerun-pass1.log" --stall-minutes 15 -- \
               timeout --kill-after=2m "${budget}m" \
-              pnpm turbo run test --only --concurrency=4 --force --log-order=stream || status=$?
+              pnpm turbo run test "${FILTERS[@]}" --only --concurrency=4 --force --log-order=stream || status=$?
           fi
           echo "PASS1_EXIT=$status" >> "$GITHUB_ENV"
           if [ "$status" -eq 124 ] || [ "$status" -eq 137 ]; then
@@ -249,8 +407,13 @@ jobs:
       # text over it would send whoever triages it hunting for state leaks that
       # are not there. That comparison needs both passes' failing task sets, so
       # it belongs one step down, in the verdict.
+      #
+      # Every step from here reads the plan step's outcome too: with no package
+      # set there is nothing to run twice, and running `turbo run test` with no
+      # --filter would test the whole workspace under this leg's name. The plan
+      # step's own red is the reading on such a night.
       - name: Test suite — pass 2 (same working tree)
-        if: always()
+        if: always() && steps.plan.outcome == 'success'
         run: |
           # Bound vitest's INNER worker pool (#11958). A no-op on a runner with
           # <= 5 cores (it only ever LOWERS vitest's own `cores - 1` default);
@@ -259,9 +422,12 @@ jobs:
           # vitest's own "use the default" signal. Needs turbo.json's
           # globalPassThroughEnv entry or turbo strips it — see the script header.
           export VITEST_MAX_WORKERS="$(node scripts/vitest-worker-cap.mjs)"
+          # The same packages as pass 1, from the same file.
+          mapfile -t PKGS < "$RUNNER_TEMP/leg-packages.txt"
+          FILTERS=("${PKGS[@]/#/--filter=}")
           # Whatever pass 1 left of the job's time; see pass 1 for the bound.
           budget=$(( (JOB_DEADLINE_EPOCH - $(date +%s)) / 60 - PASS_RESERVE_MINUTES ))
-          echo "Pass 2 may run ${budget} minutes before the job's own timeout would end it."
+          echo "Pass 2 of leg ${RERUN_LEG} may run ${budget} minutes before the job's own timeout would end it."
           status=0
           if [ "$budget" -lt 1 ]; then
             : > "$RUNNER_TEMP/rerun-pass2.log"
@@ -269,7 +435,7 @@ jobs:
           else
             node scripts/run-with-stall-guard.mjs --log "$RUNNER_TEMP/rerun-pass2.log" --stall-minutes 15 -- \
               timeout --kill-after=2m "${budget}m" \
-              pnpm turbo run test --only --concurrency=4 --force --log-order=stream || status=$?
+              pnpm turbo run test "${FILTERS[@]}" --only --concurrency=4 --force --log-order=stream || status=$?
           fi
           echo "PASS2_EXIT=$status" >> "$GITHUB_ENV"
 
@@ -290,9 +456,13 @@ jobs:
       # from here alone would be the tree's first SCHEDULED-ONLY family, which
       # `check:pm-dispatch-gates` refuses by name. That step's comment carries
       # the reasoning.
+      #
+      # `--leg` puts this leg's name in the verdict's header and in its error
+      # annotation: four legs print four verdicts, and each covers only its own
+      # packages.
       - name: Rerun-safety verdict
-        if: always()
+        if: always() && steps.plan.outcome == 'success'
         run: |
-          node scripts/rerun-safety-verdict.mjs \
+          node scripts/rerun-safety-verdict.mjs --leg "$RERUN_LEG" \
             --pass1-log "$RUNNER_TEMP/rerun-pass1.log" --pass1-exit "${PASS1_EXIT:-1}" \
             --pass2-log "$RUNNER_TEMP/rerun-pass2.log" --pass2-exit "${PASS2_EXIT:-1}"
