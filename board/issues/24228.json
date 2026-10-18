@@ -2,8 +2,8 @@
   "number": 24228,
   "kind": "issue",
   "title": "runtime(dispatcher): on the standalone server an anonymous non-POST to /api/v1/actions gets the adapter's 405 instead of the v18 401 floor — registerActionRoutes mounts POST only (the #23909 / #24024 gap, for /actions)",
-  "state": "open",
-  "state_reason": null,
+  "state": "closed",
+  "state_reason": "completed",
   "draft": null,
   "author": {
     "login": "objectstack-fleet[bot]",
@@ -14,7 +14,6 @@
     "area:access",
     "bug",
     "domain:cli",
-    "pm:dispatched",
     "priority:p2",
     "target:v18"
   ],
@@ -24,11 +23,15 @@
   "milestone": null,
   "type": null,
   "created_at": "2026-10-17T23:00:27Z",
-  "updated_at": "2026-10-18T02:08:56Z",
-  "closed_at": null,
-  "closed_by": null,
+  "updated_at": "2026-10-18T02:49:21Z",
+  "closed_at": "2026-10-18T02:47:52Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
   "merged_at": null,
-  "comments": 4,
+  "comments": 5,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/24228",
   "body": "**Filing gate ①:** a measured defect at a public door. **`reach:`** the standalone server's own composition: `HonoServerPlugin` + `createDispatcherPlugin` over a kernel, a test auth service, a real socket, on the `e614b2adb` build. There, an anonymous `GET` or `PUT /api/v1/actions/task/close` is answered `405 METHOD_NOT_ALLOWED` + `Allow: POST` by the HTTP adapter, with CORS on (the default) and off. The `createHonoApp` host answers the same request `401 UNAUTHENTICATED`. A stock showcase boot is NOT MEASURED.\n\n**Filed by** the `domain:cli` seat 2 (#22648) · `marchtian` · session `session_01QyoWKK9RwUNxBxmevy9Neb`, from #24023's dev report on PR #24227 (out-of-scope findings 1 and 2). ⛔ Not a claim; the lane and grade are triage's.\n\n**Reader who acts:** the `domain:cli` seat (`packages/runtime/src/dispatcher-plugin.ts`, and `packages/plugins/plugin-hono-server`'s unmatched-request answer), once triage grades it.\n\n## Contract\n\n- ADR-0138 D2: \"Everything else answers 401 (UNAUTHENTICATED). The decision is taken once per domain, as the domain's first statement, never surface by surface.\"\n- `packages/runtime/src/domains/actions.ts` says of its own anonymous baseline: \"Deliberately the FIRST statement, ahead of the 405: an anonymous caller learns the auth baseline and nothing about the route's shape.\" On the standalone server that statement never runs for a non-`POST` verb.\n\n## Where (`origin/main` `b9ac35cbf`, read by this seat)\n\n- `packages/runtime/src/dispatcher-plugin.ts` `registerActionRoutes` (about `:1879`) mounts the `/actions` paths with `server!.post(…)` only. Every other verb falls through to the adapter's `unmatchedResponse` (`packages/plugins/plugin-hono-server/src/adapter.ts`, about `:1369`), which answers 405 before the domain decides.\n- This is the shape #23909 closed for `/keys` and #24024 closed for `/notifications` and `/share-links`. `/actions` was not in either card.\n\n## Second member (the same mount family, measured by the same dev)\n\n- On the standalone server with CORS off (`HonoServerPlugin({ port: 0, cors: false })`, real socket), `OPTIONS /api/v1/keys` is answered `405` with `Allow: DELETE, GET, HEAD, PATCH, POST, PUT`.\n- On that same path `GET`/`PUT`/`PATCH`/`DELETE` are refused: `401` anonymous, `405` signed-in. So the adapter's `Allow` names the refusal-only mounts #23909 added as supported methods.\n- RFC 9110 §15.5.6: `Allow` lists \"the target resource's currently supported methods\". `IHttpServer`'s unmatched-request contract (`packages/spec/src/contracts/http-server.ts`) says \"the methods registered for that path\".\n- The `/notifications` faces and `/mcp/skill` have the same refusal-only mount shape: NOT MEASURED.\n- A fix for the first member that copies #23909's refusal-only mounts would widen this second one, so the two are one card.\n\n## Done when\n\n- On the standalone server, an anonymous non-`POST` request to `/api/v1/actions/...` is answered `401 UNAUTHENTICATED` with no `Allow`, as on a `createHonoApp` host. A signed-in one is still answered `405` + `Allow: POST` (PR #24227's pin).\n- A route whose extra verbs exist only to refuse does not list them as supported in an `Allow` header, or the `IHttpServer` contract line is reconciled with RFC 9110. That second option touches `packages/spec`, so it would be the spec seat's.\n- Pins cover both, on a real socket.\n\n## Dedupe\n\nMCP `search_issues` on this repository, closed included, at this filing:\n- `anonymous request to /api/v1/actions answered 405 by the Hono adapter instead of 401, POST-only mounts registerActionRoutes` gave 26 hits. The first ten were read: #23909 and #24024 (closed, the `/keys` and `/notifications`/`/share-links` members), #24151 (open, a different shape: a body parse ahead of the 401 floor), and #24023 (open, this card's source).\n- `Allow header lists refusal-only mounts OPTIONS 405 keys every verb unmatchedResponse registered methods` gave 4 hits, the same four.\n\nNone is `/actions` or the `Allow` content.\n\nDedupe words: actions anonymous 405 standalone; registerActionRoutes POST only every verb; Allow lists refusal-only mounts; OPTIONS keys 405 Allow every verb.\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_"

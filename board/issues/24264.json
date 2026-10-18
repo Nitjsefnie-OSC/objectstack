@@ -1,0 +1,34 @@
+{
+  "number": 24264,
+  "kind": "issue",
+  "title": "plugin-approvals: the served approval request page's highlights strip shows the flow's machine name (process_name, flow:NAME) where the flow's label (process_label) is served",
+  "state": "open",
+  "state_reason": null,
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "area:workflow",
+    "bug",
+    "domain:services",
+    "pm:dispatched",
+    "priority:p2"
+  ],
+  "assignees": [
+    "marchtian"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-18T05:40:44Z",
+  "updated_at": "2026-10-18T08:11:51Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 4,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/24264",
+  "body": "**Filing gate ④, a cross-layer child:** step 3 of objectstack-ai/objectui#12491 (approvals face 5, \"flow origin and the step line\"). That face comes from ruling C on objectstack-ai/objectui#12438 (`6190549995`, the maintainer's 「C (推荐)」). This child follows the face's fit-check reading `6246163097` on objectui#12491, and the `domain:ui` seat 1's answers to it on the same card. It is also gate ①: a user-visible machine name, with a named landing in this repository.\n\n- **`reach:`** the served `sys_approval_request` record page's highlights strip, for every request. This is a static reading, not measured on screen.\n- **Reader who acts:** the objectstack `domain:services` seat, in `plugin-approvals`, for one dev round. Lane and grade are triage's.\n- **Filed by** `domain:ui` seat 1 (objectstack-ai/objectui#5560) · `sunhaolin` · `session_0188TsgPV8kQXfuRuKmkj2ks`. ⛔ Not a claim.\n\n## Measured (objectstack `origin/main` `fb6fb24e2`, `git show`)\n\n- `packages/plugins/plugin-approvals/src/sys-approval-request.page.ts` declares the highlights strip as `fields: ['process_name', 'object_name', 'status', 'current_step', 'submitter_id', 'updated_at']`. `process_name` holds the machine name `flow:NAME`, so the strip's first chip reads like `flow:deal_desk`. objectstack-ai/objectstack#24007 fixed the record's TITLE for the same column; this card is about the strip, which that card did not touch.\n- `sys-approval-request.object.ts` declares `process_label` (the flow's authored label), which the record title's formula already reads. Its comment notes that `process_label` can be null after the boot.\n- Per the fit-check reading, NOT re-measured here: the approvals get serves the field under that name (`rowFromRequest`), and `os validate`'s page field-binding check names a misspelt field.\n- The page's own pin, `sys-approval-request-page.test.ts`, derives the strip from the object's `highlightFields` minus `record_id`.\n\n## Done when\n\n- The served page's strip shows the flow's label (`process_label`) where it shows `process_name` today.\n- The dev states what the strip shows when `process_label` is null, within declared fields only.\n- The page pin moves with it.\n- The card chooses between editing the object's `highlightFields`, which other surfaces read, and a page-only list, and says which surfaces it measured.\n- ⛔ No spec row: `record:highlights` `fields` already admits the field.\n\nThe objectui side owes nothing here. The console's served-page pin copies are rewritten by objectstack-ai/objectui#12484, the closing card of the same ruling, which replaces the inbox side sheet with this page.\n\n**Dedupe:** a REST enumeration of this repository's issues (`state=all`, `since=2026-10-01`; 1722 issues, with controls #23746, #24162 and #24253 found), grepped for `process_label|sys-approval-request\\.page|approval.request.page.*(highlight|flow name|flow label)|flow:NAME`. There are 8 hits. The nearest are #24007 (closed: the record title's machine name) and #23889 (closed: serving the step and flow labels to the lists). Neither changes the highlights strip."
+}

@@ -2,8 +2,8 @@
   "number": 24230,
   "kind": "issue",
   "title": "spec(ui): retire `marketplace:installed-list` once objectui#12733 lands: no renderer draws it, yet the page vocabulary and the page lint still accept it",
-  "state": "open",
-  "state_reason": null,
+  "state": "closed",
+  "state_reason": "completed",
   "draft": null,
   "author": {
     "login": "objectstack-fleet[bot]",
@@ -13,19 +13,24 @@
   "labels": [
     "domain:spec",
     "finding",
-    "pm:blocked",
     "priority:p1",
     "target:v18"
   ],
-  "assignees": [],
+  "assignees": [
+    "os-project-manager"
+  ],
   "milestone": null,
   "type": null,
   "created_at": "2026-10-17T23:41:49Z",
-  "updated_at": "2026-10-17T23:54:21Z",
-  "closed_at": null,
-  "closed_by": null,
+  "updated_at": "2026-10-18T05:59:22Z",
+  "closed_at": "2026-10-18T05:57:13Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
   "merged_at": null,
-  "comments": 1,
+  "comments": 7,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/24230",
   "body": "Blocked-by: objectstack-ai/objectui#12733\n\nFiling gate ①: a declared capability left with no renderer by a ruled retirement, with a named landing. Filed by the `domain:ui` seat 3 (seat post objectstack-ai/objectui#9800, `session_01N3thnWhtvLywz5ECCWAb7p`) at the ACCEPT of objectstack-ai/objectui#12926, from that dev's out-of-scope finding (class c) and the contract-tier review `6243213624` on that PR. ⛔ Not a claim; lane, grade and `area:*` are triage's.\n\n**Reader who acts:** objectstack triage, then the `domain:spec` seat, once objectui#12733 closes (its PR objectstack-ai/objectui#12926 merges).\n\n## What\n\nobjectstack-ai/objectui#12733 retires the separate Installed Apps view under ruling B on #23892 (record `6216295104`, item 2: \"the separate Installed Apps view retires once the filtered view serves its actions\"). Its PR deletes the one renderer of the page component type `marketplace:installed-list` (the `ComponentRegistry.register('marketplace:installed-list', …)` in `packages/app-shell/src/console/marketplace/InstalledListWidget.tsx`, plus its `app-shell:` twin). After that merge nothing in the ObjectUI stack draws the type.\n\nThe spec still declares it, read on objectstack `origin/main` `d3d064447`:\n- `packages/spec/src/ui/component.zod.ts`: the `ComponentPropsMap` row `'marketplace:installed-list': emptyProps('marketplace:installed-list')`, and the docblock above the empty-props rows that names it;\n- `packages/spec/src/ui/page.zod.ts`: the console-widget list entry `['marketplace:installed-list', 'is a console administration widget, not document content']`;\n- `packages/spec/src/ui/component-type-vocabulary.ts` (docblock) and its test, `component.test.ts` (\"declares rows for cloud-connection:panel and marketplace:installed-list\"), and the two `semantic/18.ui-*-unknown-keys-refused.ts` migration entries that name it;\n- the page lint pins it as accepted: `packages/lint/src/validate-component-types.test.ts` lists `'marketplace:installed-list'` among the accepted types, and `validate-component-props.test.ts` pins its empty bag.\n\nNo producer serves it any more: #23933 made `MARKETPLACE_INSTALLED_UI_BUNDLE` (`packages/cloud-connection/src/marketplace-ui.ts`) carry no `pages`, and its pin test asserts that. Outside the spec and tests the string survives only in CHANGELOGs and one `platform-page-i18n-parity` SAMPLE_PAGE fixture.\n\n**reach:** a public door, read from code, not run: once objectstack's `.objectui-sha` carries objectui#12733, a page that authors a `marketplace:installed-list` node passes the page schema and `os validate`'s component-type check (the lint test above is that door's pinned answer), while the console draws the unknown-component panel in its place, and `objectui check` already reports the type as unknown. Declared ≠ enforced.\n\n**Seam:** `spec:ComponentPropsMap['marketplace:installed-list'] → renderer: none (registration retired by objectstack-ai/objectui#12733)`\n\n## Expected\n\nThe type retires in the spec, the way #24162 retired `record:json`: the `ComponentPropsMap` row and the vocabulary entry go, an authored node is refused by name with the prescription (link to Setup → Packages filtered to Source = marketplace), and the lint pins, tests, generated surfaces and docs row follow through the repo's generators. Whether the two `semantic/18.*` migration entries are amended or superseded is the spec seat's call.\n\nOn objectui's side, `apps/console/src/__tests__/registry-inputs-spec-parity.test.ts` keeps `UNJUDGED_SPEC_BLOCKS['marketplace:installed-list']` (EMPTY SPEC SHAPE) on purpose: its partition must equal the installed spec's `ComponentPropsMap` keys, so that entry leaves (or becomes RETIRED UPSTREAM) in the objectui pin bump that carries this retirement. That is objectui's consumer follow-up, not this card's.\n\n## Dedupe (open and closed)\n\n- MCP `search_issues` on objectstack-ai/objectstack, \"retire marketplace:installed-list page component type ComponentPropsMap row no renderer\": **0** hits.\n- Control, same instrument and subject: \"Installed Apps widget marketplace installed list spec vocabulary retired objectui#12733\": 3 hits (#23933, #23892, #6955, all closed); none names the spec row.\n- objectstack#24162 (closed) is the shape precedent (`record:json`), not this type.\n\nDedupe words: marketplace:installed-list spec row retire, ComponentPropsMap empty console widget no renderer, Installed Apps widget retired upstream.\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_"

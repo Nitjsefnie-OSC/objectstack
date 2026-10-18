@@ -1,0 +1,38 @@
+{
+  "number": 24270,
+  "kind": "pull_request",
+  "title": "feat(spec): the bound record blocks accept an authored emptyState, drawn only when their dataSource binding answers no row",
+  "state": "closed",
+  "state_reason": null,
+  "draft": false,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "documentation",
+    "protocol:ui",
+    "size/m",
+    "tests",
+    "tooling"
+  ],
+  "assignees": [
+    "os-project-manager"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-18T06:58:32Z",
+  "updated_at": "2026-10-18T08:07:17Z",
+  "closed_at": "2026-10-18T08:07:16Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": "2026-10-18T08:07:16Z",
+  "comments": 3,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/pull/24270",
+  "body": "Fixes #24266\n\nClause-②: yes (widening)\n\n## What changes\n\nThe three bound record blocks, `record:details`, `record:highlights` and `record:quick_actions`, each accept an optional authored `emptyState`. This is the spec half of objectstack-ai/objectui#12932.\n\n- **The key.** `RecordDetailsProps`, `RecordHighlightsProps` and `RecordQuickActionsProps` each gain `emptyState: EmptyStateSchema.optional()`. The schema is referenced, not re-spelled: it is the list view's own `EmptyStateSchema` (`view.zod.ts`), already imported into `component.zod.ts` for `object-grid.emptyState` (#20694). Importing it adds no new module edge, so there is no `lazySchema` cycle.\n- **The condition.** All three rows share one describe, `BOUND_RECORD_BLOCK_EMPTY_STATE_DESCRIPTION`, which is not exported, the same way `RECORD_BLOCK_REQUIRED_PERMISSIONS_DESCRIPTION` is shared. It says the empty state is drawn when the block's `dataSource` binding answers no row, and only then. It is never drawn on a block with no binding, which reads the record page's record instead. A loading read and a failed read are not \"no row\" either. On `record:quick_actions`, a bound record whose bar resolves no action keeps the existing empty placeholder.\n- **Declared ahead of its renderer (AGENTS.md Prime Directive #10).** No renderer reads the key yet. Each describe opens with `[PLANNED — not yet rendered]`, the marker `check-liveness.mts` `MARKER_RE.planned` reads. `liveness/page.json`'s `_note` gains a PLANNED RECORD sentence naming the carrier, objectstack-ai/objectui#12932. A component-level key gets no ledger row because the walk stops at the undrilled `page/regions` container. This is the same pattern `RecordRelatedListProps.parentDataSource` (#23134) followed.\n- **Ledger.** `dropped-refinements.baseline.json` declares `emptyState.link.url` on the three rows. The build refused until it did. It is the same `EmptyStateLink` URL refinement that `ui/ObjectGridProps` and `ui/ListView` already declare.\n- **Generated.** `authorable-surface/ui.json` gains three `emptyState` rows, and `content/docs/references/ui/component.mdx` is regenerated. Both were written by `pnpm --filter @objectstack/spec build` and `gen:docs`, not by hand.\n\n## Measurements (mechanism hypotheses)\n\n- **H1 (premise holds).** On `origin/main` `a422f04fe`, all three rows are `strictObject`s with no `emptyState`, and the file's only `emptyState` is `ObjectGridPropsSchema`'s.\n- **H2 (no fourth block).** In objectui `main` `79cb8c03e`, `git grep recordBindingBlock` matches exactly three call sites: `record-details.tsx:1132`, `record-highlights.tsx:199` and `record-quick-actions.tsx:469`. `record:related_list`'s `parentDataSource` is a second binding that already declares its own no-row answer (a loud absence), so this key does not go on that row.\n- **H4 (no lint change).** `packages/lint/src/validate-component-props.ts` derives known keys from `ComponentPropsMap`, and no lint pin enumerates these rows' key sets.\n\n## Tests\n\nThe pin file is `packages/spec/src/ui/component-record-blocks-empty-state-24266.test.ts`. It runs 25 cases in four parts:\n\n- §1: each block parses a full `emptyState` and a one-member one, and a block without the key still parses with no default added.\n- §2: an unknown inner key is refused with `unrecognized_keys` at path `emptyState`, and a re-spelled member is refused inside `emptyState`. As a lit control, an unknown top-level key is still refused at the row. `record:related_list` still refuses the key.\n- §3: each member unwraps to `EmptyStateSchema`'s own def, by identity, which is also `object-grid`'s.\n- §4: each describe opens with the planned marker.\n\nAll runs below were on the tree of head `40ef667d`. The WIP commits were squashed into that head and their tree is byte-identical.\n\n- `pnpm --filter @objectstack/spec test`: 694 files and 21027 tests pass, exit 0.\n- `pnpm --filter @objectstack/spec typecheck`: exit 0.\n- `pnpm --filter @objectstack/spec test:repo`: 67 of 68 files passed. The 68th, `view-data-api-provider-retirement.test.ts`, failed with ENOENT on `packages/spec/json-schema/qa`. A concurrently running gate (`check:authorable-surface`) was regenerating that gitignored tree while the test walked it. Re-run alone, the file passes 10 of 10.\n- **Ablation.** I deleted `record:quick_actions`' `emptyState` line through `scripts/ablation-replace.mjs`. The anchor went from 1 hit to 0, the blob changed from `2365c6de` to `778818d7`, and 6 cases turned red. The file was then restored: blob equals HEAD and `git diff HEAD` is empty.\n- `pnpm --filter @objectstack/spec check:generated`: all 14 artifacts are up to date. The 111 commands from `dispatch-gates --commands` came back with 108 at exit 0. Three are NOT MEASURED locally, all with exit 3 for an unmet prerequisite:\n  - `check:dual-build-cjs-loads` and `check:lean-entry-closure` need a whole-workspace build.\n  - `check-plugin-teardown-shape --self-test` needs an unshallow clone.\n\n  CI runs all three.\n\n## Acceptance notes\n\n- The key validates and is not yet drawn until objectstack-ai/objectui#12932 lands against a spec release that carries it. The describe marker and the `_note` sentence state that, and both come out when that card lands.\n- The `measured.refinementSitesThatDidProject` field in `dropped-refinements.baseline.json` reads 369 on `main`, while the build prints 467. That drift was already on `main` and is not touched here. I only moved the two counts this diff changes: published schemas 236 to 238, and dropped sites 767 to 770.\n\n---\n_Generated by [Claude Code](https://claude.ai/code/session_019vZVMKXRwb7NiBZj6pseeF)_\n"
+}

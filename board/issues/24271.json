@@ -1,0 +1,28 @@
+{
+  "number": 24271,
+  "kind": "issue",
+  "title": "platform-objects sys_organization: a record page has no door to rename an organization — update_organization is list_item only and bundles slug, which the cloud's change_slug orchestrates",
+  "state": "open",
+  "state_reason": null,
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "finding"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-18T06:59:09Z",
+  "updated_at": "2026-10-18T06:59:53Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 0,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/24271",
+  "body": "Filing gate ①: a declared capability with no door where it is needed, measured on production. Filed by `repo:cloud#2` (seat post objectstack-ai/objectstack#24145, session `session_01Cbdek8SKSHxddGqTPZXdqX`) on the maintainer's question in that seat's chat, 2026-10-18 (「组织 slug 可以改，但是名称不能改吗」), and the maintainer's follow-up 「按平台优先立卡」. ⛔ Not a claim.\n\n## What happens\n\nOn the cloud control plane, the organization record page (cloud.objectos.app, `sys_organization` record) offers 退出组织 and 修改标识符 (`change_slug`). There is no way to change the organization's **name**.\n\n**At the framework pin `be076dad28a0`, and unchanged on `main` `fb6fb24e`** (`packages/platform-objects/src/identity/sys-organization.object.ts`):\n- **The rename action has no door on the record page.** Renaming is `update_organization` (\"Edit Organization\", better-auth `organization/update`, params `name`, `slug`, `logo`), declared with `locations: ['list_item']` only. A record page's header and ⋯ menu never offer it, and the cloud console has no organization list row to reach.\n- **The generic edit form cannot rename either.** `name` / `slug` / `logo` are `readonly` on purpose (ADR-0092 D4: better-auth-owned columns change only through `organization/update`).\n- **Two doors exist for one field.** `change_slug` (`record_header`) targets cloud's orchestrator (`/api/v1/cloud/organizations/{id}/change-slug`: it rewrites the platform subdomains and parks the old slug for 90 days). `update_organization` also writes `slug`, through better-auth. That path is refused by `beforeUpdateOrganization` only while the organization has active environments (`plugin-auth` `auth-manager.ts:3499`). With none, it changes the slug without the reservation.\n\n## Wanted (the lane picks the shape)\n\n1. A record page can rename an organization: `name` (and `logo`). For example, a name/logo-only action declared at `record_header` (and `list_item`), next to `change_slug`.\n2. Where the cloud orchestrator governs the slug, `slug` has one door, `change_slug`. The open-source composition, which has no orchestrator, keeps a slug door that works there. That door is `update_organization` today, because `change_slug`'s target does not exist outside cloud.\n3. Tests: the action's params, its location, and the identity write guard unchanged.\n\n## After it lands\n\nA cloud card names the action in the cloud organization page's header (`packages/service-tenant/src/pages/sys-organization.page.ts` `actions: ['leave_organization', 'change_slug']`), once cloud's framework pin carries it.\n\nDedupe: objectstack issues since 2026-09-01 grepped for `update_organization`, `rename organization`, `organization name`, `change_slug`: none open on the record-page door."
+}

@@ -1,0 +1,36 @@
+{
+  "number": 24253,
+  "kind": "issue",
+  "title": "metadata-protocol: `publishPackageDrafts` takes an opt-in per-field backfill of existing rows with the new default, so a copilot draft that adds a field can fill existing records on publish (ruling A on cloud#2924)",
+  "state": "closed",
+  "state_reason": "completed",
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "area:studio",
+    "domain:engine",
+    "priority:p2"
+  ],
+  "assignees": [
+    "os-project-manager"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-18T04:06:00Z",
+  "updated_at": "2026-10-18T08:12:37Z",
+  "closed_at": "2026-10-18T08:11:11Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": null,
+  "comments": 6,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/24253",
+  "body": "Filed by the director seat (summon #43 continuation 4, `session_01QJC7i981TSs9L1CGJK59Ax`) on the maintainer's ruling A on objectstack-ai/cloud#2924 (batch #362 item 1, 「其他同意」; the ruling record is that card's `Ruled:` line) under the maintainer's standing 口径 of 2026-10-18 「平台相关的功能，应该尽量先改平台」. ⛔ Not a claim. Filing gate ①: a measured gap with a named site and two consumers.\n\n## What is measured (objectstack `origin/main` `cbfa5e43354f`)\n- `packages/metadata-protocol/src/protocol.ts:25752` `publishPackageDrafts(request: { packageId; actor?; message?; aiModel? })` — publishing a draft neither backfills existing rows for a new field with a `defaultValue` nor emits an event a host could hook.\n- Consumers: the Studio copilot's draft posture (cloud#2924: a change to a live app with records is saved as a draft; the applied card says 「已有 N 条记录的 X 为空」, and the ruled design wanted 「发布时可选补 0」); cloud#2656 / cloud#1586 (closed): AI-added booleans on a live table must be backfilled or a `= false` filter matches nothing — cloud fixed it on its in-place publish path only, which the draft path skips.\n\n## Scope\n1. `publishPackageDrafts` accepts an opt-in `backfill: Array<{ object, field }>` (or equivalent) naming new fields whose `defaultValue` is written into existing rows at publish, as the caller — object permissions and hooks fire as for a user edit; the response reports the count per field.\n2. Nothing is backfilled unless asked; a field without a `defaultValue` is refused in the request (loud, named).\n3. `Clause-②: yes (widening)` (a request key on a published protocol method); `minor` for `@objectstack/metadata-protocol`; the Studio 变更 drawer's 补默认值 (objectui card filed in the same act) is the first UI caller; cloud's card copy gains 「可选补 0」 only after both land.\n\n## Done when\n- The option exists, is covered by a test that publishes a draft adding a boolean with `defaultValue: false` over 12 rows and reads 12 `false`; a request naming a field without a default is refused.\n- The objectui card can start.\n\nRelated: objectstack-ai/cloud#2924 (the ruling), objectstack-ai/cloud#2656 and #1586 (the boolean pins), objectstack-ai/objectui#12894 (the card rendering half)."
+}

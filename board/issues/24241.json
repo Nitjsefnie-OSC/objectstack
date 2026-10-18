@@ -2,8 +2,8 @@
   "number": 24241,
   "kind": "issue",
   "title": "director charter: put to the maintainer only the governed merges no approver account approved, each with one line on what changed (maintainer order)",
-  "state": "open",
-  "state_reason": null,
+  "state": "closed",
+  "state_reason": "completed",
   "draft": null,
   "author": {
     "login": "objectstack-fleet[bot]",
@@ -13,19 +13,24 @@
   "labels": [
     "area:devpath",
     "domain:skills",
-    "pm:queue",
     "priority:p2",
     "tooling"
   ],
-  "assignees": [],
+  "assignees": [
+    "sunhaolin"
+  ],
   "milestone": null,
   "type": null,
   "created_at": "2026-10-18T01:23:08Z",
-  "updated_at": "2026-10-18T01:23:08Z",
-  "closed_at": null,
-  "closed_by": null,
+  "updated_at": "2026-10-18T05:10:08Z",
+  "closed_at": "2026-10-18T05:06:13Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
   "merged_at": null,
-  "comments": 0,
+  "comments": 5,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/24241",
   "body": "**Filed on the maintainer's order** by the director seat (summon #44, `session_01MVLumUXJ6mkcQv27o7LR1V`). The order, verbatim, from this session's chat: 「以后只呈\"没有任何授权账号批准\"的受管合并,并且每行写一句改了什么。这要改总监席的规则,开一张卡给 skills 席去改。」 It answers the seat's proposal, made after the maintainer's 「受管合并你让我认定的价值是什么，我什么也看不到，而且之前都批过的。」 A maintainer order outranks the `tooling` entry gates (SKILL.md 〈优先级〉: 维护者裁决 first). ⛔ Not a claim.\n\n## The problem, measured\n- Summon #44 put 5 recognition rows to the maintainer: #24211, #23825, #23824, #23906 and cloud PR #2921. Four of them carry an `APPROVED` review by `os-zhuang`, an account in `GOVERNED_APPROVERS` (`scripts/pm/check-governed-queue-guard.mjs:619`), which the queue guard already counts as authorization (SKILL.md: 「批准判定单源 = 队列守卫常量 `GOVERNED_APPROVERS`」).\n- Each row was a bare PR number with no account of what changed. The maintainer could judge nothing from it and had already approved four of the five.\n\n## Scope — the rule to write\n1. `.claude/skills/pm-dispatch/references/lanes/director.md` 〈职责一〉: the audit rows put to the maintainer for recognition are **only** landings (governed path or the size limb alike) that carry **no `APPROVED` review from any `GOVERNED_APPROVERS` account**. A landing with such a review is recorded in the ledger block and is not put to the maintainer.\n2. Each row put to the maintainer carries **one line in plain words on what the change did**, read from the PR, not from the title alone.\n3. Edit in place where the charter already speaks of the audit, with no growth beyond what the order needs. The provenance cites this card's filing comment by id, without `#` (the id-lint).\n4. Out of scope: `check-governed-merges.mjs` stays as it is (report-only; ⛔ no new column or gate). The seat reads each row's reviews through REST, as summon #44 did.\n\n## Done when\n- The charter says (1) and (2), the Tier S PR lands after its at-tier record, and the director seat post's carried-recognition line follows the new rule at the next summon.\n\nRelated: the director seat post (#12708); summon #44's ledger block B (6243622639)."
