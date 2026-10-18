@@ -2,8 +2,8 @@
   "number": 24276,
   "kind": "issue",
   "title": "pm-dispatch: the PR that first depends on a new spec release raises that package's @objectstack/spec floor (A), and a version-bump card takes its held-card list from the Restart-when: index (B)",
-  "state": "open",
-  "state_reason": null,
+  "state": "closed",
+  "state_reason": "completed",
   "draft": null,
   "author": {
     "login": "objectstack-fleet[bot]",
@@ -11,17 +11,24 @@
     "type": "Bot"
   },
   "labels": [
-    "domain:skills"
+    "domain:skills",
+    "priority:p2"
   ],
-  "assignees": [],
+  "assignees": [
+    "os-steve"
+  ],
   "milestone": null,
   "type": null,
   "created_at": "2026-10-18T07:43:19Z",
-  "updated_at": "2026-10-18T07:43:19Z",
-  "closed_at": null,
-  "closed_by": null,
+  "updated_at": "2026-10-18T14:04:49Z",
+  "closed_at": "2026-10-18T11:55:52Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
   "merged_at": null,
-  "comments": 0,
+  "comments": 7,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/24276",
   "body": "**Filing gate ③, a task the maintainer directed.** In `domain:ui` seat 1's session `session_0188TsgPV8kQXfuRuKmkj2ks`, the maintainer said, verbatim: 「下限提到 next.3」, then 「下限提到 next.3我记得之前有一个升级任务，为什么没升级完整，以后如何避免。」, then, choosing both proposals the seat put forward, 「立卡吧，A 和 B 都要」. ⛔ Not a claim.\n\n**Reader who acts:** the objectstack `domain:skills` seat, the single writer of `.claude/skills/pm-dispatch/**`. This is one PR to `references/**` (Tier S governed). Lane and grade are triage's to confirm.\n\n## What happened (the incident this closes)\n\n- objectui#12873 moved objectui's lockfile to `@objectstack/*` `18.0.0-next.3`. Its body says it \"raises a range's floor only where a held card needs it\", and its held-card list named only objectui#12490 and #12333. PR objectui#12887 then recorded \"Range floors. None moved. No held card needs `next.3` in a range\".\n- objectui#12790 was on hold for exactly `next.3`: `Restart-when:` at `6227336980`, set by seat 2 about 13 hours before objectui#12873 was filed. It was missing from that list, because the list was written from memory, not read from the `Restart-when:` lines.\n- When objectui#12790 was dispatched, the brief said \"⛔ Do not bump a pin in this PR\". That also kept the floor out of the PR that first depended on `next.3`. Its PR #12939 (`bc96bc3`) made the Packages page require the served `source` while `@object-ui/app-shell` still declared `^18.0.0-next.2`. The `kernel` entry of the published `next.2` exports no `InstalledPackageSourceSchema`.\n- `check:spec-floors` stayed green. It judges symbol presence only, and `InstalledPackageAtEitherStage` exists in `next.2`. Its own header documents that boundary.\n- Fixed by the maintainer's order as objectui#12943.\n\n## What to change (one PR, `references/**`)\n\n- **A, in `execution-duties.md` 〈派发〉 or `dispatch-runbook.md` 〈派发词构造细则〉:** a card whose code first reads a key, type member or runtime behaviour that spec release R first publishes raises the consuming package's `@objectstack/spec` floor to R in the same PR. \"No pin bump\" bans only the lockfile move and the `.objectui-sha` / console pin move. ⛔ It never bans the floor. The claim's file surface names the manifest and the lockfile specifier when this applies.\n- **B, in `triage-duties.md` (the per-`next.N` consumer bump card), or wherever that card's duty lives:** the bump card's held-card list is read from the hold index, meaning every open card whose `Restart-when:` or `Blocked-by:` line names that release, version or upstream commit. The query and its hit count go in the body. ⛔ A list written from memory is not that list.\n- ⛔ No new gate. The four axes' startup default is \"新增门禁默认否\", and the maintainer chose A and B, not a gate. If a gate is ever wanted, the narrower path is to widen `check-spec-range-floors.mjs` to indexed-access type members. That would strengthen an existing gate, but it is not asked here.\n\n**Line budget:** pm-dispatch's `SKILL.md` is under a line ratchet. If the text lands in `references/**`, each of A and B is about one or two lines. If any line must go into `SKILL.md`, it is paid for with deletions under the ratchet's rules.\n\n**Dedupe:** a REST enumeration of this repository's issues (`state=all`, `since=2026-09-15`; 3368 issues, controls #24264, #24268 and #23352 found).\n- A was grepped for `(spec|range)…floor…(same PR|first consumer|rider|dispatch)` and `floor…(pin bump|rider)`: 0 hits.\n- B was grepped for `(bump|held)…Restart-when`, `Restart-when…(bump card|held card)` and `held.card list`: 1 hit. #22050 (closed) is the v18 staged-release decision, not this rule."

@@ -1,0 +1,34 @@
+{
+  "number": 24326,
+  "kind": "issue",
+  "title": "Seam: a page region's declared width on the three-column template's main region is accepted and never applied (ThreeColumnTemplate draws main as flex-1 and reads no main.width)",
+  "state": "open",
+  "state_reason": null,
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "bug",
+    "domain:spec",
+    "pm:dispatched",
+    "priority:p2",
+    "target:v18"
+  ],
+  "assignees": [
+    "zhuangjianguo"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-18T12:32:16Z",
+  "updated_at": "2026-10-18T13:51:58Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 2,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/24326",
+  "body": "Filing gate **①**, class c: a declared key that the runtime does not honour. **`reach:`** named producer `objectstack-ai/hotcrm`. `src/sales/pages/home.page.ts` declares `width: 'large'` on its three-column page's `main` region. The compile, which validates, accepts it, and at 1440 the region renders 792 px, the width left over after the 320 px aside. The renderer's own `large` for a header or footer is `w-96`, which is 384 px. Measured by the objectstack-ai/hotcrm#2158 dev on `@objectstack/*` 18.0.0-next.3 (report comment 6249904396 on that card). Filed by the `repo:hotcrm` seat (`os-project-manager`, `session_01BDgipbNowaGa139em8Fhoq`). ⛔ Not a claim. **Grade and lane:** triage's. This is a `Seam:` card (spec ↔ renderer).\n\n`Seam: spec:PageRegionSchema.width → renderer:objectui ThreeColumnTemplate`\n\n**Reader who acts:** the objectstack triage seat, which routes it to the spec lane under the seam rule. No HotCRM card waits on it.\n\n## What happens\n\n- The page metadata contract accepts a `width` on every region of a three-column page, including `main`.\n- objectui `packages/components/src/renderers/layout/page.tsx` (at `5e15928b4631`, the next.3 console pin) draws `main` as `flex-1 min-w-0` and never reads `main.width`.\n- The one value read is `'full'`, and `PageRenderer` reads it page-wide with a different meaning: it removes the page's max-width cap.\n- So `small` / `medium` / `large` on `main` have no effect.\n\nOnly `large` was measured; that the others also have no effect comes from the source.\n\n## Expected (the spec lane decides)\n\nOne of the two, per \"declared means enforced\":\n- the renderer honours `main.width` with the meaning it has on the other regions; or\n- the contract refuses a `width` on `main` (or limits it to `full`) with a located message at publish time.\n\n## Dedupe\n\nMCP `search_issues`, \"three-column page template main region width ignored by renderer PageRegion width\" on objectstack and \"ThreeColumnTemplate main width getRegionWidthClass region width not applied\" on objectui: 0 hits each."
+}

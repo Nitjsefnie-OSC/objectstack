@@ -1,0 +1,32 @@
+{
+  "number": 24298,
+  "kind": "issue",
+  "title": "metadata-protocol / spec: a draft carries no per-field provenance (which surface changed which key, and when), so Studio cannot mark a copilot's draft change with the ruled 草稿 chip and 来源 line",
+  "state": "open",
+  "state_reason": null,
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "area:studio",
+    "domain:spec",
+    "pm:queue",
+    "priority:p1",
+    "target:v18"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-18T09:52:50Z",
+  "updated_at": "2026-10-18T14:08:14Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 6,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/24298",
+  "body": "Filing gate ③: a ruled design's producer half, with the gap measured. Filed by `repo:cloud#2` (seat post objectstack-ai/objectstack#24145, session `session_01Cbdek8SKSHxddGqTPZXdqX`) from the objectstack-ai/objectui#12725 phase-5 dev report (objectui PR #12952). Platform first, per the maintainer's standing 口径 「平台相关的功能，应该尽量先改平台。」. ⛔ Not a claim.\n\nBlocked-by: #24324\n\nHeld on the maintainer's word (director comment `6249880263`); the release and the resume point are in comment `6250059826`.\n\n## The ruled pull\n\nobjectstack-ai/objectui#12725 Target item 3. The maintainer's rulings are on the card: 「属性好需要考虑选中每个元素的时候也要显示」, then 「按「右栏二选一」定稿」 on the StudioRailProps artboard. A field or view setting the copilot changed carries a 草稿 chip and a 来源 line, for example 「由 AI 副驾在 2 分钟前作为草稿加入」.\n\n## Measured: no declared key carries it (framework pin `be076dad28a0`)\n\n- **`ListDraftsResponseSchema`** (`packages/spec/src/api/protocol.zod.ts`): each row is `type`, `name`, `member`, `label`, `packageId`, `updatedAt` and `updatedBy`. That is per item, not per changed key.\n- **`SysMetadataRepository.listDrafts`** (`packages/metadata-protocol/src/sys-metadata-repository.ts`) sets `updatedBy` from `row.updated_by ?? row.created_by`. That is the acting user, which is the same person for a copilot edit and a hand edit in Studio.\n- **`sys_metadata.source`** (`filesystem | database | api | migration`) is the storage origin, not the authoring surface, and it is not projected.\n- **The copilot's own envelope** (cloud `service-ai-studio`, `applyDraft`) carries `changedKeys`, but only inside the conversation. Studio's properties never see it.\n\nSo Studio cannot tell a copilot change from a Studio change, or which keys changed. objectui#12725's phase 5 drew nothing for item 3.\n\n## Wanted (the lane picks the shape; one sketch)\n\n- A draft declares per-key provenance. For example, a `changes` list on each `_drafts` row (or on the draft read of `GET /meta/:type/:name`), with one entry per changed key path (`fields.renewal_count`, `kanban.columns`):\n  - `by`: the authoring surface, `copilot | studio | api`;\n  - `actor`;\n  - `at`.\n- It is kept until publish or discard, and declared in `ListDraftsResponseSchema`.\n- **The writers:**\n  - the framework's save door stamps `studio` / `api`;\n  - cloud's copilot tools stamp `copilot` through the same door, as a cloud follow-up once the pin carries this.\n- **The reader:** Studio's properties draw the 草稿 chip and the 来源 line, as an objectui follow-up.\n- Declared is enforced: no key without its writer and its reader.\n\nDedupe: semantic search of this repository for `per-field draft provenance`, `listDrafts`, `who drafted`, `source line`. The nearest are #24253 (the opt-in backfill on publish) and #23715 (a strict draft read), and neither covers this.\n"
+}

@@ -1,0 +1,33 @@
+{
+  "number": 24333,
+  "kind": "pull_request",
+  "title": "docs(adr-0119): the /batch atomic-refusal precedent anchor names batch-routes.ts (#23050 slice 13e, split-off anchor)",
+  "state": "open",
+  "state_reason": null,
+  "draft": true,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "documentation",
+    "needs-user-decision",
+    "size/xs",
+    "skip-changeset"
+  ],
+  "assignees": [
+    "zhuangjianguo"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-18T13:34:53Z",
+  "updated_at": "2026-10-18T13:39:14Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 1,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/pull/24333",
+  "body": "Part of #23050\nClause-②: no\n\nThe basis for the `Clause-②: no` line: one anchor token in an ADR's prose changes, to name the file where the route the sentence already describes has lived since #23050 slice 2. No contract, schema, export, route, answer or configuration key changes, and no package's published files change.\n\n## 维护者速读(草稿)\n\n### 改了什么\n\nADR-0119（插件可达的事务与诚实的原子批处理）第 118 行有一处代码锚点，指向\"跨对象 `/batch` 路由已有的先例\"：运行时无法回滚时，原子批处理请求以 `501 NOT_IMPLEMENTED` 拒绝，而不是悄悄降级。本 PR 只把这个锚点的文件从 `packages/rest/src/rest-server.ts` 改为 `packages/rest/src/batch-routes.ts`，锚定的仍是同一个 `NOT_IMPLEMENTED`。ADR 的决策内容、状态行和其他任何文字都不变。\n\n### 为什么改\n\n`/batch` 路由早在 #23050 第 2 片（commit `a647783d4`）就整体搬到了 `batch-routes.ts`，它的 501 拒绝就在那里（第 177 行）。旧锚点之所以一直\"能解析\"，靠的是 `rest-server.ts` 里另外两个无关路由（对象状态机读取、已发布版本读取）的 501 字样；第 13e 片（PR #24330）把这两个路由也搬走后，旧锚点再也解析不到，CI 的 `ADR symbol anchors resolve` 门禁因此变红，门禁给出的修法就是改锚点。`docs/adr/**` 需要人工审批（Tier H），所以这一个 token 单独开 PR，不把 1,444 行的搬迁 PR 也拖进人工审批。\n\n### 风险与代价(含回滚)\n\n风险极低：只改文档里的一个路径，运行时、契约、发布产物都不变。本 PR 单独合入时锚点同样解析（`batch-routes.ts` 在 `main` 上已有该 token），与 PR #24330 合在一起时也解析（下面的实测）。回滚就是还原这一行；但若 #24330 已合入，回滚会让该门禁重新变红。\n\n### 席位意见\n\n### 你要做的(一个动作)\n\n审阅这一行改动后，对本 PR 提交一次批准（APPROVED review）；之后由席位合入本 PR，再让 #24330 合并 `main` 并落地。\n\n## What changes\n\n`docs/adr/0119-plugin-reachable-transactions-and-honest-atomic-batch.md:118`, one token: `packages/rest/src/rest-server.ts#NOT_IMPLEMENTED` → `packages/rest/src/batch-routes.ts#NOT_IMPLEMENTED`. The sentence names \"the cross-object `/batch` route's existing precedent\"; that route's `501 NOT_IMPLEMENTED` refusal is `batch-routes.ts:177` (`code: 'NOT_IMPLEMENTED'`), moved there by slice 2 (`a647783d4`, PR #23642). Nothing else in the record moves: no status line, no other ADR, and ADR-0076 stays the maintainer's own carry.\n\nThis follows the seat's review record on PR #24330 (comment `6250370051`, pointer `6250393018`) and the claim `6249541908`, amended in place with this second branch.\n\n## Proof\n\n- `node scripts/check-adr-symbol-anchors.mjs` on `origin/main` `ec749fbb4` before the edit: exit 0. On this branch (`5ab4ac08a`): exit 0, \"check-adr-symbol-anchors: 2353 anchors across 142 records resolve — 451 symbol (424 declaration, 27 literal), 1874 file-level, 28 cross-repo, 6 exempt, 18 continuation\".\n- **Control, the red this repairs:** on PR #24330's head `f2c84cc6f` alone, exit 1, `[unresolved-symbol] docs/adr/0119-plugin-reachable-transactions-and-honest-atomic-batch.md:118  packages/rest/src/rest-server.ts#NOT_IMPLEMENTED`, the finding CI's job `117683703796` reports.\n- **The combination that lands:** a scratch merge of this branch with `origin/claude/issue-23050-s13e-meta-object-state-published` (`f2c84cc6f`, `git merge --no-commit --no-ff`, automatic merge, the 19 files of #24330 plus this one): exit 0, 2353 anchors resolve. In that tree `rest-server.ts` keeps one `NOT_IMPLEMENTED`, inside a `//` comment (`:1592`), which the checker does not count. The merge was aborted and the scratch worktree removed.\n- `node scripts/pm/dispatch-gates.mjs --repo objectstack-ai/objectstack docs/adr/0119-plugin-reachable-transactions-and-honest-atomic-batch.md`, with and without `--commands`: 19 commands (11 by path, 8 declared whole-tree), identical to the git-derived list. All 19 exit 0. `check:doc-formula-expressions` first refused with exit 3 (`@objectstack/formula` and `@objectstack/lint` not built in this worktree); after `pnpm exec turbo run build --filter=@objectstack/formula --filter=@objectstack/lint` under the verify lock it exits 0 (\"22 record-scoped formula example(s) across 476 files / 1393 TS blocks judged clean\"). `--ran`: \"Run reconciliation — 19 derived, 19 run, 0 NOT-MEASURED, 0 UNRUN.\"\n- `node scripts/pm/check-governed-merges.mjs --branch HEAD`: exit 3, GOVERNED, 1 of 1 path, landing tier H, +1 / −1.\n- Changeset: none. `docs/adr/**` ships in no package's `files[]`, and `Check Changeset` refuses a newly added empty changeset (#5471), so this PR carries the `skip-changeset` label, applied in the stroke that created it.\n\n## Landing order\n\nThis PR lands first, the Tier H way: an authorized APPROVED review, then the owning seat lands it. The seat then merges `main` into PR #24330, whose `Lint · docs & code guards` lane re-runs on that head; its other 33 completed checks on `f2c84cc6f` are green (all six `Test Core` shards, `Build Core`, `TypeScript Type Check`, `Governed Surface Queue Guard`). ⛔ No `NOT_IMPLEMENTED` token is kept in `rest-server.ts` to keep the old anchor alive.\n\n---\n_Generated by [Claude Code](https://claude.ai/code/session_01SYEJqDL3NXxrJRBVqaMu9T)_\n"
+}

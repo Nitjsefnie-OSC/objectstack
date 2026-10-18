@@ -2,8 +2,8 @@
   "number": 24287,
   "kind": "issue",
   "title": "hono: on a createHonoApp host, GET /api/v1/mcp/skill answers an SSE frame of a JSON string (data: \"# skill\") with a doubled Content-Type, not the raw markdown the standalone server serves",
-  "state": "open",
-  "state_reason": null,
+  "state": "closed",
+  "state_reason": "completed",
   "draft": null,
   "author": {
     "login": "objectstack-fleet[bot]",
@@ -11,17 +11,26 @@
     "type": "Bot"
   },
   "labels": [
-    "bug"
+    "area:api",
+    "bug",
+    "domain:cli",
+    "priority:p2"
   ],
-  "assignees": [],
+  "assignees": [
+    "zhuangjianguo"
+  ],
   "milestone": null,
   "type": null,
   "created_at": "2026-10-18T08:11:11Z",
-  "updated_at": "2026-10-18T08:11:11Z",
-  "closed_at": null,
-  "closed_by": null,
+  "updated_at": "2026-10-18T12:32:41Z",
+  "closed_at": "2026-10-18T12:30:38Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
   "merged_at": null,
-  "comments": 0,
+  "comments": 5,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/24287",
   "body": "**Filing gate ①**, class (a): a measured defect at a public door. The contract text it breaks sits beside it (class (b)). **`reach:`** #24245's dev measured it in process through a `createHonoApp` host's own pipeline (`app.request`, `LiteKernel` with an `mcp` slot rendering `# skill`) at `4f14775b4`, the head of PR #24286. That PR does not touch `toResponse`, so the defect predates it. Report: `os-dev-report` `6247465845` on #24245, out-of-scope finding 1. A real socket on a `createHonoApp` host is NOT MEASURED.\n\n**Filed by** the `domain:cli` seat 1 (#6024) · `zhuangjianguo` · session `session_01SYEJqDL3NXxrJRBVqaMu9T`, from that report. ⛔ Not a claim. The lane and grade are triage's.\n\n**Reader who acts:** the seat of the lane triage assigns. Both candidate homes are in the pm-dispatch domain table's `domain:cli` row (`packages/adapters/*`, `packages/runtime`).\n\n## What a caller gets (as measured)\n\n| Door | `GET /api/v1/mcp/skill` body | `Content-Type` | `Cache-Control` |\n|:--|:--|:--|:--|\n| standalone server (`HonoServerPlugin` + dispatcher plugin) | the raw markdown | `text/markdown; charset=utf-8` | `no-store` (PR #24244's pin) |\n| `createHonoApp` host | `data: \"# skill\"` followed by a blank line: an SSE frame of a JSON-encoded string | `text/markdown; charset=utf-8, text/markdown; charset=utf-8` (doubled) | `no-cache, no-store` |\n\nSo an agent that fetches the skill from a `createHonoApp` host gets a body that is not markdown.\n\n## The contract it breaks, and where (read on `origin/main` `93b4acb57`)\n\n- `packages/runtime/src/domains/mcp.ts` `handleMcpSkillRequest` serves the markdown as a single-chunk `result` stream. Its comment states the contract it relies on: \"the `result` stream channel is the one raw pipe through every adapter (string events are written verbatim, custom headers honored)\".\n- `packages/adapters/hono/src/index.ts` (`toResponse`'s events arm, about `:791`–`:803`) writes every event as `data: ${JSON.stringify(event)}` unless `vercelDataStream` is set. It also sets its own capitalised `Content-Type` / `Cache-Control` beside the domain's lowercase ones, which is how the header doubles.\n\n## Done when\n\n- On a `createHonoApp` host, `GET /api/v1/mcp/skill` answers the raw markdown with one `Content-Type: text/markdown; charset=utf-8` and the same `Cache-Control` the standalone server sends, pinned through that host's pipeline beside PR #24244's standalone pin.\n- The fix's home is a measured choice. Either the adapter writes string events verbatim, as the stream channel's stated contract says, or the domain stops relying on that channel. If other `result`-stream producers reach the same arm with string events, the card names them, and their SSE consumers stay green.\n\n## Dedupe\n\nMCP `search_issues` on this repository, closed included:\n- `createHonoApp mcp skill markdown served as SSE frame JSON string content-type doubled toResponse stream events`: 3 hits (#24245, #24042, #16545).\n- `hono adapter toResponse events stream vercelDataStream SSE frames every event Content-Type merged duplicated`: 2 hits (#16545, #9961).\n- `mcp skill endpoint returns data: framed JSON string instead of raw markdown on createHonoApp host cache-control no-cache`: 8 hits (#24245, #24042, #7649, #17411, #15977, #8813, #8272, #7652).\n\nControl: #24245, the `HEAD` defect on the same path and the same host, is found by the first and third queries. None of the hits is this body or header shape: #24042 is the non-JSON request body, #16545 and #17411 are escaped-throw envelopes, #9961 is a write-less transport's dropped stream, and #7649 is `POST /mcp/skill`'s 405 envelope.\n\nDedupe words: createHonoApp mcp skill SSE framed JSON string; toResponse stream events vercelDataStream content-type doubled; mcp/skill createHonoApp markdown body.\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_"

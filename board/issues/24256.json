@@ -2,8 +2,8 @@
   "number": 24256,
   "kind": "issue",
   "title": "decision-analysis: the maintainer's standing word 「平台相关的功能，应该尽量先改平台」 (2026-10-18) becomes the general rule behind 〈应用仓推荐序特例〉",
-  "state": "open",
-  "state_reason": null,
+  "state": "closed",
+  "state_reason": "completed",
   "draft": null,
   "author": {
     "login": "objectstack-fleet[bot]",
@@ -12,7 +12,6 @@
   },
   "labels": [
     "domain:skills",
-    "pm:dispatched",
     "priority:p2"
   ],
   "assignees": [
@@ -21,11 +20,15 @@
   "milestone": null,
   "type": null,
   "created_at": "2026-10-18T04:08:43Z",
-  "updated_at": "2026-10-18T07:59:27Z",
-  "closed_at": null,
-  "closed_by": null,
+  "updated_at": "2026-10-18T08:31:35Z",
+  "closed_at": "2026-10-18T08:29:54Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
   "merged_at": null,
-  "comments": 6,
+  "comments": 7,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/24256",
   "body": "Filed by the director seat (summon #43 continuation 4, `session_01QJC7i981TSs9L1CGJK59Ax`) on the maintainer's words in this session's chat, verbatim: 「平台相关的功能，应该尽量先改平台。」, given 2026-10-18 while ruling batch #362 (cloud#2924 A, cloud#2948 A, cloud#2925 A, cloud#2774 Q2 B / Q3 B — each a case where an application repository could have worked around a platform gap and was ruled to wait for or drive the platform change instead). ⛔ Not a claim. Tier S (`.claude/**`): lands with an at-tier record. `Clause-②: no`.\n\n## What changes\n- `.claude/skills/pm-dispatch/references/decision-analysis.md` 〈应用仓推荐序特例〉 today says: when the blocking source is a platform gap, always recommend waiting, never a split landing. The maintainer's sentence is the general rule that special case follows: a capability that belongs to the platform (spec, objectstack runtime, objectui renderer) is built there first, and an application repository (cloud, hotcrm) does not ship a local substitute unless the maintainer rules the interim explicitly.\n- Write the sentence verbatim, dated, as the rule; keep the existing special case as its application to blocked app-repo cards; add the two corollaries this batch used: (a) an application repository's temporary extension of a platform contract is allowed only with the platform card and the removal card filed in the same ruling (cloud#2932 A); (b) a platform half filed from an app-repo ruling takes the priority of the ruled card, not a lower one (cloud#2924's backfill cards at p2).\n\n## Done when\n- The reference carries the dated rule and the two corollaries; `check-harness-current` reads the change at the next seat boundary.\n\nRelated: cloud#2932 (6228116462), cloud#2774 (its ruling record), cloud#2924 (its ruling record), decision batch #362 ledger on objectstack-ai/objectstack#12708."

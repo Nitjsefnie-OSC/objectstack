@@ -1,0 +1,32 @@
+{
+  "number": 24341,
+  "kind": "issue",
+  "title": "platform-objects: the identity objects declare their default row scope (the literals the shipped sets copy today), and the registry refuses an `extend` contributor that loosens a platform object's default (#24164 ruling E′)",
+  "state": "open",
+  "state_reason": null,
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "area:access",
+    "domain:engine",
+    "pm:blocked",
+    "priority:p1",
+    "target:v18"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-18T13:54:59Z",
+  "updated_at": "2026-10-18T13:54:59Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 0,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/24341",
+  "body": "Filed by the director seat (summon #43 continuation 5, `session_01QJC7i981TSs9L1CGJK59Ax`) from objectstack-ai/objectstack#24164, ruled E′ (batch #365 item 4). The declarations half. ⛔ Not a claim.\nBlocked-by: #24338\n\n## What changes\n- `packages/platform-objects/**`: each identity object declares its default row scope with the policy the shipped sets carry for it today (`packages/plugins/plugin-security/src/objects/default-permission-sets.ts`): the seven `sys_scim_*` projections (`scimProjectionRowScope`), `sys_verification` and `sys_jwks` (`privateCredentialRowScope`), `sys_organization` (own id), `sys_user` (self plus organisation members), `sys_session`, `sys_account`, `sys_team_member`, `sys_two_factor`, `sys_user_preference`, `sys_api_key`, `sys_device_code`, `sys_oauth_access_token`, `sys_oauth_refresh_token`, `sys_oauth_consent`, `sys_oauth_application` (the `_self` / `_org_members` list), `sys_audit_log` (`sys_audit_log_org`). About 23 objects; each literal moves, none is rewritten.\n- `packages/objectql` registry: an `extend` contributor that sets or loosens a platform object's declared default is refused at registration with a named reason (ruling item 4); a contributor that leaves it alone is unchanged.\n- Platform-global objects (`sys_metadata*`, `sys_job*`, `sys_migration*`, `sys_platform_setting`, `sys_presence`, `sys_flow_dispatch`) declare no default (ruling item 5).\n- The shipped sets keep their spreads until #24340 has landed and its pins hold; removing the duplication is the `domain:services` seat's follow-up, not this card.\n\n## Acceptance\n- A test enumerates the declaring objects against the literals in `default-permission-sets.ts` (the same predicate per object); the registry refusal is pinned; `pnpm check` green; changeset `minor` on `@objectstack/platform-objects` (and `@objectstack/objectql` for the registry rule)."
+}
