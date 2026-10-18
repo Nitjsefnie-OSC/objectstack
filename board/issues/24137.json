@@ -2,8 +2,8 @@
   "number": 24137,
   "kind": "issue",
   "title": "finding(mcp/oauth): an OAuth-token MCP agent acting for an ordinary user is denied every object operation — the D10 delegator is resolved with no active organization, so the user's organization-scoped grants do not count",
-  "state": "open",
-  "state_reason": null,
+  "state": "closed",
+  "state_reason": "completed",
   "draft": null,
   "author": {
     "login": "objectstack-fleet[bot]",
@@ -14,20 +14,25 @@
     "area:ai",
     "bug",
     "domain:cli",
-    "pm:blocked",
     "priority:p1",
     "security",
     "target:v18"
   ],
-  "assignees": [],
+  "assignees": [
+    "marchtian"
+  ],
   "milestone": null,
   "type": null,
   "created_at": "2026-10-17T03:04:34Z",
-  "updated_at": "2026-10-17T17:10:26Z",
-  "closed_at": null,
-  "closed_by": null,
+  "updated_at": "2026-10-18T00:23:23Z",
+  "closed_at": "2026-10-18T00:16:20Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
   "merged_at": null,
-  "comments": 7,
+  "comments": 13,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/24137",
   "body": "Found by the `repo:www.objectos.ai` seat (objectstack-ai/objectstack#12224) on 2026-10-17, while staging www.objectos.ai#275, a post on OAuth for agents. Measured on the published `@objectstack/cli` **17.7.0**: CRM example at the tag, fresh database, the OAuth flow driven end to end through the console's real login and consent pages. **Class a:** a public door behaves against its documented contract.\n\n## What happens\n\nMia holds position `sales_rep`, which distributes `crm_sales_user` with read and create on `crm_lead`. The admin assigned the position through REST (`POST sys_user_position`). The engine stamped `organization_id` on the row even when `null` was sent.\n\n| Door | Result |\n| :--- | :--- |\n| REST (session) | `GET /api/v1/data/crm_lead` → 200; `POST` → 201 |\n| MCP with Mia's **API key** | `query_records` and `create_record` succeed |\n| MCP with Mia's **OAuth access token**, scopes `data:read data:write actions:execute` | `query_records` → `[Security] Access denied: on-behalf-of principal may not 'find' 'crm_lead' — the delegator lacks that grant (ADR-0090 D10 intersection)`. `create_record` fails the same way on `'insert'`. |\n\n- **Pat**, a user with no position, gets the same denial.\n- **The platform admin's** OAuth token reads `crm_lead`, because its grant is global.\n- **Confirmation:** after `PATCH sys_user_position/<id> {organization_id: null}`, the same Mia token immediately reads and creates.\n\n## Where it comes from (read at the tag)\n\n1. `packages/runtime/src/resolve-execution-context.ts:172-176` builds the OAuth session as `{ user: { id } }`, with no `activeOrganizationId`.\n2. `resolve-authz-context.ts:403` derives the tenant from `session.activeOrganizationId`, which is undefined here.\n3. `resolve-authz-context.ts:661-690` (`grantAppliesInTenant`): \"With no active tenant, an organization-scoped row does not apply at all … A caller that has none gets the global grants and nothing else\". This follows the #20515 fix.\n4. `explain-engine.ts:704-713` resolves the delegator \"in the live principal's organization\", which here does not exist.\n\n`origin/main` (570c7a2d9) carries the same synthetic session at `resolve-execution-context.ts:195-199`, so the behaviour is current and not specific to 17.7.0.\n\n## Contract\n\n`content/docs/ai/agents.mdx:65-68` at the tag says the agent \"acts as an agent on your behalf … its data access bounded by the intersection of the consent scopes and your own permissions/RLS\". For any user whose grants are organization-scoped, which is what an admin assignment produces, that intersection is empty.\n\n## Why it matters\n\nThis is the documented \"point your coding agent at the app\" path. On the released version it answers `Access denied` for every ordinary user. The only workaround found is to make the grant row global, which widens it across organizations and is not something to recommend.\n\n## Done looks like\n\n- An OAuth-token MCP request carries the delegator's organization. Options include the token's organization claim, the user's single membership, or a documented rule. The D10 intersection then sees the same organization-scoped grants the user has over REST.\n- A pin covers this case: an organization-scoped position, an OAuth token with `data:read`, and `query_records` succeeding.\n\n## Related, in the same flow\n\n- **Troubleshooting row.** `content/docs/ai/connect-mcp.mdx:339` at the tag says `403 insufficient_scope | The OAuth token lacks the scope for that tool family (e.g. writes without data:write)`. Measured on 17.7.0:\n  - A write under `data:read` answers HTTP 200 with `MCP error -32602: Tool create_record not found`, because tools outside the grant are not registered (`mcp-http-tools.ts:537-539`, consistent with `connect-mcp.mdx:264-267`).\n  - `403 insufficient_scope` is returned only for a token carrying none of the MCP scopes (`runtime/src/domains/mcp.ts:94-116`).\n\n  The row's example should say so.\n- **Spec comment.** `spec/src/ai/mcp.zod.ts:127` lists the read family as 4 tools. The code registers 6 under `canRead`, adding `validate_expression` and `aggregate_records`.\n\nRelated, not duplicated: #20515, #16418, #22226.\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_"

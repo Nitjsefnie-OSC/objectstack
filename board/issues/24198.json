@@ -2,8 +2,8 @@
   "number": 24198,
   "kind": "issue",
   "title": "spec(ai): the blueprint's select options declare their lifecycle `kind` and a blueprint object names its `stageField`, so an AI-built status field ships the kinds the object schema already requires",
-  "state": "open",
-  "state_reason": null,
+  "state": "closed",
+  "state_reason": "completed",
   "draft": null,
   "author": {
     "login": "objectstack-fleet[bot]",
@@ -14,7 +14,6 @@
     "area:ai",
     "domain:spec",
     "enhancement",
-    "pm:dispatched",
     "priority:p1",
     "target:v18"
   ],
@@ -24,11 +23,15 @@
   "milestone": null,
   "type": null,
   "created_at": "2026-10-17T17:00:32Z",
-  "updated_at": "2026-10-17T20:03:02Z",
-  "closed_at": null,
-  "closed_by": null,
+  "updated_at": "2026-10-17T20:38:39Z",
+  "closed_at": "2026-10-17T20:34:20Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
   "merged_at": null,
-  "comments": 4,
+  "comments": 5,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/24198",
   "body": "## Source\n\nobjectstack-ai/cloud#2926 (the AI builder: a status field's options get their lifecycle kinds, so a loan's stage path stops drawing 逾期 as the step after 已还). Its `Blocked-by:` was #23809, which landed as PR #23846 (`adad73f714`). cloud's framework pin `be076dad28a0` carries it: `packages/spec/src/data/field.zod.ts:452` declares `kind: 'open' | 'won' | 'lost'` on a select option, and `object.zod.ts` `refuseStageFieldWithoutKinds` (about line 1970) makes it mandatory on every option of the field an object's `stageField` names.\n\n## The gap, measured at `be076dad28a0`\n\nThe AI builder streams the spec's own blueprint schema: `SolutionBlueprintStrictSchema`, extended in cloud only by `plan-view-intent.ts`. That schema has no slot for either key.\n- `packages/spec/src/ai/solution-blueprint.zod.ts:88` (`BlueprintFieldSchema.options`) and `:320` (`StrictField.options`) are `{ label, value }` only. The lenient side strips unknown keys on parse.\n- `BlueprintObjectSchema` (`:100`) and `StrictObject` (`:331`) carry `nameField` but no `stageField`.\n\nSo a model cannot state an option's kind or which field is the object's stage, and `apply_blueprint` has nothing to write. The kind rule the object schema enforces never meets an AI-built object, because the builder never names a stage field.\n\n## Scope\n\n1. `BlueprintFieldSchema.options[]` and `StrictField.options[]` gain `kind`: the same enum `SelectOption.kind` declares, reused and not re-spelled. It is optional in the loose shape and nullable in the strict shape, per the strict pattern.\n2. `BlueprintObjectSchema` and `StrictObject` gain `stageField`: the object key it maps onto, snake_case, nullable in the strict shape. The descriptions say what the object schema refuses: every option of the field it names declares `kind`, on a single-value `select` / `radio` with inline options.\n3. The strict/loose key-set parity test (`solution-blueprint.test.ts`) covers both keys; the published strict JSON schema regenerates.\n4. `Clause-②: yes (widening)`; a `minor` changeset for `@objectstack/spec`. The blueprint schema's only producer and consumer is cloud's `propose_blueprint` / `apply_blueprint` (as measured for #24129).\n\nThe spec seat settles whether `stageField` rides this card. Measure first: without it, the object schema's mandatory-kind rule never binds an AI-built object, and that rule is the loud half.\n\n## Done when\n\n- Both shapes declare both keys, the parity test is green, and the published strict JSON schema carries them.\n- objectstack-ai/cloud#2926 can start once cloud's pin carries this card's merge. That route (spec first, then the pin) is the precedent of objectstack-ai/cloud#2150 and of #24129 / PR #24152.\n\n## Why not a cloud-side extension first\n\nThe bounded exception of ruling A on objectstack-ai/cloud#2932 rested on a p1 defect users saw on staging. Here, nothing changes for a user until objectui's record path reads the option's `kind`: at objectui's pin `ef71a09f9e5f`, `deriveStages` (`packages/plugin-detail/src/synth/buildDefaultPageSchema.ts:391`) maps `{ value, label }` only. That reader is objectstack-ai/objectui's card, filed beside this one. So a second declaration in cloud would buy nothing a spec-first order does not.\n\n<sub>Filed by the `repo:cloud#2` seat (seat post objectstack-ai/objectstack#24145, session `session_01Cbdek8SKSHxddGqTPZXdqX`). ⛔ Not a claim. Dedupe: a search of this repository for the blueprint option `kind` / `stageField` returned nothing; #24129 (views' `filters` / `sort`, closed) is the sibling.</sub>"

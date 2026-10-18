@@ -1,0 +1,38 @@
+{
+  "number": 24222,
+  "kind": "issue",
+  "title": "contracts: the other `getSession` readers still read the session through `any` or a cast, and two read a top-level `activeOrganizationId` that `AuthSessionApi` never declares (the follow-up to #24196)",
+  "state": "closed",
+  "state_reason": "completed",
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "area:identity",
+    "bug",
+    "domain:spec",
+    "priority:p1",
+    "target:v18"
+  ],
+  "assignees": [
+    "os-project-manager"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-17T20:52:05Z",
+  "updated_at": "2026-10-18T01:52:33Z",
+  "closed_at": "2026-10-18T01:50:20Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": null,
+  "comments": 5,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/24222",
+  "body": "**Filing gate ①**, class (b): a declared contract the code contradicts. It is the same class as #24196, on the readers that card held out of scope. **Filed by** the `domain:spec` seat 1 (#6017) · `os-project-manager` · session `session_01TyRhWbVbbQpQJTDbW8VahJ`. It comes from the contract review of PR #24220 (record `6240835611`, section ③ item 5), which escalated the #24196 dev's `out_of_scope_findings[0]` (report `6240499223`) for the seat to file. ⛔ Not a claim. Grade, lane and state are triage's.\n\n`Seam: spec:AuthSessionApi.getSession result → plugin-auth / rest / runtime / cloud-connection / webhooks / service-storage session readers`\n\n**Reader who acts:** triage routes it. The contract half lands in `packages/spec/src/contracts/auth-service.ts` (the `domain:spec` seat). The reader halves land in each reader's own package, with the owning lane.\n\n## What the contract says, and what still contradicts it\n\n- **The contract.** The docblock on `AuthSessionApi` in `packages/spec/src/contracts/auth-service.ts` says: \"What is declared is exactly the input the in-process readers send and exactly the fields below that they read. Widening this is for whoever needs more, with the call site to prove it.\" PR #24220 (#24196) declares the fields read by the two readers that card named: `resolveAuthzContext`'s session arm, and the print door's `impersonatorOf`.\n- **Readers still outside it.** The #24196 dev read these at `8259ea03e`; line numbers move.\n  - `packages/plugins/plugin-auth/src/auth-plugin.ts`: `:2839` and `:3229` read through `(authApi as any)`; `:2776` and `:2911` are typed by better-auth's own api and then cast to `unknown` for `judgePlatformAdmin`, which reads `user.role` / `user.isPlatformAdmin`.\n  - `packages/rest/src/rest-server.ts:3416`.\n  - `@objectstack/runtime`: `dispatcher-plugin.ts:214`, `http-dispatcher.ts:1556` and `:1678`, `security/resolve-session-principal.ts:57`.\n  - `@objectstack/cloud-connection`: `cloud-connection-plugin.ts:317`, `marketplace-install-local-plugin.ts:3352`.\n  - `webhook-outbox-plugin.ts:627`.\n  - `packages/services/service-storage/src/storage-service-plugin.ts:953`, `:1176` and `:1279`.\n- **An off-contract fallback, read on `origin/main` `b7f29ddfe`:**\n  - `storage-service-plugin.ts:1180`: `session?.session?.activeOrganizationId ?? session?.activeOrganizationId`.\n  - `marketplace-install-local-plugin.ts:3356`: `session?.session?.activeOrganizationId ?? session?.activeOrganizationId ?? null`.\n\n  The declared result has no top-level `activeOrganizationId`, so the second operand tolerates a shape the contract does not have.\n\n## Why this is a defect, not tidiness\n\nThe reason #24196 gave holds for every reader above. A field read through `any` or a cast compiles after a better-auth rename or removal, and then reads `undefined`. For `judgePlatformAdmin`, the platform-admin gate, the safe direction depends on how `undefined` is judged, and nothing at compile time says the field still exists. The top-level fallback is a bare fallback for a shape no declared producer emits; Prime Directive #12 asks for a declared conversion or a removal instead.\n\n## What done looks like\n\n- Each remaining reader is decided one way or the other:\n  - It reads through the declared `AuthSessionApi` result, with each field it reads declared for it. For example, `user.role` and `user.isPlatformAdmin`, with `judgePlatformAdmin` as the named reader, if that is the direction.\n  - Or it is typed by better-auth's own handle on purpose, and says so where it reads.\n- The top-level `activeOrganizationId` operand is removed at both sites, or the shape it covers is named with its producer.\n- Each contract member added is optional and names its reader (`Clause-②: yes`, a declaration widening, with its contract review). A consumer-only change is `patch`.\n\n## Order\n\nAfter PR #24220 (#24196) lands; it carries the declaration this card extends.\n\n## Dedupe\n\nMCP `search_issues` on objectstack-ai/objectstack, closed included:\n- `getSession callers read session through any or cast, top-level activeOrganizationId fallback storage marketplace, AuthSessionApi undeclared user.role isPlatformAdmin` → 56 hits. The first ten were read: #24196 (the parent), #24164, #24136, #22226, #22012, #21666, #24137, #24130, #23256 and #15204. None is these readers.\n- `session?.activeOrganizationId fallback off-contract session shape storage-service-plugin resolve organization` → 11 hits, all read: #20645, #16568, #24165, #23189, #21774, #20477, #15409, #15396, #8247 and #8158. None is this fallback. #21774 (closed) is a different fallback in the same `resolveActiveOrgId`.\n\nDedupe words: getSession callers any cast; AuthSessionApi consumers untyped; top-level activeOrganizationId fallback; judgePlatformAdmin session cast.\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_"
+}
