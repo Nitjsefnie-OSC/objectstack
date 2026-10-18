@@ -1,0 +1,36 @@
+{
+  "number": 24345,
+  "kind": "pull_request",
+  "title": "docs(pm-dispatch): name the hourly card refresh as a second pm:blocked returner; Blocked-by: undecorated is the spelling to write",
+  "state": "closed",
+  "state_reason": null,
+  "draft": false,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "documentation",
+    "size/s",
+    "skip-changeset"
+  ],
+  "assignees": [
+    "os-steve"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-18T14:37:21Z",
+  "updated_at": "2026-10-18T14:53:17Z",
+  "closed_at": "2026-10-18T14:53:15Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": "2026-10-18T14:53:15Z",
+  "comments": 2,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/pull/24345",
+  "body": "Fixes #24322\nClause-②: no\n\n## What changed\n\n`.claude/skills/pm-dispatch/SKILL.md` 〈状态模型〉, the `pm:blocked` row: 「#N 关闭时由解锁扫描放回」 → 「#N 关闭时由解锁扫描或 `scheduled-full-run-card.yml` 刷新放回」. Nothing else in the row.\n\n`.claude/skills/pm-dispatch/references/state-machine.md` 〈`pm:blocked`〉:\n- The 正典标记 line: 「、无装饰;指令是行,句中提及是散文。」 → 「、写时无装饰;读者兼收列表/粗体/反引号。」 — undecorated is the spelling to write; the reader both returners share (`DIRECTIVE_PREFIX` in `scripts/pm/check-half-states.mjs`) also accepts a list bullet and bold or backtick decoration.\n- Two new lines after 「上游已关 ⇒ … ⛔ 不反射式放行」, spelled from `staleBlockVerdict`'s exits in `scripts/ci/scheduled-full-run.mjs` (held on an open, unread, closed-cross-repo or declared-`Unlock-action:` target; assigned; else expired):\n  - 「`scheduled-full-run-card.yml` 经 `scripts/ci/scheduled-full-run.mjs` 刷新小时红卡时亦放回,规则更窄:」\n  - 「双通道目标全为本仓已关卡、无 `Unlock-action:` 行、无 assignee 才放;跨仓已关不放。」\n\nNo behaviour change, no gate, no label, no sweep. No issue or PR number in the rule text (`pnpm check:pm-skill-id-lint` exit 0).\n\n## Line budget — both files stay at their ceilings\n\n| file | lines before → after | ceiling | headroom after | widest table row / longest line |\n|---|---|---|---|---|\n| `.claude/skills/pm-dispatch/SKILL.md` | 319 → 319 | 319 | 0 | `pm:blocked` row 296 → 336 bytes (pin 342); the file's widest row is still the 342-byte `domain:engine` row |\n| `.claude/skills/pm-dispatch/references/state-machine.md` | 41 → 41 | 41 | 0 | no table row (pin 0); longest line 120 bytes (cap 120) |\n\nTwo lines added in `state-machine.md`, both paid in the same file; every clause's survival site:\n\n| payment | before | after | survival of each clause |\n|---|---|---|---|\n| ① 〈`pm:on-hold`〉 two lines → one (−1) | 「放行双查两查皆机械零判断:① 只放最近一次 `pm:on-hold`/`pm:blocked` 转换评论的条件。」 + 「② 该评论之后卡上有更新的 merged PR ⇒ 拒绝放行;⛔ 永不对更早的 blocker 放行。」 | 「放行双查皆机械:只放最近一次 hold/blocked 转换评论的条件;其后卡上有新 merged PR 即拒。」 (116 B) | both checks stay on the new line and are also stated at SKILL.md 〈状态模型〉 「hold 放行须双查:只放最近一次转换评论的条件,其后卡上有更新的 merged PR 即拒」; 「两查皆机械零判断」 → 「皆机械」; 「⛔ 永不对更早的 blocker 放行」 is the negative restatement of 「只放最近一次…的条件」 and survives there; `pm:on-hold`/`pm:blocked` → hold/blocked, SKILL.md's own spelling (「hold/blocked 的行契约」) |\n| ② 〈`pm:blocked`〉 finished-work line absorbs the re-dispatch ban (−1) | 「工已完、PR 被外部门禁缺陷卡住者同用本态,⛔ 不设新标签;`Blocked-by:` 指向那张门禁卡。」 + 「⛔ 永不给完工卡重派 dev。」 | 「工已完而被门禁缺陷卡住者同用本态,⛔ 不设新标签、不重派;`Blocked-by:` 指向门禁卡。」 (115 B) | 「PR 被外部门禁卡住」 survives at SKILL.md 〈状态模型〉 「工已完、PR 被外部门禁卡住的同用本态」; 「⛔ 不设新标签」 kept; the re-dispatch ban is 「⛔ …不重派」 on the same card's line; 「那张」 dropped, its antecedent (门禁缺陷) is on the same line |\n| within-line fold (0 lines) 〈`pm:blocked`〉 正典标记 tail | 「;指令是行,句中提及是散文」 | dropped to make room for the decoration clause | 「行首」 earlier on the same line (a directive is a line) and the next line 「句中提及刻意拒收」 (an in-sentence mention is prose, refused) |\n\nNo ceiling raise, no `CROSS_FILE_MOVES` entry, no edit to the ratchet script, no re-wrap. The seat's reading (d) was measured and only half holds: the 正典标记 tail folds losslessly (above), but the 「等发布」 half of the next line and the `Part of` line carry 224 bytes of distinct content (a card that closes at that moment vs. the pin-bump chore card and the `Part of` ban), so that fold saves no line; the second payment was taken from the on-hold pair instead.\n\n## Verification (head `9b164c9a`)\n\nDerived at base `68a090fb` over the two files and re-derived with no paths at `9b164c9a` (`node scripts/pm/dispatch-gates.mjs --commands --repo objectstack-ai/objectstack`): 20 commands, identical lists. All 20 run locally on `9b164c9a`, each exit code captured before any pipe; `--ran` reconciliation: 「20 derived famil(ies) accounted for — 20 run, 0 NOT-MEASURED」.\n\n- `pnpm check:pm-skill-ratchet` exit 0 — 「SKILL.md: widest table row is 342 bytes (pin 342; headroom 0)」, 「SKILL.md is 319 lines (ceiling 319; headroom 0)」, 「state-machine.md is 41 lines (ceiling 41; headroom 0)」.\n- `pnpm check:pm-skill-id-lint` exit 0 — 「87 file(s) clean (pattern /#[0-9]{3,}/g)」.\n- `pnpm --filter @objectstack/lint run check:doc-formula-expressions`: first run exit 3, the gate's declared prerequisite refusal (`@objectstack/lint` not built — nothing measured); after `pnpm exec turbo run build --filter=@objectstack/formula --filter=@objectstack/lint` under the verify lock (「VERDICT command-exit 0」), rerun exit 0 on the same tree.\n- The other 17 derived commands: exit 0.\n- Local-only `pnpm check:skill-frame-freshness` exit 0 (「the decision frame in this tree is current with origin/main」); its reading stays local.\n- Control-byte scan over both files: no hit. Four-axis frame untouched (`pnpm check:skill-frame-sync` exit 0).\n- No package touched ⇒ no build closure and no package test suite is owed; `test:repo` and the whole-farm lint are CI's.\n\nPremise re-checks at `68a090fb` (all hold): `解锁扫描放回` 1 in SKILL.md (control `pm:blocked` 2); `正典标记` 1 hit at state-machine.md L24 (control `Unlock-action` 1); `export function staleBlockVerdict` 1 in scheduled-full-run.mjs (control `fileOrRefreshCard` 8).\n\n## Acceptance notes\n\n- `origin/main` advanced to `51ad8e4f` (cli/runtime) during the run; no overlap with these two files, branch left one commit behind rather than merged forward.\n- The protocol corpus names the hourly CI card nowhere, so the row names its workflow file and the reference names the workflow and the module beside the shorthand 「小时红卡」.\n- `.claude/**` publishes nothing: `skip-changeset` declared on the `pr_create` stroke.\n\n## 维护者速读(草稿)\n\n- **改了什么**:派发协议的两处文字。状态模型表的 `pm:blocked` 行多写一个放回者(小时 CI 红卡的刷新工作流 `scheduled-full-run-card.yml`);状态机细则里写明 `Blocked-by:` 标记「写时无装饰、读者兼收装饰」,并补上第二放回者的更窄规则(双通道目标全为本仓已关卡、无 `Unlock-action:` 行、无 assignee;跨仓已关不放)。两文件行数不变(319/319、41/41),新增两行由同文件内两处无损合并付账,每个条款的落点见上表。\n- **为什么改**:刷新工作流已在 `main` 上这样做,协议文字却仍只写解锁扫描一个放回者,并把「无装饰」写成唯一读法;agent 按旧文字会误判卡的来路和标记的合法拼写。\n- **风险与代价(含回滚)**:零行为变化、零门禁、零标签、零清扫,只改 agent 读的文字;回滚 = revert 这一个 commit。代价是两处合并后的句子更紧(双查两行并一行;完工卡的「不重派」并入同卡那行)。\n- **席位意见**:\n- **你要做的**:无需操作。本 PR 为 Tier S,由 `domain:skills` 席位达档复核后入队落地。\n\n---\n_Generated by [Claude Code](https://claude.ai/code/session_01V1upgJbYCZ5xed9pEQF4Tz)_\n"
+}

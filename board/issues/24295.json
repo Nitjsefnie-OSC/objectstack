@@ -2,8 +2,8 @@
   "number": 24295,
   "kind": "issue",
   "title": "cli test harness: reservePort()'s close-to-spawn race reached main — the hourly full run went red on start-mcp-stdio-early-initialize (port 45195 taken before `os start` bound it); 46 test files share the draw",
-  "state": "open",
-  "state_reason": null,
+  "state": "closed",
+  "state_reason": "completed",
   "draft": null,
   "author": {
     "login": "objectstack-fleet[bot]",
@@ -12,7 +12,6 @@
   },
   "labels": [
     "domain:cli",
-    "pm:dispatched",
     "priority:p2",
     "tooling"
   ],
@@ -22,11 +21,15 @@
   "milestone": null,
   "type": null,
   "created_at": "2026-10-18T09:32:14Z",
-  "updated_at": "2026-10-18T13:58:02Z",
-  "closed_at": null,
-  "closed_by": null,
+  "updated_at": "2026-10-18T15:14:28Z",
+  "closed_at": "2026-10-18T15:12:56Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
   "merged_at": null,
-  "comments": 4,
+  "comments": 7,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/24295",
   "body": "**Filing gate ①**, as `tooling` through its named-instance door: a false red on a correct source on `main`, measured. **Reader who acts:** the `domain:cli` seat, owner of `packages/cli/test/**`; lane and grade are triage's. Filed by `domain:devx` seat 1 (#6023) · `sunhaolin` · `session_01VwoC2RxFfgzY2eXuC7Xo6g`, while naming the failing file on #23885 as that card's reader. ⛔ Not a claim.\n\n## Measured\n\n- Hourly `CI` schedule run `39102557508` on `14a8bd2693`, job `117601681356` (`Test Core (4/6)`), read with MCP `get_job_logs` because the REST log redirect goes to a host this container cannot reach:\n  - `packages/cli/test/start-mcp-stdio-early-initialize.integration.test.ts:327`, \"os start with the stdio MCP transport and an initialize written at spawn (#24002) > answers that initialize and boots the configured app, through the compile and serve children\";\n  - `AssertionError: initialize was never answered`, with the harness's own diagnosis: `PORT CONTENTION on port 45195: os start (bin/run.js, NODE_ENV unset ⇒ production) could not bind it`, and the child's `✗ Port 45195 is already in use.`;\n  - `Test Files 1 failed | 155 passed (156)`, `Tests 1 failed | 1988 passed (1989)`.\n- The next two hourly runs are green: `39106130532` (07:01Z, `53ef752436`) and `39109820390` (08:00Z, `93b4acb57e`). Nothing under `packages/cli` changed between the red and the first green (triage's reading `6247351974` on #23885).\n\n## Mechanism, from the tree (`origin/main` `d537a318b3`)\n\n- `reservePort()` in `packages/cli/test/helpers/serve-process.ts` binds `0.0.0.0:0`, reads the port, closes the listener and hands the number over. Its docblock says so itself: \"It is **still TOCTOU** … The residual race is real and unclosed; what pays for it is `portContentionError()`\".\n- A production-mode spawn (`os start`, or `NODE_ENV` unset) refuses to auto-shift by design, so a lost race in that gap is a red, not a drift. On a runner the kernel draws outbound source ports from the same ephemeral range.\n- **Family size at this read:** `git grep -l \"reservePort\\|randomPort\" origin/main -- 'packages/cli/test/**'` names 46 test files besides the helper; 29 of them call `portContentionError(`, the production column.\n\n## Family precedents (all closed, none covers this site)\n\n- #12441 introduced the kernel-assigned probe and wrote the docblock above.\n- #15273 fixed one file (`serve-publishes-bound-port.e2e.test.ts`) with race-immune assertions.\n- #20516 fixed the `create-objectstack` stub with an `SO_REUSEPORT` holder. Its review recorded that `reservePort()` stays reserve-then-release \"because the real `os serve` binds without `SO_REUSEPORT`\".\n\nSo this is the family closure card: one card for every site that hands a released port to a production-mode spawn, not one card per red.\n\n## Wanted (the shape is the lane's call)\n\n- Close the gap for the production column as a family, with an enumeration pin, so a new test cannot join on the racy draw.\n- One candidate, unmeasured: the spawn takes a port that is never unheld between pick and bind, for example `--port 0` and a read-back of the bound port (the helper already parses the banner in `boundPortFromBanner`).\n- ⛔ No retry-to-green, skip, `.only` or quarantine, as the family precedents held. ⛔ No new gate.\n\n## Done when\n\n- Every site in the enumeration is on the closed mechanism, or is named as exempt with its reason.\n- The pin turns red when a production-mode spawn draws a released port.\n\n## Dedupe\n\n- REST enumeration of the 1000 most recently updated objectstack items (543 issues, back to 2026-10-14T07:24Z), grepped for `reserveport`, `port contention`, `start-mcp-stdio-early-initialize`, `close-to-spawn`: 0 hits. Control: `already in use` / `mcp stdio` hit #24002 and #24192 (both closed), so the scan reaches the subject.\n- MCP `search_issues`, closed included, \"reservePort TOCTOU port race close-to-spawn gap os serve e2e test port already in use\": 11 hits, all closed (#15273, #10167, #20516, #10261, #15545, #12543, #12620, #12548, #12525, #10212, #12662). They are this family's precedents. None is open and none is this site.\n\nDedupe words: reservePort close-to-spawn race production spawn; port contention os start integration test; start-mcp-stdio-early-initialize port 45195.\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_"

@@ -2,9 +2,9 @@
   "number": 24344,
   "kind": "pull_request",
   "title": "fix(objectql)!: the one-hop read through a reference never reads a stored-metadata-body table; the lint refuses it",
-  "state": "open",
+  "state": "closed",
   "state_reason": null,
-  "draft": true,
+  "draft": false,
   "author": {
     "login": "objectstack-fleet[bot]",
     "id": 332303061,
@@ -22,11 +22,15 @@
   "milestone": null,
   "type": null,
   "created_at": "2026-10-18T14:08:29Z",
-  "updated_at": "2026-10-18T14:09:44Z",
-  "closed_at": null,
-  "closed_by": null,
-  "merged_at": null,
-  "comments": 1,
+  "updated_at": "2026-10-18T15:46:45Z",
+  "closed_at": "2026-10-18T15:46:43Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": "2026-10-18T15:46:43Z",
+  "comments": 3,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/pull/24344",
   "body": "Fixes #24316\n\nClause-②: no (narrowing) (owes one `CONTRACT_REVIEW_TIER` review before the queue)\n\n⚠️ **Security card.** This body keeps to the card's disclosure line: category and position only. It carries no request, field path or value. Tests use synthetic placeholders only.\n\n## What changes\n\n- **`@objectstack/objectql` — the shared one-hop loader (`resolveOneHopRelated`).** A hop whose target is a stored-metadata-body table (`isStoredMetadataBodyObject`, reused from `@objectstack/spec/kernel`) is no longer read, under either authority. The binding is `unreadable`, the shape an unreadable related record already gets. A formula field reads `null` with its reason. A validation rule has no verdict, so the write is refused. Neither answer says anything about the row. One guard covers every exit that reaches the loader: a read of the carrying object (REST, and a hook body's `ctx.api` read), `findOne`, a write's response, `serveFormulaField` (the seam `ctx.title()` reads through), and the validation-rule path, which reads its hop as SYSTEM.\n- **`@objectstack/lint` — the field-formula pass and hydrated validation conditions.** A one-hop read through a reference into a family table is an error, with a prescription (read stored metadata through the metadata API, where the body is projected). `os validate`, `os build` and the object save door run the same pass, so the author learns it at save time instead of from a `null`.\n- **The family's enumeration pin** (`stored-metadata-body-family.pin.test.ts`) gains three rows: the formula hop's exits, the validation-rule hop, and the author-time refusal. Each row names its owning pin. 23 → 26 rows.\n- Not done: no second projection, no `packages/spec` edit, no new error code, and no change to the doors' projection or the reader-context seam.\n\n## Reach, measured before the fix (live backend, showcase app, `--fresh`)\n\nThe setup used a synthetic placeholder credential in a stored datasource body, and a carrier object with a reference into the family plus formulas through it.\n\n| Reader | Family's own door | Through the hop (before) | Through the hop (after) |\n|---|---|---|---|\n| administrator, session | redacted body, keyed hash | **yes**, 1/1 rows: placeholder and unkeyed hash served | no (engine pin) |\n| administrator, API key | redacted, keyed | **yes**, 1/1 | no (engine pin) |\n| member granted read on the family table, session | redacted, keyed | **yes**, 1/1 | no (engine pin) |\n| same member, API key | redacted, keyed | **yes**, 1/1 | no (engine pin) |\n| member, no grant on the family table (default), session and API key | refused (`PERMISSION_DENIED`) | no, 0/1 (formulas `null`) | no |\n\n- **Validation-rule hop (SYSTEM authority), before:** an administrator received the rule's own verdict over the unprojected body, which is a one-bit oracle per write. A member with no grant got the unevaluable refusal. After: no verdict for any caller (engine pin).\n- **Master-detail `parent` root:** measured with no verdict served. The write was refused as unbound, so it is out of this change.\n\n| Producer door | Before | After |\n|---|---|---|\n| metadata save door (object type) | **accepted** (1/1 objects with formula hops; 1/1 with a rule hop) | **refused** at author-time validation, 2/2 objects (each hop named) |\n| `os validate` / `os build` (`validateStackExpressions`) | accepted (the lint pin goes red when its refusal is ablated) | refused (lint pin) |\n| package install | NOT MEASURED: no install of a package carrying such an object was driven | — |\n\n## Verification (head `7946ad1a2`, after merging `origin/main`)\n\n- `pnpm --filter @objectstack/objectql test`: 440 files / 8290 tests passed.\n- `pnpm --filter @objectstack/lint test`: 145 / 6864 passed.\n- `pnpm --filter @objectstack/metadata-protocol test`: 244 passed, 3 skipped / 20641 passed, 19 skipped.\n- `typecheck` for objectql, lint and metadata-protocol: exit 0 each, re-run after the merge and a rebuild of their dependency closure.\n- After the merge, the targeted suites were re-run: 35, 443 and 9 tests passed.\n- Derived gates (`dispatch-gates.mjs --commands`, no paths): 71 commands, all exit 0 on `7946ad1a2`. `--ran` reconciliation: 71 derived, 71 run, 0 NOT-MEASURED (a derived zero).\n- On the first run, two gates refused because the clone was shallow. After deepening, both passed (exit 0).\n- **Ablation 1 (engine guard disabled):** ran with `scripts/ablation-replace.mjs`, which confirmed the mutation landed. The engine pin went 10/10 red. The tool restored the file to the HEAD blob, with `git diff HEAD` empty.\n- **Ablation 2 (lint refusal disabled):** the lint pin went 5 red and 1 green. The green case is the control: a hop into an ordinary object and a bare id read. The file was restored to the HEAD blob.\n- **Pin sweep:** no other test declares a reference into the family. The family pin's row count is the only pin that changed meaning, and it is load-bearing (23 → 26).\n- The two existing lint pins that moved are adjusted, not weakened:\n  - the #5017 receiver meta-test excuses the new Map/Set locals;\n  - the master-detail carrier refusal still comes from its own pass, because the new index is read lazily.\n\n## Acceptance notes\n\n- The runtime answer reuses the `unreadable` binding, so a formula's fault text reads \"that read failed\". The authored refusal with its prescription is the lint's, at save.\n\n---\n_Generated by [Claude Code](https://claude.ai/code/session_01DAEUSSMYBHAthcxTvba4yT)_\n"

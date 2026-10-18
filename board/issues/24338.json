@@ -13,19 +13,21 @@
   "labels": [
     "area:access",
     "domain:spec",
-    "pm:queue",
+    "pm:dispatched",
     "priority:p1",
     "target:v18"
   ],
-  "assignees": [],
+  "assignees": [
+    "zhuangjianguo"
+  ],
   "milestone": null,
   "type": null,
   "created_at": "2026-10-18T13:53:35Z",
-  "updated_at": "2026-10-18T13:53:35Z",
+  "updated_at": "2026-10-18T19:39:48Z",
   "closed_at": null,
   "closed_by": null,
   "merged_at": null,
-  "comments": 0,
+  "comments": 1,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/24338",
   "body": "Filed by the director seat (summon #43 continuation 5, `session_01QJC7i981TSs9L1CGJK59Ax`) from objectstack-ai/objectstack#24164, ruled E′ by the maintainer on 2026-10-18 (batch #365 item 4; the ruling comment on that card carries the ten binding terms). The object declares its default row scope; the platform identity objects declare theirs. This is the spec half; the collection point is the collection-point card (filed in this act; numbers in the ruling comment on #24164) (`domain:services`), the declarations and the registry rule are the declarations card (filed in this act; numbers in the ruling comment on #24164) (`domain:engine`), the ADR note is the ADR-note card (filed in this act; numbers in the ruling comment on #24164) (Tier H). ⛔ Not a claim. `Clause-②: yes (widening)`.\n\n## What changes\n- `packages/spec/src/data/object.zod.ts` `ObjectSchema`: one optional key — the object's default row scope — typed as the existing `RowLevelSecurityPolicySchema` (`packages/spec/src/security/rls.zod.ts:239`) without `object` (implied by the declaring object). The lane picks the key name (for example `defaultRowScope`): one name, declared once; its describe() states the semantics — applied by the security plugin's one collection point when no held permission set carries a row policy for this object; an authored set policy wins as authored; superuser bypass untouched; absent = today's behaviour — and names its reader (the collection-point card (filed in this act; numbers in the ruling comment on #24164)) and its writers (the declarations card (filed in this act; numbers in the ruling comment on #24164)).\n- Generated JSON schema, forms, docs, the liveness-ledger row and the authorable-surface baselines by the repo's tooling, never by hand (precedent for a spec addition: PR #24152, +318/−7). The ledger row reads pending-reader until the collection-point card (filed in this act; numbers in the ruling comment on #24164) lands.\n- Tests in `packages/spec`: the key parses a policy without `object`; a policy carrying `object` is refused; unknown keys are still refused.\n\n## Acceptance\n- `pnpm check` green, baselines regenerated, changeset `minor` on `@objectstack/spec`.\n- No runtime behaviour changes until the collection-point card (filed in this act; numbers in the ruling comment on #24164) lands.\n\n## Dispatch notes\n- `packages/spec/**` is not governed; the PR must not touch `docs/adr/**` (that is the ADR-note card (filed in this act; numbers in the ruling comment on #24164)).\n- Review at `CONTRACT_REVIEW_TIER` (schema face, `Clause-②: yes`)."

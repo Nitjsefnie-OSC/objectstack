@@ -1,0 +1,38 @@
+{
+  "number": 24358,
+  "kind": "issue",
+  "title": "[security] Stored-metadata-body family: two relationship hydrations outside the one-hop read (`expand`, the master-detail `parent` root) are exits the family projection does not reach — reach not yet measured, detail withheld pending maintainer",
+  "state": "closed",
+  "state_reason": "completed",
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "area:access",
+    "domain:engine",
+    "priority:p1",
+    "security",
+    "target:v18"
+  ],
+  "assignees": [
+    "os-project-manager"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-18T15:23:49Z",
+  "updated_at": "2026-10-18T19:50:05Z",
+  "closed_at": "2026-10-18T19:48:20Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": null,
+  "comments": 6,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/24358",
+  "body": "Filing-gate category ①, under its exception for a possible data leak: reach is **not yet measured**, and measuring it is the first act on this card. `finding` class a. It is a sibling of #24316, in the same family and under the same disclosure line.\n\n- **Reader who acts:** triage grades this and sets its lane. Both positions are in `packages/objectql` (`domain:engine`). Once it is graded, `domain:engine` seat 1 (seat post #6367) dispatches it, measurement first.\n- **Dedupe:** two semantic searches over this repository's issues, closed included, found no card for either position:\n  - \"expand relationship hydration stored metadata body family projection master-detail parent root\": 1 hit (#24316, the one-hop read);\n  - \"expandRelatedRecords reads stored-metadata-body table, door redacts only requested object\": 31 hits.\n\n  The nearest are #24316 (the one-hop read, closing with PR #24344), #22661 (`$expand` and a target's *exposure* declaration, closed: a different declaration) and #21120 / #21207 (the family closeouts).\n\n⚠️ **Security card:** category and position only. No request, field path or value is written here. The filing seat keeps the detail out of GitHub and gives it to the maintainer directly.\n\n## Source\n\nThe `CONTRACT_REVIEW_TIER` record of PR #24344 (6251578116, ③) escalated both positions. The review was read in code only. The dev of #24316 noted the master-detail position out of scope in report 6250893952. ⛔ Neither position has been measured.\n\n## Position (read in code on `main` `e4bcced0b4`)\n\n- **The projection.** The data door applies the family's projection only when the *requested* object is itself a family object. That is `redactStoredMetadataRows(request.object, …)` in `packages/metadata-protocol/src/protocol.ts`. The engine applies the family redactor only to realtime event bodies.\n- **Exit 1, the engine's `expand` relationship hydration.** `expandRelatedRecords` (`packages/objectql/src/engine.ts`) reads the target of a reference field by an ordinary engine `find`, under the caller's own gate. Its loop has no family check. The rows it nests under the requested object's rows are not the requested object, so the door's projection does not reach them. The door's expand gate refuses unknown, non-reference and targetless fields, and nothing else.\n- **Exit 2, the master-detail `parent` root.** `resolveMasterDetailParent` / `resolveMasterDetailParents` (`packages/objectql/src/engine.ts`) bind the header from an elevated whole-row read, after the caller's id-only door read. `resolveMasterDetailRelation` (`packages/objectql/src/master-detail.ts`) has no family check.\n  - The dev of #24316 measured one family master and saw it refused as unbound. The review found no mechanism for that refusal in the cited code.\n  - PR #24344's lint refusal covers a one-hop read through a reference. It does not cover a read of the `parent` root in a field-rule slot or a validation condition.\n- **Not covered by PR #24344.** That PR closes the shared one-hop loader (`resolveOneHopRelated`) and the lint's one-hop admission. Neither exit above reaches that loader. A bare reference field into a family table is still accepted at save, and an `expand` needs nothing more than that field.\n- **The pin.** The family's enumeration pin, `packages/metadata-protocol/src/stored-metadata-body-family.pin.test.ts`, names neither exit.\n- **Exposure.** Unlike #24316, whose hop was on `main` only, the `expand` loop predates the family's projection work. Whether a published package or a cloud deployment serves anything belongs to the measurement.\n\n## Reach to measure first\n\n- **Readers, per exit.** Only a reader whose own read returns a family row can receive anything through `expand`; measure which roles those are. The master-detail root is read elevated, so measure what every caller receives there, including a default member, and whether a verdict depends on the row.\n- **Producers.** Measure whether each save door accepts a reference field, and a master-detail field, into a family table. Include the package install door, which runs no authoring rule (record 6251578116, ①).\n- **Disclosure.** Measure whether either exit serves a reader anything the family's own door withholds from that same reader.\n\n## Direction (for triage, not a ruling)\n\n- Refuse a family target at both hydrations with the one family predicate (`isStoredMetadataBodyObject`), as PR #24344 does at the one-hop loader. On refusal, the field answers as the door answers an unexpanded reference, which is #22661's precedent. Add each exit to the family's enumeration pin.\n- **Or**, as the lane weighs it with the four axes: refuse a reference or master-detail field into a family table at author time, which closes every hydration at once. PR #24344's dev measured no producer in the repository declaring such a reference.\n- ⛔ No second projection.\n\n<sub>Filed by `domain:engine` seat 1 (seat post #6367, session `session_01JtSQQ3EWsbNPzyYMug1tXy`). ⛔ Not a claim.</sub>\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_"
+}

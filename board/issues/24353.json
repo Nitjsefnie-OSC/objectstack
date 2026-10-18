@@ -1,0 +1,36 @@
+{
+  "number": 24353,
+  "kind": "pull_request",
+  "title": "docs(error-catalog): INVALID_FIELD names the refusal of a search over an empty resolved search set",
+  "state": "closed",
+  "state_reason": null,
+  "draft": false,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "documentation",
+    "size/xs",
+    "skip-changeset"
+  ],
+  "assignees": [
+    "os-warren"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-18T15:06:49Z",
+  "updated_at": "2026-10-18T15:46:45Z",
+  "closed_at": "2026-10-18T15:46:43Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": "2026-10-18T15:46:43Z",
+  "comments": 1,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/pull/24353",
+  "body": "Fixes #24331\n\nClause-②: no\n\n## What\n\nOne sentence is added to the **Cause** text of `### INVALID_FIELD` in `content/docs/api/error-catalog.mdx`, right after the `internal: true` sentence. It names the refusal that PR #24320 (`ec749fbb44`) added. When an object's resolved search set is empty, a non-blank `search` gets `400 INVALID_FIELD` with `param: 'search'`. It no longer gets every row back. The sentence also gives the two remedies the refusal message itself prescribes. No other entry changes and no section is added. The diff is +4 / -0 lines, all inside that entry.\n\n## Read from the code, not from the card\n\nThe wording comes from the producer as it stands on the base `33f700b87b`. No commit between `ec749fbb44` and the base touches `packages/objectql/src/engine.ts` or `packages/objectql/src/search-filter.ts`: the `git log` over that range and those paths is empty. `git merge-base --is-ancestor ec749fbb44 33f700b87b` exits 0.\n\n- **Where.** `ObjectQL.expandSearchOnAst` in `packages/objectql/src/engine.ts`. When `expandSearchToFilter` returns `null` and the normalized term is non-blank, it throws `emptySearchSetError(...)`. `find`, `findOne`, `count` and `aggregate` all reach this call.\n- **Envelope.** `status: 400`, `code: 'INVALID_FIELD'`, `object`, `param: 'search'`. This matches the card.\n- **When the set is empty.** `resolveSearchFieldResolution` in `packages/spec/src/data/search-fields.ts` runs over the object's fields after the `internal: true` ones are removed. A `searchableFields` entry counts only when it names an existing field that is not a `formula`. If no entry does, the auto-default is used, and the refusal fires only when the auto-default is empty too. The auto-default skips hidden fields, the system names in `SEARCH_AUTO_EXCLUDED_FIELDS` (`id`, `created_at`, `owner_id`, and others), and every type outside the textual set plus `select`.\n- **Where the code differs from the card.** The card says the set is empty when \"the object has no textual or enum stored field and no `searchableFields` entry naming one\". The code differs in two ways. Some textual fields do not count: a hidden one, a system-named one, or one marked `internal: true`. And a declared entry may name any stored field, such as a `lookup` or `json` column, not only a textual one. So the sentence says \"the default search scans none\" and \"`internal: true` fields never count\", not \"no textual or enum stored field\".\n- **Remedy.** The message ends with the two remedies: declare `searchableFields` on the object naming a stored field, or mirror the composed title onto a stored text field and search that. The card's remedies match the message. The sentence keeps both. It says \"a composed title\" because the catalog sets up no junction object for \"the\" to refer to.\n\n## Verification\n\n- `node scripts/pm/dispatch-gates.mjs --commands --repo objectstack-ai/objectstack` derived the commands from the tree at `d87f5a77f`, the head of this PR. The change set is 1 path and the list has 41 commands, the same list as the dispatch-time reading.\n  - All 41 were run. Each exit code was captured before any pipe, and every final exit is 0.\n  - Six commands first refused with exit 3 (`PREREQUISITE NOT MET`) because packages were not built. Five needed the `@objectstack/lint` closure: `check:doc-formula-expressions`, `check:doc-security-posture`, spec `check:docs`, `check:docs-transcript-drift` and spec `check:skill-examples`. The client SDK case of `check:skill-examples` also needed the client packages built.\n  - The closures were built through `scripts/pm/os-verify-lock.sh`. The `@objectstack/lint...` build was 4/4 tasks, all cache hits. The `@objectstack/client-react...` plus `@objectstack/client...` build was 35/35 tasks, 34 of them cache hits. The six commands were then re-run, and all six exited 0.\n- The `--ran` reconciliation printed: `41 derived, 41 run, 0 NOT-MEASURED, 0 UNRUN`.\n- Sanity check (not a gate): the edited page compiles with `@mdx-js/mdx` 3.1.1 (exit 0), and the new sentence appears once in the output.\n- Left to CI: `Build Docs`, `Test Core` and the type-check lanes. The derivation lists these as CI-only.\n- No package is touched, so no package test or typecheck is owed. There is no changeset because the change is docs only (`skip-changeset`).\n- `origin/main` has moved to `dd72a047f`, which touches only `.claude/skills/pm-dispatch/**`. That is disjoint from this diff, so main was not merged in.\n\n## Acceptance notes\n\nThese other hand-written pages describe how `search` behaves on the data read route, and none of them mentions this refusal. They are left unchanged here because they are outside this card's file surface:\n\n- `content/docs/protocol/kernel/error-handling.mdx:626`: says the catalog's `INVALID_FIELD` entry \"enumerates every read axis this one code answers on\". Its list in parentheses names `select`, `expand`, `searchFields`, `groupBy` and `aggregations[].field`, but not `search`.\n- `content/docs/api/data-api.mdx:26`: the `search` parameter row. Also `content/docs/api/data-api.mdx:153-158`: a table of `search` / `searchFields` requests and their results, with no row for a bare `?search=` on an object that has no searchable field.\n- `content/docs/data-modeling/queries.mdx:476` (the Full-Text Search section) and `content/docs/protocol/objectql/query-syntax.mdx:1120`: both describe how search fields are resolved and how `searchFields` is refused, but not this refusal.\n\n---\n_Generated by [Claude Code](https://claude.ai/code/session_01FM29ZqLTrnPNXxijioZwMp)_\n"
+}

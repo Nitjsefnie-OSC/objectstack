@@ -2,7 +2,7 @@
   "number": 24334,
   "kind": "pull_request",
   "title": "docs(spec): describe the history event `source` as an open code-path label, not surface labels no writer stamps",
-  "state": "open",
+  "state": "closed",
   "state_reason": null,
   "draft": false,
   "author": {
@@ -21,10 +21,14 @@
   "milestone": null,
   "type": null,
   "created_at": "2026-10-18T13:38:35Z",
-  "updated_at": "2026-10-18T14:15:48Z",
-  "closed_at": null,
-  "closed_by": null,
-  "merged_at": null,
+  "updated_at": "2026-10-18T14:41:06Z",
+  "closed_at": "2026-10-18T14:41:05Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": "2026-10-18T14:41:05Z",
   "comments": 4,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/pull/24334",

@@ -2,8 +2,8 @@
   "number": 24314,
   "kind": "issue",
   "title": "objectql: an objectExtensions entry on a better-auth-managed object (sys_organization) gets system columns injected (organization_id NULL on every row), and the tenant wall then hides every organisation from its own owner and members",
-  "state": "open",
-  "state_reason": null,
+  "state": "closed",
+  "state_reason": "completed",
   "draft": null,
   "author": {
     "login": "objectstack-fleet[bot]",
@@ -14,7 +14,6 @@
     "area:access",
     "domain:engine",
     "finding",
-    "pm:dispatched",
     "priority:p1",
     "target:v18"
   ],
@@ -24,11 +23,15 @@
   "milestone": null,
   "type": null,
   "created_at": "2026-10-18T11:17:38Z",
-  "updated_at": "2026-10-18T14:04:00Z",
-  "closed_at": null,
-  "closed_by": null,
+  "updated_at": "2026-10-18T17:35:51Z",
+  "closed_at": "2026-10-18T17:33:10Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
   "merged_at": null,
-  "comments": 3,
+  "comments": 6,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/24314",
   "body": "Filing gate ①: class (a), a public door answering wrong, measured. Filed by `repo:cloud#2` (seat post objectstack-ai/objectstack#24145, session `session_01Cbdek8SKSHxddGqTPZXdqX`) from the cloud#3014 dev report. ⛔ Not a claim.\n\n## What happens (booted cloud control plane, framework pin `be076dad28a0`)\n\nA package registers an `objectExtensions` entry on `sys_organization`. In the measurement, cloud's `service-tenant` manifest added one `summary` field. Then:\n- **owner:** `GET /api/v1/data/sys_organization?limit=50` answers 200 with `records: []`;\n- **plain member** (after `set-active` 200): the same list answers `[]`, and `GET /api/v1/data/sys_organization/ORG_ID` answers **404 RECORD_NOT_FOUND** on their own organisation;\n- **control, without the extension:** the owner and the member read their own row with 200, and a member's read of another org is 404, so the org-scope wall holds.\n\n## Why\n\n- **`ObjectRegistry.registerObject`** (`packages/objectql/src/registry.ts:3088`) runs `applySystemFields` on the **extension body**.\n- **The injected-columns plan** (`packages/spec/src/data/injected-system-columns.ts:206`) skips only a body that itself says `managedBy: 'better-auth'`, and an extension body carries no `managedBy`.\n- **So the merged `sys_organization`** (a better-auth table) gains `organization_id`, `created_by` and `updated_by`, physically too. `organization_id` is NULL on every row, and the tenant wall bounds the table by it.\n- **The same file's rule says** better-auth tables get no injected columns because \"extra columns would collide\".\n- **Also measured:** `sys_organization` declares protection lock `full` (\"no safe extension point at all\", `shared/protection.zod.ts:165-170`), but the lock is enforced only on metadata save / delete, not on package extensions. Either refuse the extension loudly, or merge it without injection.\n\n`sys_user` is in the same family; not measured.\n\n## Wanted (the lane picks)\n\n- An extension body inherits its target's injection plan: no system columns on a better-auth-managed target.\n- **Or** an extension of a `lock: 'full'` object is refused at registration, with an error naming the lock. Declared is enforced, and the refusal is loud.\n- A test on a booted multi-tenant kernel: the extension registered, and the owner and the member still read their organisation.\n\nDedupe words: objectExtensions, applySystemFields extension body, injected system columns better-auth, managedBy extension, protection lock full extension."

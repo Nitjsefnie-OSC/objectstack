@@ -1,0 +1,32 @@
+{
+  "number": 24368,
+  "kind": "issue",
+  "title": "platform copy, the rest of cloud#3002 ruling A: about 50 non-comment \"this environment\" strings outside #24327 and #24360 (cloud-connection, plugin-auth, service-settings, platform-objects, mcp, plugin-security, spec) need the per-string reading",
+  "state": "open",
+  "state_reason": null,
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "area:i18n",
+    "domain:services",
+    "finding",
+    "pm:queue",
+    "priority:p2"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-18T16:27:12Z",
+  "updated_at": "2026-10-18T16:57:19Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 1,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/24368",
+  "body": "Carries the strings outside `packages/runtime/src/domains` and #24360's six of #24327's family; #24327 keeps `packages/runtime/src/domains` (PR #24367), and #24360 keeps its six.\n\n**Filing gate ①, class (a): user-visible copy that contradicts a ruling,** from #24327's dev report (`domain:cli` seat 1's dispatch; the census below). **Filed by** the `domain:cli` seat 1 (#6024) · `zhuangjianguo` · session `session_01SYEJqDL3NXxrJRBVqaMu9T`. ⛔ Not a claim. Lanes and grade are triage's: these files span several lanes.\n\n## Why a new card\n\nTriage's reading on #24327 (`6250167038`) counted \"about 122\" of the 134 non-test hits as comments. The dev's census on `f4b2a3f78` counts **68 of 128 non-comment lines**. #24327 and #24360 cover 18 of them. The rest were never read string by string. Read from code; no door was measured.\n\n## The census (dev report on #24327; lines on `f4b2a3f78`, they move)\n\n**In the in-system sense (a user inside the running system reads it), candidates for the ruling:**\n- `packages/cloud-connection` (11): `cloud-connection-plugin.ts` `:597`, `:659`, `:761`, `:813`, `:867`, `:930`, `:968` (a `401 UNAUTHENTICATED`, \"Sign in to this environment …\"); `marketplace-install-local-plugin.ts` `:1498`, `:2562` (install notes); the route ledger `:115`, `:157`.\n- `packages/plugins/plugin-auth` (10): `audience-posture.ts` `:476`, `:487`; `auth-manager.ts` `:2434`; `auth-plugin.ts` `:3505`; `last-admin-guard.ts` `:841`, `:1146`, `:1171`, `:1218`, `:1374`; `register-sso-provider.ts` `:385`.\n- `packages/services/service-settings` (5): the mail / sms / auth manifests and `en.ts`.\n- `packages/platform-objects` (9 beyond #24360's one): `sys-oauth-application.object.ts` `:236`, `sys-sso-provider.object.ts` `:67`, `:112`, and translations.\n- `packages/mcp` (3 client-visible): `connect-ui.ts` `:63`, `:85`; `metadata-completeness.ts` `:47`. (`mcp-server-runtime.ts` `:1448` is a log.)\n- `packages/plugins/plugin-security`: `packaged-permission-set-lock.ts` `:337`–`:338`, `:363`.\n- `packages/spec` (9): including `permission-set-owner-binding.ts` `:127` (a save refusal) and `permission.form.ts` `:52` (Setup help text).\n\n**Not this sense (the dev's reading, for triage to confirm):** `plugin-email` / `service-sms` boot errors (operator-facing); `core` `plugin-signature-verifier.ts` `:346` (the JS runtime); `cli` (7, the deployment environment addressed from outside).\n\n**Other repository (objectstack-ai/objectui, `43efd078a`), for `repo:objectui`:**\n- `packages/app-shell/src/views/metadata-admin/PermissionMatrixEditor.cloneToCustomize.test.tsx` `:54`–`:58` mirrors the server's clone notice \"as the door sends it\". Once PR #24367 lands, \"authored in this environment\" there becomes \"authored in this system\".\n- `apps/console/src/pages/developer/AgentConnectSection.tsx` `:186` (\"Every app in this environment\") and `:197` (AlertTitle \"MCP is not enabled for this environment\"). That alert's description also calls MCP opt-in (`OS_MCP_SERVER_ENABLED=true`), while `isMcpServerEnabled()` (objectstack `packages/types/src/env.ts` `:594`) is on by default.\n\n## The rule\n\nobjectstack-ai/cloud#3002 ruling A, as triage applied it on #24327: \"made here, not from a package\" reads \"authored in this system\"; \"the system the caller is in\" drops the noun. A string that means a deployment or configuration scope keeps its word. Tests pin the kind or code, not the prose, unless a consumer parses the text.\n\n## Done when\n\n- Every listed string has been read: changed per the rule, or left with its reason.\n- `packages/cloud-connection` and `packages/mcp` sit in `domain:cli`'s table; the others are in other lanes. Triage splits the work by lane as it sees fit.\n\n## Dedupe\n\n#24327 and #24360 are the parent and sibling. No other open card covers these sites (triage's search on #24327 reached the cloud#3002 inventory `6247161029`, which puts the platform's own copy out of its scope).\n\nDedupe words: this environment server copy remainder; cloud#3002 ruling A plugin-auth cloud-connection service-settings copy.\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_"
+}

@@ -2,8 +2,8 @@
   "number": 23952,
   "kind": "issue",
   "title": "C3 stage 9 (#15204): declared sharing rules read from the registry, bootstrapDeclaredSharingRules retires, and the ceremony deletes the declared-rule mirrors; the verified marker follows (director ordering ruling)",
-  "state": "open",
-  "state_reason": null,
+  "state": "closed",
+  "state_reason": "completed",
   "draft": null,
   "author": {
     "login": "objectstack-fleet[bot]",
@@ -16,15 +16,21 @@
     "priority:p1",
     "target:v18"
   ],
-  "assignees": [],
+  "assignees": [
+    "os-steve"
+  ],
   "milestone": null,
   "type": null,
   "created_at": "2026-10-16T13:39:13Z",
-  "updated_at": "2026-10-16T17:08:25Z",
-  "closed_at": null,
-  "closed_by": null,
+  "updated_at": "2026-10-18T20:00:31Z",
+  "closed_at": "2026-10-18T19:58:47Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
   "merged_at": null,
-  "comments": 2,
+  "comments": 8,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/23952",
   "body": "Part of #15204 (C3, ADR-0131). Filing gate: **④ a ruled execution card** — the director's ordering ruling the record whose id is the first line of #15204's body on #15204 (batch #357 item 3, the maintainer's 「总监裁顺序」), under the stage-0 addendum 6100442578 (「If stages 1–8 land while stage 9 is still gated, stage 9 moves to its own card under the epic」). Filed by the director seat (summon #43, `session_01QJC7i981TSs9L1CGJK59Ax`). ⛔ Not a claim. `pm:epic`: the epic PM dispatches it. Facts were read at objectstack `origin/main` `099cc9d6`.\n\n## The order (ruled)\n\nStage 9 goes first; the ownership ceremony's verified marker is reached after it. ADR-0131 D13/D14's zero-NULL gate is read as satisfied by a D10 report whose only remaining NULL rows are the `declared-rule-mirrors` the ceremony itself charts for this stage; any other NULL row keeps blocking both the marker and this stage.\n\n## The work\n\n1. **Registry read.** Declared `sharingRules` are served from the registry at enforcement. `packages/plugins/plugin-sharing/src/sharing-rule-service.ts` (`listRules`, `getRule`, `findRuleRowByName`, the orphan sweep) reads declared rules from the registry and organization-authored rules from `sys_sharing_rule`; the recipient and condition shapes are reconciled (the registry copy and the metadata-door copy differ today: recipient `'role'`, condition string versus `{dialect, source}` — `packages/runtime/src/standalone-stack-seeder-declaration-copy.test.ts`). Measure first: whether a reader like `createSecurityCatalogReader` for `sharing_rule` needs `sharing_rule` to become a registered metadata kind (the addendum's item (a) — `packages/spec` work for the spec seat, `Blocked-by:` this card if so).\n2. **Seeder retired.** `bootstrapDeclaredSharingRules` (`packages/plugins/plugin-sharing/src/bootstrap-declared-sharing-rules.ts`, called from `sharing-plugin.ts`) stops running; its retirement note is written where D13 asks (the seeder is machinery, not an authorable shape, so the ADR-0087 entry is the note).\n3. **`sys_record_share.source_id` → name** BEFORE any deletion (the addendum's item (c)): grants that point at a declared rule's row id are rewritten to the rule's name and verified to resolve in the registry.\n4. **Mirrors deleted.** The ceremony deletes `sys_sharing_rule` rows with `managed_by in (package, platform)` and `customized` not true — the `mirror-deletion` departure made executable on the fate-3 table, or this stage's own idempotent migration step; the executor chooses and pins either way. After it, `remainingFor` reaches 0 on `sys_sharing_rule` and the ceremony's post-check can verify.\n5. **Text.** The post-check label for `declared-rule-mirrors` names this card.\n\n## Pins\n\n- A fresh boot in every posture writes zero rows to `sys_sharing_rule` for declared rules, and a declared rule still enforces (positive control: remove the declaration and the grant stops).\n- On a database that completed the ceremony with the mirror rows standing (the maintainer's hotcrm `dev.db`: 11 rows), this stage's step deletes exactly those rows, every `sys_record_share.source_id` resolves by name, and the post-check reports zero remaining; a customized or organization-authored rule is untouched.\n- An organization-authored rule keeps working through `sys_sharing_rule` in every posture.\n\n## Decision owed, maybe\n\nThe addendum's item (b): what switching off a vendor's declared rule means under D6 (no regime charted for this type). If ADR-0131 D6 and ADR-0057 D6 do not settle it when this stage is planned, the epic PM files a decision card; it does not block items 2–5.\n\n## Governing text\n\nADR-0131 D2 (the seeder retires), D10 fate 2, D13 (`:673`), D14 (`:697`); the stage-0 addendum 6100442578; the ordering ruling the record whose id is the first line of #15204's body on #15204; ADR-0057 D6 (the runtime shape is canonical).\n\n## Dedupe\n\nOpen `target:v18` cards whose title or body names stage 9, `bootstrapDeclaredSharingRules` or declared sharing rules at filing: #15204 only (REST list of 100 open). Dedupe words: C3 stage 9 declared sharing rules registry bootstrapDeclaredSharingRules retire declared-rule-mirrors ceremony verified marker."

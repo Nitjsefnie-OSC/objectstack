@@ -2,9 +2,9 @@
   "number": 24333,
   "kind": "pull_request",
   "title": "docs(adr-0119): the /batch atomic-refusal precedent anchor names batch-routes.ts (#23050 slice 13e, split-off anchor)",
-  "state": "open",
+  "state": "closed",
   "state_reason": null,
-  "draft": true,
+  "draft": false,
   "author": {
     "login": "objectstack-fleet[bot]",
     "id": 332303061,
@@ -12,7 +12,6 @@
   },
   "labels": [
     "documentation",
-    "needs-user-decision",
     "size/xs",
     "skip-changeset"
   ],
@@ -22,10 +21,14 @@
   "milestone": null,
   "type": null,
   "created_at": "2026-10-18T13:34:53Z",
-  "updated_at": "2026-10-18T13:39:14Z",
-  "closed_at": null,
-  "closed_by": null,
-  "merged_at": null,
+  "updated_at": "2026-10-18T14:41:06Z",
+  "closed_at": "2026-10-18T14:41:05Z",
+  "closed_by": {
+    "login": "os-zhuang",
+    "id": 277994282,
+    "type": "User"
+  },
+  "merged_at": "2026-10-18T14:41:05Z",
   "comments": 1,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/pull/24333",

@@ -1,0 +1,31 @@
+{
+  "number": 24378,
+  "kind": "issue",
+  "title": "[Decision] Declared sharing rules: what switching off a vendor's rule means once they are read from the registry",
+  "state": "open",
+  "state_reason": null,
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "needs-user-decision",
+    "pm:epic",
+    "priority:p2",
+    "target:v18"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-18T17:33:15Z",
+  "updated_at": "2026-10-18T17:48:45Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 1,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/24378",
+  "body": "Filing gate **②**: a decision only the maintainer can make, owed by ruling β item 5 (b) (6216760903 on #15204: \"a decision card only if governing text does not settle it when the stage is planned, and it does not block the rest\"). Reader who acts: the maintainer rules; the epic PM (`epic:#15194`, `session_01Y5583bs2RDd53MH6kM1ca3`) executes. Dedupe: semantic search on objectstack-ai/objectstack, all states, \"switch off disable vendor declared sharing rule regime activation shadow same name\" → no card asks it. Source: the stage 9 os-dev-report on #23952 (PR #24376), `open_questions[0]`.\n\nBlocks: nothing. Stage 9 (PR #24376) builds no disable mechanism and keeps today's behaviour.\n\n## 维护者速读\n\n**一句话问题：** 包里声明的共享规则改为直接从代码读取后，客户想「关掉」某条厂商规则该怎么做？今天沿用的行为是：客户自建一条**同名**规则，就会顶替掉厂商那条——这是按名字静默覆盖，一条恰好同名的组织规则会悄悄替换掉厂商规则。\n\n**你要做的：** 选一个字母。推荐 **D（现在什么都不建，等真有人要再定 A）**。\n\n| 选项 | 做什么 | 客户感受 | 工作量 |\n|:--|:--|:--|:--|\n| A 行为类（regime C） | 「关掉」= 部署级的激活开关（`sys_metadata_activation`，权限解析已经在读它）；仪式删完副本后，退掉按名字覆盖 | 在 Setup 里对厂商规则点「停用」；同名规则不再悄悄顶替 | ~0.5–1k 行 |\n| B 覆盖类（regime O） | 把今天的同名覆盖定为正式契约（带墙时拒绝组织建同名规则） | 和今天一样，但写进契约 | ~0.2–0.4k 行 |\n| C 封存 | 拒绝新建与厂商规则同名的规则；没有开关 | 想关只能改包 | ~0.2k 行 |\n| D 暂缓 | 什么都不建，保留沿用行为，等出现具名需求再在 A/B/C 里定 | 无变化 | 0 |\n\n## Governing text\n\n- ADR-0131 D6 charts three regimes — O (view, dashboard, report, translation, email_template), C (flow, action, workflow, validation, scheduled job), E (object, app) — and names **none** for `sharing_rule`.\n- ADR-0057 D6 speaks only to seeding (\"the runtime shape is canonical\").\n- Ruling β item 5 (b), quoted above.\n\n**Why it is not settled:** no regime is charted for this type, and the inherited name-shadowing is neither declared nor refused anywhere.\n\n## Measured\n\n- Declared sharing rules today: showcase 2, app-crm 0, the maintainer's hotcrm 11. No request to switch one off is on record.\n- Inherited behaviour (stage 9 keeps it): a stored `sys_sharing_rule` row of the same name answers for the declared rule in its scope — so a customized seeded copy keeps its effect (the seeder promised to preserve it, #2909).\n\n## Recommendation: **D**, with **A** as the shape when a named pull appears\n\n- **项目长远合理性（定调）：** 共享规则授予访问权，是行为类元数据，长远应归 regime C（和 flow、action 一样用激活开关），也就是 A。但 A 要建的是一个今天没人要的能力。\n- **实际业务需求：** 零拉动——三个应用里没有一条「要关掉厂商规则」的需求记录。\n- **防 AI 写代码犯错：** 按名字静默覆盖是个陷阱（同名即替换，没人察觉），A 的显式开关是响亮的；D 保留这个陷阱，但它是旧行为、不是新引入的，且目前没有触发路径的报告。\n- **创业阶段不扩散：** D 零成本；有拉动时直接做 A，不需要再开决策。\n\n自检：只看①选 A；②③④ 是否翻转：是——② 零拉动、④ 不扩散，只调时序为「暂缓到有拉动」，不翻成 B 或 C；所以推荐写作 D（A 的分期），方向仍是 A。\n\n**置信缺口：** cloud 客户是否已有「想关掉厂商规则」的诉求，本会话读不到。\n\n## After the ruling\n\n- **D:** nothing is built; this card closes with \"A when a named pull appears\" recorded, and the seat files the A card the day a pull is named.\n- **A / B / C:** one stage under the epic, after stage 9 lands, measured first.\n\nos-decision-facets\n- ① 项目长远合理性：A 收窄特例（共享规则归入已有的行为类 regime C，复用激活账本）；B 把按名覆盖这一特例写进契约；C 封死定制。\n- ② 实际业务拉动：零——三个应用无一条关掉厂商规则的需求记录。\n- ③ 防 AI 犯错：A 是显式开关、响亮；B/D 保留按名静默覆盖；C 是响亮拒绝。\n- ④ 创业阶段不扩散：D 零成本；A 是一个今天无拉动的新能力。\n\nPrior rulings read: \"disable\" \"switch off\" \"sharing_rule\" \"regime\" on #15204, #23952, #15194 threads → 1 hit (6216760903 β item 5 (b)); ADR-0131 D6; ADR-0057 D6; thread: 6216760903.\n\nRelated: #23952 (stage 9, PR #24376), #15204 (C3, closed)."
+}

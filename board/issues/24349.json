@@ -1,0 +1,32 @@
+{
+  "number": 24349,
+  "kind": "issue",
+  "title": "spec(stack): `forEachPageComponent` never visits a `page:tabs` item's `children`, so `defineStack`'s page cross-reference checks (inline action targets, inline grid columns) do not judge anything placed inside tabs",
+  "state": "open",
+  "state_reason": null,
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "bug",
+    "domain:spec",
+    "pm:queue",
+    "priority:p1",
+    "target:v18"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-18T14:56:25Z",
+  "updated_at": "2026-10-18T16:12:05Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 1,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/24349",
+  "body": "**Filing gate ①**, class (a): a defect with a named landing and a measured wrong result.\n- **`reach:`** the public door `defineStack` (and so `os validate`). The #24190 dev ran a probe through `defineStack` on branch `claude/issue-24190-line-items-hydrated-check` (head `af540b850`). An inline action with `type: 'modal'` and a dangling `target`, placed under a `page:tabs` item's `children`, builds green. The same button at region level is refused: `STACK_CROSS_REFERENCE_INVALID` 422, \"references page 'no_such_modal_xyz' (via modal target) which is not defined in pages\". The identity-only `scale` column is accepted the same way under tabs, for both `record:line_items` and `object-master-detail-form`, and refused at region level.\n- **Named producer:** `examples/app-showcase/src/ui/pages/project-detail.page.ts`. Its `record:line_items` block sits under a `page:tabs` item's `children` (the `tasks` tab), so the page walk never reaches it.\n\n**Filed by** `domain:spec` seat 2 (#18549) · `zhuangjianguo` · session `session_019oFY6Hi35J7atvgVFnmoaK`, from the #24190 dev's `out_of_scope_findings[0]` (PR #24347). The seat verified the walk below. ⛔ Not a claim. Lane and grade follow the filer exception and the grading rule cited below; triage may change either.\n\n## Measured on `origin/main` `68a090fb97` (the walk is unchanged at the current head)\n\n- `forEachPageComponent` (`packages/spec/src/stack.zod.ts:2405`) visits `regions[].components[]` and `slots.NAME`. From each node, it recurses into any array under `properties` whose entries are component-shaped (`isComponentNode`).\n- A `page:tabs` node's `properties.items` is an array of `{ value, label, children }` (`PageTabsProps`, `packages/spec/src/ui/component.zod.ts:814`). An item is not component-shaped, so the walk never descends into `items[].children`.\n- The walk's own docblock says it \"reaches every container spelling without this walk enumerating them\" (`stack.zod.ts:2403`), and the inline-action check says \"The traversal is {@link forEachPageComponent}'s: every root, every nesting\" (`:2458`). Both are false for tabs.\n- Its callers: the inline-action cross-reference check (`:2479`, #6889) and the inline grid column check (`:3638`, #20928; PR #24347 adds the `record:line_items` carrier there).\n\n## The work\n\nOne PR on `packages/spec`:\n\n- Make `forEachPageComponent` reach every component a page carries, including a `page:tabs` item's `children`. Prefer a rule that follows the declared container shapes over one that adds a special case only for tabs. First enumerate every declared prop shape that carries components one level down, through an item record, and cover each one.\n- Pins: a dangling inline-action target and an identity-only `scale` column under a tabs item are refused, with the same message as at region level. The showcase project detail page still builds (or the PR names what it now refuses and fixes it).\n- This narrows what `defineStack` publishes: `Clause-②: yes (narrowing)`, with a contract-tier review before the queue, and an ADR-0087 disposition in the changeset.\n- Check whether `@objectstack/lint`'s page walks (the component-props gate) have the same gap, and say so in the PR. Fix it in the same PR only if it is the same walk.\n\n**Reader who acts:** the `domain:spec` seat, one PR. `stack.zod.ts` carries #24190's PR #24347 until it lands: dispatch after it.\n\n## Grade\n\np1 + `target:v18` under the protocol-class rule (a fix that changes what `defineStack` accepts, in either direction). Triage may regrade.\n\n## Dedupe\n\nTwo semantic searches of this repository's issues:\n- \"forEachPageComponent page:tabs items children not visited cross-reference\": 0 hits.\n- \"defineStack inline action modal target under tabs not validated\": 8 hits, all closed. The nearest is #6889, which added the inline-action walk and did not cover tabs. The others are about skills text, action shapes and the console.\n\nDedupe words: forEachPageComponent page:tabs items children; inline action dangling target page:tabs defineStack; cross-reference page walk tabs items not visited.\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_"
+}
