@@ -1,0 +1,33 @@
+{
+  "number": 24563,
+  "kind": "issue",
+  "title": "A list view bound to an object outside the writing package's dependency closure skips the field-reference check: unknown `columns` fields are accepted (200 active, draft → publish) where the same body is refused 422 `list-view-field-unknown`",
+  "state": "open",
+  "state_reason": null,
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "area:records",
+    "bug",
+    "domain:spec",
+    "pm:queue",
+    "priority:p1",
+    "target:v18"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-19T13:44:22Z",
+  "updated_at": "2026-10-19T14:07:40Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 1,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/24563",
+  "body": "Filing gate: ① — product defect against a declared contract, with a reproduction (QA-measured).\n\nPath: none (no checklist clause asserts this; observed while driving platform-core.metadata-authoring-roundtrip, priority P1 — tri-state ③, \"no item asserts the capability\")\nType: Bug (prefilled — violates the declared runtime-door contract of `validateListViewFieldRefs` and of the package-closure gate, quoted below)\nQA-source: #24557 · platform-core.metadata-authoring-roundtrip · observation outside the clauses (verified by an independent re-run)\n\nreach: measured once through the public HTTP door — `PUT /api/v1/meta/view/showcase_task.qavfy_r1?package=com.qa.vfy2` with a `columns` entry naming a field that does not exist answers **200 `state:\"active\"`** with no advisory at framework 5b14b7f3; the identical body sent as an overlay answers 422 `list-view-field-unknown`. The served view then breaks: the console shows \"This view's query was rejected\" (`GET /api/v1/data/showcase_task?fields=title,zzz_nope` → 400 `INVALID_FIELD`).\n\n## What happens\n\nA list view written into a writable package is checked for unknown field references **only if its bound object is inside the package's dependency closure**. When the view binds an object the package does not declare a dependency on (e.g. a code-package object such as `showcase_task`), or an object that does not exist at all, both the active PUT and draft → `publish-drafts` accept unknown `columns` fields silently (`probes.issues: []`, `_diagnostics.valid: true`). The same body is refused `422 list-view-field-unknown` as an overlay, from a package that declares the dependency, or when bound to the package's own object.\n\n## Reproduction (showcase, admin)\n\n1. `POST /api/v1/packages {\"manifest\":{\"id\":\"com.qa.vfy2\",\"name\":\"QA Vfy2\",\"version\":\"0.1.0\",\"type\":\"app\",\"namespace\":\"qavfy2\"}}` → 201.\n2. `PUT /api/v1/meta/view/showcase_task.qavfy_r1?package=com.qa.vfy2` body `{\"name\":\"showcase_task.qavfy_r1\",\"object\":\"showcase_task\",\"viewKind\":\"list\",\"label\":\"r1\",\"type\":\"grid\",\"data\":{\"provider\":\"object\",\"object\":\"showcase_task\"},\"columns\":[{\"field\":\"title\"},{\"field\":\"zzz_nope\"}]}`\n   - expected: 422 `list-view-field-unknown` at `views[0].columns[1].field`\n   - actual: 200 `state:\"active\"`, no advisories.\n3. Draft path: same body with `?mode=draft&package=com.qa.vfy2`, then `POST /api/v1/packages/com.qa.vfy2/publish-drafts {}` → `outcome:\"published\"`, `probes.issues: []`.\n4. Controls (all refused 422 `list-view-field-unknown`): the same body with no `?package` (overlay); from a package declaring `dependencies:{\"com.example.showcase\":\"*\"}`; a view bound to an object the package itself owns. Binding `nosuch_obj` also answers 200.\n\n## Mechanism\n\n1. `resolveWritePackageScope` (`packages/metadata-protocol/src/protocol.ts`) feeds `narrowObjectsToPackageClosure` (`packages/lint/src/runtime-gate.ts`), which removes `showcase_task` from `stack.objects` — its owner is neither the writing package, a declared dependency, nor a system object.\n2. `packages/lint/src/validate-list-view-field-refs.ts`: `if (!graph.has(object) || !graph.get(object)) return;` skips the whole view, deferring an unresolvable base object to `validateObjectReferences`.\n3. `packages/lint/src/reference-integrity-suite.ts`: `validateObjectReferences` runs on `runtimeTypes: ['flow','dataset']` only — never on `view` writes — so the deferred finding never fires. Neither an error nor an advisory reaches the author.\n\n## Declared contract it violates\n\n- `reference-integrity-suite.ts` notes on `validateListViewFieldRefs` (`runtimeTypes: ['flow','view','object']`): the standalone list view \"a Studio tenant or an MCP/AI author writes goes through that door … a build-time-only rule would never reach the author who made the typo\", and \"no missing-collection false-positive channel\".\n- The `RuntimePackageScope` doc in `runtime-gate.ts`: \"the failure direction is more validation input, never less\" and \"⛔ There is deliberately no branch that narrows on a guess and no branch that skips rules\" — here the narrowing makes the rule skip.\n- `runtime-gate.package-closure.test.ts` pins \"DOES judge a reference outside the declared dependencies\" — flows do report this case (`flow-trigger-unknown-object`); views report nothing.\n\nRelated, closed: #14107 made list-view field references checked at author time in `os validate` / `os build`; this is the runtime door's out-of-closure gap.\n\n## Filing-gate answers\n\n- Category: ① (finding class (b): violates a declared contract; reach measured above).\n- Acting reader: the lane owning `packages/lint` runtime gate + `packages/metadata-protocol` write scope — candidate fixes: dispatch an object-reference check for `views[].data.object` on `view` writes, or resolve the field check against the full object collection when the bound object is outside the closure, or refuse/warn on the out-of-closure binding itself.\n- Duplicate search (open AND closed), objectstack: \"list-view-field-unknown view columns unknown field accepted on draft publish writable package\" → 10 hits (#24253, #23715, #14107, #10377, #8908, #8858, #8595, #8594 among them — none this defect; #14107 is the build-time sibling).\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_\n"
+}

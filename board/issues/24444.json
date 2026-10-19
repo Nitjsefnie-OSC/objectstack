@@ -12,18 +12,20 @@
   },
   "labels": [
     "domain:skills",
-    "pm:queue",
+    "pm:dispatched",
     "priority:p2"
   ],
-  "assignees": [],
+  "assignees": [
+    "os-justin"
+  ],
   "milestone": null,
   "type": null,
   "created_at": "2026-10-19T03:39:50Z",
-  "updated_at": "2026-10-19T03:39:50Z",
+  "updated_at": "2026-10-19T11:41:52Z",
   "closed_at": null,
   "closed_by": null,
   "merged_at": null,
-  "comments": 0,
+  "comments": 2,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/24444",
   "body": "Filed by the director seat (summon #43 continuation 5, `session_01QJC7i981TSs9L1CGJK59Ax`) on the maintainer's words of 2026-10-19 in this seat's chat, after batch #368: 「你的决裁总是有一个回退合理吗？是完全不同的开发方向。最终结论应该只有一个吧？是 skills 的问题吗」, then 「同意」 on the change below. `.claude/**` is Tier S: the maintainer merges. ⛔ Not a claim.\n\n## Why\n`.claude/skills/pm-dispatch/references/decision-analysis.md` asks every decision analysis for a fallback option: line 13 「推荐/回退/口径」 and line 30 「推荐 + 回退 + 置信缺口:荐一项、给回退项、明说看不见什么」. A fallback means something only when it is the same direction at a smaller scale or a later date, and line 32 already forbids recommending a staged half (「分期半量 ⛔ 不作推荐」). What the rule leaves is a second direction beside the first — on #24378 the seat recommended A with B′ 「as the fallback」, two different builds — which hands the decision back to the maintainer. The maintainer's rule: one recommendation; the other options are listed with why each is not taken; a confidence gap says what is unseen and never becomes a second recommendation.\n\n## What changes\n- `references/decision-analysis.md` line 30: 「推荐 + 回退 + 置信缺口:荐一项、给回退项、明说看不见什么;⛔ 不沿用他席推荐。」 → 「推荐 + 置信缺口:只荐一项;其余选项各一句不取理由;看不见什么明说,⛔ 不因此给第二推荐;⛔ 不沿用他席推荐。」\n- line 13: 「推荐/回退/口径」 → 「推荐/口径」.\n- Nothing else: `grep -rn \"回退\" .claude/skills/pm-dispatch/` at `origin/main` finds these two lines as the only decision-analysis uses; the other hits (shell fallbacks in `platform-readings.md`, the rewrite 回退方式 in `dispatch-runbook.md`, promote/回退 in `reading-discipline.md`, triage and os-dev wording) are untouched. The four facets, the 自检 line and the 裁后执行 paragraph stay as they are.\n\n## Acceptance\n- The two lines read as above; no other line of the skill changes; the skill's own checks (the pm-dispatch skill lint, if `pnpm check` covers `.claude/`) green; no changeset.\n- The PR stays a draft until the maintainer's hand merge (Tier S); it touches `.claude/skills/pm-dispatch/references/decision-analysis.md` only."

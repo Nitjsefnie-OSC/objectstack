@@ -2,8 +2,8 @@
   "number": 24414,
   "kind": "issue",
   "title": "formula: a capability predicate in the standard library — a page predicate can ask whether the viewer holds a system capability, from the same data the action gate reads (cloud#3036 ruling A)",
-  "state": "open",
-  "state_reason": null,
+  "state": "closed",
+  "state_reason": "completed",
   "draft": null,
   "author": {
     "login": "objectstack-fleet[bot]",
@@ -13,7 +13,6 @@
   "labels": [
     "area:access",
     "domain:engine",
-    "pm:dispatched",
     "priority:p1"
   ],
   "assignees": [
@@ -22,11 +21,15 @@
   "milestone": null,
   "type": null,
   "created_at": "2026-10-19T00:33:31Z",
-  "updated_at": "2026-10-19T08:13:00Z",
-  "closed_at": null,
-  "closed_by": null,
+  "updated_at": "2026-10-19T09:23:07Z",
+  "closed_at": "2026-10-19T09:18:44Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
   "merged_at": null,
-  "comments": 7,
+  "comments": 8,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/24414",
   "body": "Filed by the director seat (summon #43 continuation 5, `session_01QJC7i981TSs9L1CGJK59Ax`) from objectstack-ai/cloud#3036, ruled A by the maintainer on 2026-10-19 (batch #366 item 4): the action's declaration is the one source of truth, so a page predicate must be able to ask the same question the action gate asks — does the viewer hold this capability. Platform first (the maintainer's 口径 「平台相关的功能，应该尽量先改平台。」). ⛔ Not a claim. `Clause-②: yes (widening)` — one new standard-library function.\n\n## What is measured (cloud#3036 os-dev-report 6255664506; objectui `9e7e1a55bead`, objectstack `44a5011fe623`)\n- `packages/formula/src/stdlib.ts:192` `registerPermissionPredicate` registers the one permission function, `can(object, verb)`, answered from the subject's object-permission map; a verb outside `OBJECT_PERMISSION_VERB_NAMES` throws 「A capability outside that list is not modelled as an object permission」 (about `:215`). No function answers a `systemPermissions` name.\n- objectui binds a page predicate's `current_user` from `buildExpressionUser` (`packages/app-shell/src/providers/expressionUser.ts`), which carries `id`, `name`, `email`, `role`, `isPlatformAdmin`, `positions` — no `systemPermissions`; the capability gate for actions reads `user.systemPermissions` from the action runner (`packages/react/src/hooks/useCapabilityGate.ts:40`–`:49`). So actions are gated on capabilities and no page node can be.\n- The proxy cloud pages use today (`can('sys_environment','edit')`) diverges from the capability for a platform administrator who is a plain member of an organisation (measured).\n\n## What changes\n- `packages/formula` standard library: one predicate (name chosen by the lane; for example `hasCapability(name)` on the subject, beside `can`), answered from the subject's held system capabilities (the `systemPermissions` list `GET /api/v1/auth/me/permissions` returns). When the subject carries no capability list, it throws the way `can()` does (loud, never a silent false).\n- The subject contract: the evaluator's subject gains the capability list beside the object-permission map (`packages/core/src/evaluator/subjectPermissions.ts`), so any host that binds a subject can supply it; objectui's binding is the objectui binding card (filed next in this act; number in the ruling on cloud#3036).\n- Docs: the predicate's describe and the spec's `visible` / `visibleWhen` docs name it as the way to gate a page node on a capability (ADR-0066 D4 stays: `visible` hides, `requiredPermissions` refuses).\n- Tests: held / not held / list absent (throws); a name with no declaring action is still just a string (no registry lookup).\n\n## Acceptance\n- `pnpm check` green; generated baselines by tooling; changeset `minor` on `@objectstack/formula` (and `@objectstack/core` if the subject type changes).\n- Review at `CONTRACT_REVIEW_TIER` (a new public function, `Clause-②: yes`).\n\n## Dispatch notes\n- Not governed. The consumer chain: the objectui binding card (filed next in this act) (binding), then cloud#3036 (the 「设置」 rows) after two pins."

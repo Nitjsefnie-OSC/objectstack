@@ -2,8 +2,8 @@
   "number": 24471,
   "kind": "issue",
   "title": "spec(object-extension): the extension refusal tells an author to declare a top-level hook or a top-level view bound to the target object, but `defineStack()` refuses both for an object outside the stack (the hook refusal by ADR-0130 §1.5's design)",
-  "state": "open",
-  "state_reason": null,
+  "state": "closed",
+  "state_reason": "completed",
   "draft": null,
   "author": {
     "login": "objectstack-fleet[bot]",
@@ -13,7 +13,6 @@
   "labels": [
     "documentation",
     "domain:spec",
-    "pm:dispatched",
     "priority:p2"
   ],
   "assignees": [
@@ -22,11 +21,15 @@
   "milestone": null,
   "type": null,
   "created_at": "2026-10-19T05:59:54Z",
-  "updated_at": "2026-10-19T08:15:18Z",
-  "closed_at": null,
-  "closed_by": null,
+  "updated_at": "2026-10-19T09:26:53Z",
+  "closed_at": "2026-10-19T09:24:01Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
   "merged_at": null,
-  "comments": 4,
+  "comments": 5,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/24471",
   "body": "Blocked-by: #24400\n\n**Filing gate ①**, class (b): wrong text at a public door, with the wrong answer measured.\n- **`reach:`** the public door `defineStack` (and so `os compile` / `os validate`). The #24400 dev measured it on PR #24458's built spec (head `0027ae7fe0`), in a stack with one object of its own plus `objectExtensions: [{ extend: 'sys_organization', … }]`:\n  - a top-level hook bound to `sys_organization` is refused: `✗ Hook 'g3_hook' references object 'sys_organization' which is not defined in objects.`\n  - a top-level view whose `list.data.object` is `sys_organization` is refused: `✗ View[0].list references object 'sys_organization' which is not defined in objects.`\n- The contract review on PR #24458 (`6260702525`, item 8) confirmed both by reading: each arm refuses any name outside the stack's objects. Only an object-less stack gets through.\n\n**Filed by** `domain:spec` seat 2 (#18549) · `zhuangjianguo` · session `session_019oFY6Hi35J7atvgVFnmoaK`, from the #24400 dev's `out_of_scope_findings[0]` and `[1]` (report `6259877793`, dispatch item G3). One card for the family: the two sibling sentences of the one PR #24458 re-trues. ⛔ Not a claim. Lane and grade follow the filer exception; triage may change either.\n\n## Measured on `origin/main` `31ce45c071`\n\n- **The sentences.** `packages/spec/src/data/object.zod.ts:3988`–`:3993`, `ObjectExtensionSchema`'s guidance:\n  - `hooks`: \"declare a top-level hook bound to the target object instead\";\n  - `listViews`: \"declare a top-level `view` bound to the target object instead\".\n  - The hand-written mirror is `content/docs/data-modeling/object-extensions.mdx:86`–`:87`.\n- **The refusals.** In `packages/spec/src/stack.zod.ts`, the hooks arm is at `:3830` and the views arm at `:3846`. The `objectNames.size === 0` early return (`:3812`) is the only way through.\n- **A recorded decision for hooks.** ADR-0130 §1.5 (`docs/adr/0130-release-artifact-as-co-ownership-boundary.md:157`) records \"a hook attached to a foreign object\" as REJECTED, and concludes that \"the split must follow hook ownership\". So the hooks sentence contradicts a recorded decision, not just the code.\n- PR #24458 (#24400) re-trues only the `actions` sentence beside these two.\n\n## The work\n\nOne PR on `packages/spec`, plus the docs mirror rows.\n\n- **`hooks`:** re-true the sentence to the route that works. ADR-0130 §1.5 decides that the refusal is deliberate, so ⛔ do not widen the hooks arm in this card. Name what an author does instead (the hook lives with the package that owns the object), or name no route if none exists.\n- **`listViews`:** no recorded decision was found. Two honest answers:\n  - widen the views arm the way PR #24458 widens the action arm (an extended or named platform target), with the served view reaching the object;\n  - or re-true the sentence to the route that works.\n\n  The dispatching seat picks one with four-axis reasons. If the axes split, a decision goes to the box first.\n- **Pins:** each sentence's claim is pinned at `defineStack`, with a same-stack control.\n\n**Reader who acts:** the `domain:spec` seat, in one PR, after PR #24458 lands. It edits the same `ObjectExtensionSchema` guidance and the same docs table.\n\n## Grade\n\np2 when both answers are text. If `listViews` widens the views arm, the fix changes what `defineStack` accepts, so it becomes protocol class (p1 + `target:v18`). Triage may regrade.\n\n## Dedupe\n\n- A semantic search of this repository's issues, \"ObjectExtension guidance hooks listViews top-level hook view bound to another package object refused defineStack\", returned 4 hits.\n  - One is open: #24400, this family's `actions` sentence.\n  - Three are closed. #21639 is about view containers displacing each other, #8070 about the package-export view vocabulary, and #5420 about a showcase registration.\n- None names these two sentences.\n\nDedupe words: extension guidance hooks top-level hook another package object refused; ObjectExtension listViews guidance view data.object cross-package.\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_"

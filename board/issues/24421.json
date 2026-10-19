@@ -13,7 +13,7 @@
   "labels": [
     "area:access",
     "domain:services",
-    "pm:dispatched",
+    "pm:blocked",
     "pm:epic",
     "priority:p1",
     "target:v18"
@@ -24,11 +24,11 @@
   "milestone": null,
   "type": null,
   "created_at": "2026-10-19T01:11:32Z",
-  "updated_at": "2026-10-19T07:28:21Z",
+  "updated_at": "2026-10-19T12:08:56Z",
   "closed_at": null,
   "closed_by": null,
   "merged_at": null,
-  "comments": 7,
+  "comments": 8,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/24421",
   "body": "Filing gate **③**: a task the maintainer directed. Decision #24378 was ruled **B′**: 「同意」 then 「B′」, recorded verbatim by the director seat at 6257388265. Reader who acts: the epic seat (`epic:#15194`) dispatches it to a cloud dev. Dedupe: the same search as the companion ADR card → no carrier.\n\n## What the ruling binds (verbatim items 2–4 of 6257388265)\n\n> **The guard.** Creating a `sys_sharing_rule` row, or renaming one, to the name of a declared rule in that scope through Setup's New (or any write that is not an edit of the projected declared row) is refused at the write door with the vendor rule named. Editing the projected row — the customised copy — stays the way to narrow or switch off a vendor rule, as today.\n\n> **The reconcile.** A same-name write (the customised copy's creation, or its `active` change) reconciles the shadowed declaration's name-keyed grants at once, not at the next boot's `sweepOrphanedRuleGrants`.\n\n> **Under a wall** an organisation's overlay is its own (today's holder key, `sharing-rule-service.ts:887`); under `single` the one overlay answers everywhere (today's behaviour).\n\n## Why\n\nThe ruling closes two consequences that stage 9 (PR #24376) measured. Both are recorded on #24378:\n- a same-name row created at runtime switches a vendor rule off at once;\n- the shadowed declaration's grants stand until the next restart.\n\n## Acceptance\n\n- **The guard.** A create or rename that takes a declared rule's name in its scope is refused, through the service and through `POST`/`PATCH /api/v1/sharing/rules`. The ADR-0112 refusal names the vendor rule. Pin the code and the HTTP status, not a message regex.\n- **The edit path stays open.** Editing the projected row still creates the customised copy, and narrows or switches off the vendor rule.\n- **The reconcile.** The customised copy's creation, and an `active` change on it, reconcile the declaration's grants in the same request. The pin observes the grants before the next boot.\n- **Scopes.** Under a wall the overlay is the organisation's own; under `single` it answers everywhere. Both are pinned.\n- **Size and declaration.** About 0.3–0.5k lines. `Clause-②` is measured by the dev: refusing a write that used to succeed is a narrowing."

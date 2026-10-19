@@ -1,0 +1,34 @@
+{
+  "number": 24517,
+  "kind": "issue",
+  "title": "pm-dispatch lanes/hotcrm.md:8 and :33 still forbid the repo:hotcrm seat to grade and point at a dead \"SKILL.md 多仓协调规则 4\": align them with the single-lane rule, as ruled on hotcrm#2178 (A)",
+  "state": "open",
+  "state_reason": null,
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "area:devpath",
+    "domain:skills",
+    "pm:dispatched",
+    "priority:p2",
+    "tooling"
+  ],
+  "assignees": [
+    "os-justin"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-19T10:34:02Z",
+  "updated_at": "2026-10-19T11:42:25Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 3,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/24517",
+  "body": "**Filing gate ③:** a task the maintainer's ruling directs. On objectstack-ai/hotcrm#2178 the maintainer ruled 「A」 (recorded in comment `6265194393`, matching the director's delta `6264888052`): the `repo:hotcrm` seat grades its lane's cards at first touch, and the skills lane aligns the charter text. Filed by the `repo:hotcrm` seat (`os-project-manager`, session `session_01BDgipbNowaGa139em8Fhoq`). ⛔ Not a claim.\n**Reader who acts:** the `domain:skills` lane seat, in one text PR.\n**Dedupe:** objectstack issues searched for \"lanes/hotcrm.md charter grading pointer 多仓协调规则 dead pointer cross-repo-coordination\": 42 hits, 0 open on point. The nearest are #11516 (closed; the charter's half-state-patrol line) and #18019 (closed; other lines left behind by a charter revision).\n\n## What is wrong (objectstack `main`, `.claude/skills/pm-dispatch/references/`)\n\n- `lanes/hotcrm.md:8`: \"⛔ 不产 `domain:*`、type 与定级，纪律全文在 SKILL.md 多仓协调规则 4。\"\n  - The pointer is dead. `grep -c '多仓协调规则' ../SKILL.md` answers 0, because the multi-repo text moved to `cross-repo-coordination.md` in the principle-only rewrite (`f151ef2c9`).\n  - The rule it carries is the 2026-08-16 three-repo wording (objectstack-ai/objectstack#9131: triage grades objectstack, objectui and cloud; sister seats \"never mint grades\"). That ruling never covered hotcrm.\n- `lanes/hotcrm.md:33`: \"定级归分诊或维护者，本席只供证据。\" It contradicts the single-lane rule.\n- `cross-repo-coordination.md:9-10`: \"单车道仓 `repo:*` 席自理机械三务 … 机械三务 = 自扫 sweep、自打 `type`、自做 `finding` 首触定级。\" This is the rule hotcrm#2178 ruled to apply.\n\n## What to change (the ruling's 口径, verbatim from `6264888052`)\n\n> the skills lane opens one text PR on `lanes/hotcrm.md:8` and `:33` (pointer to `cross-repo-coordination.md`, the grading sentence aligned), ⛔ nothing else in that PR.\n\n- `:8` points at `cross-repo-coordination.md`'s single-lane rule, and it no longer says the seat produces no grade.\n- `:33` says the seat grades at first touch by `filing-gate.md`'s 定级判据, with the reason posted on the card and open to the maintainer's veto.\n\n**Not in this PR, for the author to read:** `lanes/hotcrm.md:51` (\"`domain:*` 与 type 留给分诊\") also differs from the single-lane rule, on `type`. The 口径 says nothing else goes in this PR, so it is recorded here and stays out.\n\n## Acceptance\n\n- `grep -c '多仓协调规则' .claude/skills/pm-dispatch/references/lanes/hotcrm.md` answers 0.\n- `lanes/hotcrm.md` and `cross-repo-coordination.md` agree on who grades a hotcrm card.\n- The PR body quotes the ruling (hotcrm#2178, `6265194393`) and the 口径.\n- The line ratchet and id-lint guards pass. This is a `.claude/**` Tier S text change."
+}

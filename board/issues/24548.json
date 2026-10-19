@@ -1,0 +1,32 @@
+{
+  "number": 24548,
+  "kind": "issue",
+  "title": "Storage upload/complete commits a file record for bytes the backend never stored; the download then fails 500",
+  "state": "open",
+  "state_reason": null,
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "area:files",
+    "bug",
+    "domain:services",
+    "pm:queue",
+    "priority:p2"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-19T13:27:08Z",
+  "updated_at": "2026-10-19T14:04:35Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 1,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/24548",
+  "body": "Filing gate: ① product defect — reproduced through a public HTTP door, landing file named.\nPath: api-backend.error-sentences-and-unique-violation-wire-code (checklist item priority P2; found while driving its acceptance[3] storage-fault leg, outside what that clause asserts)\nQA-source: #24541 · api-backend.error-sentences-and-unique-violation-wire-code · acceptance[3] (incidental, outside the clause)\nType: Bug — a committed file is treated as servable, and the sibling chunked-completion door already refuses the same \"no bytes\" state.\nReader: the `domain:services` lane seat (owner of `packages/services/service-storage`) — first step is the `upload/complete` handler in `packages/services/service-storage/src/storage-routes.ts` (~965–1008).\nDuplicate check (open AND closed): \"storage upload complete commits file without bytes uploaded, no existence check\" → 5 hits (#22547, #22349, #22313, #22332, #22175 — none exact) · \"presigned upload complete committed status download fails missing object\" → 0 hits · \"storage complete door commits pending file when PUT failed ENOTDIR, upload/complete 200 after raw upload 500\" → 12 hits (none match). #22313 (closed) fixed the same class for the CHUNKED completion door only.\nreach: `POST /api/v1/storage/upload/presigned` then, with NO bytes uploaded, `POST /api/v1/storage/upload/complete` → 200 and the `sys_file` row reads `status: committed`; `GET /api/v1/storage/files/ID/url` → 200 signed URL whose fetch answers 500 \"Download failed\". Measured on a healthy stock showcase at 5b14b7f3 (no fault injection needed).\n\n## What happens\n\nThe single-shot presigned flow marks an upload `committed` without asking the storage backend whether the object exists. A failed or skipped byte upload therefore produces a committed file record with a declared size, a signed download URL is handed out for it, and the download fails 500. The eTag the complete request may carry (\"S3 ETag verification\" in the spec) is stored without being checked.\n\n## Reproduction (stock showcase, framework 5b14b7f3)\n\n1. Boot showcase; `POST /api/v1/auth/sign-in/email` with `admin@objectos.ai` / `admin123` and KEEP the session cookie (storage routes resolve the caller from the better-auth cookie session, not the bearer token).\n2. `POST /api/v1/storage/upload/presigned` body `{\"filename\":\"ghost.txt\",\"mimeType\":\"text/plain\",\"size\":5}` → 200 with `uploadUrl` and `fileId` F.\n3. Do NOT upload any bytes. (Fault variant, same result: boot with `OS_STORAGE_LOCAL_ROOT` pointing under a regular file; the raw PUT then answers 500 \"Upload failed\".)\n4. `POST /api/v1/storage/upload/complete` body `{\"fileId\":\"F\"}`\n   - Expected: a 409 refusal with the file left `pending` (parity with the chunked door, and the premise that `committed` means servable).\n   - Actual: 200 `{fileId: F, size: 5, name: \"ghost.txt\"}`; `GET /api/v1/data/sys_file/F?select=id,status,size` → `status: \"committed\"`, `size: 5`.\n5. `GET /api/v1/storage/files/F/url` → 200 signed URL; fetching it → 500 \"Download failed\". `GET /api/v1/storage/files/F` → 302 to the same URL → 500.\n\n## Contract\n\n- `packages/services/service-storage/src/storage-routes.ts:590-597` — download servability treats any `committed` file as servable (\"pending → refused … an upload that was never completed has no bytes to promise\").\n- `storage-routes.ts:90-104` (#22313) — the chunked-completion sibling refuses a completion that does not hold the declared bytes with 409 RESOURCE_CONFLICT.\n- `packages/spec/src/api/storage.zod.ts:74-77` — `CompleteUploadRequestSchema` documents `eTag` as \"S3 ETag verification\"; the handler stores it verbatim (`storage-routes.ts:985-992`).\n- `packages/spec/src/contracts/storage-service.ts` declares `exists(key)`, so the check is available to the handler.\n\n## Mechanism and fix landing\n\n- `packages/services/service-storage/src/storage-routes.ts` ~965–1008: the complete handler checks session, row, uploader and organization, then sets `status: committed` without calling the backend.\n- Fix: call `exists(key)` (and compare size / eTag where the backend reports them) before committing; answer 409 and keep the row `pending` when the bytes are absent. Secondary: the local raw download of a missing object should answer 404, not 500.\n- Severity hint: medium — any signed-in uploader can mint committed records that point at nothing; downstream consumers trust `committed`.\n"
+}

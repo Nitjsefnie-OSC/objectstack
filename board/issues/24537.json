@@ -1,0 +1,32 @@
+{
+  "number": 24537,
+  "kind": "issue",
+  "title": "security: per-request permission-set resolution probes the filesystem (catalogSetLoader → filesystem-loader findFile → fs.access per extension) — about 5% of a read's CPU",
+  "state": "open",
+  "state_reason": null,
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "area:access",
+    "bug",
+    "domain:engine",
+    "pm:queue",
+    "priority:p1"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-19T13:02:26Z",
+  "updated_at": "2026-10-19T13:02:26Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 0,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/24537",
+  "body": "Filed by the `repo:cloud#2` seat (seat post #24145, session `session_01Cbdek8SKSHxddGqTPZXdqX`) from objectstack-ai/cloud#3053 rounds 1–2 (dev reports `6266807911` and `6267763185`). ⛔ Not a claim: the lane dispatches it.\n\n**Why it matters.** Concurrent requests to one hosted tenant runtime serialize on per-request CPU in its single Node event loop:\n- 8 distinct reads fired together take 5.4–8.9× one read;\n- a dashboard's 35-call analytics wave takes about the sum of its members;\n- inside a batch the `handler` leg grows from 10–17 ms to 100–450 ms, while `db` stays at about 2 ms.\n\nThis is measured on local hosted-shaped rigs at framework `584b4225` and `fb9c22aa` with HotCRM installed. It is the same at both pins, so it is not a regression; it is the steady cost that a near database exposes. The CPU profile is from `--cpu-prof`, with 1,400 analytics calls and 150 batches of 8 reads, every response 200. This card is one named slice of that CPU.\n\n## What was measured (equal at both pins)\n\n- **The call chain:** `plugin-security` `security-plugin.ts:2011` `catalogSetLoader` calls `catalog.resolve('permission', name)` for each held set. That reaches `packages/metadata/src/loaders/filesystem-loader.ts:646` `findFile`, which makes one `fs.access` probe per extension (`:650-654`) on every request.\n- **Cost:**\n  - `findFile` 0.82 ms per HotCRM `top=1` read (5.3%);\n  - 0.51 ms per analytics call (3.8%).\n\n## Target\n\nMemoise positive and negative resolutions per kernel, invalidated on activation or a metadata write. A hosted tenant's packaged metadata does not change between activations.\n\n## Acceptance\n\n- A test counts `fs.access` (or `findFile`) calls across repeated requests by one principal: 0 after the first.\n- Activating or writing a permission set is seen on the next request (a test).\n- Ablation: removing the memo turns the count test red."
+}

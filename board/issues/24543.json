@@ -1,0 +1,32 @@
+{
+  "number": 24543,
+  "kind": "issue",
+  "title": "approvals checklist: act-door-and-admin-rescue-slate clause 1 pins PUT 405 Allow on the wire, but both wire doors answer 404 by design (its own pin asserts the 404) - re-word",
+  "state": "open",
+  "state_reason": null,
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "area:devpath",
+    "documentation",
+    "domain:devx",
+    "pm:queue",
+    "priority:p1"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-19T13:22:05Z",
+  "updated_at": "2026-10-19T14:13:52Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 1,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/24543",
+  "body": "Filing gate: ① — a checklist clause out of step with an implementation that was not ruled wrong (test-fix / re-word; `pm:queue` takes \"说明书脱节 → 修文档\").\nPath: approvals.act-door-and-admin-rescue-slate\nQA-source: #24542 · approvals.act-door-and-admin-rescue-slate · clause 1\nChecklist item priority: P1 (the item fails on this clause ⇒ inherits P1 per the filing-gate grading rule)\ntype: Task (the product honours its declared contract; the checklist text is what is wrong)\nreach: `PUT /api/v1/approvals/act?token=…` on a stock `os dev` showcase boot answered **404** `application/json` `ENDPOINT_NOT_FOUND` with no `Allow` header (twice, fresh requests; same for DELETE and PATCH) — the clause expects 405 + `Allow: GET, POST`.\n\n## What is wrong\n\n`docs/qa/platform-checklist/areas/approvals.json`, item `approvals.act-door-and-admin-rescue-slate` (rev 1): the title and acceptance clause 1 say the email action door answers `PUT → 405 with Allow: GET, POST` \"through the dispatcher exactly as the self-hosted mount\".\n\nNeither wire door answers that, by design:\n\n- the self-hosted mount registers only `GET` and `POST /api/v1/approvals/act` (changeset `.changeset/pre/22578-approvals-action-page-member.md`: \"the plugin mounts GET and POST … exactly as before\");\n- the dispatcher's `/approvals/act` domain claims only GET / HEAD / POST, and \"every other method is not claimed and falls through\" (`packages/runtime/src/domains/approvals.ts`, the Methods note);\n- the item's **own pin** asserts the 404: `packages/runtime/src/domains/approvals-act.test.ts` — an unclaimed PUT is \"the dispatcher's ordinary miss\", `{ status: 404, code: 'ROUTE_NOT_FOUND' }`, and the member never runs.\n\nThe `405` + `Allow: GET, POST` answer belongs to the in-process member `ApprovalService.handleActionPage` only (`packages/plugins/plugin-approvals/src/action-page-member.integration.test.ts`, \"any other method is 405 with Allow\"), which no wire request reaches for PUT.\n\n## Reproduction (the QA run's)\n\n1. Boot stock showcase: `OS_PORT=P objectstack dev --ui --seed-admin -p P -d file:…/data.db`.\n2. As admin, `POST /api/v1/approvals/requests/REQUEST_ID/remind` on a pending request; read the act URL from the approver's `sys_notification` `payload.actions`.\n3. `PUT /api/v1/approvals/act?token=TOKEN` (no body). Expected per clause 1: 405 + `Allow: GET, POST`. Actual: 404 `ENDPOINT_NOT_FOUND`, no `Allow`.\n\nThe GET / POST / dead-token legs of the same clause all held (200 confirm page, 200 \"Approved\", 200 \"Invalid link\" / \"Already used\" / \"Already decided\").\n\n## What to change\n\nRe-word clause 1 (and the title's \"PUT 405 Allow: GET, POST\") to the shape the product and its pin declare: 405 + `Allow` at the member, an ordinary 404 miss on the wire for any method other than GET / HEAD / POST. Bump `revision`, add a `history` row, keep `node scripts/check-platform-checklist.mjs` green.\n\n## Who acts (domain:devx — owns `docs/qa/**` per the pm-dispatch lane table)\n\nThe checklist ledger seat (an edit to `docs/qa/platform-checklist/areas/approvals.json` in one PR). No product code changes.\n\n## Duplicate check\n\nGitHub issue search in objectstack-ai/objectstack, **including closed**: \"approvals act PUT 405 Allow GET POST act-door-and-admin-rescue-slate\" → 17 hits; \"checklist item approvals.act-door clause PUT 404 wire test-fix\" → 22 hits. Neither has a card for this clause (nearest: #22438 / #22577 / #22575 — the capability's own landing cards, closed; #23950 — the previous re-point family card, closed, covering six other clauses, not this one).\n"
+}

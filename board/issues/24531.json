@@ -1,0 +1,33 @@
+{
+  "number": 24531,
+  "kind": "issue",
+  "title": "feat(plugin-auth,plugin-email): 18.x step 3 (8b-0d′): identity mail goes to a deployment-level sibling of sys_email, expand-first",
+  "state": "open",
+  "state_reason": null,
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "domain:services",
+    "pm:dispatched",
+    "pm:epic",
+    "priority:p1"
+  ],
+  "assignees": [
+    "os-steve"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-19T12:40:16Z",
+  "updated_at": "2026-10-19T12:44:21Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 1,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/24531",
+  "body": "Filing gate **③**: a task the maintainer directed. These are steps 1–3 of the 18.x line, under ruling records 6266750393 and 6267391172 on #15194. The second records the maintainer's 「用量很多，不用节约」: steps 1–3 start now, in parallel.\n- **Reader who acts:** the epic seat (`epic:#15194`, `session_01Y5583bs2RDd53MH6kM1ca3`), which dispatches it now.\n- **Dedupe:** none. Before this card, the stage lived only in the plan rows on #15212.\n\nPart of #24343 (three framework writers), from decision #24377 Q2 A (ruling 6257510973) · **Step 3: 8b-0d′, identity mail goes to a deployment-level sibling of `sys_email`** · ⛔ Not an 18.0 gate.\n\n## The line's rule (binding)\nOnce merged, this PR leaves `main` releasable:\n- **R1.** A fresh install boots and serves.\n- **R2.** A database an 18.0 install created upgrades to that commit, boots, and keeps its data. #24522's harness proves this.\n- **R3.** A v17 database is still refused.\n- **R4.** A walled posture is still refused at boot.\n\n**Expand first.** This step only adds: the new write shape, plus reads that accept both the 18.0 shape and the new one. It never moves or deletes an 18.0 row and never drops a column. Each such removal is written down for the step-5 ceremony.\n\n**Merge gate.** The PR stays a draft until #24522's harness has merged. It lands after it has merged `main` and is green on R1–R4.\n\n## Scope\n- Per #24377 Q2 A (ruling 6257510973), identity mail persists to a new deployment-level sibling of `sys_email`, not to `sys_email`. Identity mail means verification, password reset and similar mail about a user with no organization.\n- Expand: new identity mail goes to the sibling. Every reader of identity mail (resend, rate limits, audit and admin views) reads both the sibling and the 18.0 rows in `sys_email`. Moving the old rows is a step-5 ceremony item.\n- 8b-0f (#24453) has merged, so `auth-manager.ts` is free.\n- Plan amendment 13 (6259616282) on #15212 and #24343's body carry the detail. Read them.\n\n## Acceptance\n- The new shape is pinned on a fresh install. The dual read is pinned on an 18.0-shaped row.\n- The harness stays green.\n- The report lists every removal the step-5 ceremony owes, table by table.\n- Measure first. If expand-first is impossible or unsafe for any part, stop and report that part with the alternative. Do not build a destructive change."
+}
