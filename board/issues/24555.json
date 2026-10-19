@@ -2,9 +2,9 @@
   "number": 24555,
   "kind": "pull_request",
   "title": "chore(release): exit Changesets pre mode (`next`), so the next version pass cuts the 18.0.0 GA",
-  "state": "open",
+  "state": "closed",
   "state_reason": null,
-  "draft": true,
+  "draft": false,
   "author": {
     "login": "objectstack-fleet[bot]",
     "id": 332303061,
@@ -12,7 +12,6 @@
   },
   "labels": [
     "documentation",
-    "needs-user-decision",
     "size/s",
     "skip-changeset",
     "tooling"
@@ -23,10 +22,14 @@
   "milestone": null,
   "type": null,
   "created_at": "2026-10-19T13:40:57Z",
-  "updated_at": "2026-10-19T13:56:11Z",
-  "closed_at": null,
-  "closed_by": null,
-  "merged_at": null,
+  "updated_at": "2026-10-19T14:44:18Z",
+  "closed_at": "2026-10-19T14:44:15Z",
+  "closed_by": {
+    "login": "os-zhuang",
+    "id": 277994282,
+    "type": "User"
+  },
+  "merged_at": "2026-10-19T14:44:15Z",
   "comments": 1,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/pull/24555",

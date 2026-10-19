@@ -1,0 +1,32 @@
+{
+  "number": 24605,
+  "kind": "issue",
+  "title": "QA run · records-forms.object-hook-lifecycle (1/1) · ba4afcc2 · 2026-10-19 · 1 PASS / 0 PARTIAL / 0 FAIL / 0 BLOCKED / 0 NOT-RUN",
+  "state": "closed",
+  "state_reason": "completed",
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "qa-run"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-19T15:56:14Z",
+  "updated_at": "2026-10-19T16:17:38Z",
+  "closed_at": "2026-10-19T16:17:38Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": null,
+  "comments": 1,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/24605",
+  "body": "Second-round 18.0 release-sweep re-test (maintainer-approved re-test on the release candidate; round 1 at `5b14b7f3`, anchor #24579). This item was re-driven because #24518 (`04669a4`) changed what a `runAs: 'user'` hook sees in `sys_user` after round 1.\n\n## Environment fingerprint\n\n- framework `ba4afcc2391922a86678bf5e47b1a0e4d2c87ff1`; `.objectui-sha` `4016370af3c9c9dafec2bc5299afd8e8079701b8` (console built this round with `pnpm objectui:build`)\n- app: a scratch copy of `examples/app-showcase` at that sha, outside the repo tree, with 7 scratch hooks (`qa_*`) added to `allHooks` and 3 scratch flows; nothing in the repo was edited\n- boot: `OS_PORT=47411 OS_LOG_LEVEL=info objectstack dev --ui --seed-admin -p 47411 -d file:(scratch)/data.db`, 2026-10-19 14:27Z, fresh file DB, stock seed\n- personas: the seeded admin (organization owner, platform admin); `qa-member-r2` (invite-member then sign-up; positions `org_member`, `everyone`); `qa-loner-r2` (admin create-user, then `organization/remove-member`, so no `sys_member` row; positions `everyone`)\n- run sequentially, one runner; manual API drive (Tier 2: the pin covers acceptance[0] and the beforeDelete abort shape only)\n\n## Scope\n\n- selector `records-forms.object-hook-lifecycle`, revision 5. Judged 1 of 1.\n\n## Per-clause verdicts\n\n| clause | verdict | oracle evidence (text) |\n|---|---|---|\n| step 1 registration check | precondition held | `GET /api/v1/meta/hook` lists the 5 showcase hooks plus the 7 `qa_*` hooks; the boot log has `Registered hook: com.example.showcase:qa_*` |\n| acceptance[0] beforeInsert stamp | pass | `POST /api/v1/data/showcase_inquiry {name,email,message}` 201; `GET ...?select=status,source` gives `{status:new, source:web}`; pin `showcase-public-form.dogfood.test.ts` 4/4 |\n| acceptance[1] multi-event trim | pass | POST title `'  os-qa-r2-trim  '` stored as `os-qa-r2-trim`; PATCH `'   os-qa-r2-trim2   '` reads back `os-qa-r2-trim2` |\n| acceptance[2] completion audit fires | pass | `PATCH Build homepage {done:true}`, then the log has `INFO [hook 'showcase_audit_task_completion'] task completed: Build homepage` |\n| acceptance[3] no fire on non-transition | pass | `PATCH App wireframes {priority:high}` (already done); `task completed: App wireframes` count 0 before, 0 after a 4 s settle |\n| acceptance[4] over-budget warn | pass | `PATCH Data Platform {spent:650000}`, then `WARN ... project over budget: Data Platform (650000 / 600000)` |\n| acceptance[5] record = stored plus payload | pass | the spent-only PATCH above fired (budget read from storage); `PATCH Website Relaunch {spent:70000}` gave no line |\n| acceptance[6] abort rolls back | pass | scratch `qa_abort_throw` (beforeInsert, throws, onError abort): `POST 'qa-abort-r2'` 400 `{\"error\":\"qa abort probe\"}`; filtered count 0 before, 0 after |\n| acceptance[7] onError log does not roll back | pass | scratch `qa_log_throw` (async afterUpdate, throws, onError log): PATCH 200, re-read shows the new value; log `ERROR [hook] handler failed (onError=log; suppressing) {\"hook\":\"qa_log_throw\",...}` |\n| acceptance[8] unevaluable condition fails closed | pass | scratch `qa_cond_unevaluable` (`record.title.startsWith(\"qa-cond\") && int(record.title) > 0`, onError log): POST 500 `INTERNAL_ERROR`; count 0/0; log `HookConditionError: Hook 'qa_cond_unevaluable' could not evaluate its condition ... operation aborted`; the body never ran |\n| acceptance[9] priority order | pass | scratch `qa_prio_10` / `qa_prio_90` on one afterInsert: the log shows `qa_prio_10` at 14:29:15.419 and `qa_prio_90` at 14:29:15.587 |\n| negatives[0..4] | hold | no abort left a row; the log-policy failure did not roll back; the transition fired; the non-transition did not; the unevaluable condition aborted |\n\nDerived item verdict: **PASS**. Round 1 (#24572) scored this item PARTIAL (the scratch variants were not run).\n\n## #24518 probe (the reason this item was re-driven)\n\nScratch `qa_runas_user_peers` (`runAs: 'user'`) and `qa_inherit_peers` (default `inherit`) read `sys_user` through `ctx.api` on afterInsert of a `qa-peers*` task and log the ids they see. Each answer was compared with the same persona's own `GET /api/v1/data/sys_user` at the same moment.\n\n| triggering persona | runAs user hook saw | persona's own request saw |\n|---|---|---|\n| admin (owner, platform admin) | 3: admin, auditor.demo, phone.demo | 3, the same |\n| member in the organization | 4: qa-member-r2, auditor.demo, phone.demo, admin; never qa-loner-r2 | 4, the same |\n| user with no organization membership | 1: itself only | 1, itself |\n\nThe members visible to the hook never extend beyond the organization: the removed user is absent from every member-side answer. The no-organization context answers the user alone, as the change description states. The inherit hook gave the same answer in every row. Supporting pins at this sha: `objectql/src/hook-run-as.test.ts` 21/21 and `service-automation/src/runas-user-hook-org-peers.integration.test.ts` 5/5.\n\n## Checklist-accuracy findings / fixture gaps\n\n- Step 1 names `GET /api/v1/meta/types/hook`, which answers 404 `RESOURCE_NOT_FOUND` at this sha; `GET /api/v1/meta/hook` is the route that lists hooks.\n- acceptance[8] says \"a HookConditionError-class refusal\". On the wire the refusal is `500 {\"code\":\"INTERNAL_ERROR\"}`, and the class name appears only in the server log. The clause should name the wire shape, or say the class is a log-side oracle.\n- Steps use `$select=`; the by-id read door accepts only `select` / `expand` (`$select` answers 400 `VALIDATION_ERROR`).\n\n## Handover\n\nNone; every clause has a verdict.\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_\n"
+}

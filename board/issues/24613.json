@@ -1,0 +1,36 @@
+{
+  "number": 24613,
+  "kind": "issue",
+  "title": "service-automation: a runAs:'user' flow run carries no email, so every current_user.email row policy denies the run on rows its triggering user can read and write",
+  "state": "closed",
+  "state_reason": "completed",
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "area:access",
+    "bug",
+    "domain:services",
+    "priority:p1",
+    "target:v18"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-19T16:02:26Z",
+  "updated_at": "2026-10-19T20:07:33Z",
+  "closed_at": "2026-10-19T20:05:49Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": null,
+  "comments": 5,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/24613",
+  "body": "Filing gate: **① a product defect with a named location and a reproduction.** Reader: the `packages/services/service-automation` lane. The fix carries `email` through the run identity: the plugin's grants bridge, `FlowUserGrants`, `resolveRunContext` and `resolveRunDataContext`. Dedupe (open and closed): \"runAs user flow run identity missing current_user.email RLS policy refuses record the user can access\" gave 6 hits; \"current_user.email unresolved in flow run context runAs user email owner RLS\" gave 7 hits; a REST listing of every issue created since 2026-10-19T12:00Z (about 40) was also scanned. The nearest cards are the `org_user_ids` twins #24448 (flow) and #24497 (hook), both closed and both about the peer list, not email. No card covers `email`.\n\nreach: public entrance, measured once with a wrong result. `POST /api/v1/data/showcase_task` by a member holding the stock showcase set `showcase_contributor` fires a `runAs: 'user'` record-change flow, and the flow is refused on the row the member just wrote and can update with their own request.\nPath: automation.flow-run-semantics-v18\nQA-source: #24606 · automation.flow-run-semantics-v18 · acceptance[1]\nChecklist item priority: P1\ntype: Bug\n\n## What is wrong\n\nA `runAs: 'user'` flow is meant to run as its triggering user, with the same data access as that user's own request. The run's data context carries the user's id, positions, permission sets, peer list and organization, but **not their email**. So every row policy that reads `current_user.email` cannot match inside the run. The flow is refused on rows the same user reads and writes freely with their own request. This is not a leak: it fails closed. But a record-triggered flow on a contributor-scoped object silently fails every time, for exactly the users the policy exists for.\n\n## Reproduction (framework `ba4afcc2`, stock showcase plus one scratch flow)\n\n1. Add a scratch flow to a copy of `examples/app-showcase`: type `record_change`, `runAs: 'user'`. Its start node is `{objectName: 'showcase_task', triggerType: 'record-after-insert', condition: 'title.startsWith(\"qa-flow\")'}`. It has one `update_record` node `{objectName: 'showcase_task', filter: {id: cel record.id}, fields: {notes: cel current_user.id}}`. Boot it with `objectstack dev --seed-admin`.\n2. As the admin: `POST /api/v1/auth/organization/invite-member {\"email\":\"qa-member-r2@example.com\",\"role\":\"member\"}`, then sign that address up with `POST /api/v1/auth/sign-up/email`. Grant the stock set with `POST /api/v1/data/sys_user_permission_set {\"user_id\": the member id, \"permission_set\": \"showcase_contributor\"}`. That set carries `task_own_rows` (select, `assignee == current_user.email`) in `examples/app-showcase/src/security/permission-sets.ts`.\n3. As the member: `POST /api/v1/data/showcase_task {\"title\":\"qa-flow-member3\",\"project\":\"(a project id)\",\"assignee\":\"qa-member-r2@example.com\"}` answers 201.\n4. Expected: the run completes and `notes` equals the member's id. Actual: `GET /api/v1/automation/qa_stamp_current_user/runs` shows status `failed` with `trigger.userId` = the member's id, and the stamp node fails with \"update_record(showcase_task) failed: You do not have access to this record. Contact the person who owns it, or your administrator, if you need access.\" `notes` stays null.\n5. Control, same member, same row, own request: `GET /api/v1/data/showcase_task/(id)` answers 200, and `PATCH {\"notes\":\"...\"}` answers 200.\n6. Control, admin: the same flow on an admin-created task completes and stamps the admin's id.\n\nReproduced twice, on two fresh rows under two projects.\n\n## Mechanism\n\n- **The request path seeds the email:** `ctx.email` comes from the session, falling back to `sys_user.email` via `resolveUserAuthzGrants` (`packages/core/src/security/resolve-authz-context.ts`).\n- **The RLS compiler reads only that field:** it binds `current_user.email` from the execution context's `email` and nothing else (`packages/plugins/plugin-security/src/rls-compiler.ts`).\n- **The run drops it at every step:**\n  - `AutomationContext` declares no email (`packages/spec/src/contracts/automation-service.ts`).\n  - The plugin's grants bridge receives `grants.email` and returns only positions, permissions, `org_user_ids` and `tenantId` (`packages/services/service-automation/src/plugin.ts`).\n  - `FlowUserGrants` and `resolveRunContext` copy the same four (`packages/services/service-automation/src/engine.ts`, whose docblock already notes \"No run context carries an email\").\n  - `resolveRunDataContext` builds `{isSystem:false, userId, positions, permissions, org_user_ids?, tenantId?, flowRunId?}` (`packages/services/service-automation/src/runtime-identity.ts`).\n- **The hook-side twin, by code reading only (not measured):** `ScopedContext[SEED_USER_GRANTS]` (`packages/objectql/src/engine.ts`, added by #24518) spreads the triggering context and adds positions, permissions and `org_user_ids`, but never `grants.email`. A `runAs: 'user'` hook fired from a context with a `userId` and no email (a flow-run write, an internal producer) has the same gap. A hook fired from an HTTP request inherits the request's email and does not.\n\nNot a regression: production code in `service-automation` and `core` is unchanged between `5b14b7f3` and `ba4afcc2`. Round 1 passed this clause with a fixture that had no email-keyed row policy. An independent verifier re-derived the verdict and the mechanism from the captured evidence (RUNNER rule 7) and confirmed it.\n\n## Acceptance\n\n- A `runAs: 'user'` record-change run triggered by a member whose only access to the row is an email-keyed policy (`showcase_contributor` on `showcase_task`) reads and updates that row, and the stamp equals the member's id.\n- A pin at the real-stack layer (beside `runas-user-hook-org-peers.integration.test.ts`) that goes red when the run context carries no email.\n- Optionally, the same for `SEED_USER_GRANTS`, so a hook's `runAs: 'user'` context carries the email the same user's request would carry.\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_\n"
+}

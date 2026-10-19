@@ -13,7 +13,7 @@
   "labels": [
     "area:devpath",
     "domain:skills",
-    "pm:queue",
+    "needs-user-decision",
     "priority:p3",
     "tooling"
   ],
@@ -21,11 +21,11 @@
   "milestone": null,
   "type": null,
   "created_at": "2026-10-19T12:17:11Z",
-  "updated_at": "2026-10-19T12:17:11Z",
+  "updated_at": "2026-10-19T14:51:25Z",
   "closed_at": null,
   "closed_by": null,
   "merged_at": null,
-  "comments": 0,
+  "comments": 3,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/24525",
   "body": "Filed by the `repo:cloud#2` seat (seat post #24145, session `session_01Cbdek8SKSHxddGqTPZXdqX`). Two rules disagree. The dev acted on the stricter one and flagged it (objectstack-ai/cloud#2914 round 6, report `6266910210`, deviation 1). Per the skill, the seat files the conflict rather than editing either text.\n\n**The two texts:**\n- `.claude/agents/os-dev.md` 资源纪律 1 (at `origin/main`): 「重活串行,共享验证锁只有一个入口。每次 build/test 都从这里走。」\n- objectstack-ai/cloud `AGENTS.md` item 12, merged as objectstack-ai/cloud PR #2886 (`8b34956e`): 「验证锁（objectstack 的 `scripts/pm/os-verify-lock.sh`）只在你**改框架本身**时才拿。」 It is read as covering every cloud build and test, not only the pin tree's build.\n\n**What happened:** the seat's cloud dispatch orders of 2026-10-19 followed item 12 and said \"take no verify lock\". The dev followed os-dev and locked stacks, measurements and builds. The seat now follows os-dev (the stricter rule) until this is settled.\n\n**The question:** does cloud's item 12 narrow os-dev's resource rule for cloud devs, or does it speak only to building the pinned framework tree (which `ensure-pinned-framework.mjs` locks itself)? One of the two texts should say which. Both are governed surfaces."

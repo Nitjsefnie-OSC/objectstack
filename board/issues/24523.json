@@ -2,8 +2,8 @@
   "number": 24523,
   "kind": "issue",
   "title": "authz: every authenticated request re-reads the Default Organization (two sequential sys_organization reads) once the admin's admin_full_access grant is organization-owned",
-  "state": "open",
-  "state_reason": null,
+  "state": "closed",
+  "state_reason": "completed",
   "draft": null,
   "author": {
     "login": "objectstack-fleet[bot]",
@@ -14,18 +14,23 @@
     "area:access",
     "bug",
     "domain:engine",
-    "pm:queue",
     "priority:p1"
   ],
-  "assignees": [],
+  "assignees": [
+    "os-project-manager"
+  ],
   "milestone": null,
   "type": null,
   "created_at": "2026-10-19T12:09:21Z",
-  "updated_at": "2026-10-19T12:22:22Z",
-  "closed_at": null,
-  "closed_by": null,
+  "updated_at": "2026-10-19T19:39:36Z",
+  "closed_at": "2026-10-19T19:36:57Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
   "merged_at": null,
-  "comments": 0,
+  "comments": 7,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/24523",
   "body": "Filed by the `repo:cloud#2` seat (seat post #24145, session `session_01Cbdek8SKSHxddGqTPZXdqX`) from objectstack-ai/cloud#3053's attribution round (dev report `6266807911`, out-of-scope finding 1). ⛔ Not a claim: the `domain:engine` lane dispatches it.\n\n## What was measured\n\nThe measurements ran on local `--prod-like --seed` cloud stacks at three framework pins, with `OS_SERVER_TIMING=true`. The statement count is the `db` member of `Server-Timing` (`SqlDriver`'s knex query listener). Warm medians of 5, as the owner of a hosted tenant environment:\n\n| request | `ec749fbb` | `584b4225` (fresh environment) | `fb9c22aa` |\n|:--|:--|:--|:--|\n| `GET /api/v1/auth/get-session` | 8 | **10** | **10** |\n| `POST /api/v1/analytics/dataset/query` | 9 | **11** | **11** |\n\nThe data and meta reads carry the same +2. At `fb9c22aa` that +2 is offset by #24391's −3 on the `sys_metadata` reads.\n\n**The +2 are two sequential reads on every authenticated request:**\n- `select * from sys_organization where slug = ? order by id asc limit ?`\n- then `select * from sys_organization order by id asc limit ?`\n\nThe second read happens because the environment's one organization is not slugged `default`; with a `default` slug there is one read.\n\n**When they start:**\n- For a fresh environment, at `584b4225`: objectstack-ai/cloud PR #3063 writes the owner's grant to the Default Organization.\n- For an existing environment, at `fb9c22aa`: cloud PR #3070's backfill gives the existing grant the organization. Measured in an upgrade series that carried one environment across the three pins: 8 → 8 → 10.\n\n## Where it comes from\n\n- `packages/core/src/security/resolve-authz-context.ts:934-942`: `readDefaultOrganizationId` makes two `tryFind` calls. It is called at `:1498-1501` whenever a principal holds an organization-owned `admin_full_access` grant under `single`. The lines are the same at `584b4225` and `fb9c22aa`.\n- It was introduced by `b2e78701` (#24373), which is in `ec749fbb..584b4225`.\n- Nothing carries the read across requests:\n  - the request memo de-duplicates only within one request;\n  - the cross-request grants cache is off by default (`OS_AUTHZ_GRANTS_CACHE_TTL_MS`, 0 by the maintainer's Fork 4 ruling).\n- **The blind spot:** #24373 says its batch-equivalence goldens did not move because their fixture holds the organization-less row. That fixture never exercises the new read.\n- **Reach:** every authenticated request of every principal that holds an organization-owned `admin_full_access` grant. Once C8 8c-2 retires the organization-less anchor, that is every admin.\n\n## Cost\n\n- Locally the two reads cost about 0.3 ms.\n- On staging's remote tenant databases (Turso, Tokyo) each statement is a network round trip. If the 222 ms `get-session` baseline issued the 8 statements measured here, one statement costs at most about 28 ms, so +2 is at most about +55 ms per request.\n- That is a small part of cloud#3053's staging regression, which is still being attributed. But it is paid on every request, before the handler.\n\n## Target\n\n1. **Memoize the Default Organization id per engine,** beside the organization probe memo (`packages/objectql/src/engine.ts:7111-7145`, `probeInstallOrganizations` / `invalidateOrganizationProbe`).\n   - Invalidate it on the same `sys_organization` write faces, with no time-based staleness.\n   - A steady-state request then issues 0 `sys_organization` reads.\n   - #21868 (a cached default organization id never revalidated after the organization was recreated) is the failure to design against.\n2. **A statements-per-request golden** whose fixture holds an organization-owned `admin_full_access` grant. It pins `get-session` and one data read, so the anchor read cannot come back unnoticed.\n\n## Acceptance\n\n- With an organization-owned admin grant, `get-session` issues the same statement count as with an organization-less one.\n- Deleting and recreating the Default Organization re-reads it on the next request (a test).\n- The new golden turns red when the memo is removed (an ablation)."

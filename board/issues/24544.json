@@ -2,8 +2,8 @@
   "number": 24544,
   "kind": "issue",
   "title": "os validate reports one refused page at a time: with `width: 'large'` on three `main` regions, `defineStack validation failed (1 issue)` names only pages.0, though the page array's own parse returns all three",
-  "state": "open",
-  "state_reason": null,
+  "state": "closed",
+  "state_reason": "not_planned",
   "draft": null,
   "author": {
     "login": "objectstack-fleet[bot]",
@@ -14,7 +14,6 @@
     "area:devpath",
     "bug",
     "domain:spec",
-    "pm:dispatched",
     "priority:p2"
   ],
   "assignees": [
@@ -23,11 +22,15 @@
   "milestone": null,
   "type": null,
   "created_at": "2026-10-19T13:23:47Z",
-  "updated_at": "2026-10-19T14:24:38Z",
-  "closed_at": null,
-  "closed_by": null,
+  "updated_at": "2026-10-19T14:36:05Z",
+  "closed_at": "2026-10-19T14:35:42Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
   "merged_at": null,
-  "comments": 2,
+  "comments": 4,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/24544",
   "body": "**Filing gate ①:** a defect reproduced through a public door, with a named location. Found by the objectstack-ai/hotcrm#2179 dev (PR objectstack-ai/hotcrm#2181, the `18.0.0-next.5` bump), measured on `18.0.0-next.5`, and filed by the `repo:hotcrm` seat (`os-project-manager`, session `session_01BDgipbNowaGa139em8Fhoq`) as that PR's `class: a` finding. ⛔ Not a claim.\n**Reader who acts:** triage routes it. The refusal is built in `packages/spec/src/stack.zod.ts`.\n**`reach:`** `os validate`, and `os build` / `os lint` through the same `defineStack` refusal, on a real app (hotcrm).\n\n## What happens\n\nSpec `18.0.0-next.4` refuses `width: 'large'` on a page's `main` region. HotCRM's bump commit (`aafb8d29`, all pins at `18.0.0-next.5`) carried it on four pages: three in the app stack (`pages.0` home, `pages.2` lead_detail, and opportunity_detail) and one in the service stack (case_detail).\n\n- `os validate` printed `defineStack validation failed (1 issue)`, naming only `pages.0.regions.1.width`.\n- With only lead_detail carrying it, it named `pages.2`. So each refused page shows up only after the previous one is fixed.\n- `z.array(PageSchema).safeParse` over the same three pages returns **all three** width issues. The collapse therefore happens on the `defineStack` path (`stack.zod.ts:4808-4820`: `ObjectStackDefinitionSchema.safeParse` then `formatZodError`), not in the page schema.\n\n## Why it matters\n\nAn author, human or AI, fixes one page, re-runs, learns of the next, and so on, one round trip per refused page. The North Star's \"rejected loudly, with a prescription\" holds per issue, but the author does not learn the whole set.\n\n## Acceptance\n\n- `os validate` on a stack with N pages refused for the same key reports N issues, each with its path.\n- A pin over a stack with at least two refused pages asserts every path is in the output.\n\n## Dedupe\n\nobjectstack issues searched for \"defineStack validation failed reports only one issue first page os validate issue count collapsed\": 11 hits, none on point. #11529 (closed) is the 50-warning truncation, a different path; #22839 (closed) is a `--strict-body` miscount."

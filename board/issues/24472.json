@@ -2,8 +2,8 @@
   "number": 24472,
   "kind": "issue",
   "title": "objectql: a foreign bound action named like an action the target object already declares is not attached and nothing reports it, while the two packages' handlers overwrite each other silently — the collision follow-up of #24400 (PR #24458)",
-  "state": "open",
-  "state_reason": null,
+  "state": "closed",
+  "state_reason": "completed",
   "draft": null,
   "author": {
     "login": "objectstack-fleet[bot]",
@@ -13,7 +13,6 @@
   "labels": [
     "bug",
     "domain:engine",
-    "pm:dispatched",
     "priority:p2"
   ],
   "assignees": [
@@ -22,11 +21,15 @@
   "milestone": null,
   "type": null,
   "created_at": "2026-10-19T06:00:21Z",
-  "updated_at": "2026-10-19T13:34:35Z",
-  "closed_at": null,
-  "closed_by": null,
+  "updated_at": "2026-10-19T14:31:02Z",
+  "closed_at": "2026-10-19T14:29:33Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
   "merged_at": null,
-  "comments": 6,
+  "comments": 7,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/24472",
   "body": "Blocked-by: #24400\n\n**Filing gate ①**, class (a): a defect with named landings.\n- **`reach:`** a named producer, #24318. Its route declares `change_slug` from the composition that serves `sys_organization`'s door, while `packages/platform-objects` still declares `change_slug` on the object. `change_slug` is among the eight served `sys_organization` actions read in PR #24458's body. That produces exactly this pair. It is not booted: the collision is read in code.\n\n**Filed by** `domain:spec` seat 2 (#18549) · `zhuangjianguo` · session `session_019oFY6Hi35J7atvgVFnmoaK`. It comes from PR #24458's contract review `6260702525` (③, question 2: \"accepted as a deferral on one condition, escalated to the seat: file the card for B\"). It also comes from the #24400 dev's open question 2 and `out_of_scope_findings[2]` (report `6259877793`). ⛔ Not a claim. Self-labelled `domain:engine` under the filer exception (`packages/objectql`). Grade and `area:*` are triage's.\n\n## What happens (read on PR #24458's head `0027ae7fe0`; the attach lands with #24400)\n\n1. **The listing face.**\n   - `SchemaRegistry.attachBoundActions` (`packages/objectql/src/registry.ts:3516`) skips a bound action whose name the object already carries (`present.has(action.name)`, `:3527`), and logs nothing.\n   - The object's own declaration, with its own gate, is served. The other package's declaration is listed nowhere on the object.\n2. **The handler face** (pre-existing on `main` `31ce45c071`).\n   - `ObjectQL.registerAction` (`packages/objectql/src/engine.ts:5522`) keys handlers by `OBJECT:ACTION`.\n   - `this.actions.set` (`:5524`) overwrites with no diagnostic.\n   - The handler that runs is whichever package registered last, while the router's rung 1 serves the object's declaration.\n\nSo, for a same-name pair, the served declaration and the handler that runs can come from different packages, and registration order decides which.\n\n## The work\n\nOne PR on `packages/objectql`, after #24400 lands.\n\n- **Judge the collision at `kernel:ready`**, beside `findUnboundActionTargets`. When two packages' declarations of one object and name differ, either refuse, or at least warn naming both packages.\n  - First measure a sameness test: a composed stack can carry one declaration under two packages, so compare declaration equality minus stamps. Choose refuse or warn after that measurement.\n  - A refusal is a narrowing (`Clause-②: yes (narrowing)`). It must not hard-fail #24318's transition order, so agree the order with #24318's seat.\n- **Make the handler face agree.** The same check covers `registerAction`'s silent overwrite, or the PR says why it cannot.\n- **Rider: stale copies after withdrawal** (same population). Measure it first, and drop it if the served answer is right.\n  - After the binding package is uninstalled, a stored `sys_metadata` overlay written back from a served read may still carry the attached action's copy.\n  - The boot-bridged MetadataService copy is not re-bridged on withdrawal. This is the class of `subtractExtenderContributions` / `restoreExtendedObjectCopies`; compare closed #24182 for fields.\n  - Re-check:\n    1. Boot with a package that binds an action to `sys_organization`.\n    2. Save the object through the REST door.\n    3. Uninstall the binder.\n    4. Read `GET /api/v1/meta/object/sys_organization`.\n\n    If the action is still listed, fix it in this PR. If not, say so in the PR and drop it.\n- **Optional rider: an index.** `boundCodeActions()` (`registry.ts:3543`) walks every registered action on each uncached attach. An `objectName` index is in proportion if the PR is in that function anyway.\n\n**Reader who acts:** the `domain:engine` seat, in one PR. #24318's seat reads this card's outcome before it stages the `change_slug` move.\n\n## Grade\n\np2: a registration-time diagnostic and a handler-face agreement, with no `/meta` door answer changed. Triage may regrade.\n\n## Dedupe\n\nTwo semantic searches of this repository's issues:\n- \"bound action name collision two packages same object action handler overwrite registerAction silent\" returned 3 hits, all closed:\n  - #17923 is the dispatch-contract name disarm;\n  - #3935 is REST name-only resolution;\n  - #5510 is the lint per-object naming false positive.\n\n  None is this collision.\n- \"stored sys_metadata overlay keeps action copy after package uninstall MetadataService copy not re-bridged extender withdrawal\" returned 18 hits; the first 10 were read, all closed. The nearest is #24182, the same staleness class for an extender's fields, not for actions.\n\nDedupe words: bound action name collision two packages same object; action handler key collision OBJECT:ACTION overwrite; attached action stale overlay uninstall.\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_"

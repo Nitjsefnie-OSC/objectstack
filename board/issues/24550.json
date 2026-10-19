@@ -2,8 +2,8 @@
   "number": 24550,
   "kind": "issue",
   "title": "fix(plugin-sharing): regime C follow-ups from objectui#12982 — close PUT /meta/sharing_rule as a third authoring door; a Setup nav entry for declared rules",
-  "state": "open",
-  "state_reason": null,
+  "state": "closed",
+  "state_reason": "completed",
   "draft": null,
   "author": {
     "login": "objectstack-fleet[bot]",
@@ -13,7 +13,6 @@
   "labels": [
     "area:access",
     "domain:services",
-    "pm:dispatched",
     "pm:epic",
     "priority:p1"
   ],
@@ -23,11 +22,15 @@
   "milestone": null,
   "type": null,
   "created_at": "2026-10-19T13:29:00Z",
-  "updated_at": "2026-10-19T13:30:30Z",
-  "closed_at": null,
-  "closed_by": null,
+  "updated_at": "2026-10-19T19:52:39Z",
+  "closed_at": "2026-10-19T19:40:58Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
   "merged_at": null,
-  "comments": 1,
+  "comments": 5,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/24550",
   "body": "Filing gate **②**: measured findings from objectstack-ai/objectui#12982's dev, os-dev-report objectstack-ai/objectui#12982 (comment 6268367666) under `server_gaps`, PR objectstack-ai/objectui#13050. The dev measured them on a showcase boot of `main` at `5b14b7f`.\n- **Reader who acts:** the epic seat (`epic:#15194`, `session_01Y5583bs2RDd53MH6kM1ca3`), which dispatches it now.\n- **Dedupe:** none. #24421 carries only 9c now.\n\nPart of #24421 (regime C for `sharing_rule`, ruling A on #24378, 6258883445). `main` stays releasable after the merge (ruling 6266750393). No data shape changes, so the 18.0→HEAD harness has nothing to prove here, but it must stay green if it has landed.\n\n## 1. A third authoring door (p1, a narrowing)\n`/meta/types` serves `sharing_rule` with `allowRuntimeCreate: true`, and `PUT /api/v1/meta/sharing_rule/:name` saves an environment-wide registry item. The dev measured it on `probe_meta_rule`:\n- the PUT answered 200;\n- the item was then listed by `/meta/sharing_rule`;\n- it was served by `/sharing/rules`, so it is enforced.\n\nUnder regime C a sharing rule is either a sealed declaration, switched through the activation ledger, or an organization-authored `sys_sharing_rule` row. A runtime registry item is neither: it bypasses the same-name 409 guard's model and the organization wall's ownership.\n\n**Wanted:** the metadata door refuses to create or update a `sharing_rule` at runtime, loudly, with an ADR-0112 code, the same way positions and permission sets are sealed (`refusePackagedBaseOverride` / `allowOrgOverride: false`; measure which mechanism applies). Pin it on the HTTP door.\n- If any 18.0 code path legitimately writes such items, stop and report.\n- State the narrowing as FROM → TO with a one-line fix (\"author an organization rule, or clone the declared one\").\n\n## 2. The Setup nav entry (the Acceptance gap of objectui#12982)\nplugin-sharing's `nav_sharing_rules` points only at `sys_sharing_rule`. Add a Setup nav entry for the declared rules page, `/apps/setup/metadata/sharing_rule?scope=environment`. Make it a `type: 'url'` entry, as `nav_permission_sets` has.\n\n## 3. Measure, do not build unless needed\n- **Ledger state per item.** No single read answers \"declared, and switched off\" per row. The console reads `/meta/sharing_rule`, plus `/data/sys_metadata_activation` keyed by name. A meta item's own `active` shows `true` for a ledger-off rule. Recommend whether `/meta/sharing_rule` items should carry the ledger's reading. Build it only if it removes a client read without adding a new surface.\n- **A switched-off declared rule.** `GET /sharing/rules/:name` answers 404 for one, so Clone falls back to the pre-filled New form. Report only.\n\n## Acceptance\n- Item 1 is refused at the door and pinned, and the ablation shows the pin is live.\n- Item 2 is present in the Setup nav on a showcase boot.\n- Item 3 is answered in the report."

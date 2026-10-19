@@ -1,0 +1,32 @@
+{
+  "number": 24585,
+  "kind": "issue",
+  "title": "pm-dispatch: the pre-dispatch fast-forward keeps the shared checkout on the session branch, so the cloud stop hook reports main's commits as \"unpushed\" and asks the seat to push",
+  "state": "open",
+  "state_reason": null,
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "area:devpath",
+    "domain:skills",
+    "pm:queue",
+    "priority:p2",
+    "tooling"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-19T14:37:49Z",
+  "updated_at": "2026-10-19T15:01:03Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 1,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/24585",
+  "body": "Filing gate ③, a maintainer-directed task. The maintainer's word in `domain:cli` seat 1's session chat, verbatim: 「技能侧可选改法，立skills卡片」. It answers this seat's proposal in the same chat: let the seat keep the shared checkout detached at `origin/main` instead of on the session branch, so the stop hook skips it.\n\nFiled by `domain:cli` seat 1 (seat post #6024) · `zhuangjianguo` · session `session_01SYEJqDL3NXxrJRBVqaMu9T`. ⛔ Not a claim. Lane, grade and `area:*` are triage's. **Reader who acts:** the `domain:skills` seat, which owns `.claude/skills/pm-dispatch/**` (governed, Tier S).\n\n## What happens (measured in this session, 2026-10-18 to 2026-10-19)\n\n- The cloud environment's stop hook (`~/.claude/stop-hook-git-check.sh`, not in this repository) counts `git rev-list \"origin/$current_branch..HEAD\" --count` whenever `origin/<session branch>` resolves (its lines 39–40 and its final block).\n- The environment creates that ref locally at session start. Here `origin/claude/keen-feynman-9b3kh4` was written 2026-10-18 06:33 at `a422f04fe`, and `git ls-remote origin refs/heads/claude/keen-feynman-9b3kh4` answers nothing: the branch was never pushed.\n- `references/dispatch-runbook.md:140` has the seat run `git -C <repo-root> pull --ff-only origin main` before each subagent batch. The shared checkout sits on the session branch, so every fast-forward moves HEAD along `main` while the stale ref stays put.\n- The result: the hook reported 98, then 103, 122 and 136 \"unpushed commit(s)\" at successive stops and asked for a push. At every reading, `git rev-list --count HEAD ^origin/main` was 0: every commit was already on `main`.\n- The cost: a push prompt after almost every turn, which the seat declines in chat each time. A seat that obeyed would publish a remote branch identical to `main`, and the environment then asks for a draft PR with a zero diff.\n\n## The option the maintainer asked to be carded\n\nReplace the fast-forward of the session branch with a detached checkout of `main`:\n- `git -C <repo-root> fetch origin main && git -C <repo-root> checkout --detach origin/main`\n- `--detach` still refuses to overwrite local changes, so a dirty checkout still fails loudly, which is the property `:141` asks of `--ff-only`.\n- The hook reads `git branch --show-current`. It is empty on a detached HEAD, so the hook skips its branch block.\n- Dev worktrees are created from `origin/main` with `git worktree add`, so they are unaffected.\n\n**For the implementer to measure, not assumed here:**\n- Every reader of the shared checkout's branch name, for example `scripts/pm/check-harness-current.mjs` and anything that runs `git rev-parse --abbrev-ref HEAD` there. `scripts/pm/os-regen-merge.sh` (`:729`, `:891`) reads it only in a dev worktree.\n- Whether a fast-forward elsewhere in the skill or `os-dev.md` assumes a branch.\n- That a seat session's stop hook stays silent across several dispatch rounds.\n\n## Constraints\n\n- `check:pm-skill-ratchet`: `SKILL.md`'s line count only falls. The change belongs in `references/dispatch-runbook.md`, where the rule lives.\n- `check:pm-skill-id-lint`: no issue numbers in the skill text.\n- Tier S (`.claude/**`): an at-tier review before ready.\n\n## Not in this card\n\n- The hook's own counting. `HEAD --not --remotes` would answer 0 here, and the script already uses that form in its signing block. It belongs to the Claude Code cloud environment, not this repository, and is reported upstream by the maintainer if wanted.\n- Deleting the stale local ref by hand, which is a per-session workaround.\n\n## Dedupe\n\n- MCP `search_issues` \"stop hook unpushed commits PM seat shared checkout pull ff-only main session branch\": 22 hits, all seat posts or unrelated cards (#22052, which is about the update-branch relay op). None names the stop hook.\n- \"pm-dispatch shared checkout detached HEAD origin/main instead of session branch\": 22 hits, with no card on the checkout's branch (#20154 concurrency, #20048 the ccr flip, #16372 stale SHAs).\n- The control query reaches the pm-dispatch family (#20154, #20048).\n- Dedupe words: stop hook unpushed; shared checkout detached; dispatch-runbook ff-only session branch.\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_"
+}

@@ -2,8 +2,8 @@
   "number": 24546,
   "kind": "issue",
   "title": "Flow resume answers 200 and silently drops `variables` when the body also carries `inputs`",
-  "state": "open",
-  "state_reason": null,
+  "state": "closed",
+  "state_reason": "completed",
   "draft": null,
   "author": {
     "login": "objectstack-fleet[bot]",
@@ -14,18 +14,23 @@
     "area:workflow",
     "bug",
     "domain:cli",
-    "pm:queue",
     "priority:p2"
   ],
-  "assignees": [],
+  "assignees": [
+    "zhuangjianguo"
+  ],
   "milestone": null,
   "type": null,
   "created_at": "2026-10-19T13:27:02Z",
-  "updated_at": "2026-10-19T14:12:43Z",
-  "closed_at": null,
-  "closed_by": null,
+  "updated_at": "2026-10-19T17:06:59Z",
+  "closed_at": "2026-10-19T17:05:12Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
   "merged_at": null,
-  "comments": 1,
+  "comments": 5,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/24546",
   "body": "Filing gate: ① product defect — reproduced through a public HTTP door, landing file named.\nPath: automation.trigger-status-contract (checklist item priority P1; found while driving its steps[5], outside its clauses — no clause failed)\nQA-source: #24545 · automation.trigger-status-contract · steps[5] (incidental, outside clauses)\nType: Bug — violates the resume route's own declared closed-set / no-silent-drop contract.\nReader: the `domain:cli` lane seat (owner of `packages/runtime`) — first step is the resume arm of `packages/runtime/src/domains/automation.ts` (~3197–3262).\nDuplicate check (open AND closed): \"flow resume body both inputs and variables, variables silently ignored\" → 3 hits (#22642, #7639, #3853 — none match; #3853 is a different, closed resume-body hole) · \"resume route variables alias inputs precedence dropped\" → 1 hit (#3853, no match) · \"resume body closed set unknown key inputs variables output branchLabel\" → 0 hits.\nreach: `POST /api/v1/automation/showcase_reassign_wizard/runs/RUN/resume` with both `inputs` and `variables` (the latter carrying an unknown screen field) → 200 `success:true`; the `variables` bag is never read. Measured on stock showcase at 5b14b7f3.\n\n## What happens\n\nThe resume route accepts `inputs`, `variables`, `output` and `branchLabel` as a closed key set and type-checks each. When a body carries BOTH `inputs` and `variables`, the assembly reads `b.inputs ?? b.variables`, so `variables` is discarded without a word: the call answers 200 and the run completes, even when `variables` holds a field the screen does not declare. Sent alone, the same `variables` bag is judged (and refused) normally — so this is not a dead alias, it is a live key dropped only in combination.\n\n## Reproduction (stock showcase, framework 5b14b7f3)\n\n1. Boot showcase (`objectstack dev --seed-admin`), sign in `admin@objectos.ai` / `admin123` (`POST /api/v1/auth/sign-in/email`).\n2. `GET /api/v1/data/showcase_task?limit=1&fields=id,assignee` → task id T.\n3. `POST /api/v1/automation/showcase_reassign_wizard/trigger` body `{\"recordId\":\"T\",\"objectName\":\"showcase_task\"}` → 200 `status:\"paused\"`, runId R, screen `collect` with required field `new_assignee`.\n4. `POST /api/v1/automation/showcase_reassign_wizard/runs/R/resume` body `{\"inputs\":{\"new_assignee\":\"inputs-win@example.com\"},\"variables\":{\"new_assignee\":\"variables-lost@example.com\",\"bogus_key\":1}}`.\n   - Expected: a 400 refusal naming the conflicting keys (or, at minimum, the `variables` bag judged — which alone yields 400 INVALID_SCREEN_INPUT for `bogus_key`).\n   - Actual: 200 `success:true`; the run completes; `GET /api/v1/data/showcase_task/T` shows `assignee: \"inputs-win@example.com\"`.\n5. Controls (fresh paused runs): `{\"variables\":{\"new_assignee\":\"v@example.com\",\"bogus_key\":1}}` → 400 INVALID_SCREEN_INPUT `Unknown screen field \"bogus_key\"`; `{\"variables\":{\"new_assignee\":\"variables-only@example.com\"}}` → 200 and the value is written.\n\n## Contract\n\n- `packages/runtime/src/domains/automation.ts:3135` — `variables` is in the accepted resume key set and is type-checked (~3231).\n- `automation.ts:3152-3163` (closed-set note, commit a4331227b) and `:3197-3203` (value-shape note): the route states that silently dropping a submitted value while answering 200 is the defect family it closes.\n- No published schema declares the resume body; the client SDK names only `inputs` / `output` / `branchLabel`, and `variables` is an undocumented accepted alias. The MCP `resume_run` door builds the signal from one source only, so it is not affected.\n\n## Mechanism and fix landing\n\n- `packages/runtime/src/domains/automation.ts:3259` — `const inputs = (b.inputs ?? b.variables);`\n- Fix: refuse a body carrying both `inputs` and `variables` with the route's 400 validation-failure envelope (or merge and refuse on conflict) before `resume()`; pin it beside the existing closed-set / value-shape tests in `packages/runtime`.\n- Severity hint: low — a caller has to send both keys; no data outside the caller's own run is affected.\n"

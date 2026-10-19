@@ -1,0 +1,31 @@
+{
+  "number": 24580,
+  "kind": "issue",
+  "title": "feat(objectql,cli)!: 18.x step 4: the walled lift (8b walled half plus the walled part of #24489)",
+  "state": "open",
+  "state_reason": null,
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "domain:engine",
+    "pm:blocked",
+    "pm:epic",
+    "priority:p1"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-19T14:28:49Z",
+  "updated_at": "2026-10-19T16:01:21Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 2,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/24580",
+  "body": "Filing gate **③**: a task the maintainer directed. It is a step of the 18.x line, under ruling records 6266750393 and 6267391172 on #15194. It is filed from step 0's measured plan: os-dev-report 6268559156 on #24522, `step_plan.steps[3]`, plus its `line_facts` F1–F6 and `flags`.\n- **Reader who acts:** the epic seat (`epic:#15194`, `session_01Y5583bs2RDd53MH6kM1ca3`).\n- **Dedupe:** none.\n\nPart of #15212 (C8) and #24489 (the 18.0-guards restore) · **Step 4: the walled lift** · ⛔ Not an 18.0 gate.\n\n## The line's rule (binding)\nOnce merged, `main` stays releasable:\n- **R1.** A fresh install boots.\n- **R2.** #24522's 18.0→HEAD harness is green.\n- **R3.** A v17 database is refused until step 6.\n- **R4.** A walled posture is refused at boot until step 4.\n\n**Ordering:** after steps 1–3 (#24529, #24530, #24531) have all merged.\n\n## Scope (from the measured plan; re-measure before building)\n- **8b's walled half.** Lift the platform-object exemption under `group` / `isolated` (`engine.ts` about :7251, one condition, plus its docblocks). `PLATFORM_OBJECT_TENANCY` keeps its every-posture reader, the `bypassTenantAudit` mute; only the walled reader retires.\n- **#24489, items 2 and 3.** Delete `walledPostureRefusal` (`serve.ts`) and its test, and restore the seven walled e2e cases from the parent of #24480's squash. Also remove the 18.0 walled docs sentences and C11's walled riders: `WALLED_POSTURE_RELEASE_NOTE`, `walledPostureFinding`.\n- **R4 is restated:** from this step on, a walled `os serve` boots.\n- **Recorded for step 5:** walled 18.0 databases that exist anyway (embedded hosts were never refused) go through the ceremony's attribution and report fates.\n- Expect fallout in walled test rigs (step_plan: up to 164 walled-posture test files). Fix fixtures, not assertions.\n\nNot dispatched yet. The seat claims it when its ordering is met."
+}

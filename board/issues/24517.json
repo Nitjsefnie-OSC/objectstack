@@ -2,8 +2,8 @@
   "number": 24517,
   "kind": "issue",
   "title": "pm-dispatch lanes/hotcrm.md:8 and :33 still forbid the repo:hotcrm seat to grade and point at a dead \"SKILL.md 多仓协调规则 4\": align them with the single-lane rule, as ruled on hotcrm#2178 (A)",
-  "state": "open",
-  "state_reason": null,
+  "state": "closed",
+  "state_reason": "completed",
   "draft": null,
   "author": {
     "login": "objectstack-fleet[bot]",
@@ -23,9 +23,13 @@
   "milestone": null,
   "type": null,
   "created_at": "2026-10-19T10:34:02Z",
-  "updated_at": "2026-10-19T11:42:25Z",
-  "closed_at": null,
-  "closed_by": null,
+  "updated_at": "2026-10-19T14:45:19Z",
+  "closed_at": "2026-10-19T14:45:19Z",
+  "closed_by": {
+    "login": "os-zhuang",
+    "id": 277994282,
+    "type": "User"
+  },
   "merged_at": null,
   "comments": 3,
   "locked": false,

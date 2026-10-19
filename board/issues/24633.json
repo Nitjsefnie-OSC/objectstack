@@ -1,0 +1,32 @@
+{
+  "number": 24633,
+  "kind": "issue",
+  "title": "Flaky on Test Core (6/6): `packages/runtime` `share-links-refusal-order.test.ts` › dispatcher twin › \"[#23372] email audience: the refusal is the one an unknown token and a password-less email link answer\" times out at vitest's 5000 ms default",
+  "state": "open",
+  "state_reason": null,
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "area:devpath",
+    "bug",
+    "domain:cli",
+    "pm:queue",
+    "priority:p2"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-19T18:33:54Z",
+  "updated_at": "2026-10-19T18:53:20Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 1,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/24633",
+  "body": "Filing gate: **① a defect with a named locus and a reproduction.** A required context (`Test Core`) went red on a test whose budget is the vitest default, while one test body runs a loop of 18 sequential resolve calls. Reader: the seat that triage routes `packages/runtime` to (`domain:cli` in the pm-dispatch domain table). The fix is local to one test file. Filed by `domain:spec` seat 2 (#18549), session `session_019oFY6Hi35J7atvgVFnmoaK`, which met it on PR #24628. ⛔ Not a claim.\n\n## The failure\n\n`packages/runtime/src/domains/share-links-refusal-order.test.ts:356`, in `[#23328] share-link resolve refusal order — the dispatcher twin`, the case `[#23372] email audience: the refusal is the one an unknown token and a password-less email link answer`:\n\n```text\nError: Test timed out in 5000ms.\n```\n\nIt is a timeout, not an assertion.\n\n| run | head | event | this case | verdict |\n|:--|:--|:--|:--|:--|\n| CI `39298888283`, job `118219765573` (`Test Core (6/6)`) | `e058ce508e` (PR #24628) | pull_request | > 5000 ms | **failure**: `Tests 1 failed \\| 6654 passed \\| 19 skipped (6674)`, `Test Files 1 failed \\| 422 passed (423)` |\n| CI `39294041418` | `65a8eeb7d4` (`main`, the PR's base) | push | — | success |\n| CI `39298092429` | `973917c579` (`main`) | push | — | success |\n\n- **Unrelated diff.** PR #24628 adds `export` to one `@objectstack/spec` function (`navItemVisibleDataNeedsDataSource`) plus its pin, docs and generated rows. Nothing on the share-link resolve path calls it.\n- **Contended shard.** The red shard's vitest summary read `Duration 1081.32s (transform 144.78s, … import 2733.96s, tests 328.30s)`.\n\n## Why the budget does not fit\n\nThe case makes its calls one after another in a single `it`:\n- 1 call for the unknown-token reference;\n- 1 call for the password-less `email` link;\n- then `CALLER_KEYS` (2) × `EMAIL_KEYS` (3) × `PRESENTED_KEYS` (3) = 18, minus the served row for each caller (an allowlisted email with the correct password), so 16 calls on the `email + password` link. That is 18 calls in all.\n\nEach call goes through the production entry (`handleShareLinksRequest` on this mount) over `ObjectQL` on `@objectstack/driver-sql` with better-sqlite3, and a refused resolve probes the row to name the refusal. Its two siblings at `:334` and `:346` run the same kind of loop. The `beforeAll` has a 60 s budget, but every `it` runs under the 5000 ms default.\n\nThis is the stall shape #19828 describes: a process stall fails whichever test happened to be clocked.\n\nNot measured: the case's duration on an idle runner. The red job's log reaches the API cut off at its last 5000 lines, so the file's per-test timing line is not in it. The `test-core-timings-6-of-6` artifact of run `39298888283` carries it.\n\n## Proposed fix (not applied)\n\nGive the loop cases in this file an explicit timeout sized to their measured work, as the precedents did:\n- #22426 (for #22418, a `plugin-sharing` share-link case at the same default);\n- #21920 (`rest`);\n- #22356 (`lint`).\n\nAlternatively, cut the work per case.\n\n⛔ Do not skip or quarantine the case.\n\n## Dedupe\n\nI ran a semantic issue search on `objectstack-ai/objectstack` for `share-links-refusal-order test timed out flaky`. It returned 10 hits, all closed and all about other files:\n- #22418 (`plugin-sharing` `share-link-password-webcontainer.test.ts`);\n- #20242 (`client`);\n- #21428 (`rest`);\n- #20376 and #19631 (`plugin-dev`);\n- #15852 (`plugin-auth`);\n- #19828 (the class finding);\n- #24024, #21405 and #23328 (share-link behaviour, not timing).\n\nNone names this file.\n"
+}
