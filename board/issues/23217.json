@@ -2,8 +2,8 @@
   "number": 23217,
   "kind": "issue",
   "title": "runtime: one internal request-to-ExecutionContext resolver for the platform's five hand-rolled copies (rest, runtime, service-settings, service-storage, plugin-hono-server) — not a published export (ruling C′ on #23128, p3)",
-  "state": "open",
-  "state_reason": null,
+  "state": "closed",
+  "state_reason": "completed",
   "draft": null,
   "author": {
     "login": "objectstack-fleet[bot]",
@@ -12,7 +12,6 @@
   },
   "labels": [
     "domain:cli",
-    "pm:dispatched",
     "priority:p3",
     "tooling"
   ],
@@ -22,12 +21,16 @@
   "milestone": null,
   "type": null,
   "created_at": "2026-10-13T09:16:11Z",
-  "updated_at": "2026-10-19T01:45:53Z",
-  "closed_at": null,
-  "closed_by": null,
+  "updated_at": "2026-10-19T04:00:34Z",
+  "closed_at": "2026-10-19T03:58:59Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
   "merged_at": null,
-  "comments": 30,
+  "comments": 33,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/23217",
-  "body": "Ruled: 6257816853 · slice 5 letter A · item 3 letter (i) · 2026-10-19T01:38Z\n\nRuled: 6227928430 · letter A on #23982 (batch #358 item 1) · home amended to `@objectstack/core` · 2026-10-17T01:27Z\n\nFiled by the director seat (summon #37, `session_01LqNgdPZB2Jnr5HpGbaqLeB`) on the maintainer's ruling C′ on #23128 (「同意」, recorded at 6142279866) under 「立卡你决定，不需要我同意」. ⛔ Not a claim. Filing gate ①: a measured duplication with named sites. Priority p3: housekeeping inside the platform; nothing user-visible changes and #23128 does not wait for it.\n\n## What is measured (#23128's dev, on `dc93781c19`)\nFive platform doors each hand-roll the same request-to-context composition (`resolveAuthzContext` + `classifyAdmissionTenancyPosture` + `assembleExecutionContext` / `assembleExecutionContextOrGuest` + a session read): `packages/rest/src/rest-server.ts:3060`, `packages/runtime/src/security/resolve-execution-context.ts:150`, `packages/service-settings/.../settings-service-plugin.ts:285`, `packages/service-storage/.../storage-service-plugin.ts:862` and `:1247`, `packages/plugins/plugin-hono-server/src/current-user-endpoints.ts:443`. Each copy was fixed separately when an input was omitted (the tenancy posture: #15351, #15352; the in-process session read: #22258; a six-field omission: #15747).\n\n## What to build (one PR, or one per door after the first)\n1. One function in `@objectstack/core`, exported from its `.` entry beside `classifyAdmissionTenancyPosture` (`Clause-②: yes (widening)`, `minor` on `@objectstack/core`; the home amended by the ruling on #23982, batch #358 item 1 — the runtime home C′ named is unreachable from four of the five doors; later slices `Clause-②: no`) that takes the pieces a door holds (the request's headers or the Hono context, the auth service, the ObjectQL engine) and returns the ExecutionContext, with the two choices made once and documented: the anonymous entry (fail-closed `assembleExecutionContext` unless the door's product semantics say guest) and the ADR-0069 auth gate.\n2. The five doors call it; each conversion is proven by that door's existing pins (no new behaviour; a door that intentionally differs keeps its difference as a named parameter, never a copy).\n3. ⛔ No new published export, no change to any door's outward behaviour, no app-author surface (ruling C′: code-mounted app routes are retired, so no app needs this).\n\n## Acceptance\n- `git grep -c` of the composition's distinctive lines over the five files reads 0 outside the shared function. The hono `/auth/me` door reaches 0 copies and adopts the composition's reading (ruling `6257816853` item 1). One exception: storage's ADR-0069 gate reader (`buildAuthGateSessionReader`) stays a hand-written door fact beside the one composition, as a copy under #24366's parity pin (`d8e11b58e7`, PR #24388; ruling `6257816853` item 3 (i)). Every door's pins are green; the ADR-0096 principal-less refusal and the ADR-0069 gate read the same on each door before and after (a pin per door).\n\nRelated: #23128 (ruling C′, dev report 6138940364) · #15747 · #15351 · #15352 · #22258 · ADR-0096 · ADR-0069."
+  "body": "Ruled: 6257816853 · slice 5 letter A · item 3 letter (i) · 2026-10-19T01:38Z\n\nRuled: 6227928430 · letter A on #23982 (batch #358 item 1) · home amended to `@objectstack/core` · 2026-10-17T01:27Z\n\nFiled by the director seat (summon #37, `session_01LqNgdPZB2Jnr5HpGbaqLeB`) on the maintainer's ruling C′ on #23128 (「同意」, recorded at 6142279866) under 「立卡你决定，不需要我同意」. ⛔ Not a claim. Filing gate ①: a measured duplication with named sites. Priority p3: housekeeping inside the platform; nothing user-visible changes and #23128 does not wait for it.\n\n## What is measured (#23128's dev, on `dc93781c19`)\nFive platform doors each hand-roll the same request-to-context composition (`resolveAuthzContext` + `classifyAdmissionTenancyPosture` + `assembleExecutionContext` / `assembleExecutionContextOrGuest` + a session read): `packages/rest/src/rest-server.ts:3060`, `packages/runtime/src/security/resolve-execution-context.ts:150`, `packages/service-settings/.../settings-service-plugin.ts:285`, `packages/service-storage/.../storage-service-plugin.ts:862` and `:1247`, `packages/plugins/plugin-hono-server/src/current-user-endpoints.ts:443`. Each copy was fixed separately when an input was omitted (the tenancy posture: #15351, #15352; the in-process session read: #22258; a six-field omission: #15747).\n\n## What to build (one PR, or one per door after the first)\n1. One function in `@objectstack/core`, exported from its `.` entry beside `classifyAdmissionTenancyPosture` (`Clause-②: yes (widening)`, `minor` on `@objectstack/core`; the home amended by the ruling on #23982, batch #358 item 1 — the runtime home C′ named is unreachable from four of the five doors; later slices `Clause-②: no`) that takes the pieces a door holds (the request's headers or the Hono context, the auth service, the ObjectQL engine) and returns the ExecutionContext, with the two choices made once and documented: the anonymous entry (fail-closed `assembleExecutionContext` unless the door's product semantics say guest) and the ADR-0069 auth gate.\n2. The five doors call it; each conversion is proven by that door's existing pins (no new behaviour; a door that intentionally differs keeps its difference as a named parameter, never a copy).\n3. ⛔ No new published export, no change to any door's outward behaviour, no app-author surface (ruling C′: code-mounted app routes are retired, so no app needs this).\n\n## Acceptance\n- `git grep -c` of the composition's distinctive lines over the five files reads 0 outside the shared function. The hono `/auth/me` door reaches 0 copies and adopts the composition's reading (ruling `6257816853` item 1). One exception: storage's ADR-0069 gate reader (`buildAuthGateSessionReader`) stays a hand-written door fact beside the one composition, as a copy under #24366's parity pin (`d8e11b58e7`, PR #24388; ruling `6257816853` item 3 (i)). Its three grep hits (`resolveApiKeyAdmission(`, `classifyAdmissionTenancyPosture(`, and `inProcessSessionReadInput(` in the shared `buildGetSession`) are that reader family. One more hit reads outside the line's subject: settings' `resolveAdmissionTenancyPosture` calls `classifyAdmissionTenancyPosture(` to feed the settings SERVICE's own `tenancyPosture` option, not a request-to-context composition. It was measured and kept in slice 3 (PR #24297's body) and noted by the seat at slice 5's review. Every door's pins are green; the ADR-0096 principal-less refusal and the ADR-0069 gate read the same on each door before and after (a pin per door).\n\nRelated: #23128 (ruling C′, dev report 6138940364) · #15747 · #15351 · #15352 · #22258 · ADR-0096 · ADR-0069."
 }

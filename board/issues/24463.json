@@ -1,0 +1,35 @@
+{
+  "number": 24463,
+  "kind": "pull_request",
+  "title": "docs(qa): re-point the platform-owner-email item's legacy-grant anchor at grantAnchorsPlatformStanding",
+  "state": "closed",
+  "state_reason": null,
+  "draft": false,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "size/xs",
+    "skip-changeset"
+  ],
+  "assignees": [
+    "os-warren"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-19T04:59:09Z",
+  "updated_at": "2026-10-19T05:27:45Z",
+  "closed_at": "2026-10-19T05:27:43Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": "2026-10-19T05:27:43Z",
+  "comments": 1,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/pull/24463",
+  "body": "Fixes #24438\nClause-②: no\n\n## What\n\n`pnpm check:platform-checklist` is red on `main` with one problem: `areas/access-security.json` cites `packages/core/src/security/resolve-authz-context.ts#legacyGrantAnchorRetired`, and that file no longer declares the symbol. This PR changes that one citation, in `source[2]` of item `access-security.platform-owner-email-anchor`, to `#grantAnchorsPlatformStanding`.\n\nNothing else changes: not the prose beside the citation, not any clause, step, fixture or oracle, not `scripts/symbol-anchors.mjs`, not the anchor baseline. Diff: 1 file, +1 / -1.\n\n## Where the symbol went\n\n`b2e78701f7` (PR #24373) deleted the local flag `const legacyGrantAnchorRetired = postureEnforcesWall(resolveTenancyPosture())` from `resolveUserAuthzGrants`. It added a module-level predicate, `grantAnchorsPlatformStanding(grant, { walled, defaultOrganizationId })`. §6b now asks it of every `admin_full_access` grant:\n\n- walled posture: it returns false, so no grant anchors standing;\n- `single`: the organization-less grant anchors, and so does the Default Organization's grant.\n\nThe citation's parenthetical reads \"the unscoped admin_full_access row derives PLATFORM_ADMIN only when the requested posture enforces no wall\". That is still true, and the predicate is now where it is decided: `if (anchor.walled) return false;`, then `organizationId === null || …`. The requested posture is still read by `postureEnforcesWall(resolveTenancyPosture())`, now held in `walled`. So this is a re-point: the behaviour the citation describes did not move.\n\n## Verification\n\n- Base `725a5b131` (`origin/main`): `node scripts/check-platform-checklist.mjs` exits 1 with `check-platform-checklist: 1 problem(s)`. That one problem is the ABSENT SYMBOL line the card quotes.\n- Head `0c177741b`: `pnpm check:platform-checklist` exits 0, self-tests included. Verdict: `check-platform-checklist: OK — 16 areas, 327 items (322 active, 1 planned); … symbol anchors: 855/865 resolved by symbol-anchors.mjs … 18 file floors held`.\n- `node scripts/pm/dispatch-gates.mjs --commands` on this diff derives 13 commands. All 13 exit 0 at `0c177741b`: `check-ci-filter-parity`, `check-closing-keyword-parity` (and its `--self-test`), `check-comment-mask-corpus`, `check:doc-formula-expressions` (lint), `check:cross-package-test-inputs`, `check:doc-authoring`, `check:driver-memory-census`, `check:gitlink-declared`, `check:nul-bytes`, `check:platform-checklist`, `check:refd-timer-probe`, `check:watch-hint-literal`.\n- `--ran` reconciliation: \"13 derived famil(ies) accounted for — 13 run, 0 NOT-MEASURED (a DERIVED zero — all 13 recorded an exit code and none of them is 3)\".\n- `check:doc-formula-expressions` first exited 3 (PREREQUISITE NOT MET, because lint and formula were not built). That is not a measurement. After `turbo run build --filter=@objectstack/formula --filter=@objectstack/lint` it exited 0.\n- No ablation: the diff changes QA-ledger data, not tested behaviour. The base-red and head-green runs above are the before and after.\n- No package is touched, so no build closure, package test or typecheck is owed. CI families are read from this PR's check-runs.\n- Changeset: `docs/qa/**` publishes nothing, so the PR carries `skip-changeset`.\n\n## Acceptance notes\n\n- **The revision is not bumped (it stays 3).** The checklist README bumps `revision` \"on any semantic edit\". This edit changes no step, clause, verify or oracle, so a run record pinned to revision 3 still reads the same item.\n  - Precedent is split. Five code PRs re-pointed a `source` anchor in place with no bump: `52ff308b8`, `646303eae`, `df000d4b2`, `bb7ccde66`, `6868514b1`. Two docs(qa) PRs bumped: `6792be6ab`, and `52c04b360`, which edited a `verify` field.\n  - The card's line budget is one line. If a bump is wanted, the follow-up is about six lines: revision 4 plus one `history` entry.\n- **The item's own re-author trigger has fired. This is an open question for the access lane, and this PR does not act on it.**\n  - Clause 6's verify ends: \"The single half's own fate is #11979's (Choice 4B): if that lands, this clause is re-authored, not read as a regression\". PR #24373 landed #11979 at 2026-10-18T19:15Z (state reason `completed`).\n  - The first-user promotion now writes its `admin_full_access` grant with `organization_id` set to the Default Organization (`packages/plugins/plugin-security/src/bootstrap-platform-admin.ts`). The PR's fresh-boot golden moved its grant owner from `null` to `org_default`.\n  - So on the fresh `single` boot this item runs, the seeded admin holds the Default Organization's grant, not the organization-less row. Four phrases describe the older boot:\n    - `personas[0]`: \"it is grant-anchored via the unscoped admin_full_access row that first-registrant promotion writes\";\n    - `fixtures.knownGaps[0]`: \"also holds the unscoped admin_full_access grant under single\";\n    - `acceptance[0]`: \"under single the ADR-0068 D2 unscoped-grant anchor stays the only door\";\n    - `acceptance[5]`: \"(clauses 1 and 3 observe it live)\".\n  - Every verdict still holds: M is refused, the admin gets its 200, the organization-less row confers nothing under a wall, and the config anchor still confers.\n  - The legacy-row half of clause 6 is still pinned, by the describe '[#11663 L5] the legacy grant row is an anchor under `single`, and NOWHERE else'. The new half is pinned by '[ADR-0131 D5] under `single` the Default Organization's admin_full_access grant is the anchor', in the same test file. The item cites that describe nowhere.\n  - As the dispatch instructs, this PR does not reword the clause. The question, its options and the evidence are in the report on the card.\n\n---\n_Generated by [Claude Code](https://claude.ai/code/session_01FM29ZqLTrnPNXxijioZwMp)_\n"
+}

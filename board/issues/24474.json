@@ -1,0 +1,37 @@
+{
+  "number": 24474,
+  "kind": "pull_request",
+  "title": "fix(lint): the translation-reference rules judge a locale pack's picklists face",
+  "state": "closed",
+  "state_reason": null,
+  "draft": false,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "documentation",
+    "size/m",
+    "tests",
+    "tooling"
+  ],
+  "assignees": [
+    "baozhoutao"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-19T06:09:45Z",
+  "updated_at": "2026-10-19T07:10:48Z",
+  "closed_at": "2026-10-19T07:10:46Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": "2026-10-19T07:10:46Z",
+  "comments": 2,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/pull/24474",
+  "body": "Fixes #23566\n\nClause-②: no\n\n## What changed\n\n`packages/lint/src/validate-translation-references.ts` now reads a locale pack's `picklists` face. Until now nothing read it, so a wrong key passed `os lint --strict` and was dropped silently at runtime. Two rules already covered the same mistakes elsewhere, and this change extends both of them to the new face. No rule id is added, and each finding carries the severity of its field-level twin (the triage ruling: \"the two existing rules … extend to the picklist face, at their field-level twins' severity. No new rule id.\"):\n\n| key | verdict | severity |\n|---|---|---|\n| `picklists.NAME` naming a list that no package in the stack declares | `translation-target-unknown`, with \"Did you mean\" from the declared list names; fix line: \"Match the key to a picklist's `name`, or drop it.\" | error (same as the field orphan) |\n| `picklists.NAME.options.KEY` where KEY is not a value of that list | `translation-option-key-unknown`, with the field twin's two arms: a key spelled as the DISPLAY LABEL is told the value to rename it to, and any other key gets the nearest declared value | warning (same as a field option key) |\n\n**What a key resolves against.** The rule uses the same set the runtime uses. `lookupPicklistOption` (`@objectstack/spec/system`) is called with the list's name and each served option's value read as text. For a picklist-bound field, the served options are the list's own `options` plus every `picklistExtensions` entry for it (`PicklistServedFieldSchema`). So the universe is the declaration's options together with the options every extension adds. Lists and extensions are read from the stack in hand and from every `packages[].manifest` body. Both keys have the `concat` disposition, which places them inside the ADR-0130 D4 assembled body, the same reasoning the other sibling-package folds use. When both the stack and a sibling declare a list, the declaration being judged keeps the slot (the dashboards' decision). Extensions are a union.\n\n**What is not judged.** If the stack only *extends* a list and no package of the stack declares it, the `picklists.NAME` subtree is skipped wholly. The owner's options cannot be seen from here. This is rung 2b of the object ladder (`objectExtensions`) applied to a list.\n\n`os explain translation-target-unknown` and `os explain translation-option-key-unknown` (`rule-explanations.ts`) now name the face, and the module header documents it.\n\n## Deviation from the field twin (one, deliberate)\n\nThe field twin's option-key fix line ends with \"Declared values: …\". The picklist fix line does not. It stays one line of at most 200 characters, the shape #22161 settled on, and the verdict's \"Did you mean\" names the nearest value. The field twin's hint is unchanged.\n\n## Tests (at head `d237990699`, after merging `origin/main` `26501ae24f`)\n\n- New describe block `the picklist face (#23566)` in `validate-translation-references.test.ts`, one pin per leg:\n  - Leg A: `….picklists.salutation.options.mister`, `translation-option-key-unknown`, warning. The test asserts the same rule and severity on the field twin.\n  - Leg B: `….picklists.not_a_list`, `translation-target-unknown`, error. The near-miss `salutaton` gets `Did you mean \"salutation\"?`. The test asserts the field twin's orphan severity.\n  - Also covered: the display-label arm; a lit control; a value an extension adds (accepted) next to one nobody adds (refused); a list and an extension that live in a sibling package; and the extended-only skip.\n  - The new message and fix arms are added to the #22161 one-line-verdict and one-line-fix rosters and to the `os explain` fact pins.\n- `pnpm --filter @objectstack/lint test`: 145 files and 6871 tests passed, lock VERDICT command-exit 0. `pnpm --filter @objectstack/lint typecheck`: VERDICT command-exit 0.\n- `pnpm --filter @objectstack/spec test:repo`: 69 files and 1134 tests passed, VERDICT command-exit 0.\n- `node scripts/pm/dispatch-gates.mjs --commands --repo objectstack-ai/objectstack` derived 64 commands, and I ran all of them. Reconciled with `--ran` (each line `CMD :: exit N`): 62 exit 0 and 2 NOT MEASURED. `check:dual-build-cjs-loads` and `check:lean-entry-closure` exited 3 with PREREQUISITE NOT MET, because they need a whole-workspace `pnpm build` that I did not run locally. CI builds the full tree for them.\n- Consumer sweep: no example in this repository declares or translates `picklists` (`git grep -n picklists -- examples` returns 0 hits), so no shipped stack starts failing. HotCRM keeps its local guard until this ships (see the card's consumer note).\n\n## Acceptance notes\n\n- `content/docs/protocol/kernel/i18n-standard.mdx`: the table of resolvable keys has no `picklists.{list}` / `picklists.{list}.options.{value}` rows. The file is outside this card's claimed surface, so it is left for a docs follow-up. Carrier: none named.\n- Boundary: suppose a field references a list (`picklist: NAME`) owned by a dependency outside the artifact. A `picklists.NAME` translation key for that list is reported as `translation-target-unknown`. This matches the object twin's verdict for an object contributed by another installed package. It does not match the CLI's `picklist-reference-unverified` notice for the reference itself.\n\n---\n_Generated by [Claude Code](https://claude.ai/code/session_01D6F9axfoPzR7t8G1J7Ytzz)_\n"
+}

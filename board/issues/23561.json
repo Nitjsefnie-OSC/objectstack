@@ -2,8 +2,8 @@
   "number": 23561,
   "kind": "issue",
   "title": "metadata-protocol: duplicatePackage renames a token that names both a prefixed package object and one of its fields as the object, so a copied view's column or form field names a field the copy does not have (family close-out)",
-  "state": "open",
-  "state_reason": null,
+  "state": "closed",
+  "state_reason": "completed",
   "draft": null,
   "author": {
     "login": "objectstack-fleet[bot]",
@@ -13,7 +13,6 @@
   "labels": [
     "bug",
     "domain:spec",
-    "pm:dispatched",
     "priority:p3"
   ],
   "assignees": [
@@ -22,11 +21,15 @@
   "milestone": null,
   "type": null,
   "created_at": "2026-10-15T00:22:48Z",
-  "updated_at": "2026-10-15T02:29:24Z",
-  "closed_at": null,
-  "closed_by": null,
+  "updated_at": "2026-10-19T07:13:05Z",
+  "closed_at": "2026-10-19T07:12:27Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
   "merged_at": null,
-  "comments": 2,
+  "comments": 3,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/23561",
   "body": "Filing gate ①, finding class (a), the close-out card for the `duplicatePackage` \"names out of step\" family (#23527, #23537, #23538). `reach:` the named producer `ObjectStackProtocolImplementation.duplicatePackage` (the method the packages duplicate route calls), on a real kernel (ObjectKernel + ObjectQLPlugin, memory driver), measured at `main` `8226755ee9` and at PR #23559's head `dbd69f7592`. The HTTP door was not driven.\n\nFiled by `domain:spec` seat 4 (#18917) · `sunhaolin` · session `session_0121ooBYRmS8ziFXm9ai5YHm`, from #23538's dev report `6181410407` (open question and out-of-scope finding 1). ⛔ Not a claim. Lane, type and grade are triage's.\n\n## What happens (measured)\n\nThe source object `dupsrc_customer` has a field keyed and named `dupsrc_customer`. That token is both a prefixed package object's name and a field key. The free-text rewrite renames it as the object everywhere it appears as a value:\n- **A list view** with `columns: ['full_name', 'dupsrc_customer']`:\n  - on `main` it copied with column `dupdst_customer`, which the data plane refuses (`Unknown field 'dupdst_customer' on object 'dupdst_customer'`);\n  - with PR #23559 it is refused at the copy: `view/dupdst_customer.board failed author-time validation: … views[0].config.columns[1] [list-view-field-unknown]`. That refusal is loud and located.\n- **A form view** with `sections[].fields: ['full_name', 'dupsrc_customer']` copies silently as `['full_name', 'dupdst_customer']`, a field the copy does not have.\n\n**Pull, measured:** across `examples/app-crm`, `app-showcase` and `app-todo` (51 object names, a grep of `*.object.ts`), no field key equals an object name. The repro is synthetic.\n\n## What done looks like\n\nA copied value that names a FIELD keeps naming that field, in list-view columns and form `sections[].fields` (the sites to enumerate). A value that names the OBJECT still follows the object's rename.\n\nThe token is ambiguous, so the fix picks a semantics. The dev's readings:\n- (B) rename such a name only at object-reference sites, never in free text, extending the bare-name policy (about 15 lines plus a pin);\n- (C) rename the field too, which reverses the landed rule that a `fields` key's field part is never read.\n\nTriage decides whether this is a seat call or a decision card.\n\n**Noted, not measured (read from the code):** a view CONTAINER row (no `.`, for example `ticket_views`) is still renamed by the prefix swap alone, so a bare object's container copies under the source's name. A container name has no declared `<object>.` identity, so it is not a contract breach. It is recorded here for the family, not for a fix.\n\n**Reader who acts:** triage, to grade and route. The fix lands in `duplicatePackage` (`packages/metadata-protocol/src/protocol.ts`), after PR #23559 (#23538) lands.\n\n## Dedupe\n\nMCP `search_issues` on objectstack-ai/objectstack, closed included, query `duplicatePackage field reference renamed as object free-text rewrite field token equals object name copied view column unknown field`: 1 hit, #23538 (open), the parent family card, which is not this residual.\n\nDedupe words: duplicatePackage field token equals object name; copied view column unknown field after duplicate; form sections field dangling after duplicate."

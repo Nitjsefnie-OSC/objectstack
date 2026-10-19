@@ -1,0 +1,35 @@
+{
+  "number": 24435,
+  "kind": "issue",
+  "title": "[Decision] Two more framework writers land organization-less rows under a wall before C8 stage 8b: flow credentials (`sys_flow_credential`) and boot-seeded declared webhooks (`sys_webhook`)",
+  "state": "closed",
+  "state_reason": "completed",
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "area:access",
+    "pm:epic",
+    "priority:p1",
+    "target:v18"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-19T02:46:03Z",
+  "updated_at": "2026-10-19T03:44:53Z",
+  "closed_at": "2026-10-19T03:43:12Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": null,
+  "comments": 3,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/24435",
+  "body": "Ruled: 6259141885 · letters Q1 A · Q2 A · 2026-10-19T03:40Z\n\nFiling gate **②**: a decision only the maintainer can make. The maintainer asked for this card in the epic seat's chat: 「用决策卡。24378 也重开，带上你的新意见和我们的讨论」. Reader who acts: the maintainer rules; the epic PM (`epic:#15194`, `session_01Y5583bs2RDd53MH6kM1ca3`) executes.\n\n**Dedupe.** Semantic search on objectstack-ai/objectstack:\n- \"sys_flow_credential organization column deployment-level env-wide flow credential tenant\": 4 hits, none asking this;\n- \"bootstrapDeclaredWebhooks seeder declared webhooks registry retire sys_webhook rows boot\": 5 hits, all closed, none asking this.\n\nBlocks: C8 stage **8b** (#15212). After 8b, the engine refuses an organization-less system insert under a wall, so both writers would start failing there.\n\n**Source.** A read-only writer census the epic seat ran on `origin/main` `e22defb13`, before dispatching 8b. It was run so that #24377's late discovery does not repeat.\n- It covered the 44 in-reach platform objects, less the 9 admitted ones and the 5 #24377 already ruled, leaving **30 candidates**.\n- 2 candidates need a decision. 1 needs only a stamp. The rest always derive an organization, or have no framework writer.\n\n## 维护者速读\n\n**一句话问题：** 8b 落地后，隔离部署下凡是\"写入时推不出组织\"的系统写入都会被拒。普查又找到两处这样的写入：**流程凭据**、**启动时自动复制的软件包 webhook**。每处要定一个去向。\n\n| | 今天 | 选项 A(席位推荐) | 选项 B | 选项 C |\n|:--|:--|:--|:--|:--|\n| **Q1 流程凭据** `sys_flow_credential` | 保存/发布带签名密钥的流程时写,不带组织。对象注释自称「整个环境一份」(`sys-flow-credential.object.ts:33`,`unique: 'global'` `:117`),表却带组织列,仪式又按组织数据处理(`organization-ownership-inventory.ts:599`)—— 三处矛盾 | **改为部署级**(去组织列,`systemFields: { tenant: false }`),归属跟流程走(流程本是环境元数据,D2/D6);与 #24377 Q4「`sys_secret` 归属跟引用行走」一致;D7 加一行;随 8b-0de 做 | 保留组织列,隔离下拒绝带密钥的流程保存 —— 隔离部署无法用签名 webhook/http 流程 | 保留组织列,按发布者会话的组织盖章 —— 流程是全环境的,凭据却分组织,另一个组织运行同一流程时找不到凭据 |\n| **Q2 声明的 webhook** `sys_webhook` | 每次启动把包里声明的 webhook 复制成无组织的行(`bootstrap-declared-webhooks.ts:256`,`webhook-outbox-plugin.ts:322`)。D2 原文「No seeder writes them into any table」,但退役清单漏了它;8c-0 后这些行在隔离下已让认证挡住 | **退役种子程序**,声明的 webhook 从注册表读取(与 stage 9 对共享规则的做法相同);仪式删除镜像行(D10 fate 2) | 定为部署级:声明 webhook 进无组织列的同构表,保留种子程序 —— 与 D2「声明不落表」相悖 | 不处理:8b 后隔离部署下声明的 webhook 静默消失(拒写被 `:258-276` 捕获只记 warning) |\n\n**你要做的：** 各回一个字母，例如「Q1 A Q2 A」。\n\n**工作量与位置：**\n- **Q1 A** 约 0.3–0.6k 行，并进 8b-0de(同批改仪式清单与 D7)。\n- **Q2 A** 约 0.8–1.5k 行，作新阶段 **8b-0g**：排在 8b-0de 之后、8b 之前(都改仪式文件，只能串行)。关键路径约 +0.5–1 天。\n- **D7 那一行:** 若在您合并 PR #24422 之前裁决，就并进 #24422，省一次 Tier H 审批。#24422 正因 #24378 重开而暂缓。\n\n**无需决定、照做：** `sys_share_link` 在用户生成分享链接时写入，不带组织(`share-link-service.ts:665`)。但组织推得出来(记录和会话都在手上)，在 8b 前补上盖章即可，是一个小阶段。\n\n## Measured (all at `origin/main` `e22defb13`)\n\n- **The exemption today.** `resolveSystemInsertOrganization` (`packages/objectql/src/engine.ts:7165`) runs on every insert. Any in-reach `sys_`/`cloud_`/`ai_` object that is not on the 9-entry admit list (`platform-object-tenancy.ts:124-229`) returns at `:7183`, before the posture is read, so it lands NULL in every posture. 8b retires that exit.\n- **Q1.**\n  - The writer is `service-automation/src/flow-credential-channel.ts:341`, under `{isSystem:true}` (`:85`).\n  - It is called from the metadata save door (`metadata-protocol/src/protocol.ts:23987`) and from the one-time migration (`flow-credential-migration.ts:222`).\n  - No organization is threaded.\n  - The inventory row reads `fate: 'attribution'`, \"under single the Default Organization; otherwise reported\" (`:599`).\n- **Q2.**\n  - The writer is `plugin-webhooks/src/bootstrap-declared-webhooks.ts:256` under `SYSTEM_CTX` (`:109`). It runs on every boot (`webhook-outbox-plugin.ts:322`).\n  - The inventory keeps the rows with a label only (`:529`, \"not named by D10 fate 2, so they stay\").\n  - Their `sys_http_delivery` tail follows the webhook's organization (`auto-enqueuer.ts:887`, `:1228-1235`).\n- **Lean compositions change no answer under a wall.** A walled posture is refused before the organization object is checked (`core/src/security/system-write-organization.ts:115-117`).\n- **Latent, no decision.** None of these has a live caller or path, so 8b's refusal is acceptable for each:\n  - `sys_scim_connection_credential`: its mint has no caller and is not exported.\n  - `sys_setting`'s user rung for a walled user with no active organization: no built-in user-scope key exists.\n  - `sys_import_job` by an operator with no organization: a narrow case.\n\n## Recommendation: **Q1 A · Q2 A**\n\n- **① Long-term soundness.**\n  - Q1 A makes the object say one thing in three places. A flow is environment metadata, so its credential is too.\n  - Q2 A completes D2's own sentence. Stage 9 already did the same for sharing rules, so the pattern exists.\n- **② Business need.** Both writers are live: signed webhook and http flows, and declared webhooks in packages. Under a wall, 8b would break them, and Q2's failure would be silent.\n- **③ AI error-proofing.**\n  - Q1 A removes a tenant column that no writer can fill.\n  - Q2 A removes a boot-time mirror whose rows block certification.\n  - Q2 C would turn a refusal into a warning-only disappearance.\n- **④ Startup focus.** Q1 A is the smaller change. Q2 A reuses stage 9's shape. Neither adds a capability.\n\nos-decision-facets\n- ① 项目长远合理性:Q1 A 让对象三处说法一致(流程是环境元数据,凭据随之);Q2 A 补全 D2「声明不落表」,复用 stage 9 的形状。\n- ② 实际业务拉动:两处都是活写入(签名 webhook/http 流程、包内声明的 webhook);隔离部署下 8b 会让它们失效,Q2 还是静默失效。\n- ③ 防 AI 犯错:Q1 A 去掉一个无人能填的租户列;Q2 A 去掉启动时的镜像;Q2 C 把拒写变成只记 warning 的消失。\n- ④ 创业阶段不扩散:Q1 A 改动更小;Q2 A 复用既有形状;都不新增能力。\n\n自检：只看①选 Q1 A、Q2 A；②③④ 是否翻转：否。\n\n**Confidence gap.** Whether cloud's control plane relies on declared webhooks under a wall is unknown. This session cannot read the cloud repo.\n\nRelated: #15212 (the C8 plan), #24377 (the first four walled fates), #24422 (the D7 PR, held), #23952 (stage 9, the registry pattern)."
+}

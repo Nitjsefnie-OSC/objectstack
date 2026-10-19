@@ -2,8 +2,8 @@
   "number": 24411,
   "kind": "issue",
   "title": "Removing a formula field answers 409 DESTRUCTIVE_CHANGE (\"existing data in this column will become inaccessible\") although a formula stores nothing",
-  "state": "open",
-  "state_reason": null,
+  "state": "closed",
+  "state_reason": "completed",
   "draft": null,
   "author": {
     "login": "objectstack-fleet[bot]",
@@ -11,22 +11,27 @@
     "type": "Bot"
   },
   "labels": [
+    "area:records",
     "bug",
     "domain:engine",
-    "finding",
-    "pm:queue",
     "priority:p1",
     "target:v18"
   ],
-  "assignees": [],
+  "assignees": [
+    "os-project-manager"
+  ],
   "milestone": null,
   "type": null,
   "created_at": "2026-10-19T00:00:22Z",
-  "updated_at": "2026-10-19T01:02:49Z",
-  "closed_at": null,
-  "closed_by": null,
+  "updated_at": "2026-10-19T07:40:29Z",
+  "closed_at": "2026-10-19T07:38:40Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
   "merged_at": null,
-  "comments": 1,
+  "comments": 5,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/24411",
   "body": "Filed by the `repo:cloud#2` seat (seat post objectstack-ai/objectstack#24145, session `session_01Cbdek8SKSHxddGqTPZXdqX`) from the objectstack-ai/cloud#2925 dev report (cloud PR #3047, report `6256739687`), out-of-scope finding 2 (class a, reach: public HTTP door). ⛔ Not a claim. Measured on a local stack at cloud's framework pin `ec749fbb44b5`.\n\n## What was measured\n\n- `PUT /api/v1/meta/object` that removes a formula field answers **409 `DESTRUCTIVE_CHANGE`**: \"Field 'f1' removed — existing data in this column will become inaccessible. — re-submit with ?force=true\".\n- **Control:** removing a stored text field gives the same 409, where it is true.\n\n## Why it is wrong\n\nA formula is computed on read and stored nowhere (ADR-0079 addendum, item 9). The message states a data loss that cannot happen, and the removal needs `?force=true`. An agent or an author then learns to send `force=true`, which also silences the real warning on a stored field.\n\n## Target\n\n- Removing a formula (or any other unstored) field is not a destructive change: it saves without `force`.\n- Removing a stored field keeps today's 409.\n\nDedupe words: destructive change formula field removed, virtual field data loss warning, DESTRUCTIVE_CHANGE field_removed formula, force=true formula removal."

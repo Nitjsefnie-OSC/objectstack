@@ -2,8 +2,8 @@
   "number": 24420,
   "kind": "issue",
   "title": "docs(adr): ADR-0131 D6 charts sharing_rule under regime O, guarded, and reads the activation ledger one way (ruling B′ on #24378)",
-  "state": "open",
-  "state_reason": null,
+  "state": "closed",
+  "state_reason": "completed",
   "draft": null,
   "author": {
     "login": "objectstack-fleet[bot]",
@@ -13,22 +13,23 @@
   "labels": [
     "area:access",
     "domain:spec",
-    "pm:dispatched",
     "pm:epic",
     "priority:p2",
     "target:v18"
   ],
-  "assignees": [
-    "os-steve"
-  ],
+  "assignees": [],
   "milestone": null,
   "type": null,
   "created_at": "2026-10-19T01:11:08Z",
-  "updated_at": "2026-10-19T01:51:02Z",
-  "closed_at": null,
-  "closed_by": null,
+  "updated_at": "2026-10-19T07:08:27Z",
+  "closed_at": "2026-10-19T06:49:51Z",
+  "closed_by": {
+    "login": "os-zhuang",
+    "id": 277994282,
+    "type": "User"
+  },
   "merged_at": null,
-  "comments": 4,
+  "comments": 12,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/24420",
   "body": "Filing gate **③**: a task the maintainer directed. Decision #24378 was ruled **B′**: 「同意」 then 「B′」, recorded verbatim by the director seat at 6257388265. Reader who acts: the epic seat (`epic:#15194`) dispatches it; the maintainer merges (Tier H, governed ADR text). Dedupe: semantic search on objectstack, \"sharing rule regime O overlay guard … reconcile shadowed grants\" → 24 results, none a carrier: the nearest are the decision card itself and stage 9, both closed.\n\n## What the ruling binds (verbatim items 1 and 5 of 6257388265)\n\n> **The chart.** ADR-0131 D6 lists `sharing_rule` under regime O (overlay): a stored `sys_sharing_rule` row of the declared rule's name, in its scope, replaces the declared rule whole; `active: false` on that row is the switch-off; the ownership ceremony deletes only uncustomised mirrors (the #2909 promise, `sharing-plugin.ts:852`–`:857`, stands). One dated line, Tier H (the maintainer merges). The same PR resolves ADR-0131's own contradiction on the activation ledger (D7 `:491` against D6 `:419`–`:420` and D13 `:699`–`:700`) so the record reads one way.\n\n> **Nothing else:** no activation-ledger type for sharing rules (A), no blanket refusal of same-name rows (C), nothing left as is (D).\n\n## Wanted\n\nOne docs PR on `docs/adr/0131-total-organization-ownership-no-null-organization-id.md`:\n- **D6 gains one dated line** charting `sharing_rule` under regime O, guarded. It names the guard and the immediate reconcile; both are built by the companion code card.\n- **The activation-ledger contradiction gets one reading.** D7 at about `:491` disagrees with D6 at about `:419`–`:420` and with D13 at about `:699`–`:700`. The PR resolves it with dated notes, ⛔ never by rewriting the ruled text.\n- No code. ⛔ Nothing under `content/docs/releases/`.\n\n## Acceptance\n\n- The ADR states one reading of each point, with the ruling cited by its comment id.\n- The PR carries an at-tier `## Contract review` record (governed rules text) and is merged by the maintainer."

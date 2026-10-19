@@ -1,0 +1,36 @@
+{
+  "number": 24487,
+  "kind": "issue",
+  "title": "scaffold(create-objectstack): measure `npx -y create-objectstack@next` on node 22 / npm 10 with pnpm absent — does 18.0 GA fix the `latest` install crash by itself? (#24445)",
+  "state": "closed",
+  "state_reason": "completed",
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "area:devpath",
+    "domain:devx",
+    "priority:p1"
+  ],
+  "assignees": [
+    "os-warren"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-19T07:11:39Z",
+  "updated_at": "2026-10-19T07:37:15Z",
+  "closed_at": "2026-10-19T07:37:15Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": null,
+  "comments": 3,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/24487",
+  "body": "Filed by the director seat (summon #43 continuation 5, `session_01QJC7i981TSs9L1CGJK59Ax`) on the maintainer's words of 2026-10-19 in this seat's chat, on #24445: 「等我发布了新的 v18 npx create-objectstack问题就能解决吗？要不要派一个卡测试一下」 then 「你只需要创建卡片」. A measurement card: it fixes nothing, changes no workflow, publishes nothing. ⛔ Not a claim.\n\n## Why\n\n- #24445: the nightly registry canary (`.github/workflows/scaffold-e2e.yml` job `registry-canary`, `:530`ff) has been red since 10-16 because `npx -y create-objectstack@latest` resolves to 17.7.0, whose generated project crashes at `npm install` on npm 10 (`Cannot read properties of null (reading 'edgesOut')`). npm 10 is what Node 20 and Node 22 bundle; the scaffolder falls back to npm only when pnpm is absent from PATH (`detect-package-manager.ts`), so the users hit are first-timers on an LTS Node with no pnpm.\n- The 18.x line carries two fixes: the blank template's `overrides.vitest` (#23788 / #23805, `.changeset/pre/23788-blank-scaffold-npm10-vitest-override.md`) and `@objectstack/metadata-core` dropping its optional `vitest` peer (#23806). The nightly 「Scaffold with repo dist」 job is green on #24168's head (`a30a6dc4de`, run `39194689420`) — but that job scaffolds with the repo-built scaffolder and framework, not with what the registry serves. Whether a new user gets a working install from the **published** `@next` packages on npm 10 has not been measured; the canary only ever runs `@latest`.\n- The maintainer's question is exactly that: once 18.0 is published and `latest` moves, does `npx create-objectstack` work by itself, with no 17.x release?\n\n## What to measure\n\nOn a machine or container with **Node 22 (npm 10.9.x) and pnpm absent from PATH** (so the scaffolder takes the npm path a first-time user takes). Mirror the canary's steps at `scaffold-e2e.yml:549`ff; ⛔ do not edit the workflow (Tier H) — run it by hand.\n\n1. **The case:** `npx -y create-objectstack@next canary-app -t blank --skip-skills`. Record the banner version (expected `18.0.0-next.N`), the package manager it chose, the full outcome of its install step, and whatever the canary runs after scaffolding (the same `objectstack` command the job runs).\n2. **The control:** the same command with `@latest` (expected: banner 17.7.0, `edgesOut` crash, `objectstack: not found`). If the control passes, the premise of #24445 has changed; say so.\n3. **The common path:** repeat case 1 with pnpm on PATH (expected green; records which path the scaffolder took).\n4. **Dist-tags at the time of the reading:** `npm view create-objectstack dist-tags` and `npm view @objectstack/runtime dist-tags`.\n\n## Done when\n\n- The four readings are on this card verbatim (commands, versions, exit codes, the install log's last 20 lines on failure), and a one-line summary is posted on #24445 as a pointer.\n- **Green on `@next` (npm path):** the reading says so, and that 18.0 GA moving `latest` is expected to turn the canary green on its own; no 17.x release is needed for the new-user path. The maintainer's letter on #24445 follows the reading.\n- **Red on `@next`:** the reading names the failing step and the error, and a fix card is filed on the 18.x line (`domain:devx`) before GA; #24445 stays open.\n- ⛔ No fix, no workflow change, no release in this card.\n\n## Dedupe\n\n`needs-user-decision` and `pm:queue` cards read in this act: #24445 is the decision card (it names A / B / C and runs no measurement); no other card measures the registry path on `@next`. #23805 / #23806 / #23849 / #23966 are the 18.x fixes and their docs, all landed.\n\nRelated: #24445 (the decision; this card's reading precedes its letter), #24168 (the `next` version PR, merged), `scaffold-e2e.yml` (`registry-canary`), ADR none."
+}

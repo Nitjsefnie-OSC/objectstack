@@ -1,0 +1,37 @@
+{
+  "number": 24475,
+  "kind": "pull_request",
+  "title": "fix(metadata-protocol): duplicatePackage renames a name that is also a field key only at object-reference sites",
+  "state": "closed",
+  "state_reason": null,
+  "draft": false,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "documentation",
+    "size/s",
+    "tests",
+    "tooling"
+  ],
+  "assignees": [
+    "baozhoutao"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-19T06:13:49Z",
+  "updated_at": "2026-10-19T07:12:28Z",
+  "closed_at": "2026-10-19T07:12:26Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": "2026-10-19T07:12:26Z",
+  "comments": 2,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/pull/24475",
+  "body": "Fixes #23561\nClause-②: no\n\n## What this does\n\n`duplicatePackage` (`packages/metadata-protocol/src/protocol.ts`, ADR-0070 D4) renamed a token that is BOTH a prefixed package object's name AND a field key as if it were the object, in free text. A field keyed `dupsrc_customer` on the object `dupsrc_customer` kept its key on the copy, but a copied list view's `columns` and a copied form's `sections[].fields` were rewritten to `dupdst_customer`, a field the copy does not have. Since PR #23559 the list view was refused at the copy (`list-view-field-unknown`). The form copied silently, with a dangling field.\n\nTriage ruling (comment 6181968665), direction B: \"Rename such a name only at object-reference sites, never in free text. That extends the landed bare-name policy\". C (also renaming the field) is ruled out.\n\nThe mechanism: before the free-text regex is built, `duplicatePackage` collects the `fields` record keys of every object row in the source package. A prefixed renamed object name that is also one of those keys is left out of the free-text regex. Such a name is then rewritten only by the existing object-reference path (`REFERENCE_SITES` target `object`: `object`, `reference`, `objectName`, a permission set's `objects` keys, and the rest), which is exactly how a bare object name is already handled. No second mechanism is added, and `reference-sites.ts` is not edited.\n\n- **Scope of \"a field key\": package-wide.** The set holds a field key on ANY object of the package, not only on the same-named object. For example, a lookup field `acme_customer` on `acme_order` raises the same ambiguity in that order's list view. Package-wide is the superset of the two readings.\n- **Consequence of the ruling, pinned:** free text (an object's `description`) naming such an object is now left as stored. A prefixed object that no field key spells is still renamed in free text, as a whole identifier, as before.\n- No accept/refuse change beyond the copy no longer refusing that list view.\n\n## Pins (`packages/objectql/src/protocol-duplicate-package-names-in-step.test.ts`, real kernel: ObjectKernel + ObjectQLPlugin, memory driver)\n\n- **New case:** a name that is both a prefixed object and a field key is renamed only at object-reference properties. It asserts:\n  - `res.failed` is empty (the list view is no longer refused) and both views are copied;\n  - the list-view columns stay `['full_name', 'dupsrc_customer', 'x_dupsrc_customer']`;\n  - the form's `sections[0].fields` stay `['full_name', 'dupsrc_customer']`;\n  - the object references DO follow the copy: the view `object` and `config.data.object`, two lookup `reference`s, the action `objectName`, and the permission set's `objects` key;\n  - the description is left as stored;\n  - `engine.insert` through the copied field key lands.\n- **Flipped pin, load-bearing:** the landed case-2 assertion that the description reads `Linked from dupdst_customer` now reads the description unchanged, by the ruled semantics. The whole-identifier (left-boundary) rule it also guarded is re-pinned on a new prefixed object with no matching field key, `dupsrc_note`. That case expects `Attached to dupdst_note; see x_dupsrc_note.`, and the field `x_dupsrc_note` keeps both its key and its name. So the guarded surface does not shrink.\n- **Negative control:** `dupsrc_note`, an ordinary prefixed object, is still renamed in free text.\n\n**Ablation** (through `scripts/ablation-replace.mjs`). The anchor `renameMap.has(name) && !fieldKeys.has(name)` went from 1 hit to 0 and was replaced by a marker literal (blob `49c970959c61` to `1ea7b74ba948`). Then: rebuild `@objectstack/metadata-protocol`, and `ablation-dist-preflight` found the marker in 2 built files. The pin file then read `Tests 5 failed | 1 passed (6)`. That is MORE diagnostics than the 2 red cases predicted: the copied list view's `dupdst_customer` column is refused at the copy, so `failed[]` is non-empty and cases 1, 3 and 4 go red as well. Restore: blob == HEAD, `git diff HEAD` empty, rebuild, `--absent` preflight (marker absent from all 24 built files), then the pin file read `Tests 6 passed (6)`.\n\n## Tests and gates (head `e7a7b375ed`, after merging `origin/main` `26501ae24f`)\n\n- Build: the `@objectstack/objectql` closure was rebuilt after the merge (VERDICT command-exit 0).\n- Five duplicate suites (`names-in-step`, `unprefixed-object`, `permission-field-keys`, `objects-key-collision`, `package-lifecycle`): `Test Files 5 passed (5)`, `Tests 30 passed (30)`.\n- `pnpm --filter @objectstack/metadata-protocol exec vitest run`: `Test Files 246 passed | 3 skipped (249)`, `Tests 20655 passed | 19 skipped`.\n- Typecheck: `pnpm --filter @objectstack/metadata-protocol typecheck` and `pnpm --filter @objectstack/objectql typecheck` both exited 0 (`check:test-typecheck: OK`).\n- ESLint, a proven narrowing to the 2 touched source files:\n  - `--no-inline-config --format json` gives 2 files, 0 errors, 0 warnings.\n  - The config never enables type-aware linting (`eslint.config.mjs`, no `parserOptions.project`), so this diff cannot move any untouched file's verdict.\n- `@objectstack/spec` `test:repo`: `Test Files 61 passed (61)`, `Tests 1033 passed (1033)`. This was measured at `efed56ba5b`, before the merge. This diff touches no `packages/spec` file.\n- `node scripts/pm/dispatch-gates.mjs --commands --repo objectstack-ai/objectstack` derived 69 commands at `e7a7b375ed`. Every exit was captured before any pipe. `--ran` printed: `69 derived famil(ies) accounted for — 68 run, 1 NOT-MEASURED`.\n  - The 68 that ran exited 0.\n  - NOT MEASURED: `pnpm check:dual-build-cjs-loads`, exit 3, PREREQUISITE NOT MET. It needs every package's `dist/`, and a full build is outside this card's local scope. CI's `Lint & Repo Gates` runs it.\n\n## Acceptance notes\n\n- **File surface:** the claimed `protocol.ts` region, the sibling pin file in `packages/objectql` (where the family's pins live, see PR #23559), and the changeset. `reference-sites.ts` needed no edit.\n- **Recorded only, as the card and triage say:** a view CONTAINER name with no dot (for example `ticket_views`) is still renamed by the prefix swap alone. It is not addressed here.\n- **Pull:** as the card measured, no field key equals an object name across the three example apps, so the repro is synthetic.\n\nChangeset: `.changeset/23561-duplicate-object-name-token.md`, `@objectstack/metadata-protocol` `patch`.\n\nSession `session_01D6F9axfoPzR7t8G1J7Ytzz`, os-dev for `domain:spec`.\n\n---\n_Generated by [Claude Code](https://claude.ai/code/session_01D6F9axfoPzR7t8G1J7Ytzz)_\n"
+}

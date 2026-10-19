@@ -1,0 +1,33 @@
+{
+  "number": 24481,
+  "kind": "issue",
+  "title": "skills(pm-dispatch): push-notify the maintainer when an item moves into the maintainer's hands (a Tier H PR to merge, a decision card, a release step)",
+  "state": "open",
+  "state_reason": null,
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "domain:devx",
+    "pm:dispatched",
+    "priority:p2",
+    "tooling"
+  ],
+  "assignees": [
+    "os-warren"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-19T06:28:43Z",
+  "updated_at": "2026-10-19T07:21:45Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 2,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/24481",
+  "body": "Filing gate **③**: a task the maintainer directed. In the epic seat's chat (`epic:#15194`, `session_01Y5583bs2RDd53MH6kM1ca3`), on 2026-10-19, the maintainer wrote 「24422 等我合并，你改过之后没给我推送消息，是skills的问题吗」, and then 「长期固定下来，立一张skills卡片」.\n\n**Reader who acts:** whichever seat owns `.claude/skills/**`. It is a governed path ([#7548](https://github.com/objectstack-ai/objectstack/issues/7548)), so the PR is Tier H, and the maintainer reviews and merges it.\n\n**Dedupe:** semantic search on objectstack-ai/objectstack for \"pm-dispatch skill notify maintainer push notification when action needed merge decision\" returned 6 hits, all closed, none about push notifications. The nearest is #23934 (a chat that lists options and waits is a popup), which is a different rule.\n\n## What happened (measured)\n\n- At about 05:46Z on 2026-10-19, PR #24422 (Tier H, ADR-0131) became ready for the maintainer's approval and merge. Its at-tier contract review had passed (6260552601), and the seat had corrected the PR body.\n- The seat said so in chat only. It sent no push notification, so a maintainer away from that session learned nothing.\n- `.claude/skills/pm-dispatch/SKILL.md` has no rule for this. The nearest lines are:\n  - `:268`, 「卡先于弹窗 …… ⛔ 不 assign 推送」, which forbids using a GitHub assignment as a nudge;\n  - `:270`, 「`AskUserQuestion` 只是在场加速器 …」, which covers a maintainer who is present.\n\n  Nothing covers a maintainer who has stepped away, while an item waits on the maintainer's own click or word.\n\n## Wanted\n\nAdd one rule next to `SKILL.md` `:268`–`:270`. It follows the skill's own style (Chinese bullet, ⛔ markers). Suggested wording, which the implementing seat may tighten:\n\n> - 维护者动作推送:事项转入维护者之手时 —— 受管 / Tier H PR 待批准与合并、`needs-user-decision` 卡待字、发版动作、仅其可解的阻塞 —— 席位在聊天与 GitHub 记录之外,另发一条 `PushNotification`:一行、≤200 字、先写要做的动作与编号(例:「#24422 ADR 待您合并(Tier H,评审已过)」)。每项一次;例行进展、刚问刚答、维护者在场即见的不推;工具回 not sent 即视为在场,不重发。⛔ 不以 GitHub assign 代推送(同上条)。\n\nIf the hourly wake routine's prompt template, or `references/execution-duties.md`, carries the round-report duty, mirror the rule there in one line. ⛔ Add no new gate. This is a seat behaviour, not a CI check.\n\n## Acceptance\n\n- `SKILL.md` carries the rule. The PR body quotes the maintainer's two sentences above verbatim.\n- On the next item that moves into the maintainer's hands, the seat sends exactly one push. Record that in the seat's next round report."
+}

@@ -2,8 +2,8 @@
   "number": 24300,
   "kind": "issue",
   "title": "spec page.zod.ts: ElementApiDataSourceSchema still describes itself as \"[PLANNED — not yet rendered]\" and visibleWhen says no renderer reads the binding, but the console renders both (objectui#12197)",
-  "state": "open",
-  "state_reason": null,
+  "state": "closed",
+  "state_reason": "completed",
   "draft": null,
   "author": {
     "login": "objectstack-fleet[bot]",
@@ -13,19 +13,23 @@
   "labels": [
     "documentation",
     "domain:spec",
-    "finding",
-    "pm:queue",
     "priority:p3"
   ],
-  "assignees": [],
+  "assignees": [
+    "os-warren"
+  ],
   "milestone": null,
   "type": null,
   "created_at": "2026-10-18T09:56:27Z",
-  "updated_at": "2026-10-18T13:04:10Z",
-  "closed_at": null,
-  "closed_by": null,
+  "updated_at": "2026-10-19T07:10:07Z",
+  "closed_at": "2026-10-19T07:08:46Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
   "merged_at": null,
-  "comments": 2,
+  "comments": 10,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/24300",
   "body": "Blocked-by: #24283 (the console pin move that carries objectui `c4dd7078ed`, the `api` binding renderer — recorded by the triage seat)\n\nFiling gate ①: class (b), a declared surface whose own text contradicts the shipped renderer, measured. Filed by `repo:cloud#2` (seat post objectstack-ai/objectstack#24145, session `session_01Cbdek8SKSHxddGqTPZXdqX`) from the cloud#2801 dev report (cloud PR #3010). ⛔ Not a claim.\n\n## What the spec says (`packages/spec/src/ui/page.zod.ts`, `main` `d537a318`; the same at cloud's pin `be076dad28a0`)\n\n- `ElementApiDataSourceSchema`'s describe (`:556`; `:509` at the pin) opens \"[PLANNED — not yet rendered]\". It ends \"The console's generic stat, usage-bar and checklist blocks are the planned readers; until they ship, the binding parses and no block reads it.\"\n- The `visibleWhen` docblock (`:718`; `:671` at the pin) says \"No renderer reads that binding yet\".\n\n## What ships\n\n- objectstack-ai/objectui#12197 shipped the stat, usage-bar and checklist blocks.\n- objectui `c4dd7078` (cloud's console pin) renders the `api` binding: `packages/react/src/SchemaRenderer.tsx` `useElementApiDataSource`, which publishes the bound value as `data` to the node and its subtree, and the node's own predicate scope reads it.\n- cloud's home and pricing pages are built on it (cloud#2986, and cloud PR #3010), measured on a local stack and pinned by booted tests.\n\n## Why it matters (AI-error axis)\n\nAn author, and an AI first of all, reads \"[PLANNED — not yet rendered]\" and \"no renderer reads that binding yet\" as \"do not use this\". That steers authors away from a shipped, contract-checked binding.\n\n## Wanted\n\n- Rewrite both texts to say what the console renders today.\n- If the framework's vendored console (`packages/console` dist) predates objectui#12197, say which console renders it, rather than leaving the PLANNED tag.\n- A describe-text change only. No schema shape change.\n\nDedupe: grepped this repository's `packages/spec/src/ui/page.zod.ts` history and its open issues for `PLANNED — not yet rendered` and `ElementApiDataSourceSchema`; no open card on the describe text."

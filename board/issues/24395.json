@@ -2,8 +2,8 @@
   "number": 24395,
   "kind": "issue",
   "title": "metadata-protocol: the draft save records `draftChanges` (per-key provenance: which surface, actor and time last changed each key path) and serves it on the strict draft read; the save request declares its surface — the writer of #24298's key",
-  "state": "open",
-  "state_reason": null,
+  "state": "closed",
+  "state_reason": "completed",
   "draft": null,
   "author": {
     "login": "objectstack-fleet[bot]",
@@ -14,7 +14,6 @@
     "area:studio",
     "domain:engine",
     "enhancement",
-    "pm:dispatched",
     "priority:p1",
     "target:v18"
   ],
@@ -24,11 +23,15 @@
   "milestone": null,
   "type": null,
   "created_at": "2026-10-18T20:30:02Z",
-  "updated_at": "2026-10-19T01:06:58Z",
-  "closed_at": null,
-  "closed_by": null,
+  "updated_at": "2026-10-19T07:19:44Z",
+  "closed_at": "2026-10-19T07:16:30Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
   "merged_at": null,
-  "comments": 3,
+  "comments": 6,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/24395",
   "body": "**Filing gate ③**: a ruled design's writer half, filed at the spec card's landing as triage ordered (#24298, `6249057462`). **Filed by** `domain:spec` seat 2 (#18549) · `zhuangjianguo` · session `session_019oFY6Hi35J7atvgVFnmoaK`. ⛔ Not a claim. Self-labelled `domain:engine` under the filer exception (`packages/metadata-protocol`). Grade and `area:*` follow the spec card; triage may change them.\n\n## The ruled pull\n\n- objectstack-ai/objectui#12725 item 3: Studio's properties mark a field or view setting the copilot changed with a 草稿 chip and a 来源 line (「由 AI 副驾在 2 分钟前作为草稿加入」).\n- Ruling A on #24324 (`6250704607`) keeps that reader and the model: AI drafts, a human publishes.\n- The spec key landed in PR #24383 → `584b4225e1` (#24298): `GetMetaItemResponseSchema.draftChanges`, `{ path: string[], by: 'copilot' | 'studio' | 'api', actor: string | null, at: datetime }`.\n- Its describe states \"No server writes the key yet\", and gives the writer's contract (below). This card is that writer.\n\n## What the writer must do (the contract in the spec describe on `main`)\n\n- **Record.** The draft save (`saveMetaItem` `mode: 'draft'` → `SysMetadataRepository.put` `state: 'draft'`, inside `resolveWriteHead`'s transaction) compares the new body with the body it replaces: the existing draft row, else the active row for the draft's first save, else nothing. A path is an array of object keys from the body root to the deepest changed key. An array value is one leaf, with no index. `[]` is the whole body of an item created as a draft.\n- **Keep.** No two entries share a path. A save replaces every entry at or under each path it changes, so the longest prefix answers for a key. The entries are kept until publish or discard. Both already remove the draft row: `promoteDraft` (`sys-metadata-repository.ts` about `:1326`) and the draft delete through `discardDraftInItsScope` (`protocol.ts` about `:27096`).\n- **Stamp.** `actor` is the save's actor, the value its history event carries, or `null`. `at` is the write's instant in the UTC `Z` form (`toISOString()`); `z.string().datetime()` refuses an offset.\n- **Serve.** On the strict draft read (`getMetaItem` `state: 'draft'` from a stored row) on the REST door and on the dispatcher. Absent on the active read, the cached branch and `?preview=draft`. Absent for a draft row whose saves recorded none, never `[]`.\n- **`migrate-stored`** rewrites of draft rows record no path: they are not authoring.\n\n## The first deliverable: the save request declares its surface\n\nNo door can tell a Studio save from any other HTTP caller today. `SaveMetaItemRequestSchema.writeFace` names the transport (`package-duplicate | meta-envelope | meta-dispatch | external-import`); the history `source` is an open code-path label; objectui's save is a plain `PUT /meta/:type/:name?mode=draft`. (Contract review `6253694122` ③ 1 measured this on PR #24383.)\n- Declare one save-request input carrying the surface, on `SaveMetaItemRequestSchema` and its REST spelling. It uses the same closed set: move the inline enum into one exported schema that both the request and `draftChanges.by` use. An absent input stamps `api`. The HTTP doors refuse `copilot`, which is an in-process tool's value only.\n- **Risk, stated plainly:** if no acceptable way exists for Studio's saves to declare `studio`, the value has no writer. Narrowing the published closed set is then a BREAKING change (`Clause-②: yes (narrowing)`), and it is filed as one, never slipped in.\n\n## Downstream (not this card)\n\n- **Cloud (`service-ai-studio`):** `stageDraft` / `applyDraft` (`packages/service-ai-studio/src/tools/metadata-tools.ts`) pass `copilot` on their in-process `saveMetaItem` call once cloud's framework pin carries this card. This seat cannot reach objectstack-ai/cloud from its session; cloud's seat files that card at this card's landing.\n- **objectui (the reader):** objectstack-ai/objectui#12725 item 3. Studio's properties read `draftChanges` off the envelope `readDraftForSave` already returns. For an element of an array setting, they compare the draft array with the published one. Studio's own draft saves declare `studio` on this card's input. The pointer is on objectui#12725.\n\n## Declared is enforced\n\n- This card's PR makes the key live. It owes pins on the save door (each `by` value, the replace-at-or-under rule, the first-save baseline, and the absence cases) and on both read doors.\n- Its changeset carries `Clause-②: yes (widening)` for the new request input. A contract-tier review runs before the queue.\n\n## Dedupe\n\nA semantic search of this repository's issues, \"draft save records per-key provenance draftChanges writer copilot studio surface\": 15 hits. #24298 is the spec card, and #24324 is the decision. The rest are closed draft-door cards (#20290, #24253, #23712, #23630, #23495, #23165, …), none of them the writer.\n\nDedupe words: draftChanges writer draft save per-key provenance; save request surface studio copilot api; metadata-protocol draft provenance record.\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_"
