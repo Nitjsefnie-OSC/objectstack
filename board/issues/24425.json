@@ -1,0 +1,30 @@
+{
+  "number": 24425,
+  "kind": "issue",
+  "title": "skills(objectstack-ui, objectstack-data): teach the aggregate × field-type rule — a formula cannot be a sum / avg / min / max measure (store a number), a multi-value field cannot be a group-by axis (cloud#2861 ruling B; Tier H)",
+  "state": "open",
+  "state_reason": null,
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "domain:skills",
+    "pm:queue",
+    "priority:p2"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-19T01:56:17Z",
+  "updated_at": "2026-10-19T01:56:17Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 0,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/24425",
+  "body": "Filed by the director seat (summon #43 continuation 5, `session_01QJC7i981TSs9L1CGJK59Ax`) on the maintainer's words of 2026-10-19 after ruling B on objectstack-ai/cloud#2861: 「2861 这个应该是 skills 也要优化吧」. The published skills are a governed surface (`skills/**`, Tier H: the maintainer merges). ⛔ Not a claim.\n\n## Why\ncloud#2861 measured (6257002212) that an AI-built dashboard asking for a total over a numeric formula plots a count, or another field's total, and that a group-by over a multi-value field publishes grouped by another axis — under the original caption, with the customer told nothing. Ruling B makes cloud's authoring steps refuse those two snaps. The skills are the other half: today no published skill teaches the rule, so an agent writes the refused shape first and learns only from the refusal.\n- `skills/objectstack-query/SKILL.md:9`, `:52` point dashboard datasets and measure filters at **objectstack-ui**; `skills/objectstack-data/rules/relationships.md:295` already says a `summary` needs a stored field, not a `formula` — the dataset-measure case is not stated anywhere (`git grep -n -i \"aggregate\\|measure\" origin/main -- skills/objectstack-ui skills/objectstack-data` finds no dataset-measure rule).\n- The platform rule: `packages/spec/src/data/aggregate-field-type-compatibility.ts` (formula refused under sum / avg / min / max — virtual in SQL storage); the spec's remedy, semantic migration `18.dataset-measure-aggregate-field-type-refused` (store the value as a number field); multi-value fields refused as a dataset dimension (`validate-dataset-measure-aggregates.ts`, `field-value.zod.ts`).\n\n## What changes\n- `skills/objectstack-ui` (the dataset / dashboard section): one rule block — a measure's `sum` / `avg` / `min` / `max` needs a stored numeric field; a `formula` (and the other refused classes) cannot be aggregated; when a total over a computed value is wanted, store the number (a user-entered field, or a flow that keeps it in step where flows are available) or title the widget as the count it is; a multi-value field (`multiselect`, tags) cannot be a group-by dimension — use a per-member record query (`$contains`) or another axis. One worked example each (the leave-days total; the by-tag breakdown).\n- `skills/objectstack-data/rules/field-types.md` (the `formula` row): one sentence cross-referencing the rule above.\n- Evals: one eval case per rule in the skill's `evals/` (the agent must not emit a `sum` over a formula or a `groupBy` over a multiselect; `must_not_contain` lines), in the existing eval format.\n- No other skill text changes; the rule is stated once in objectstack-ui and referenced from objectstack-data.\n\n## Acceptance\n- The two rules and the two examples are in `skills/objectstack-ui`; the cross-reference in objectstack-data; the eval cases pass with the skill's eval runner; `pnpm check` (skill lint) green; no changeset (skills publish on their own cadence).\n- The PR stays a draft until the maintainer's hand merge (Tier H); it must touch `skills/**` only.\n\n## Dispatch notes\n- Sibling: cloud's own authoring skill and rules (`packages/service-ai-studio/src/skills/**`, `tools/get-authoring-rules.tool.ts`) carry the same two rules inside cloud#2861's B rewrite — the cloud seat's half, not this card."
+}

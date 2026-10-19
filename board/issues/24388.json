@@ -1,10 +1,10 @@
 {
   "number": 24388,
   "kind": "pull_request",
-  "title": "fix(service-storage): the family gate and the route judge the same credential (#24366)",
-  "state": "open",
+  "title": "fix(service-storage)!: the family gate and the route judge the same credential",
+  "state": "closed",
   "state_reason": null,
-  "draft": true,
+  "draft": false,
   "author": {
     "login": "objectstack-fleet[bot]",
     "id": 332303061,
@@ -22,12 +22,16 @@
   "milestone": null,
   "type": null,
   "created_at": "2026-10-18T18:59:34Z",
-  "updated_at": "2026-10-18T20:01:45Z",
-  "closed_at": null,
-  "closed_by": null,
-  "merged_at": null,
-  "comments": 4,
+  "updated_at": "2026-10-18T21:22:02Z",
+  "closed_at": "2026-10-18T21:22:01Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": "2026-10-18T21:22:00Z",
+  "comments": 6,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/pull/24388",
-  "body": "Fixes #24366\n\nClause-②: no\n\n## What changed\n\nThe storage family's ADR-0069 authentication-policy gate and the route now judge the same credential. The family door fronts routes that serve different credentials — the upload routes and the unclaimed-file download identify their caller by the session, the parent-governed download serves the one request-to-ExecutionContext composition's principal — so the door judges every credential a route of the family can serve. A session the policy HOLDS (an expired password, enforced MFA not yet enrolled) is refused `403` with the gate's posture code on every route of the family, whatever else the request carries, before any of the family's own logic runs. A held key's owner is still refused through the shared key-admission seam with the owner's posture.\n\nThe fix is one narrowing in `buildAuthGateSessionReader` (`packages/services/service-storage/src/storage-service-plugin.ts`): the gate the door asks now always covers the credential the route will serve.\n\n## Why it is a narrowing\n\nNo request a storage route refuses today becomes accepted: this only adds refusals (a held session that was served is now refused). No export, schema or accepted value changes. `Clause-②: no`.\n\n## Scope\n\n- `packages/services/service-storage` only. `packages/core` / `packages/runtime` (the one composition `resolveRequestExecutionContext`) are untouched — this is a `service-storage`-local decision.\n- The gate reader stays a hand-written door fact beside the one composition (it is the input #23217's item 3 waits on; see below), implemented here as a parity pin rather than a gate-only mode of the composition.\n\n- Docs (patch round 1, rework `6253965841`): `content/docs/permissions/authentication.mdx` now says that the storage routes refuse a gated session whatever else the request carries. This PR made the earlier sentence false there.\n- `scripts/engine-double-contract.pinned.json` records the new pin's fake engine, written by the gate's own `--write`.\n\n## Tests\n\n- New pin `storage-routes.family-gate-credential.pin.test.ts`: on the download routes (an unclaimed file and a parent-governed file) and the upload start route, a held session is refused `403` with its posture whatever else the request carries, storage never touched. Controls: an un-held session is served; a held owner's key alone is refused as today.\n- Updated the two existing pins that encoded the prior door behaviour (`storage-routes.api-key-account-posture.pin.test.ts`, `storage-routes.request-context-door.pin.test.ts`) to the rule.\n- Ablation: restoring the prior reader turns three of the new pin's cases red; restored clean.\n- `pnpm --filter @objectstack/service-storage test` (1051 pass) and `typecheck` green locally; the derived gate families run in CI.\n\n## Bearing on #23217\n\nThis card's design is #23217 item 3's input: the storage family's gate reader stays a hand-written door fact (a parity pin), not a gate-only mode of the one composition.\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nhttps://claude.ai/code/session_01Nk17Z26X5DB59iQztDBADH\n"
+  "body": "Fixes #24366\n\nClause-②: no (narrowing)\n\n## What changed\n\nThe storage family's ADR-0069 authentication-policy gate and the route now judge the same credential. The family door fronts routes that serve different credentials — the upload routes and the unclaimed-file download identify their caller by the session, the parent-governed download serves the one request-to-ExecutionContext composition's principal — so the door judges every credential a route of the family can serve. A session the policy HOLDS (an expired password, enforced MFA not yet enrolled) is refused `403` with the gate's posture code on every route of the family, whatever else the request carries, before any of the family's own logic runs. A held key's owner is still refused through the shared key-admission seam with the owner's posture.\n\nThe fix is one narrowing in `buildAuthGateSessionReader` (`packages/services/service-storage/src/storage-service-plugin.ts`): the gate the door asks now always covers the credential the route will serve.\n\n## Why it is a narrowing\n\nNo request a storage route refuses today becomes accepted: this only adds refusals (a held session that was served is now refused). No export, schema or accepted value changes. `Clause-②: no (narrowing)`.\n\n## Scope\n\n- `packages/services/service-storage` only. `packages/core` / `packages/runtime` (the one composition `resolveRequestExecutionContext`) are untouched — this is a `service-storage`-local decision.\n- The gate reader stays a hand-written door fact beside the one composition (it is the input #23217's item 3 waits on; see below), implemented here as a parity pin rather than a gate-only mode of the composition.\n\n- Docs (patch round 1, rework `6253965841`): `content/docs/permissions/authentication.mdx` now says that the storage routes refuse a gated session whatever else the request carries. This PR made the earlier sentence false there.\n- `scripts/engine-double-contract.pinned.json` records the new pin's fake engine, written by the gate's own `--write`.\n\n## Tests\n\n- New pin `storage-routes.family-gate-credential.pin.test.ts`: on the download routes (an unclaimed file and a parent-governed file) and the upload start route, a held session is refused `403` with its posture whatever else the request carries, storage never touched. Controls: an un-held session is served; a held owner's key alone is refused as today.\n- Updated the two existing pins that encoded the prior door behaviour (`storage-routes.api-key-account-posture.pin.test.ts`, `storage-routes.request-context-door.pin.test.ts`) to the rule.\n- Ablation: restoring the prior reader turns three of the new pin's cases red; restored clean.\n- `pnpm --filter @objectstack/service-storage test` (1051 pass) and `typecheck` green locally; the derived gate families run in CI.\n\n## Bearing on #23217\n\nThis card's design is #23217 item 3's input: the storage family's gate reader stays a hand-written door fact (a parity pin), not a gate-only mode of the one composition.\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nhttps://claude.ai/code/session_01Nk17Z26X5DB59iQztDBADH\n"
 }

@@ -1,0 +1,31 @@
+{
+  "number": 24430,
+  "kind": "issue",
+  "title": "[repo:cloud] the hosted tenant runtime's owner admin grant (`env-owner-admin-grant.ts`) is written with no organization; it must be owned by the Default Organization before C8 stage 8c-2 retires the NULL-grant reader",
+  "state": "open",
+  "state_reason": null,
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "area:access",
+    "priority:p1",
+    "repo:cloud",
+    "target:v18"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-19T02:31:08Z",
+  "updated_at": "2026-10-19T02:31:08Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 0,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/24430",
+  "body": "Filing gate **④**: a coordination node, the cloud half of objectstack C8 stage 8c-2 (#15212, epic #15194). Filed by the objectstack epic seat (`epic:#15194`, `session_01Y5583bs2RDd53MH6kM1ca3`) at the maintainer's word in that seat's chat: 「云端的锚点迁移 你建卡了吗，可以在 objectstack 创建 cloud 车道的卡片」. ⛔ Not a claim.\n\n**Reader who acts:** the `repo:cloud` seat. It measures first, then builds in the cloud repo if a gap is found.\n\n**Dedupe:**\n- every `repo:cloud` card in this repo (31, all states), scanned for `env-owner-admin-grant`, owner admin grant, anchor, `ownerSeed` and `admin_full_access`: 0 open cards. The closed neighbours are #11977 (superseded) and #17072 (the `ownerSeed` verification gap, a different defect);\n- semantic search, \"cloud env-owner-admin-grant admin_full_access row owned by Default Organization anchor move tenant runtime\": 0 hits on this subject.\n\nBlocks: C8 stage 8c-2 on #15212. This card does not block on objectstack; the seat dispatches 8c-2 only after this card closes.\n\n## Why this exists\n\n- **What cloud does.** It confers a hosted tenant environment's owner platform standing by writing an `admin_full_access` grant row into the tenant runtime (`env-owner-admin-grant.ts:67`, `:91`, the cloud seat's measurement of 2026-09-03, pointer 5521222826 on #11979). That row carries **no organization**.\n- **The ruling.** Ruling **A′** on #11977 (record 5596500401, the maintainer's 「11977 同意」, 2026-09-09) fixed the anchor for a hosted tenant runtime, which is a `single`-posture kernel. It is what ADR-0131 **D5** states: under `single`, the first-user promotion keeps writing the `admin_full_access` grant row, **owned by the Default Organization, never NULL**.\n- **What objectstack is doing.**\n  - Stage 8b-0a has already moved the framework's own promotion row onto the Default Organization.\n  - C8 stage **8c-2** retires the framework readers that still treat a NULL-organization grant as standing: `resolve-authz-context.ts` about `:887`–`:938` and `:1476`–`:1506`, `last-admin-guard.ts` about `:965`–`:1024`, and `ensure-default-organization.ts` (plan 6251466182; amendment 6253205661 records this cloud rider).\n- **The risk.** If cloud's row is still NULL when 8c-2 lands, **every hosted tenant's environment owner silently loses admin standing in their own environment**. The cloud seat measured on 2026-09-03 that the write keeps succeeding and simply stops conferring, and that the writer swallows its own errors.\n- **Reach:** every hosted tenant environment.\n\n## Wanted (measure first)\n\n1. **Measure on cloud `main`, at its framework pin.**\n   - What `organization_id` does the owner's `admin_full_access` row carry today?\n   - Through which write path (the engine, or a driver or raw write)?\n   - Under which posture does the tenant runtime boot?\n2. **If the row is already owned by the tenant runtime's Default Organization,** close this card `completed` with that evidence.\n3. **Otherwise, make cloud's writer write the grant owned by the Default Organization** (A′, D5). Prefer the framework's own path, the Default-Organization promotion that 8b-0a ships, over a second writer, if that path covers the hosted runtime.\n   - Hosted runtimes that already exist need their NULL rows re-attributed. Under `single`, objectstack's ownership ceremony (`os migrate organization-ownership`) attributes a NULL grant to the Default Organization (ADR-0131 D10). Say whether cloud runs that ceremony on its tenant runtimes, or needs its own step.\n4. **Make the writer loud.** A failed or non-conferring owner grant must surface, not be swallowed.\n\n## Acceptance\n\n- On a freshly provisioned hosted tenant environment, at a framework pin that carries 8b-0a: the owner's `admin_full_access` row has `organization_id` equal to that runtime's Default Organization, and the owner resolves platform standing through it.\n- The same holds for an environment provisioned before the change, after cloud's upgrade path.\n- The writer reports its failure instead of swallowing it.\n- **Hand-off to objectstack:** comment on #15212 with the cloud PR and the pin it needs. The epic seat dispatches 8c-2 only after this card closes."
+}

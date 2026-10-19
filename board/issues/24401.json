@@ -1,0 +1,37 @@
+{
+  "number": 24401,
+  "kind": "pull_request",
+  "title": "fix(engine): six user-facing strings say \"authored in this system\", not \"this environment\"",
+  "state": "closed",
+  "state_reason": null,
+  "draft": false,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "documentation",
+    "size/s",
+    "tests",
+    "tooling"
+  ],
+  "assignees": [
+    "os-project-manager"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-18T22:01:51Z",
+  "updated_at": "2026-10-18T23:06:50Z",
+  "closed_at": "2026-10-18T23:06:48Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": "2026-10-18T23:06:48Z",
+  "comments": 3,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/pull/24401",
+  "body": "Fixes #24360\n\nClause-②: no (copy only: no accept set or public surface moves; owes the seat's review of record at `TIER_DEFAULT` before the queue)\n\n## What changed\n\nobjectstack-ai/cloud#3002 ruling A, read per string as triage 6250167038 does: inside the running system, a user-facing string names the system the user is in as \"this system\". A string that means \"made here, not from a package\" reads \"authored in this system\". Six strings in the `domain:engine` lane said \"authored in this environment\":\n\n| package | site (by symbol) | now reads |\n|:--|:--|:--|\n| `@objectstack/objectql` | `describeDefaultRecordPageHolder` (`default-record-page.ts`) | `page \"NAME\", authored in this system` |\n| `@objectstack/objectql` | `describeSecurityCatalogHolder`, the `environment` case (`security-catalog-namespace.ts`) | `the environment catalog (an item authored in this system, not shipped by a package)` |\n| `@objectstack/metadata-protocol` | `protectionBlockRefusal` (`protocol.ts`) | \"... is authored in this system (ADR-0010 §3.5) ...\" |\n| `@objectstack/metadata-protocol` | the lock-family-key refusal (`protocol.ts`) | \"an item saved here is authored in this system (ADR-0010 §3.5) ...\" |\n| `@objectstack/metadata-protocol` | the default-record-page conflict's `describe` holder text (`protocol.ts`) | `page 'NAME', authored in this system` |\n| `@objectstack/platform-objects` | `sys_metadata_activation`, `package_id` field description | \"... Empty when no package ships it: an item authored in this system.\" |\n\nAlso `sys_metadata_activation`'s object description (the claim's optional line, about `:75`): \"Packaged artifacts and positions or permission sets authored in this system are both recorded here.\" It is user-facing: it is the object's schema text shown wherever the object is described, and the comment above it (ADR-0126 §4) already treats it as copy, not reference. The phrase means \"made here, not from a package\", so it follows row 1.\n\n**\"The environment catalog\" stays.** It is the documented name of that holder: ADR-0048 lists it as a holder by that name, the namespace's own docblock names it, the published `@objectstack/objectql` changelog uses it, and the envelope's `existingHolder.kind` is `'environment'`. Only the parenthesis changes, per triage row 6.\n\nNo code, status, error code or envelope field changes. Three `patch` changesets, one per published package.\n\n## Pins\n\n- `default-record-page-save-door.test.ts` (two assertions) and `registry-default-record-page.test.ts` (one helper) pin the refusal's first sentence, on top of `code` + `status` + the structured `existing` / `incoming` holders. That sentence names both holders, which is the refusal's stated contract, so the pins move with the text rather than being loosened.\n- The flipped pins carry weight. Reverse verification on the committed fix 2c06b1a39, each leg a mutation through `scripts/ablation-replace.mjs` that put \"authored in this environment\" back:\n  - `default-record-page.ts` (src-resolved): `registry-default-record-page.test.ts` went `1 failed | 21 passed`; restored blob equals the HEAD blob (`508f9a49e1ef`).\n  - `protocol.ts` (resolved through `@objectstack/metadata-protocol`'s `dist/`): rebuilt, `ablation-dist-preflight` confirmed the marker in `dist/`, `default-record-page-save-door.test.ts` went `4 failed | 30 passed`; restored (blob `6abd847e4dfa` equals HEAD), rebuilt, preflight `--absent` exit 0, `34 passed`.\n- No test, fixture, platform-checklist item or docs page pins or quotes the other four strings. The lock-refusal tests pin substrings that survive (`Remove the \\`protection\\` block`, `code package's source`, `They would ...`). No i18n bundle or reference page carries any of the six, so nothing was regenerated.\n\n## Verification (head 6ec175748, after merging origin/main d8e11b58e)\n\n- Build: `--filter` closure of the three packages, `VERDICT command-exit 0`, on the pre-merge head and again on the merged head. Full `pnpm build --concurrency=2`: `76 successful, 76 total`.\n- Typecheck, merged head: `@objectstack/objectql` exit 0 (`check:test-typecheck: OK`), `@objectstack/metadata-protocol` exit 0, `@objectstack/platform-objects` exit 0 (`check:test-typecheck: OK`).\n- Tests, on 2c06b1a39 (the merge brought no file in these packages or `packages/spec`):\n  - `@objectstack/platform-objects`: `Test Files 76 passed (76)`, `Tests 1176 passed (1176)`.\n  - `@objectstack/metadata-protocol`: `Test Files 246 passed | 3 skipped (249)`, `Tests 20655 passed | 19 skipped (20674)`.\n  - `@objectstack/objectql` (all vitest projects): `Test Files 445 passed (445)`, `Tests 8359 passed (8359)`.\n- Gates: `node scripts/pm/dispatch-gates.mjs --commands` (no paths) on 6ec175748 derived 71 commands; all 71 exit 0. `check:dual-build-cjs-loads` and `check:i18n` first exited 3 (PREREQUISITE NOT MET, unbuilt packages) and exit 0 after the full build. `--ran`: `Run reconciliation — 71 derived, 71 run, 0 NOT-MEASURED, 0 UNRUN` (all 71 carry a recorded exit code).\n- `pnpm exec eslint --no-inline-config` over the six changed `.ts` files: exit 0. `check-nul-bytes`: exit 0.\n- `test:repo` not run locally (CI `Test Core`).\n\n## Acceptance notes\n\n- `protocol.ts`'s uninstall refusal (\"An uninstall is environment-wide — it removes every row bound to the package in this environment — ...\") is a client-visible string outside this card's table, split across a string concatenation. It contrasts the deployment with an organization scope, so its reading is a call for the family card #24368, which carries the rest of the family. Left as is.\n- `protocol.ts`'s `reassignOrphanedMetadata` `console.error` (\"this environment has NOT converged ...\") is an operator log, not a user-facing string. Left as is.\n- The docblocks of `default-record-page.ts` and `security-catalog-namespace.ts` still say \"authored in this environment\". They are code comments, ruled out of this card.\n- `packages/runtime` is #24327's, and `protocol.ts`'s `duplicatePackage` region is #23561's; neither is touched.\n\nDurable attribution: os-dev run for #24360, cloud session `session_01Vp3Ze7Vv9L1PuejcRQC2bK`, dispatched by the `domain:engine` seat 1 PM (`session_01JtSQQ3EWsbNPzyYMug1tXy`).\n\n---\n_Generated by [Claude Code](https://claude.ai/code/session_01Vp3Ze7Vv9L1PuejcRQC2bK)_\n"
+}

@@ -1,0 +1,33 @@
+{
+  "number": 24410,
+  "kind": "issue",
+  "title": "formula lint admits a read of a field the related object does not declare; the read then nulls every formula through that lookup, valid siblings included",
+  "state": "open",
+  "state_reason": null,
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "bug",
+    "domain:engine",
+    "finding",
+    "pm:queue",
+    "priority:p1",
+    "target:v18"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-18T23:59:59Z",
+  "updated_at": "2026-10-19T01:01:49Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 1,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/24410",
+  "body": "Filed by the `repo:cloud#2` seat (seat post objectstack-ai/objectstack#24145, session `session_01Cbdek8SKSHxddGqTPZXdqX`) from the objectstack-ai/cloud#2925 dev report (cloud PR #3047, report `6256739687`), out-of-scope finding 1 (class c + a, reach: public HTTP door). ⛔ Not a claim. Measured on a local stack at cloud's framework pin `ec749fbb44b5`.\n\n## What was measured\n\n1. `PUT /api/v1/meta/object` answers **200** for a formula that reads `record.book.name`, although `pq_book` declares no `name` field.\n2. `GET /api/v1/data` then reads that formula `null` on every row. A VALID sibling formula on the same object, `joinNonEmpty([record.book.title, record.reader.reader_name], ' · ')`, also reads `null` in the same read.\n3. **Control:** `?fields=title` (the valid formula alone) reads 「月亮与六便士 · 赵明轩」.\n4. The runtime's own WARN says a re-save \"refuses it with a located message\", but the re-save answered 200.\n\n## Why it matters\n\nThe same shape as objectstack-ai/objectstack#24197 (closed) one level in: a formula that passes validation and reads null. Here one bad read also blanks the good ones. An AI writing a record title (ADR-0079 D3) guesses the target's field name, and the whole title family goes blank with no refusal.\n\n- **Named producer:** the cloud AI builder. PR #3047 guards its own path (`titleFormulaGaps`). Every other author (Studio, `create_metadata`, a package) still gets the 200.\n- **Seam:** spec object field formula expression → runtime objectql `resolveFormulaRelated` (the one-hop read) + lint `validate-expressions.ts` `judgeFieldFormula`, which admits it.\n\n## Target\n\n- A formula reading a field its lookup's target does not declare is refused at save, with the field and the target named.\n- One formula's failed read does not null its siblings.\n\nDedupe words: formula undeclared related field, one-hop formula sibling null, traversal lint related field existence, formula hop unknown column."
+}
