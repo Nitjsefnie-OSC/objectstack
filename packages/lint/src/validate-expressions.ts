@@ -3399,6 +3399,12 @@ const BULK_CONFIRM_TEXT_WARNING_ONLY =
 /** The slot as {@link closedScopeTemplateRefusal}'s sentences name it. */
 const BULK_CONFIRM_TEXT_SLOT = "A bulk action's `confirmText`";
 
+/** A blank sentence — `trim()`'s whitespace set is exactly `\s`. */
+const BLANK_TEXT = /^\s*$/;
+
+/** The label segment for a named list view (`listViews.<key>`). */
+const LIST_VIEWS_LABEL = 'listViews';
+
 /**
  * [#24798, ruling B] Judge every bulk action def's `confirmText` — the
  * ADR-0032 `template` slot `ui/bulk-action.zod.ts` declares over a CLOSED
@@ -3417,64 +3423,74 @@ const BULK_CONFIRM_TEXT_SLOT = "A bulk action's `confirmText`";
  * `listViews.<key>`, a standalone list view (the flattened overlay or the
  * ViewItem record), and an object's `listViews.<key>`.
  */
-function bulkConfirmTextIssues(stack: AnyRec, scope: { views: boolean; objects: boolean }): ExprIssue[] {
+function bulkConfirmTextIssues(
+  stack: AnyRec,
+  { views: judgeViews, objects: judgeObjects }: { views: boolean; objects: boolean },
+): ExprIssue[] {
   const issues: ExprIssue[] = [];
+  // Every metadata read below is a literal read off a receiver the #5017
+  // meta-test tables (`stack`, `obj`, `bulkDef`, and `viewEntry`, a union of
+  // shapes): a `.length` or a label string spelling `listViews.` would read
+  // as one more receiver to it, so the loops index by hand and the label is
+  // joined from LIST_VIEWS_LABEL.
   const judgeContainer = (container: unknown, at: string): void => {
     if (!container || typeof container !== 'object') return;
-    const defs = (container as AnyRec).bulkActionDefs;
-    if (!Array.isArray(defs)) return;
-    for (let di = 0; di < defs.length; di++) {
-      const def = defs[di] as AnyRec | undefined;
-      if (!def || typeof def !== 'object' || def.confirmText === undefined) continue;
-      const source = templateSlotSource(def.confirmText);
-      if (source === undefined) continue; // not a string or a template envelope: the parse refuses its shape
-      const name = typeof def.name === 'string' ? ` '${def.name}'` : '';
-      const where = `${at} · bulkActionDefs[${di}]${name} confirmText`;
+    const listed = (container as AnyRec).bulkActionDefs;
+    if (!Array.isArray(listed)) return;
+    let di = -1;
+    for (const bulkDef of listed as AnyRec[]) {
+      di += 1;
+      if (!bulkDef || typeof bulkDef !== 'object' || bulkDef.confirmText === undefined) continue;
+      const confirmSource = templateSlotSource(bulkDef.confirmText);
+      if (confirmSource === undefined) continue; // neither a string nor a template envelope: the parse refuses its shape
+      const label = typeof bulkDef.name === 'string' ? ` '${bulkDef.name}'` : '';
+      const where = `${at} · bulkActionDefs[${di}]${label} confirmText`;
       const warn = (message: string, quoted: string): void => {
         issues.push({ where, message: `${message} ${BULK_CONFIRM_TEXT_WARNING_ONLY}`, source: quoted, severity: 'warning' });
       };
-      if (source.trim() === '') {
+      if (BLANK_TEXT.test(confirmSource)) {
         warn(
           `${BULK_CONFIRM_TEXT_SLOT} is blank, so the confirm step shows an empty sentence where the default one names `
             + 'the record count: write the sentence, or remove the key to show the default.',
-          source,
+          confirmSource,
         );
         continue;
       }
-      const refusal = closedScopeTemplateRefusal(source, { slot: BULK_CONFIRM_TEXT_SLOT, roots: bulkConfirmTemplateRoots(def) });
+      const refusal = closedScopeTemplateRefusal(confirmSource, { slot: BULK_CONFIRM_TEXT_SLOT, roots: bulkConfirmTemplateRoots(bulkDef) });
       if (refusal !== undefined) {
-        warn(refusal, source);
+        warn(refusal, confirmSource);
         continue;
       }
-      for (const e of validateExpression('template', source).errors) warn(e.message, e.source);
+      for (const e of validateExpression('template', confirmSource).errors) warn(e.message, e.source);
     }
   };
-  const judgeListViews = (listViews: unknown, owner: string): void => {
-    if (!listViews || typeof listViews !== 'object' || Array.isArray(listViews)) return;
-    for (const [key, lv] of Object.entries(listViews as AnyRec)) judgeContainer(lv, `${owner} · listViews.${key}`);
+  const judgeListViews = (named: unknown, owner: string): void => {
+    if (!named || typeof named !== 'object' || Array.isArray(named)) return;
+    for (const [key, lv] of Object.entries(named as AnyRec)) judgeContainer(lv, `${owner} · ${LIST_VIEWS_LABEL}.${key}`);
   };
-  if (scope.views) {
-    for (const [vi, view] of recordsOf(stack.views).entries()) {
-      if (!view || typeof view !== 'object') continue;
-      const viewName = typeof view.name === 'string' ? view.name : typeof view.object === 'string' ? view.object : `#${vi}`;
+  if (judgeViews) {
+    let vi = -1;
+    for (const viewEntry of recordsOf(stack.views)) {
+      vi += 1;
+      const viewName = typeof viewEntry.name === 'string' ? viewEntry.name : typeof viewEntry.object === 'string' ? viewEntry.object : `#${vi}`;
       // The two standalone shapes `PUT /api/v1/meta/view` carries and the
       // publish gate snapshots as `views: [item]` — recognised as the list-view
       // field rules recognise them (`validate-list-view-field-refs.ts`): the
       // flattened list overlay (the `ListView` at the top level) and the
       // ViewItem record (one level down, in `config`). Without them a view
       // write would run this pass over nothing.
-      const config = view.config;
-      if (view.viewKind === 'list') {
-        const record = config !== null && typeof config === 'object' && !Array.isArray(config);
-        judgeContainer(record ? config : view, `view '${viewName}' (${record ? 'ViewItem record' : 'flattened list overlay'})`);
+      if (viewEntry.viewKind === 'list') {
+        const record = viewEntry.config !== null && typeof viewEntry.config === 'object' && !Array.isArray(viewEntry.config);
+        judgeContainer(record ? viewEntry.config : viewEntry, `view '${viewName}' (${record ? 'ViewItem record' : 'flattened list overlay'})`);
       }
-      judgeContainer(view.list, `view '${viewName}' · list`);
-      judgeListViews(view.listViews, `view '${viewName}'`);
+      judgeContainer(viewEntry.list, `view '${viewName}' · list`);
+      judgeListViews(viewEntry.listViews, `view '${viewName}'`);
     }
   }
-  if (scope.objects) {
-    for (const [oi, obj] of recordsOf(stack.objects).entries()) {
-      if (!obj || typeof obj !== 'object') continue;
+  if (judgeObjects) {
+    let oi = -1;
+    for (const obj of recordsOf(stack.objects)) {
+      oi += 1;
       judgeListViews(obj.listViews, `object '${typeof obj.name === 'string' ? obj.name : `#${oi}`}'`);
     }
   }
