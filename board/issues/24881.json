@@ -1,0 +1,37 @@
+{
+  "number": 24881,
+  "kind": "pull_request",
+  "title": "fix(platform-objects): a team record no longer lists Sessions with \"Sign out other devices\"",
+  "state": "closed",
+  "state_reason": null,
+  "draft": false,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "documentation",
+    "size/m",
+    "tests",
+    "tooling"
+  ],
+  "assignees": [
+    "os-project-manager"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-20T12:32:29Z",
+  "updated_at": "2026-10-20T13:50:15Z",
+  "closed_at": "2026-10-20T13:50:13Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": "2026-10-20T13:50:13Z",
+  "comments": 4,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/pull/24881",
+  "body": "Fixes #24765\n\nClause-②: no (narrowing)\n\nDeveloper run for the `domain:engine` seat 1 dispatch (claim comment 6289444669), session `session_01NftZtMY2EJSyAjctCSfkis`.\n\n## What changes\n\n`sys_session.active_team_id` is a lookup to `sys_team`. It did not set `relatedList: false`, so every team record derived a **Sessions** related list (Setup → Teams → a team → Related). That list carried the session object's only `list_toolbar` action, \"Sign out other devices\". Its confirmation reads \"Sign out of every other device where you're currently logged in?\", and it revokes the **caller's** own other sessions, not the team's.\n\n- `packages/platform-objects/src/identity/sys-session.object.ts`: `active_team_id` now sets `relatedList: false`, with a one-line comment saying why. The field, its lookup, its label and its column stay. better-auth still writes `activeTeamId` there (`plugin-auth/src/auth-schema-config.ts`).\n- `packages/platform-objects/src/identity/sys-team-derived-related-lists.test.ts` (new): the pins below.\n- `.changeset/24765-team-sessions-related-list.md`: `minor` for `@objectstack/platform-objects` (fix round 1: a narrowing ships `minor` in the launch window, as Check Changeset's level axis enforces), with the BREAKING banner and the ADR-0087 disposition `not-required (no-migration-prescription)` that `check-adr-0087-registration` asks of a `(narrowing)` arm.\n\n## The read, done before the edit (base `abd5acdaf7`)\n\n- **How a team's related lists are derived.** `sys_team` declares no record page anywhere in the repo (only `sys_organization` and `sys_user` have pages), so the console derives the team page's related lists. `FieldSchema.relatedList` says `false` suppresses the child and absent shows it. The key is `live` in `packages/spec/liveness/field.json`, whose evidence is objectui `deriveRelatedLists` skipping the foreign key when `relatedList` is `false`.\n- **Every lookup into `sys_team`** (all `lookup` / `master_detail` fields in `packages/` and `examples/`): `sys_session.active_team_id` (fixed here), `sys_team_member.team_id` (the team's Members list, which is wanted) and `sys_invitation.team_id`. The Invitations list on a team is named, not changed. Its toolbar action `invite_user` is org-scoped and not self-scoped. Its `accept_invitation` / `reject_invitation` row actions are visible only to the invitee (`record.email == ctx.user.email`).\n- **Who reads a team's Sessions list today:** nobody. No page, test, doc, `qa/` file or `docs/qa/platform-checklist/` item names it. `identity-auth.json`'s revoke-other-sessions item is about a user's own sessions and is unchanged.\n- **The user's own Sessions list** is a curated `record:related_list` tab on `SysUserDetailPage`, keyed on `sys_session.user_id`, and does not go through `active_team_id`.\n\n## Pins\n\nIn `sys-team-derived-related-lists.test.ts`, applying the spec's derivation rule to every object this package exports:\n\n- the derived related lists of `sys_team` exclude `sys_session` and still include `sys_team_member.team_id` (a guard against over-applying the key);\n- `sys_session.active_team_id` is still a `lookup` to `sys_team` labelled \"Active Team\", with `relatedList: false`;\n- `SysUserDetailPage` still lists `sys_session` by `user_id`; `sys_session.user_id` still derives a list on `sys_user`; `revoke_my_other_sessions` is still a `list_toolbar` action.\n\n**Ablation**, run through `scripts/ablation-replace.mjs` on the committed fix. The anchor `relatedList: false,` went 1 → 0 on disk and the blob went `adf2c552a667` → `55e8613a1c8f`. The file then ran **2 failed | 3 passed**: `exclude sys_session` and the declaration pin went red. Restored: blob == HEAD `adf2c552a667`, and `git diff HEAD` is empty. The tests import `src/` directly, so no `dist/` leg applies.\n\n**Pin sweep:** I swept `active_team_id`, \"Active Team\", `revoke_my_other_sessions`, \"Sign out other devices\" and the confirmation text across `packages/`, `qa/`, `docs/qa/platform-checklist/` and `content/docs/`. No existing pin moves.\n\n## Verification\n\nRun at `4f4bb1fab`, which is the branch merged with `origin/main` `3fbef41b4`, unless a line says otherwise.\n\n- `pnpm --filter @objectstack/platform-objects typecheck`: exit 0. The first run went red on two type errors in the new test file, which I fixed. I did not add a ledger entry.\n- `pnpm --filter @objectstack/platform-objects test`: exit 0, 80 files, 1204 tests.\n- `pnpm --filter @objectstack/core test:repo`: exit 0, 6 files, 82 tests (pre-merge head).\n- Dependent suites, pre-merge head: `plugin-auth` exit 0 (3240 passed, 10 skipped) · `plugin-security` exit 0 (4047 passed, 45 skipped) · `runtime` exit 0 (6782 passed, 19 skipped) · `rest` exit 0 (6144 passed, 326 skipped) · `verify` exit 0 (376 passed). The full `cli` unit layer runs longer than the 10-minute foreground cap, so I left it to CI. Its tests that read identity objects (`organization-ownership-inventory`, `unmanaged-tables`, `src/lint`) ran: exit 0, 94 passed.\n- Gates: `node scripts/pm/dispatch-gates.mjs --commands --repo objectstack-ai/objectstack` with no paths derived 66 commands, and I ran all 66. 65 exited 0 on the first pass. `pnpm check:dual-build-cjs-loads` exited 3 (PREREQUISITE NOT MET: no `dist/`). After `pnpm build` it exited 0. `--ran` reconciliation: 66 derived, 66 run, 0 NOT-MEASURED, 0 UNRUN, with every line carrying its exit code. After the merge I re-ran `check-adr-0087-registration`, `check-changeset-no-major`, `check-empty-changeset`, `check:i18n`, `check:type-check-debt` and `check:nul-bytes`: all exit 0.\n- `node scripts/check-i18n-bundles.mjs`: exit 0. All bundles are in sync, so this change regenerates no translation bundle.\n\n## Acceptance notes\n\n- **Not asked, not built:** a team-scoped session action, and any change to `revoke_session` or to the header action.\n- This narrowing owes a `CONTRACT_REVIEW_TIER` review of record before the queue, run by the seat.\n\n---\n_Generated by [Claude Code](https://claude.ai/code/session_01NftZtMY2EJSyAjctCSfkis)_\n\n"
+}

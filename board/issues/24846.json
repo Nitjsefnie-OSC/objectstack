@@ -1,0 +1,37 @@
+{
+  "number": 24846,
+  "kind": "pull_request",
+  "title": "fix(plugin-auth): invite-member refuses an unknown role with code ROLE_NOT_FOUND",
+  "state": "closed",
+  "state_reason": null,
+  "draft": false,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "documentation",
+    "size/m",
+    "tests",
+    "tooling"
+  ],
+  "assignees": [
+    "os-justin"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-20T10:04:38Z",
+  "updated_at": "2026-10-20T11:25:16Z",
+  "closed_at": "2026-10-20T11:25:14Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": "2026-10-20T11:25:14Z",
+  "comments": 3,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/pull/24846",
+  "body": "Fixes #24750\n\nClause-②: yes\n\n## What changes\n\n`POST /api/v1/auth/organization/invite-member` with a role outside the closed membership vocabulary now answers `400` with `code: 'ROLE_NOT_FOUND'` and the vendor's own message (`ROLE_NOT_FOUND: no_such_role`). That is the body `update-member-role` already gives for the same refusal, and the answer the spec's invitation `role` docstring (`packages/spec/src/identity/organization.zod.ts`) and `content/docs/permissions/authentication.mdx` promise. The refusal still lands before any invitation row is written.\n\n- `packages/plugins/plugin-auth/src/invite-role-not-found-code.ts` (new): `codeInviteRoleNotFound(ctx)` recognises exactly this refusal: the invite path, a 400 `APIError`, no `code` of its own, and a message starting with the vendor prefix `ROLE_NOT_FOUND: `. It re-throws it as `APIError('BAD_REQUEST', { code: 'ROLE_NOT_FOUND', message })`. Any other answer passes through unchanged, including a future vendor release that codes the refusal itself.\n- `auth-manager.ts`: the `after` hook calls it last, right before the sign-up tail. The throw ends the hook, so it has to come after every path-specific section.\n- `packages/spec/src/api/error-code-ledger.zod.ts`: one `ROLE_NOT_FOUND` row in `@objectstack/plugin-auth`'s section. This is the spec lane's pre-approved ledger-append class: no field, no mechanism change, no other entry. `check:generated` named `content/docs/references/**` as fed by it, and `check:generated --fix` regenerated it (two reference pages, one row each, plus the `+339 more` → `+340 more` count).\n- `.changeset/24750-invite-role-not-found-code.md`: `@objectstack/plugin-auth` minor, `@objectstack/spec` minor, `Clause-②: yes (widening)`. The rule is AGENTS.md Post-Task Checklist step 3: \"`yes` takes at least `minor`\". The ledger row widens spec's published `ErrorCode` union, so spec is minor as well.\n\n## Mechanism, as measured\n\n- better-auth 1.7.3 `dist/plugins/organization/routes/crud-invites.mjs` throws `new APIError(\"BAD_REQUEST\", { message: ROLE_NOT_FOUND + \": \" + roles })` with no `code`. `routes/crud-members.mjs` (update-member-role) throws the same condition with `code: ORGANIZATION_ERROR_CODES.ROLE_NOT_FOUND.code`. **The control door's code comes from the vendor, not from a plugin-auth mapping.** So the dispatch's hypothesis that both codes come from one mapping step in `auth-manager.ts` is false: there was no plugin-auth mapping seam to reuse.\n- The seam used is better-auth's own hook runner (`dist/api/dispatch.mjs`, `runAfterHooks`). The thrown `APIError` reaches the user `after` hook on `ctx.context.returned`, and an `APIError` an after hook throws replaces the returned value. The user hook runs before the plugin after-hooks. The vendored library is not touched.\n\n## Pins (through the real door: `AuthManager.handleRequest`, real better-auth pipeline)\n\nAdded to `accept-invitation-adopt-membership.test.ts`, the suite that already mounts the invitation door. Putting them there reuses its pinned engine double, so `engine-double-contract`'s ledger does not move.\n\n1. An unknown role is refused 400 with `code: 'ROLE_NOT_FOUND'`, the message names the role, and no `sys_invitation` row exists.\n2. CONTROL: a valid role (`member`) still gets 200 and one pending row with that role.\n3. CONTROL: `update-member-role` with an unknown role still answers 400 `ROLE_NOT_FOUND`, and the membership role is unchanged.\n\nRepro before the fix: pin 1 red (`expected undefined to be 'ROLE_NOT_FOUND'`), pins 2–3 green.\n\nAblation at `925e35e1`, through `scripts/ablation-replace.mjs`. The anchor `await codeInviteRoleNotFound(ctx);` went x1 → x0 and the blob went `658b4666de2f` → `44a4a7103dff`. Pin 1 went red with the same assertion, and pins 2–3 stayed green, as controls should. Restore with `git checkout HEAD -- PATH`: the blob was back to the HEAD blob `658b4666de2f` and `git diff HEAD` was empty. The test imports `./auth-manager` from source, so there is no `dist` leg.\n\n## Verification (final head `65cdcf23c`, after merging `origin/main` `08d201a80`)\n\n- `pnpm --filter '@objectstack/plugin-auth^...' build` and `pnpm --filter @objectstack/plugin-auth build`: exit 0.\n- `pnpm --filter @objectstack/spec build && pnpm --filter @objectstack/spec check:generated`: exit 0, \"All 14 generated artifacts are up to date\".\n- `pnpm --filter @objectstack/plugin-auth typecheck && pnpm --filter @objectstack/spec typecheck`: exit 0.\n- `pnpm --filter @objectstack/plugin-auth test`: 168 files, 3227 passed, 10 skipped.\n- `pnpm --filter @objectstack/spec test`: 703 files, 21360 passed, 1 todo.\n- `node scripts/pm/dispatch-gates.mjs --commands --repo objectstack-ai/objectstack`: 118 commands from the 7 changed paths. Every one was run with its exit captured before any pipe, and every one exited 0 (`check:error-code-casing`, `check:error-code-provenance`, `check:dispatcher-error-vocabulary`, `check:engine-double-contract` and `check:auth-mount-ledger` among them). `--ran` answered \"118 derived, 118 run, 0 NOT-MEASURED, 0 UNRUN\".\n\n## Decisions taken (self-driven dispatch, recorded for review)\n\n- **Seam:** an `after`-hook re-throw of the vendor's refusal (chosen), not a `before`-hook re-validation of the role. Re-validating would give plugin-auth a second copy of the vendor's vocabulary check (static roles plus dynamic `organizationRole` rows), and two owners of one decision drift apart. The after-hook adds only the missing code, on the vendor's own verdict.\n- **Message:** the vendor's message is kept verbatim. It already names the role, and it is byte-identical to the control door's body.\n- **spec changeset level:** minor, because a new member in the published `ErrorCode` union is a widening of spec's face too.\n\n## Acceptance notes\n\n- The ledger row registers a code that `update-member-role` already put on the wire as a better-auth pass-through, unregistered. This PR makes that existing pass-through registered too. It does not change that door's answer, and pin 3 holds that.\n- QA source: #24538 (identity-auth run) and the re-measure from #24779. The nearest earlier cards are #23945 and #24243, which covered plugin-auth's own throws. They are named here for context only; this PR closes nothing but the first line's card.\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\n---\n_Generated by [Claude Code](https://claude.ai/code/session_01SKHckexWmsVZ6qZ1sioSkD)_\n"
+}

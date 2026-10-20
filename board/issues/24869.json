@@ -1,0 +1,35 @@
+{
+  "number": 24869,
+  "kind": "pull_request",
+  "title": "qa(checklist): records-forms.record-discussion-mentions — @mention recipients gated on read access (the clause #24802 deferred)",
+  "state": "closed",
+  "state_reason": null,
+  "draft": false,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "size/s",
+    "skip-changeset"
+  ],
+  "assignees": [
+    "os-warren"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-20T12:10:05Z",
+  "updated_at": "2026-10-20T12:32:44Z",
+  "closed_at": "2026-10-20T12:32:42Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": "2026-10-20T12:32:42Z",
+  "comments": 1,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/pull/24869",
+  "body": "Fixes #24864\nClause-②: no — the internal QA ledger and its runner protocol; nothing published\n\n## Summary\n\n`records-forms.record-discussion-mentions` goes to revision 5 with the clause #24802 deferred. Under RUNNER rule 2 it had to wait until #24785's fix merged. That fix, #24794, merged as `e5b3de06a6`.\n\n- **acceptance[9] (api oracle).** An @mention notification reaches a mentioned user only when that user can read the comment's record. That holds whether the mention names them by user id or by email, and the author is never notified. The clause is stated at the level of #24794's Summary. The gate sits at the producer, plugin-audit's mention writer. It judges each mentioned user in their own envelope, using the grant resolver, organization-claim vetting and parent-read evaluator a request uses.\n- **steps[13]** drives the stock `single` leg: a same-organization member whom the record's own sharing excludes. It uses an owner-only `showcase_private_note` against a `showcase_account` the member can read. On a walled boot it repeats the note-shaped leg across organizations.\n- **fixtures.requires[2]** adds the records and the second member.\n- **knownGaps[2]**: the cross-organization leg needs a walled boot.\n- **negative[6]** covers both directions: no notification to a non-reader, and no withheld notification for a reader.\n- **automated.ref** names `packages/plugins/plugin-audit/src/mention-recipient-gate.integration.test.ts` and, per RUNNER rule 6, the layer it drives. That layer is the engine: a real kernel, ObjectQL engine and SQLite driver, with plugin-security's read layer played by a middleware and messaging by an `emit()` recorder. The pin therefore scores the clause `partial` at most and names HTTP and the real plugin-security as missing.\n- **source** gains `QA-source: #24783 · records-forms.record-discussion-mentions · acceptance[4]` and the gate file.\n- **history** gains a revision 5 row naming #24785 and #24794.\n\nThe clause describes the mechanism only; no step-by-step cross-organization reproduction is written anywhere. acceptance[4] is unchanged: it scores whose bell gains a row, while this clause scores which of the mentioned users may.\n\n## Verification\n\nStock showcase at `81120caac8` (this branch's base, with `e5b3de06a6` on it). Build: `pnpm build --concurrency=2`, 76/76. Boot: `objectstack dev --seed-admin`, `Tenancy: single`, fresh DB. The server was stopped by process group afterwards.\n\n- **Member setup.** Sign-up answers 403 `SELF_REGISTRATION_CLOSED` (audience posture `invite_only`). The member was minted with `POST /api/v1/auth/admin/create-user` and landed in the default organization. It changed its password and signed in again. Its session's `activeOrganizationId` is the default organization.\n- **Access, as the member.** `GET /api/v1/data/showcase_private_note/ID` → 404; `GET /api/v1/data/showcase_account/ID` → 200.\n- **Comments.** As admin, three `sys_comment` creates → 201 each: on the note mentioning the member by id; on the note by email; on the account mentioning the member by id and the admin itself.\n- **Member inbox** (`GET /api/v1/notifications`): exactly one `collab.mention`, for the account comment, with `actionUrl` `/showcase_account/ID` and `unreadCount` 1. None for either note comment.\n- **Admin inbox:** no `collab.mention` at all. Its three rows are seeded `approval.requested`.\n- **Log:** two lines `[audit] mention notification withheld {\"reason\":\"cannot_read_source\",\"userId\":…,\"commentId\":…}`, one per note comment. The email mention resolved to the member's id. The author is dropped without a line.\n\nThe `single` leg is **green** on current main, as expected after #24794. The cross-organization leg was not run: it needs a walled boot (knownGaps[2]).\n\n## Gates\n\nOn head `45f8e20b`:\n\n- `node scripts/check-platform-checklist.mjs` → exit 0. Output: `check-platform-checklist: OK — 16 areas, 328 items (323 active, 1 planned)`.\n- `node scripts/pm/dispatch-gates.mjs --commands` derived 13 commands, each run and each exit 0:\n  - `node scripts/check-ci-filter-parity.mjs` 0\n  - `node scripts/check-closing-keyword-parity.mjs` 0\n  - `node scripts/check-closing-keyword-parity.mjs --self-test` 0\n  - `node scripts/check-comment-mask-corpus.mjs` 0\n  - `pnpm --filter @objectstack/lint run check:doc-formula-expressions` 0\n  - `pnpm check:cross-package-test-inputs` 0\n  - `pnpm check:doc-authoring` 0\n  - `pnpm check:driver-memory-census` 0\n  - `pnpm check:gitlink-declared` 0\n  - `pnpm check:nul-bytes` 0\n  - `pnpm check:platform-checklist` 0\n  - `pnpm check:refd-timer-probe` 0\n  - `pnpm check:watch-hint-literal` 0\n- `node scripts/pm/dispatch-gates.mjs --ran` → exit 0: 13 derived, 13 run, 0 NOT-MEASURED.\n\n## Acceptance notes\n\n- This item's knownGaps[0] still says the mention target is \"a second signed-up user\". On a stock boot, self-sign-up is closed (`SELF_REGISTRATION_CLOSED`, `invite_only`), so the new step mints the member through `admin/create-user` instead. knownGaps[0]'s own wording is the wave anchor's to correct, and is not touched here. It is noted for #24579.\n- The inbox row's discriminator field is `type` (`collab.mention`), under `data.notifications[]`. The verify text names that shape.\n\n---\n_Generated by [Claude Code](https://claude.ai/code/session_01MRkuLGosywLTY6EMcP6fGK)_\n"
+}

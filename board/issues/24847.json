@@ -1,0 +1,35 @@
+{
+  "number": 24847,
+  "kind": "issue",
+  "title": "[Decision] 18.0.0 release scope: publish before or after step 7b-1+7b-2 (the COALESCE index form)",
+  "state": "closed",
+  "state_reason": "completed",
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "domain:engine",
+    "priority:p1"
+  ],
+  "assignees": [
+    "os-steve"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-20T10:07:07Z",
+  "updated_at": "2026-10-20T11:02:01Z",
+  "closed_at": "2026-10-20T11:02:01Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": null,
+  "comments": 2,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/24847",
+  "body": "Ruled: 6289274285 · no letter, the maintainer reserves the call · 2026-10-20T10:55Z\n\n**一句话问题：** 18.0.0 要不要等\"唯一索引从 COALESCE 写法换成普通写法\"（第 7 步的 7b-1+7b-2）做完再发？这一块对用户不可见，却是第 7 步里改动风险最大、也最晚完成的一块。\n\n**背景：** 维护者已裁定 18.0.0 等第 4–7 步全部合并后再发（6282882793，原话「还是等你全部完成」）。第 7 步实测拆成 8 块，其中 7 块要么改变对外行为，要么改变全新安装的表结构，属于该进大版本的改动。7b-1+7b-2 只改两件事：一是表结构比对工具把两种索引写法视为等价，二是新建表时用普通写法。它在驱动那条线上要排在 7b-0 后面。\n- 读到的既有裁决：6282882793（发版时机）、6285122667（7b-0 / 7a-3 的执行记录）、ADR-0131 D1/D8、ADR-0120 D3（COALESCE 写法的来源）。\n\nGoverning text: 6282882793 — 「还是等你全部完成」(18.0.0 publishes after steps 4–7). This card asks whether to amend it for one part.\n\n**前提（带复核命令）：**\n- 7b-1+7b-2 尚未派发：`curl -sS \"https://api.github.com/repos/objectstack-ai/objectstack/pulls?state=open&per_page=50\" | jq -r '.[].head.ref' | grep -c 7b12`，应为 0。\n- 旧写法的读取会一直保留（已有库上的 COALESCE 索引要能读懂）：见 #24583 测量 m7 F-f 及 7b-1 条目（`schema-drift.ts` `canonicalIndexKey`）。\n\n**选项：**\n\n| 选项 | 做什么 | 客户能感知的后果 | 工作量 |\n|---|---|---|---|\n| **A（推荐）** | 18.0.0 不等 7b-1+7b-2，它放到 18.0.x / 18.1 | 没有可见差别。18.0.0 的库仍是 COALESCE 索引，功能完全正常；以后那块落地时，比对工具把旧写法视为等价，不删索引、也不用迁移 | 省 2 小时左右；发版里少一块碰索引 DDL 的高风险改动 |\n| B | 照原裁决，全部做完再发 | 同 A，只是 18.0.0 新建的库直接用普通写法 | 多等 2 小时左右；这块碰的是唯一索引的 DDL，紧贴着发版合入 |\n\n**业务含义：** A 相当于先上线一辆功能完整的车，内饰换件留到第一次保养；B 是换完内饰再交车。两者开起来没区别。\n\nos-decision-facets\n- ① 项目长远合理性：两者终态相同（新 DDL 普通写法，旧写法永远读得懂），A 不留迁移债，也不留特例。\n- ② 实际业务拉动：今天没有客户因为 COALESCE 写法受影响，零拉动。\n- ③ 防 AI 犯错：A 让紧贴发版的改动更少；索引 DDL 出错会删了重建唯一索引，属于破坏性操作。\n- ④ 创业阶段不扩散：A 不新增任何面，只是推迟一块纯内部改动。\nPrior rulings read: release scope,18.0.0,coalesce,index → 11 hits; ADR-0120 D3, ADR-0131 D13; thread: 6282882793 on #15194\n\n**推荐：** A。只看①时选 A；②③④ 都不翻转。回退方案是 B。\n- 置信缺口：7b-1+7b-2 的实际工作量还没实测，\"省 2 小时\"是按 7b-0 的进度估算的。\n\n**会不会留下迁移债：** 不会。原因有两点：\n- 比对工具读旧写法的能力无论如何都要保留，已有库上的 COALESCE 索引必须能读懂；\n- 7b-0 让租户列在全新安装上从建表起就不可为空，在不可为空的列上，COALESCE 索引与普通索引语义相同。\n\n**裁后执行：**\n- 选 **A**：发版前核对不再等 7b-1+7b-2。这一块照常派发、照常复审合入，只是不卡 18.0.0，并在 #24583 上记为 18.0.x 的一部分。\n- 选 **B**：照原计划，等它合入后再做发版前核对。\n\nBlocks: none (the release check waits on this answer only if B).\n"
+}

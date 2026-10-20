@@ -1,0 +1,36 @@
+{
+  "number": 24832,
+  "kind": "pull_request",
+  "title": "test(dogfood): the persona matrix hangs its invoice lines off an unpaid invoice",
+  "state": "closed",
+  "state_reason": null,
+  "draft": false,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "size/s",
+    "skip-changeset",
+    "tests"
+  ],
+  "assignees": [
+    "os-justin"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-20T08:41:17Z",
+  "updated_at": "2026-10-20T09:11:41Z",
+  "closed_at": "2026-10-20T09:11:39Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": "2026-10-20T09:11:39Z",
+  "comments": 2,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/pull/24832",
+  "body": "Refs #24780\nClause-②: no\n\n**This is row 3 of #24780** (triage pointer `6286191020`): the stale fixture in `showcase-crud-persona-matrix.dogfood.test.ts`. Row 1 is PR #24805, which landed as `c56115bf9`. Row 2 belongs to #24749. #24780 remains open: the PM closes it once rows 1 and 3 have both landed.\n\n## What changes\n\nOne fixture line in `packages/qa/dogfood/test/showcase-crud-persona-matrix.dogfood.test.ts`, in `beforeAll`:\n\n- **Before:** `seed.invoiceId = await firstId('showcase_invoice')`, which takes whichever invoice a `limit: 1` read returns first.\n- **After:** the first invoice whose `status` is not `paid`. That is the state the showcase's paid-invoice line lock reads (the `showcase_guard_paid_invoice_line_*` hooks test `header.status === 'paid'`). It follows the pattern of the `[#18682]` account choice directly above it, and the new comment explains why.\n\nThe lock from PR #24731 is unchanged. This PR changes no case assertion, no other dogfood file, and nothing under `examples/app-showcase/**` or `packages/spec/**`.\n\n## Why\n\n- The admin payload control creates a `showcase_invoice_line` under `seed.invoiceId` and asserts a status below 300. Since PR #24731, the showcase refuses a line insert under a paid invoice with a 400: \"This invoice is paid, so its lines are locked: a line cannot be added to it.\"\n- `firstId` does not pick the same invoice each time. On `ab9890169` I measured three boots. The `limit: 1` read returned INV-1012 (sent), then INV-1008 (sent), then INV-1005 (paid). The ids are random and differ on every boot. The unlimited read returned insertion order every time, with INV-1001 first. The seed holds 12 invoices, and 5 of them are paid. So the control fails on some boots and passes on others.\n- CI shows the same pattern. Shard 3/3 on `74f78159af` was red in push run 39376439272 and green in schedule run 39378039597. On `a43405d596` it was red in schedule run 39384364728. I also read four `main` runs from before `576d0f3733`, and shard 3/3 was green in all of them.\n\n## Evidence\n\nEvery run used `pnpm --filter @objectstack/dogfood exec vitest run --maxWorkers=2 FILE` under `os-verify-lock`, after building the closure with `turbo run build --filter='@objectstack/dogfood^...'`. This file belongs only to the `isolated` project. The gate runs `turbo run test --filter=@objectstack/dogfood` with `OS_TEST_SHARD=k/3`.\n\nOn an unmodified file, red or green comes down to which invoice the boot happens to draw. So the red/green comparison uses an uncommitted scratch copy whose only change forces the parent to a paid invoice (`where: { status: 'paid' }`):\n\n| tree | parent | result |\n|---|---|---|\n| `4e0f5f50d` (`576d0f3733^`) | forced paid | `Tests 46 passed (46)`, VERDICT command-exit 0 |\n| `576d0f373` (PR #24731) | forced paid | FAIL: \"admin control: the showcase_invoice_line payload is VALID (...) got {\"error\":\"This invoice is paid, so its lines are locked: a line cannot be added to it.\",\"object\":\"showcase_invoice_line\"}: expected 400 to be less than 300\", VERDICT command-exit 1 |\n| `ab9890169` (`main`, the base) | forced paid | the same FAIL at the assertion CI cites (`:369`), VERDICT command-exit 1 |\n| `8c65e505a` (the fix) | the fix | `Tests 46 passed (46)`, VERDICT command-exit 0 |\n| `0503d47c6` (final head, `main` merged) | the fix | `Tests 46 passed (46)` on each of two runs |\n\nOnly `examples/app-showcase`, a changeset and one docs file differ between the two bisect trees, and the dogfood suite loads the showcase from source. So a single built closure served both legs, and the matrix file is byte-identical across the pair.\n\n**Which lines hang off a seeded invoice.** I ran a probe on `8c65e505a`: a scratch copy with one extra reporting case, not committed. Only `showcase_contributor` creates a line. That persona's `showcase_invoice` row runs first, and its line hangs off its own invoice, whose status is `draft`. The only line under a seeded invoice is the admin control's, so fixing this one parent fixes every place in the file with this cause.\n\nNo ablation: product behaviour does not change.\n\n## Gates (final head `0503d47c6`)\n\n- `node scripts/pm/dispatch-gates.mjs --commands --repo objectstack-ai/objectstack` derived 56 commands from 1 changed path. All 56 ran, each with its exit code captured before any pipe. `--ran`: \"56 derived famil(ies) accounted for — 56 run, 0 NOT-MEASURED (a DERIVED zero — all 56 recorded an exit code and none of them is 3).\"\n- `check:dual-build-cjs-loads` first exited 3 (PREREQUISITE NOT MET: 8 packages had no `dist`). I built those 8 and re-ran it: exit 0, \"112 published require entry point(s) across 69 package(s) load\".\n- `pnpm lint` (`eslint . --no-inline-config`): exit 0, no findings.\n- `pnpm --filter @objectstack/dogfood run typecheck`: exit 0. `tsc --listFilesOnly` lists the edited file.\n- `check-nul-bytes: OK (scanned 12537 text file(s) ...; no raw ASCII control bytes)`.\n\n## Changeset\n\n`skip-changeset`: the diff is one test file in `@objectstack/dogfood`, which is `private: true` and publishes nothing.\n\n## Acceptance notes\n\n- The file's other seeded parents (`showcase_product`, `showcase_project`, `showcase_expense_report`, `showcase_team`) still use `firstId`, so they are also drawn at random on each boot. Today no rule makes any of those choices refuse a payload, and every pre-lock run I read was green. If a state rule is added to one of those objects, its parent should be chosen the same way.\n\n---\n_Generated by [Claude Code](https://claude.ai/code/session_01LmjU2x1faLZ39DVTFyVca6)_\n"
+}

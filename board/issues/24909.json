@@ -1,0 +1,32 @@
+{
+  "number": 24909,
+  "kind": "issue",
+  "title": "A scaffolded app pointed at PostgreSQL is refused with \"Run pnpm install && pnpm build\", which does not fix it: the missing optional peer pg is reported as a build precondition",
+  "state": "open",
+  "state_reason": null,
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "area:devpath",
+    "bug",
+    "domain:services",
+    "pm:queue",
+    "priority:p1"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-20T13:53:55Z",
+  "updated_at": "2026-10-20T14:02:34Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 1,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/24909",
+  "body": "Filing gate: ① product defect with a named location and a reproduction (release-fixed wrong text in a boot refusal).\n\n- Category: ①. reach: the published 18.0.0 package, measured once through a public entry point. Scaffold from npm (npm create objectstack@18.0.0), then os dev -d postgres://..., the step your-first-project.mdx gives for production (\"point OS_DATABASE_URL at Postgres ... no code changes\").\n- Who acts: the seat that owns packages/services/service-datasource. Location: packages/services/service-datasource/src/connect-failure-remedy.ts, UNBUILT_WORKSPACE_REMEDY and connectFailureRemedy().\n- Dedup: local scan of the 626 newest issues (state=all, open and closed, #23703 to #24907) for Cannot find module 'pg' / install pg / optional peer / build precondition: 0 hits. Semantic search \"postgres driver pg not installed boot error says run pnpm install && pnpm build\": 2 hits, #24464 and #22155, both closed and both about different messages.\n\nreach: npx os dev --no-watch -p PORT -d postgres://postgres@127.0.0.1:55432/DB in a fresh create-objectstack@18.0.0 project (published npm 18.0.0), PostgreSQL 16.15.\nQA-source: #24908 · smoke:npm-18.0.0 · D1\ntype: Bug\n\n## Reproduction (published 18.0.0, outside any workspace)\n\n1. npm create objectstack@18.0.0 my-app -- --skip-skills; cd my-app. The package.json has no pg (the template lists none).\n2. createdb DB; npx os dev --no-watch -p 3404 -d postgres://postgres@127.0.0.1:55432/DB\n   - Exit 1. The refusal:\n     \"✗ datasource 'default': connect failed — Knex: run $ npm install pg --save Cannot find module 'pg' ... (declared boot-critical by the host ...). The driver package could not be LOADED at all — it is not installed, or its build output is missing. That is a build precondition, not a datasource fault: the configuration is fine, and no boot-time override can make a driver that does not exist answer a query. Run `pnpm install && pnpm build`, then start again.\"\n3. Do what it says: pnpm install (exit 0), pnpm build (exit 0, which is objectstack build in a scaffold), then step 2 again. Refused again with the same text.\n4. pnpm add pg, then step 2: boots (Driver SqlDriver(pg)), and CRUD works.\n\n## What is wrong\n\n- The remedy was written for one case (the module note, #5794): an unbuilt monorepo worktree where driver-sql's dist is missing. It is chosen for every module-not-found (isModuleNotFoundError), and that includes a project that simply lacks the optional peer pg. Per docs/data-modeling/drivers.mdx, pg is an optional peer you install yourself.\n- In that case all three claims are wrong for the reader: \"a build precondition\", \"the configuration is fine\", and the one command it offers. The text says it names one correct fix and stops, so a reader who follows it is stuck. The right fix (pnpm add pg, or npm install pg) appears only inside knex's own text, which this message calls a build problem.\n- The same branch probably also catches mysql2, and the turso, mongo and sqlite-wasm arms (drivers.mdx lists them as optional packages). Only pg was measured.\n\nAcceptance: when the module that could not be resolved is an optional driver peer (pg, mysql2, ...) and not the driver package's own build output, the refusal names the install command for that module. The unbuilt-worktree wording stays for the case it was written for."
+}

@@ -1,0 +1,37 @@
+{
+  "number": 24858,
+  "kind": "pull_request",
+  "title": "docs(lint): `os explain` for the two list-view binding verdicts, and the whole-collection docblocks say what is now true",
+  "state": "closed",
+  "state_reason": null,
+  "draft": false,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "documentation",
+    "size/m",
+    "tests",
+    "tooling"
+  ],
+  "assignees": [
+    "baozhoutao"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-20T11:18:13Z",
+  "updated_at": "2026-10-20T12:32:45Z",
+  "closed_at": "2026-10-20T12:32:42Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": "2026-10-20T12:32:42Z",
+  "comments": 1,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/pull/24858",
+  "body": "Closes #24796\n\nClause-②: no\n\nComments and explanation text only. No verdict, severity or accept set moves.\n\n## What changed\n\n- **`packages/lint/src/authoring-rules.ts`**: the `AuthoringRuleContext.packageScope` docblock (it ships in the published `.d.ts`). It used to say an object missing from a whole snapshot \"may come from another package\". It now says that what such a miss means depends on who built the snapshot. On the CLI the stack is one app, so \"exists nowhere\" cannot be decided. At the runtime door with no closure in force the snapshot is the whole served collection, so the object exists nowhere, and a list view bound to it is refused `list-view-object-unknown`.\n- **`packages/lint/src/runtime-gate.ts`**: the comment at the `packageScope` spread in `runRuntimeAuthoringRules` gets the same fix. It used to say \"from one a whole-collection snapshot merely does not carry\". It now says that without a closure the snapshots carry the whole collection, and only the CLI still cannot decide.\n- **`packages/lint/src/rule-explanations.ts`**:\n  - New `os explain list-view-object-outside-closure` entry. It covers the package closure's limbs (as `narrowObjectsToPackageClosure` keeps them), why the binding is not resolvable by declaration, the matching dataset-door verdict, why field positions stay unjudged, and the remedy (declare the dependency, or bind inside the closure).\n  - New `os explain list-view-object-unknown` entry. It covers the whole collection a write with no package is judged against, why that lets the door say \"exists nowhere\", why the nearest name rides the `fix:` line rather than the verdict, why an empty collection is not judged, and why the CLI still skips the binding.\n  - The two entries share one paragraph (`LIST_VIEW_BINDING_SCOPE`): the binding keys, one finding per list view, and that drafts and stored rows are not judged. This is the pattern `LIST_VIEW_HEAD_ONLY` already uses.\n  - Bounded in-place fix, same staleness class and same file: the last paragraph of the existing `list-view-field-unknown` entry said \"An unresolvable `data.object` skips the whole list view\". That is now true only on `os validate` / `os build` / `os lint`. The paragraph now names the two runtime ids that refuse the binding instead. The pinned phrase \"one typo yields one finding\" is kept.\n- **`packages/lint/src/validate-list-view-field-refs.test.ts`**: the existing pin \"`os explain` carries what the verdicts no longer say\" now also covers the two new ids. Each must have an entry, and each entry must name its closure/collection facts and its sibling id.\n- **`.changeset/24796-list-view-binding-explanations.md`**: `@objectstack/lint` patch.\n\nEach text was checked against the implementation: `validate-list-view-field-refs.ts` (the two report functions and their section docblocks), `reference-integrity-suite.ts` (the `wholeCollection` / `packageScope` dispatch), and `runtime-gate.ts` (`narrowObjectsToPackageClosure`, `packageScopeInForce`). Neither entry describes the flow door's `flow-trigger-unknown-object` verdict, which open PR #24839 is changing.\n\n## Parity / pin tests\n\n`rule-explanations.test.ts` checks only that each key is an exported rule id. It does not require every rule id to have an entry. Both ids are already exported from the root barrel (`LIST_VIEW_OBJECT_OUTSIDE_CLOSURE`, `LIST_VIEW_OBJECT_UNKNOWN`), and that test passes unchanged. The parity pattern this family uses is the per-rule facts pin in `validate-list-view-field-refs.test.ts`, and that is what this PR extends. No generated artifact pins the explanation set.\n\n## Verification (head `f6a4f21b73`)\n\n- `pnpm --filter '@objectstack/lint^...' build`: VERDICT command-exit 0.\n- `vitest run` on `rule-explanations.test.ts`, `validate-list-view-field-refs.test.ts`, `runtime-gate.whole-collection.test.ts` and `runtime-gate.package-closure.test.ts`: 4 files, 185 tests passed.\n- `@objectstack/lint` `pnpm test`: 150 files passed; 6974 tests passed, 5 skipped.\n- `@objectstack/lint` `pnpm typecheck`: `tsc --noEmit` clean, and `check:test-typecheck` OK.\n- `@objectstack/cli` `test/explain-rule-id.test.ts` (unit tier, after building lint and the cli dependency closure): 14 tests passed. That suite holds rule ids disjoint from `os explain` schema names.\n- `dispatch-gates --commands`: 66 derived commands (65, plus `check-changeset-fixed`, whose roster sits under `.changeset/`) all exit 0. `check:dual-build-cjs-loads`, `check:lean-entry-closure` and `check:type-check-debt` first exited 3 (PREREQUISITE NOT MET: no workspace build, and a lock queue timeout). That is not a measurement. They went green when re-run after `check:type-check-debt --re-measure` built the workspace: re-measure OK, 26 raw errors, none above the record. `check:doc-authoring` (no tracker number in author-facing strings) and `check:nul-bytes` are among the greens.\n- Ablation of the new pin: with the fix committed, `scripts/ablation-replace.mjs --delete` removed the `list-view-object-unknown` registry row (anchor 1 to 0, blob `0cd9479e66` to `6ea77f0c56`). The facts test went red with the assertion naming the missing `os explain list-view-object-unknown` entry (expected undefined to be defined). The file was then restored with `git checkout HEAD --`: the blob equals HEAD (`0cd9479e66`) and `git diff HEAD` is empty. The test reads `src` through a relative import, so no rebuild leg applies.\n\n## Acceptance notes\n\n- **Textual overlap with open PR #24839** (the #24669 flow-trigger closure). It edits the same `packageScope` docblock in `authoring-rules.ts` on the lines next to this one (\"Read by `validateListViewFieldRefs` only\" becomes \"Read by two rules\"). It also edits other parts of `rule-explanations.ts`. Whichever lands second gets a mechanical conflict in that docblock. The two sentences do not contradict each other, so the merge only needs both kept.\n\n---\n_Generated by [Claude Code](https://claude.ai/code/session_01D6F9axfoPzR7t8G1J7Ytzz)_\n"
+}

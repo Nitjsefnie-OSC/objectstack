@@ -1,0 +1,37 @@
+{
+  "number": 24867,
+  "kind": "pull_request",
+  "title": "fix(platform-objects): credential action params declare type password, so the dialog masks what is typed",
+  "state": "closed",
+  "state_reason": null,
+  "draft": false,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "documentation",
+    "size/s",
+    "tests",
+    "tooling"
+  ],
+  "assignees": [
+    "os-project-manager"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-20T12:01:30Z",
+  "updated_at": "2026-10-20T13:22:32Z",
+  "closed_at": "2026-10-20T13:22:30Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": "2026-10-20T13:22:30Z",
+  "comments": 3,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/pull/24867",
+  "body": "Fixes #24758\n\nClause-②: no (an input's presentation: the param still accepts the same string, and no accept set or served shape moves)\n\n## What changed\n\nEvery credential param on the identity objects' actions now declares `type: 'password'` instead of `type: 'text'`, so the console's action dialog draws a masked input and the typed value is no longer readable on screen or in screenshots. Labels, names, `required` and the posted body are unchanged.\n\n| Object | Action | Param |\n|---|---|---|\n| `sys_user` | `create_user` | `password` (the card) |\n| `sys_user` | `set_user_password` | `newPassword` (the card) |\n| `sys_user` | `change_my_password` | `currentPassword`, `newPassword` |\n| `sys_user` | `delete_my_account`, `enable_two_factor`, `disable_two_factor`, `generate_backup_codes` | `password` |\n| `sys_two_factor` | `enable_two_factor`, `disable_two_factor`, `regenerate_backup_codes` | `password` |\n| `sys_sso_provider` | `register_sso_provider` | `clientSecret` |\n\nFiles: `packages/platform-objects/src/identity/sys-user.object.ts` (the claim's surface), `sys-two-factor.object.ts` and `sys-sso-provider.object.ts` (outside the claim's listed surface, see below), the pins in `packages/platform-objects/src/platform-objects.test.ts`, and a `patch` changeset for `@objectstack/platform-objects`.\n\n## Read before the edit\n\n- **Console render (objectui at the pinned `.objectui-sha` `616df6598b42`).** `ActionParamDialog` builds every param through `paramToField()`, whose widget key is `resolveParamWidgetType(param.type)` → `resolveFormWidgetType`. `password` is a key of `fieldWidgetLoaderByKey` in `@object-ui/fields`, loading `widgets/PasswordField.tsx`, which renders its input with type `password` (with a show/hide toggle) and posts the string through `onChange` exactly as the text widget does. So a `password` param is masked in the console today; no objectui change is needed.\n- **Server.** No server path reads an action param's `type`: `resolvePassword` in `plugin-auth`'s `admin-user-endpoints.ts` reads `body.password` / `body.newPassword` as strings; `MASKED_ON_READ_FIELD_TYPES` / `isMaskedOnReadFieldType` and the generic-object plaintext warning in `object.zod.ts` judge object FIELDS only, never action params. `ActionParamSchema.type` is `FieldType`, which admits `password`. What the server accepts is unchanged.\n- **Every other password-like param** (`git grep -n \"assword\" -- 'packages/platform-objects/src/**/*.object.ts'`): the eight `sys_user` params and three `sys_two_factor` params in the table. A second sweep for credential-named params (`password`, `secret`, `token`) declared `type: 'text'` across `packages/**` and `examples/**` found one more, `sys_sso_provider.register_sso_provider#clientSecret`.\n\n## Scope notes\n\n- `sys-two-factor.object.ts` is outside the claim's `File surface:`; the dispatch names \"any other password-like param on the platform objects declared `type: 'text'`\" as in scope, so its three params land here.\n- `sys_sso_provider`'s `clientSecret` is landed as a bounded in-place fix: the same defect class (a credential typed into an action dialog shown in clear), the same one-token mechanical change pinned by the same test, no open PR or claim on that file, and no new gate family.\n- No translation bundle moves: labels are unchanged, and `pnpm check:i18n` is green after the build.\n\n## Pins\n\n- `credential action params declare 'password', so the dialog masks what is typed` in `platform-objects.test.ts`: a roster row per param above asserting `type === 'password'`, plus a sweep over every object exported from `./identity/index.js` that fails on any credential-named param (`/password|secret/i`, boolean toggles such as `mustChangePassword` excepted) not declared `password`; its positive control asserts the sweep reaches exactly the rostered params.\n- Pin sweep: the declarations and their strings (\"leave empty to generate\", \"Current Password\", the param names) were searched across every package, `qa/`, `docs/qa/platform-checklist/` and `content/docs/`. No existing pin asserts these params' type, so no pin moves.\n\n## Verification record\n\nBase `abd5acdaf`, merged `origin/main` `9a06f0be0` before opening; head `d46ae39da`.\n\n- `pnpm --filter @objectstack/platform-objects typecheck`: exit 0 (before and after the merge).\n- `pnpm --filter @objectstack/platform-objects test` (full suite): exit 0, 79 files / 1212 tests passed (after the merge).\n- `pnpm --filter @objectstack/core test:repo`: exit 0, 6 files / 82 tests.\n- `pnpm --filter @objectstack/plugin-auth test` (the endpoint consumer): exit 0, 170 files, 3260 passed / 10 skipped.\n- Build: `turbo run build` over the workspace after the merge, 76/76 tasks.\n- Ablation via `scripts/ablation-replace.mjs` (fix committed first; the test imports `src`, no dist): reverting `create_user#password` to `text` → 2 failed (roster row + sweep), restored to HEAD blob `7abf5fe3a3fb`; reverting `set_user_password#newPassword` → 2 failed (`SysUser.set_user_password#newPassword declares 'password'` + sweep), restored, `git diff HEAD` empty.\n- `node scripts/pm/dispatch-gates.mjs --commands --repo objectstack-ai/objectstack`: 66 commands, each run with its exit code captured before any pipe; all exit 0. `pnpm check:i18n`, `pnpm check:dual-build-cjs-loads` and `pnpm check:lean-entry-closure` first exited 3 (PREREQUISITE NOT MET, no build) and were re-run green after the build. `--ran` reconciliation: 66 derived, 66 run, 0 NOT-MEASURED, 0 UNRUN (a derived zero: all 66 carry an exit code). After the merge, the changeset, ADR-0087, keyed-text-bounds, tenancy-census, nul-bytes and type-check coverage/debt families were re-run on `d46ae39da`: all exit 0.\n\n## Acceptance notes\n\n- `@objectstack/setup` and `@objectstack/account` declare no `test` script; their filtered runs ran nothing.\n\n---\n_Generated by [Claude Code](https://claude.ai/code/session_01G3YZBh5FVysqzzALckNTWy)_\n"
+}

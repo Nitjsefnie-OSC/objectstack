@@ -1,0 +1,37 @@
+{
+  "number": 24834,
+  "kind": "pull_request",
+  "title": "fix(plugin-approvals): the delegation form's Delegator picker offers only the signed-in user",
+  "state": "closed",
+  "state_reason": null,
+  "draft": false,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "documentation",
+    "size/m",
+    "tests",
+    "tooling"
+  ],
+  "assignees": [
+    "os-support-ai"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-20T09:01:33Z",
+  "updated_at": "2026-10-20T09:55:27Z",
+  "closed_at": "2026-10-20T09:55:25Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": "2026-10-20T09:55:25Z",
+  "comments": 2,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/pull/24834",
+  "body": "Fixes #24764\n\nClause-②: no\n\n## What changed\n\n`sys_approval_delegation.delegator_id` now declares a picker filter:\n\n```ts\nlookupFilters: [{ field: 'id', operator: 'eq', value: '{current_user_id}' }],\n```\n\nThe delegation write guard (`bindDelegationWriteGuard` in `packages/plugins/plugin-approvals/src/lifecycle-hooks.ts`) accepts one delegator on a non-system write: the acting user. Its docstring records the decision: \"a delegation names its own author as delegator; acting for someone else is done through the approval-level override\". The field was a free `sys_user` lookup, so Approvals → Delegations → New offered every user, and the server refused all but one of them with 403. The picker now offers the signed-in user and nobody else.\n\n- **Landing.** `packages/plugins/plugin-approvals/src/sys-approval-delegation.object.ts`, where the card expected it.\n- **Unchanged.** The guard: no refusal is widened and there is no admin exemption. The field stays `required`. What a write may store does not change, because nothing on the write path reads `lookupFilters`.\n- **Not touched.** No spec edit, no objectui edit, no consumer-side mapping. `approval-service.ts` is not touched.\n\n## Why this vocabulary (measured)\n\n- `lookupFilters` is the spec's structured picker filter (`packages/spec/src/data/field.zod.ts`). In the pinned console (objectui `12dc7b47c3`, `.objectui-sha`), `LookupField` lowers each entry through `lookupFiltersToRecord` (`eq` becomes `{ id: value }`). It sends the result as the `$filter` of its candidate query, and the popover, the record-picker dialog, the people picker and the recents rail all use that query.\n- The engine resolves `{current_user_id}` in a read's `where` against the caller (`ObjectQL.resolveWhereTokens`, the one gate every server read passes). `@objectstack/lint`'s filter-token rule already covers `lookupFilters` (`validate-filter-tokens.test.ts`).\n- M4 (order on insert) measured: `applyFieldDefaults` runs, then the `beforeInsert` hooks (where the guard stamps an omitted delegator), then record validation (`required`). Nothing here needed `required` changed.\n\n## Route not taken: a `current_user` default (raised as a decision in the report)\n\nOption (ii) from the dispatch, `defaultValue: 'current_user'`, is honoured by the pinned console: create forms seed the acting user on a `sys_user` lookup (`plugin-form/src/schemaDefaults.ts`). It would open the form on the one value the guard accepts. I measured it on the real engine at this branch, as an insert that omits `delegator_id`. It changes exactly one cell of the write accept set:\n\n| caller | base | with the default |\n|---|---|---|\n| member `u_admin` | stored `u_admin` (the guard stamps it) | stored `u_admin` |\n| anonymous, non-system | refused, `FORBIDDEN` 403 | refused, `FORBIDDEN` 403 |\n| system, no user id | refused, `VALIDATION_FAILED` (`required`) | refused, `VALIDATION_FAILED` |\n| system, user id `u_svc` | refused, `VALIDATION_FAILED` (`required`) | **stored `u_svc`** |\n\nNo HTTP door produces a system context, and no code in this repo writes delegation rows. Even so, it is an accept-set change, and the claim's `Clause-②: no` does not cover one. The picker filter alone makes the form offer only what the guard accepts, so this PR does not add the default and leaves it for a decision. The first commit on this branch carried the default, and the second removed it after the measurement. The net diff has no default.\n\n## Tests\n\nNew file: `packages/plugins/plugin-approvals/src/sys-approval-delegation-delegator-picker.test.ts`. It runs a real `ObjectQL` over `SqlDriver` (better-sqlite3, in-memory, real DDL) with the guard bound, and asserts:\n\n1. the declaration, read off the object and off the registered body;\n2. the picker's candidate query returns the caller and nobody else, for each of three callers (the declared filter, lowered the way the console lowers it);\n3. the guard accepts every candidate the picker offers;\n4. the guard is not widened: a create naming another user is refused with `FORBIDDEN` / 403, and so is an update relabelling the delegator, and nothing is stored;\n5. `required` stays.\n\nAblations, each through `scripts/ablation-replace.mjs`: the anchor hit once, the blob changed on disk, the test ran, and the file was restored to the HEAD blob with `git diff HEAD` empty. The test imports the object and the guard from `src/` by relative path, so no `dist/` is involved.\n\n- **A1, drop the filter.** 6 failed, 3 passed. The picker offers `[u_admin, u_priya, u_tomas]` instead of `[caller]`, both declaration pins fail (`expected undefined to deeply equal`), and the guard refuses an offered candidate.\n- **A2, put a foreign delegator back into the guard** (`if (false && has && supplied !== userId) deny();`). 2 failed, 7 passed: both refusal pins, with \"promise resolved instead of rejecting\".\n- **A3, `required: false` on the delegator.** 2 failed, 7 passed: the declaration pin, and \"`required` stays\" (the promise resolved instead of rejecting).\n\n### Readings at head `529f78b82` (after the last commit; `main` merged in at `307ce4c4b`)\n\n- `pnpm --filter @objectstack/plugin-approvals exec vitest run --maxWorkers=2`: 87 files, 1156 tests passed, exit 0.\n- `pnpm --filter @objectstack/plugin-approvals typecheck`: exit 0. `check:test-typecheck: OK`, and the debt ledger is unchanged (8 files, 324 errors, 27 signatures).\n- Local gate subset: the 68 commands `node scripts/pm/dispatch-gates.mjs --commands --repo objectstack-ai/objectstack` derives for this diff all exit 0, and `--ran` reconciles 68 derived, 68 run, 0 NOT-MEASURED. The same 68-command list derives at `origin/main` `c3a8e07b6` with these three files applied.\n- Repo-wide runs (`pnpm lint`, `test:repo` and the full farm) are left to this PR's CI.\n\n## Out of scope (the seat files these)\n\n- **The console says nothing when the 403 comes back** (objectui's half of the card). At the pin, `ModalForm`'s submit `catch` hands the error to `schema.onError` and rethrows. It shows no toast and no field error of its own, so the dialog just stays open. objectui#13161 does not cover it: that card is about the action-param dialog, which closes on a server error and shows a toast.\n\n## Acceptance notes\n\n- The edit form's Delegator picker narrows to the acting user too. That matches the guard on update, which refuses a delegator other than the caller.\n- `lookupFilters` is presentation only. The guard remains the enforcement, and this PR claims nothing beyond the picker.\n\n---\n_Generated by [Claude Code](https://claude.ai/code/session_01UmqzD97e14iws6hmVhgZ5y)_\n"
+}

@@ -1,0 +1,30 @@
+{
+  "number": 24900,
+  "kind": "issue",
+  "title": "enforce-or-remove: the declared webhook's `label` / `description` keys — are they read anywhere since declared webhooks come from the registry?",
+  "state": "open",
+  "state_reason": null,
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "domain:spec",
+    "pm:queue",
+    "priority:p3"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-20T13:28:15Z",
+  "updated_at": "2026-10-20T13:28:15Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 0,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/24900",
+  "body": "Filing gate **①**.\n- **finding:** a possibly declared-but-inert metadata key (ADR-0078, ADR-0049 enforce-or-remove), carried from the 18.x line's step 1 (#24529 / #24588).\n- **reach:** authors of declared webhooks.\n- **Reader who acts:** the `domain:spec` lane (`spec-property-retirement` skill).\n- **Dedupe:** none. Searched \"declared webhook label description enforce\".\n\n## Premise to verify\n- Since step 1, a declared webhook is read from the metadata registry (`plugin-webhooks/src/declared-webhooks.ts` `DeclaredWebhookSource`) and no longer mirrored into `sys_webhook`.\n- Step 7c (#24836) removed the mirror skip.\n- The question is whether any runtime or UI surface still reads the declared item's `label` or `description`: Setup's webhook list, the delivery log, notifications.\n\nRe-check: `git grep -n -E \"\\.label|\\.description\" packages/plugins/plugin-webhooks/src` plus objectui Setup's webhooks page, and `packages/spec/liveness/webhook.json` `props.label` / `props.description`.\n\n## Outcomes\n- Read somewhere: record the reader in the liveness ledger.\n- Read nowhere: either enforce it (show it in Setup) or retire the key with a tombstone, per the skill."
+}

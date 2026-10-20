@@ -1,0 +1,33 @@
+{
+  "number": 24859,
+  "kind": "pull_request",
+  "title": "docs(spec,adr-0069): server.trustProxy names both client-address consumers; D5 mechanism amended",
+  "state": "open",
+  "state_reason": null,
+  "draft": false,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "documentation",
+    "protocol:system",
+    "size/s",
+    "tooling"
+  ],
+  "assignees": [
+    "baozhoutao"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-20T11:19:44Z",
+  "updated_at": "2026-10-20T11:22:45Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 2,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/pull/24859",
+  "body": "Closes #24818\n\nClause-②: no\n\nTwo texts were behind the code after PR #24795 (`25e16ab00c`). This PR fixes both. No code, schema shape, key, default or accepted value changes.\n\n## What changed\n\n1. **`packages/spec/src/system/stack-server.zod.ts`, the `server.trustProxy` `.describe()` and TSDoc.** The describe named only the inbound rate limiter. It now names both consumers of the one client-address rule: the inbound rate limiter (when `server.security.rateLimit.enabled` is set), and the authentication plugin. That plugin's IP allow-list (`allowed_ip_ranges`) judges the address the rule establishes, and its login audit stamps it as `last_login_ip`. The TSDoc names the shared function (`resolveClientAddress` from `@objectstack/plugin-auth/client-address`) and says that a header believed without a rewriting proxy bypasses the allow-list as well as the rate limit.\n2. **`content/docs/references/system/stack-server.mdx`**, regenerated with `pnpm --filter @objectstack/spec gen:docs`. `check:generated` named this as the only stale artifact. The diff is the one table row.\n3. **`docs/adr/0069-enterprise-authentication-hardening.md`, D5.** I added a dated amendment note under the D5 table. It follows the in-file precedent: the D3 note \"What the gate holds (amended 2026-10-14 ...)\", plus the matching `· **Amended** (...)` entry on the Status line. The original mechanism cell is unchanged, apart from an appended pointer, *(client-address mechanism amended 2026-10-20 — see the note below)*. The note records:\n   - `X-Forwarded-For` (leftmost entry), then `X-Real-IP`, are believed only under `server.trustProxy`. Otherwise the address is the transport's peer address.\n   - `CF-Connecting-IP` is no longer read.\n   - While any range is set, an address that cannot be established is refused with `403 IP_NOT_ALLOWED`. With no ranges set, nothing is judged.\n   - The D7 audit stamps the same address and stamps none when it is undetermined.\n   - `objectstack serve` passes `server.trustProxy` to `AuthPlugin`.\n4. **`.changeset/24818-trustproxy-consumers-describe.md`**, a `patch` for `@objectstack/spec`, because the describe string ships in the spec's published `dist`.\n\n## Each claim checked against the code at `origin/main` `41646a5788`\n\n- The rule: `packages/plugins/plugin-auth/src/client-address.ts` `resolveClientAddress` reads `x-forwarded-for`, then `x-real-ip`, only when `input.trustProxy` is true. Otherwise it uses `remoteAddress`. With neither available it returns `undefined`.\n- The rule is published as a subpath (`packages/plugins/plugin-auth/package.json`, `exports[\"./client-address\"]`, a tsup entry) and imported back by `packages/runtime/src/security/inbound-rate-limit.ts:40`.\n- `serve` wiring: `packages/cli/src/commands/serve.ts:4263` passes `trustProxy: (config as any).server?.trustProxy === true` to `new AuthPlugin(...)`.\n- The allow-list judges the established address: `packages/plugins/plugin-auth/src/auth-plugin.ts`, in the D5 middleware, calls `mgr.resolveClientAddress(...)`. `AuthManager.resolveClientAddress` applies the shared rule with `this.config.trustProxy`.\n- Undetermined means refused: `AuthManager.isClientIpAllowed` returns true when no ranges are set, and `if (!ip) return false` otherwise. The middleware then answers `403` with `error.code: 'IP_NOT_ALLOWED'`.\n- `CF-Connecting-IP`: `git grep -i cf-connecting-ip -- packages` finds only `CHANGELOG.md` entries and no source.\n- D7: the sign-in after-hook calls `stampLastLogin(uid, await readRequestClientAddress())`. `stampLastLogin` writes `last_login_ip` only `if (ip)`.\n\n## Governed surface\n\n`docs/adr/**` is a governed surface at **Tier H**. This PR lands only after an authorized approval by an account in `GOVERNED_APPROVERS`. The seat handles that approval.\n\n## Verification (at `d4393185dd`)\n\n- `pnpm --filter @objectstack/spec build` passed (`VERDICT command-exit 0`).\n- `pnpm --filter @objectstack/spec check:generated`: before regenerating, it reported \"1 of 14 artifact(s) stale: content/docs/references/**\". After `gen:docs` it reported \"✓ All 14 generated artifacts are up to date\".\n- `pnpm --filter @objectstack/spec typecheck` passed (`VERDICT command-exit 0`).\n- Spec tests, narrowed: `vitest run src/system/stack-server.test.ts src/system/http-server.test.ts src/compose-stacks-key-loss.test.ts scripts/build-schemas-check-mode.test.ts` gave `Test Files 4 passed (4)`, `Tests 154 passed (154)`. These are the spec tests that name `stack-server` or `trustProxy`. The full spec suite did not finish inside the container's foreground cap on a shared box, so it is left to CI's `Test Core`. No test pins the old describe text: `git grep \"Consumed by the inbound\"` has no hit outside the changed source.\n- `node scripts/pm/dispatch-gates.mjs --ran` gave \"111 derived famil(ies) accounted for — 109 run, 2 NOT-MEASURED\". Every command that ran exited 0, after building the `@objectstack/lint...` and `@objectstack/client-react...` closures so four of them could measure.\n  - NOT MEASURED: `check:dual-build-cjs-loads`, reason: needs a whole-workspace `dist` (exit 3, prerequisite not met). Left to CI.\n  - NOT MEASURED: `check:lean-entry-closure`, reason: needs `packages/objectql/dist` (exit 3). Left to CI.\n- `pnpm check:nul-bytes`: OK.\n\n## Acceptance notes\n\n- None. No out-of-scope findings.\n\n## 维护者速读(草稿)\n\n- **改了什么**:只改文字,不改代码。`server.trustProxy` 的说明原来只写了\"限流器读它\";现在写明认证插件的 IP 白名单和登录审计(`last_login_ip`)也按同一条规则取客户端地址。ADR-0069 D5 补一条带日期的修订注记,写明现在的取址方式。\n- **为什么改**:PR #24795 之后代码已经这样运行,但对外文档和 ADR 还是旧说法(还列着已不再读取的 `CF-Connecting-IP`)。运维照旧文档配置,可能不知道这个开关同时影响登录白名单。\n- **风险与代价(含回滚)**:无运行时行为变化,风险极低。回滚即 revert 本 PR。\n- **席位意见**:\n- **你要做的**:ADR 属 Tier H 受管面,需要你批准后才能落地。\n\n---\n_Generated by [Claude Code](https://claude.ai/code/session_01D6F9axfoPzR7t8G1J7Ytzz)_\n"
+}

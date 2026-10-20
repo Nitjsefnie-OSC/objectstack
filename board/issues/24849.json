@@ -1,0 +1,37 @@
+{
+  "number": 24849,
+  "kind": "issue",
+  "title": "check-expected-skips.mjs judges a head against the roster in the checkout it runs from, so a shared checkout one merge behind origin/main reads a freshly rostered opt-in job as an unexpected skip (exit 4) — the PR #24771 arming",
+  "state": "closed",
+  "state_reason": "completed",
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "area:devpath",
+    "domain:skills",
+    "priority:p3",
+    "tooling"
+  ],
+  "assignees": [
+    "huangyiirene"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-20T10:13:34Z",
+  "updated_at": "2026-10-20T14:08:24Z",
+  "closed_at": "2026-10-20T14:04:48Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": null,
+  "comments": 4,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/24849",
+  "body": "① — a seat-side pre-check reads a stale instrument and prints a confident ⛔; measured once at the PR #24771 arming (2026-10-20T08:12Z), corrections 6286584358 / 6286614992 on that PR.\n\nFiled by the `domain:skills` PM seat, seat 1 (seat post #7623, `session_01HEdP5tPhqQfzwRmKDxwn85`), at sign-off as the shift's one mechanisable item (seat-post-protocol 换班报告: 可机械化项 → 门禁/脚本卡). ⛔ Unlabelled and ungraded: grading and routing belong to triage.\n\n**Reader, and what they do.** Triage routes this card to whoever maintains `scripts/pm/check-expected-skips.mjs` (`scripts/pm/**`, not a governed face). The fix is one refusal or one warning in that script plus its self-test; ⛔ no roster change, no workflow change.\n\n## The reading\n\n- `check-expected-skips.mjs --pr N` judges the head's `skipped` check-runs against the roster that lives IN THE FILE, and the file is read from the checkout the command runs in. The roster is tied to the checkout's workflows by design (a renamed or re-gated job reddens the roster), so the roster and the workflows move together — in one commit.\n- The seat's shared checkout is pinned to a detached `origin/main` and re-pinned after each landing (`dispatch-runbook.md` L137–L141 since PR #24685). Between two re-pins, `main` moves.\n- Measured: PR #24554 merged at 2026-10-20T08:04Z and brought both the opt-in job 「18.x upgrade harness (opt-in)」 and its roster row. The seat ran `check-expected-skips.mjs --pr 24771` at 2026-10-20T08:12Z from a checkout still at `6b222464c` (one merge behind): the head's check-runs carried the new job's skip, the stale roster did not name it, verdict exit 4 「⛔ 1 skip outside the roster」. On `c56115bf9` the same head answered OK (10 skips, all in the roster). The ⛔ was read after the arming had been sent — a seat sequencing fault, corrected in the seat's order of operations — but the instrument itself gave no sign that it was judging from a stale roster.\n- The script's own contract says a read that cannot be trusted must never be legible as 「every skip is expected」 (header, exit codes). The mirror case — a roster older than the head's workflows, legible as a confident ⛔ — has no guard.\n\n## Done when\n\n- `check-expected-skips.mjs --pr N` / `--head SHA` reads the checkout's `HEAD` against `origin/main` (or against the PR's base sha, which it already resolves) and, when the checkout is behind, either refuses (a new exit code naming the gap and the re-pin recipe) or prints the gap on the verdict line — the maintainer of the script picks which; the self-test covers the behind case and the at-tip case.\n- `--check-runs-json` and `--roster` (offline paths) are unchanged.\n- No workflow edit, no roster row.\n\n## Dedupe\n\nREST enumeration of this repository's issues and PRs since 2026-10-17 (901 items): PR #24685 (the detached pin, the premise), PR #24554 (the roster row that measured it); no card asks the script to read its own staleness. Dedupe words: `check-expected-skips stale checkout` · `roster behind origin/main` · `false unexpected skip after re-pin`."
+}

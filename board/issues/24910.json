@@ -1,0 +1,28 @@
+{
+  "number": 24910,
+  "kind": "issue",
+  "title": "A declared webhook in a scaffolded app is silently inert: os validate passes without the 'webhooks' and 'realtime' capabilities, and with 'webhooks' alone the activation answers enabled while nothing is ever enqueued (WARN only)",
+  "state": "open",
+  "state_reason": null,
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "bug"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-20T13:54:54Z",
+  "updated_at": "2026-10-20T13:54:54Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 0,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/24910",
+  "body": "Filing gate: ① product defect with a named location and a reproduction (a declared, activated delivery that is never made, with the loss logged at WARN only).\n\n- Category: ①. reach: the published 18.0.0 package, measured once through public entry points. os validate, os dev, POST /api/v1/security/_activation/webhook/NAME, and POST/PATCH /api/v1/data/OBJECT, in a fresh create-objectstack@18.0.0 project.\n- Who acts: the seat that owns packages/plugins/plugin-webhooks, together with the owner of the CLI's capability resolution / validate rules. Locations: packages/plugins/plugin-webhooks/src/webhook-outbox-plugin.ts (~373, the \"[webhook-auto-enqueuer] disabled\" WARN); the capability preflight in packages/cli/src/utils/capability-preflight.ts, which does not tie a non-empty webhooks collection to the 'webhooks' token or 'webhooks' to 'realtime'.\n- Dedup: local scan of the 626 newest issues (state=all, open and closed, #23703 to #24907) for webhook near requires / capability / realtime / inert / silent, \"auto-enqueuer] disabled\" and \"declared-webhook reader\": 0 hits. Semantic search \"declared webhooks silently inert when webhooks capability not required\": 10 results, none about this. The nearest is #24900 (open; the label/description keys of a declared webhook, a different question). #24835 is the PostgreSQL enqueue failure; this card is driver-independent and was measured on SQLite.\n\nreach: in a create-objectstack@18.0.0 project, add webhooks: [defineWebhook(...)] to objectstack.config.ts; os validate, os dev, activation 200, then a record write enqueues nothing (SQLite, published npm 18.0.0).\nQA-source: #24908 · smoke:npm-18.0.0 · E5\ntype: Bug\n\n## Reproduction (published 18.0.0, SQLite)\n\n1. npm create objectstack@18.0.0 my-app -- --skip-skills; cd my-app. The scaffold's requires is ['automation', 'triggers'].\n2. In objectstack.config.ts, add the import defineWebhook from '@objectstack/spec/automation' and the stack key\n   webhooks: [defineWebhook({ name: 'my_app_note_changed', object: 'my_app_note', triggers: ['create','update','delete'], url: 'http://127.0.0.1:3999/hook', method: 'POST', isActive: true })]\n3. npx os validate: \"Validation passed\", including \"Checking that every required capability has a provider\". npx os build exit 0.\n4. npx os dev --no-watch -p PORT -d file:FRESH. The boot log says nothing about webhooks. Sign in as the dev admin.\n5. POST /api/v1/security/_activation/webhook/my_app_note_changed with body {\"enabled\": true}: 503 SERVICE_UNAVAILABLE \"Cannot verify the declaration of webhook ... no declared-webhook reader is bound to this deployment\".\n6. Change requires to ['automation', 'triggers', 'webhooks'], rebuild, and boot a fresh file.\n   - Boot: one WARN \"[webhook-auto-enqueuer] disabled — ObjectQL, Realtime, or Messaging service not available {hasEngine:true, hasRealtime:false, hasMessaging:true}\".\n   - Activation: 200 {\"type\":\"webhook\",\"name\":\"my_app_note_changed\",\"enabled\":true}.\n   - POST a my_app_note (201), then PATCH it (200). Wait 5 s. GET /api/v1/data/sys_http_delivery: total 0.\n7. Add 'realtime' to requires as well: the same steps give 2 delivery rows (declared:my_app_note_changed, pending), which is the expected result.\n\n## What is wrong\n\n- The stack declares something that never happens, and every door says yes: validate passes, the activation door answers enabled:true, and the record writes answer 200. In step 6 the only trace is one WARN at boot, before any write. Under AGENTS.md \"Degradation log levels\", a dropped durable write is an error, said once, with its consequence and its fix.\n- Nothing ties the pieces together. A non-empty webhooks collection does not imply (or require) the 'webhooks' token, and the 'webhooks' token does not imply 'realtime', which its enqueuer cannot run without. automation/webhooks.mdx names neither token. The working combination is visible only in examples/app-showcase's requires list.\n\nAcceptance: a stack whose metadata declares webhooks, but whose requires cannot dispatch them, is refused at os validate or at boot with the missing token named, or the tokens are implied. And the activation door does not answer enabled:true on a deployment whose enqueuer is disabled."
+}

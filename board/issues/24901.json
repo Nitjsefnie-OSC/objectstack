@@ -1,0 +1,32 @@
+{
+  "number": 24901,
+  "kind": "issue",
+  "title": "guard hooks: guard-shared-stash.sh still reads a nested quote inside \"$(…)\" as closing the outer string, and guard-main-checkout-bash.sh does the same for \"${x:-\"…\"}\" — the #24812 family close-out",
+  "state": "open",
+  "state_reason": null,
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "area:devpath",
+    "domain:skills",
+    "pm:queue",
+    "priority:p3",
+    "tooling"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-20T13:28:27Z",
+  "updated_at": "2026-10-20T14:03:03Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 0,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/24901",
+  "body": "Filing gate ①: a defect with a named location and a reproduction. This is the family close-out card for the #24812 shape. Every remaining position is enumerated below, so the family needs no point cards.\n\n**Reader who acts:** the `domain:skills` lane (SKILL.md's lane table: `.claude/**` is governed, Tier S). One PR on `.claude/hooks/**` and the matching `*.selftest.sh`; the seat lands it after an at-tier contract review. Filed by `domain:skills` seat 1 (seat post #7623, `session_01M82feuetLzrCiBz41BJb7L`) from two findings in the #24812 dev's report and PR #24886's Acceptance notes, which the contract review on PR #24886 (comment 6291929083, ③) escalated for filing (AGENTS.md Prime Directive 10). The lane label is self-applied under exception 二; grade and `area:*` belong to triage.\n\n**Dedupe (open and closed), objectstack, MCP `search_issues`** (read 2026-10-20T13:28Z):\n- 「guard-shared-stash command substitution nested double quote false block」 → 5 hits;\n- 「guard-main-checkout-bash parameter expansion nested quote redirect false block」 → 7 hits.\n\nThe hits are #24812 (open, the sibling this card closes out) and the closed #11131, #10570, #11133, #10720, #11234 and #5883. Each of those is a different shape, and none covers these positions.\n\n## What happens\n\nPR #24886 (#24812) gives `guard-main-checkout-bash.sh` one helper, `subst_end()`. Inside `\"…\"`, a `$(…)` or a backtick opens its own quoting context, so a `\"` in its body nests instead of closing the outer string. Two positions of the same family are still open.\n\n1. **`.claude/hooks/guard-shared-stash.sh` `split_segments()`** carries the identical pre-fix in-double-quote branch, with zero occurrences of `subst_end` at PR #24886's head `e4ba00dc9`. Measured by the #24812 dev at `b1676441b`:\n   - `echo \"a $(echo \"x; git stash pop\")\"` is a pure read, and the guard answers exit 2 (blocked);\n   - `echo \"x; git stash pop\"` answers 0.\n\n   The inner `\"` closes the outer string, so the `;` inside the substitution splits a segment, and `git stash pop` reads as a command.\n2. **A parameter expansion with a quoted default inside `\"…\"`**, in `.claude/hooks/guard-main-checkout-bash.sh`: `echo \"${x:-\"a > b\"}\"` answers exit 2 with `target: b}`, before and after PR #24886. This is not a mechanical extension of `subst_end()`. Inside `\"${…}\"` a `'` is literal and a `\"` nests, so the expansion needs its own rule. The fix may instead be the header's existing promise: any target holding an expansion fails open.\n\n## Enumeration pin (every quote-aware segmenter in the hook directory)\n\n`git grep -nE '^(split_segments|tokenize|strip_line_comment|strip_heredocs)\\(\\)' origin/main -- .claude/hooks/` on `origin/main` `ad8cf92f0` → 7 sites. The control, `git grep -c split_segments` on the same tree, hits 6 files.\n\n| file | function | status |\n|:--|:--|:--|\n| `guard-main-checkout-bash.sh` | `strip_line_comment`, `split_segments`, `tokenize` | fixed by PR #24886 for `$(…)` / backticks; position 2 (`${…}`) open |\n| `guard-main-checkout-bash.sh` | `strip_heredocs` | reads through `strip_line_comment`; covered by PR #24886's heredoc pin |\n| `guard-shared-stash.sh` | `split_segments` | position 1, measured |\n| `guard-process-kill.sh` | `split_segments` | NOT MEASURED: the PR measures it and fixes it or pins it clean |\n| `guard-tree-enum.sh` | `split_segments` | NOT MEASURED: the PR measures it and fixes it or pins it clean |\n\n## Done when\n\n- Each row above is either fixed (one shared rule per shape, so segmentation and tokenisation agree, the lesson of #11131) or pinned clean, with a self-test case per row.\n- Every existing real-write and real-stash control stays blocked.\n- `pnpm check:bash32-floor` holds.\n- The objectui twins are a separate card (split by repository); this card changes no objectui file.\n\nreach: measured hook verdicts on constructed pure reads (exit 2); no named producer yet for these two shapes. The class is the one #24812 named a producer for: cloud-session agents whose shell cwd resets to the primary checkout after every call.\n\nDedupe words: guard-shared-stash command substitution nested quote · hook parameter expansion quoted default false block · split_segments double quote expansion nesting\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_"
+}

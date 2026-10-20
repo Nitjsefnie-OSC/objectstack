@@ -1,0 +1,33 @@
+{
+  "number": 24884,
+  "kind": "issue",
+  "title": "test(upgrade-harness): verify the published 18.0.0, and add an 18.0.0-born fixture to the upgrade harness",
+  "state": "open",
+  "state_reason": null,
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "domain:engine",
+    "pm:dispatched",
+    "pm:epic",
+    "priority:p1"
+  ],
+  "assignees": [
+    "os-steve"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-20T13:04:27Z",
+  "updated_at": "2026-10-20T14:01:08Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 2,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/24884",
+  "body": "Filing gate **③**: release aftercare for the 18.x line (epic #15194). `@objectstack/*@18.0.0` was published at 2026-10-20T12:41Z, from `chore: version packages` (#24524, `06cab4849a`).\n- **Reader who acts:** the epic seat (`epic:#15194`, `session_01Y5583bs2RDd53MH6kM1ca3`).\n- **Dedupe:** this is the \"fixture from the 18.0.0 tag\" follow-up named in ruling record 6282882793 on #15194.\n\n## Why now\nThe harness's `fixture-18.0` (base `d1173825b`) is the **pre-release** shape. 18.0.0 GA databases differ from it in three ways:\n- they are **birth-marked** (`shapeGeneration` 1);\n- their tenant column is still **nullable**, because 7b-0 is not in 18.0.0;\n- their unique indexes are in **COALESCE** form, because 7b-1+7b-2 are not in 18.0.0.\n\nStep 7's remaining parts (7a-2 #24872, 7b-0, 7b-1+7b-2, 7z #24880) land after GA. R2 must now cover **18.0.0 GA → HEAD**.\n\n## Scope\n1. **Verify the published 18.0.0** (report first; any P0 goes to the seat at once, for a patch release):\n   - R1: a fresh `single` install boots, with seeded-admin sign-in.\n   - Walled: a fresh `isolated` install with the organizations runtime, `OS_PLATFORM_OWNER_EMAIL` and a declared membership policy boots.\n   - Upgrade: a v17-shaped database and the pre-release `fixture-18.0` both upgrade through `os migrate organization-ownership --out PLAN` / `--apply --plan-file PLAN --backup-taken` on 18.0.0, then boot.\n   - The 18.0.0 upgrade guide and release notes say what shipped.\n2. **Add `fixture-18.0.0` to the upgrade harness:** a database the published 18.0.0 created, plus one leg pinning that HEAD boots it with zero refusals and zero destructive drift."
+}

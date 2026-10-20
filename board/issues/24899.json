@@ -1,0 +1,31 @@
+{
+  "number": 24899,
+  "kind": "issue",
+  "title": "security(plugin-audit): sys_audit_log copies already moved to an archive datasource may still hold pre-#24688 mail bodies in clear — measure and decide",
+  "state": "open",
+  "state_reason": null,
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "domain:services",
+    "pm:queue",
+    "priority:p1",
+    "security"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-20T13:27:40Z",
+  "updated_at": "2026-10-20T13:27:40Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 0,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/24899",
+  "body": "Filing gate **①**.\n- **finding:** a residual of #24722, which states it as a known limit (review 6282296174, ③(c)).\n- **reach:** whoever can read the archive datasource of `sys_audit_log`.\n- **Reader who acts:** the epic seat (measure), then the `domain:services` lane.\n- **Dedupe:** none. Searched \"archive datasource mail body audit\".\n\n## What is known\n- `os migrate audit-mail-bodies` (#24722) masks `body_text` / `body_html` in `sys_audit_log` and `sys_activity` copies of `sys_email` / `sys_identity_email` rows **on the hot engine only**.\n- `sys_audit_log`'s 90-day lifecycle moves old rows to an `archive` datasource. Copies archived before #24688 masked new writes are not reached.\n- Those bodies can carry reset, verification, magic-link and invitation links. Most will have expired, but not necessarily all of them, and an invitation may still be open.\n\n## Measure\n1. Which deployments have an archive datasource configured, and who can read it (doors, roles)?\n2. Is there a supported way to run the mask over the archive? For example, the same runner pointed at the archive engine.\n3. Then decide: extend the command, document a manual step, or accept the risk with a stated expiry argument. Owe a 17.x note if a 17.x line is cut.\n\nDo not print any body value while measuring."
+}

@@ -1,0 +1,37 @@
+{
+  "number": 24843,
+  "kind": "pull_request",
+  "title": "fix(plugin-auth): the account lockout resolves the account the sign-in credential check resolves",
+  "state": "closed",
+  "state_reason": null,
+  "draft": false,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "documentation",
+    "size/m",
+    "tests",
+    "tooling"
+  ],
+  "assignees": [
+    "os-support-ai"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-20T09:42:37Z",
+  "updated_at": "2026-10-20T10:49:31Z",
+  "closed_at": "2026-10-20T10:48:41Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": "2026-10-20T10:48:41Z",
+  "comments": 3,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/pull/24843",
+  "body": "Security fix (maintainer-ordered; no public card; detail withheld under the disclosure ruling).\n\nClause-②: no\n\n## The invariant this restores\n\nADR-0069 D2's account lockout counts every refused password sign-in against the account the credential check resolved, and enforces an existing lock on every sign-in attempt that resolves to that account, whatever spelling of the identifier the attempt used. The lock gate, the failed sign-in counter, the credential check and the `login_failed` / `account_locked` account events name one account.\n\n## What changed\n\n**`@objectstack/plugin-auth`**, `auth-manager.ts`, at the `/sign-in/email` lockout seam:\n\n- A new private resolver, `findSignInAccount(engine, email, fields)`, is the one answer to \"which account does this password sign-in name\". It asks `sys_user` exactly what better-auth 1.7.3's `/sign-in/email` credential check asks: `internalAdapter.findUserByEmail(email.toLowerCase())`, an equality match on the lower-cased address, which is the spelling `internalAdapter.createUser` stores.\n- The lock gate (`assertAccountNotLocked`), the counter (`recordSignInOutcome`) and the account events (`resolveSignInAccountId`) all read the account through it. Each keeps its own failure posture: the gate fails open, and the counter and the ledger report a lost write at `error`, as before.\n- The lockout state keeps its shape. It stays on the account's own `sys_user` row (`failed_login_count`, `locked_until`), and every write to it is by the row's id, so one account holds one counter. There is nothing to migrate.\n- The gate's and the counter's query options lose their `as any` casts, so `scripts/query-options-erasure-baseline.json` records `auth-manager.ts` at 12, down from 14 (`pnpm check:query-options-erasure --update`).\n\n**Docs.** `content/docs/permissions/authentication.mdx` states that the password-stage counter and lock belong to the account the sign-in's credential check resolves the address to.\n\n**Changeset.** `.changeset/auth-lockout-resolved-account.md`, a `@objectstack/plugin-auth` patch.\n\n## Tests\n\n`packages/plugins/plugin-auth/src/account-lockout-resolved-account.test.ts` (new) drives a real `AuthManager` and better-auth pipeline through `handleRequest`, over the in-memory engine this package's better-auth suites share (its equality is exact, as a SQL column's is by default). The threshold is 3, and the lock is read back from the `sys_user` row. It pins:\n\n- the spellings used are ones the credential check resolves to the account: a correct password under each signs in to that account's id;\n- refusals under different spellings of one address accumulate toward its one lock: three `login_failed` and then one `account_locked`, all naming the account, and the event's `locked_until` equals the stored lock;\n- a locked account refuses the correct password under every spelling, with 403 `ACCOUNT_LOCKED`; each refusal records `login_failed` with reason `ACCOUNT_LOCKED`, no session is minted, and the stored lock does not move;\n- a lock reached under one spelling refuses the correct password under another;\n- a successful sign-in under any spelling clears the counter;\n- an identifier that resolves to no account changes no `sys_user` row and writes no account event, and the identifier never reaches the audit sink.\n\nThe existing lockout unit cases in `auth-manager.test.ts`, the account-event cases in `auth-account-event-audit.test.ts` and the durability cases in `durability-swallow-repair.test.ts` pass unchanged.\n\n**Ablation**, run once on the committed fix with `scripts/ablation-replace.mjs` in wrap mode. One mutation of `findSignInAccount`'s query turned 5 cases red, across the new file and `auth-account-event-audit.test.ts`. The leg was restored, with the blob equal to HEAD and an empty `git diff HEAD`. The mutation's detail is withheld under the disclosure ruling.\n\n## Gates (local, at `94ea60bd5`, after merging `origin/main` at `c3a8e07b6`)\n\n- **Build.** The dependency closure and the package itself were built with `pnpm --filter '@objectstack/plugin-auth...' build`, which exited 0. `pnpm --filter @objectstack/spec check:generated` reported all 14 generated artifacts up to date.\n- **Typecheck.** `pnpm --filter @objectstack/plugin-auth typecheck` exited 0. It includes `tsconfig.examples.json` and `check:test-typecheck`, whose test layer compiles the new file with no new debt.\n- **Tests.** `pnpm --filter @objectstack/plugin-auth test` exited 0: 169 files, 3240 passed and 10 skipped.\n- **Gate families.** `node scripts/pm/dispatch-gates.mjs --commands` derived 109 families for this change set, and all were run at the final head. The `--ran` reconciliation, with every exit code recorded, reads: 109 derived, 108 run with exit 0, 1 NOT MEASURED, 0 unrun.\n  - NOT MEASURED: `node scripts/check-plugin-teardown-shape.mjs --self-test` exited 3. Its positive control is pinned to a commit that this shallow checkout cannot reach. CI runs it.\n- The root `test:repo` task (the vitest `repo` project) was not run locally: the diff touches no test of that project, and CI's `Test Core` runs it.\n\n---\n_Generated by [Claude Code](https://claude.ai/code/session_01KqkTQNLcxVc588eZpJmp1r)_\n"
+}

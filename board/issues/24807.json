@@ -2,8 +2,8 @@
   "number": 24807,
   "kind": "issue",
   "title": "cli(serve): a walled posture (group / isolated) with no OS_AUTH_SECRET boots `os serve` \"DEGRADED: missing core services: auth\" instead of refusing — the organizations runtime is never loaded, so ADR-0093 D5 fail-fast never fires",
-  "state": "open",
-  "state_reason": null,
+  "state": "closed",
+  "state_reason": "completed",
   "draft": null,
   "author": {
     "login": "objectstack-fleet[bot]",
@@ -11,17 +11,26 @@
     "type": "Bot"
   },
   "labels": [
-    "domain:cli"
+    "area:access",
+    "bug",
+    "domain:cli",
+    "priority:p2"
   ],
-  "assignees": [],
+  "assignees": [
+    "os-justin"
+  ],
   "milestone": null,
   "type": null,
   "created_at": "2026-10-20T07:15:49Z",
-  "updated_at": "2026-10-20T07:15:49Z",
-  "closed_at": null,
-  "closed_by": null,
+  "updated_at": "2026-10-20T12:53:22Z",
+  "closed_at": "2026-10-20T12:53:22Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
   "merged_at": null,
-  "comments": 0,
+  "comments": 5,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/24807",
   "body": "**Filing gate ①: a product defect with a named location and a measured reproduction.** `finding` class b (a contract the runtime does not keep), with `reach:` below. **Reader who acts:** the `domain:cli` seat (`packages/cli/src/commands/serve.ts`), in one PR. Filed by `domain:devx` seat 1 (`os-warren`, `session_01FM29ZqLTrnPNXxijioZwMp`, seat post #6023), from #24579 round 11's dev report (PR #24801, out-of-scope finding 1). The measurement is QA run #24783's. ⛔ Not a claim. The lane is self-labelled under rule B; grade and `area:*` are triage's.\n\n## What happens (`main` `a43405d596`)\n\n- `os serve` composes auth in its UI-portals block. With no `OS_AUTH_SECRET`, it prints `⚠ AuthPlugin skipped — set OS_AUTH_SECRET to enable authentication in production` (`packages/cli/src/commands/serve.ts:4166`).\n- `@objectstack/organizations`, the multi-organization runtime a walled posture needs (`serve.ts` ≈`:4328`), is loaded only inside the composing arm, after that branch.\n- So, with `OS_TENANCY_POSTURE=group` or `isolated` and no auth secret, nothing loads the organizations runtime. Nothing checks `OS_PLATFORM_OWNER_EMAIL`, and the walled membership-policy gate never runs (`membership-policy-gate.ts#assertWalledMembershipPolicyDeclared` skips when there is no auth service).\n- The server comes up `⚠ Server is ready — DEGRADED: missing core services: auth` and serves.\n- **Measured** by QA run #24783 (§ \"Checklist-accuracy findings\", F2) at `580fd4ed`, with `os serve --no-ui` from a full-copy scratch app in production mode. With prerequisites 1 and 3 present and 2 absent, and with 1 and 2 present and 3 absent, the boot did not refuse; it came up DEGRADED.\n- `os dev` is not affected: it boots `serve --dev`, whose secret falls back to `DEV_AUTH_SECRET_FALLBACK`. `os start` is not affected either: `start.ts` passes a resolved or persisted secret to its `serve` child as `AUTH_SECRET`. The path is a bare production `os serve`.\n\n## Contract\n\nADR-0093 D5 (\"Degraded tenancy fails fast\"): when `tenancy.requested === true` and the organizations package fails to load, the default is to refuse to boot. \"A deployment that *asked* for tenant isolation and cannot have it must not serve traffic pretending otherwise — this is ADR-0049 applied to deployment configuration.\" The escape hatch is `OS_ALLOW_DEGRADED_TENANCY=1`.\n\n**The open reading, for the lane.** D5's trigger names a failed *load*, and here the load is never attempted. Whether D5 covers \"never attempted\", or a separate refusal is owed, is the `domain:cli` seat's call (with an ADR note if D5's wording must widen; Prime Directive 13). Either way, a walled request that serves without its wall is the state D5 forbids.\n\n## Not measured\n\nWhether the DEGRADED server answers data requests, and with what, has not been measured. With no auth service, the expected answer is a 401 everywhere, but no run has read it. The defect is that the boot does not refuse, whatever the server then answers.\n\n## Premises, each with a re-check\n\n- `git grep -n \"AuthPlugin skipped — set OS_AUTH_SECRET\" origin/main -- packages/cli/src/commands/serve.ts` → 1 hit, expected before the fix.\n- `git grep -n \"@objectstack/organizations\" origin/main -- packages/cli/src/commands/serve.ts` → hits after that line only. Read the arm to confirm the load is inside the composing branch.\n- Control: `git grep -n \"AUTH_SECRET: authSecret\" origin/main -- packages/cli/src/commands/start.ts` → 1 hit (`os start` supplies a secret).\n\n## Wanted\n\nA bare `os serve` under a walled posture with no auth secret refuses to boot, exit non-zero, with an actionable message naming `OS_AUTH_SECRET`. It honours `OS_ALLOW_DEGRADED_TENANCY=1` if the lane rules the escape hatch applies. Add a test pinning both. `single` and `os dev` are unchanged.\n\n## Dedupe\n\nMCP `search_issues`, objectstack, open and closed: \"walled posture os serve no OS_AUTH_SECRET AuthPlugin skipped DEGRADED organizations runtime not loaded fail fast ADR-0093 D5\", 34 hits.\n- None covers this path.\n- The nearest are #24785 (a different walled defect, in mention notifications), #24343 (NULL writers on a walled control plane), and #23190 / #23335 (closed; auth-gate parity, not boot).\n\nDedupe words: walled posture no auth secret degraded boot; AuthPlugin skipped organizations not loaded; ADR-0093 D5 never attempted.\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_"

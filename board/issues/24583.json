@@ -22,11 +22,11 @@
   "milestone": null,
   "type": null,
   "created_at": "2026-10-19T14:30:18Z",
-  "updated_at": "2026-10-20T08:28:44Z",
+  "updated_at": "2026-10-20T14:20:08Z",
   "closed_at": null,
   "closed_by": null,
   "merged_at": null,
-  "comments": 11,
+  "comments": 26,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/24583",
   "body": "Filing gate **③**: a task the maintainer directed. It is a step of the 18.x line, under ruling records 6266750393 and 6267391172 on #15194. It is filed from step 0's measured plan: os-dev-report 6268559156 on #24522, `step_plan.steps[6]`, plus its `line_facts` F1–F6 and `flags`.\n- **Reader who acts:** the epic seat (`epic:#15194`, `session_01Y5583bs2RDd53MH6kM1ca3`).\n- **Dedupe:** none.\n\nPart of #15212 (C8) · **Step 7: 8c and 8d, plus removing the dual reads** · ⛔ Not an 18.0 gate.\n\n## The line's rule (binding)\nOnce merged, `main` stays releasable:\n- **R1.** A fresh install boots.\n- **R2.** #24522's 18.0→HEAD harness is green.\n- **R3.** A v17 database is refused until step 6.\n- **R4.** A walled posture is refused at boot until step 4.\n\n**Ordering:** after step 6 has merged and certified databases exist.\n\n## Scope (from the measured plan; re-measure before building)\n- **7a. 8c.** Retire the driver's NULL arms, the authz NULL readers and `criteriaContext`.\n- **7b. 8d.** First teach the schema differ that a COALESCE index and a plain one are equivalent on a NOT NULL column. Today `buildIndexName` ignores null-safety, so a redefinition emits a destructive `recreate_index`. Then change the declarations and `__global__`. This may split.\n- **7c.** Remove the dual reads steps 1–3 added (webhooks, settings audit, identity mail).\n- Each PR is contract-side removal after certification. Run the harness against the post-ceremony fixture (step 6 restates it).\n\nNot dispatched yet. The seat claims it when its ordering is met."

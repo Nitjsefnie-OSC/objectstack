@@ -1,0 +1,32 @@
+{
+  "number": 24833,
+  "kind": "issue",
+  "title": "os dev's in-place upgrade says every refused database is \"still in the v17 organization-ownership shape\", after an ERROR-level stack dump of the boot refusal — an 18.0 pre-release database (and a database HEAD itself created) is told it is v17",
+  "state": "open",
+  "state_reason": null,
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "area:devpath",
+    "bug",
+    "domain:cli",
+    "pm:queue",
+    "priority:p2"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-20T08:45:01Z",
+  "updated_at": "2026-10-20T09:59:36Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 0,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/24833",
+  "body": "Filing gate: ① product defect (user-visible, stable reproduction, named location; shipped CLI text — the \"frozen at release\" exception applies).\n\n- Category: ① — reach: `os dev` from an app directory whose `.objectstack/data/objectstack.db` an 18.0.0-next.5 `os dev` created, measured once at 307ce4c4.\n- Who acts: the seat that owns `packages/cli` `os dev` (the 18.x organization-ownership line, follow-up to PR #24681) — `packages/cli/src/commands/dev.ts` (the recover branch, ~line 822) and the refused child's log output.\n- Dedup: local scan of the 625 newest issues (state=all, open and closed) for `v17 organization-ownership shape|still in the v17|os dev.*upgrad` — 0 hits; for `birth|ownership|ceremony` — 25 hits, none on this text. Related, not the same: #24827 (a fresh HEAD database refused, where this line also appears) and #24638 (the `[schema-drift]` line that prescribes `--allow-destructive` for `organization_id`, still printed in the same boot).\n\nreach: `os dev` (nothing chosen) over an 18.0.0-next.5 development database, 307ce4c4.\nPath: cli.dev-boot-contract\nQA-source: #24838 · cli.dev-boot-contract · observed beside the clauses (upgrade matrix cell d)\nChecklist item priority: P0\ntype: Bug\n\n## Reproduction (framework 307ce4c4)\n\n1. In a scratch copy of `examples/app-showcase` taken at the `@objectstack/cli@18.0.0-next.5` tag (`820fd5aef0`), run that release's `os dev --seed-admin -p PORT` with no database chosen. It creates `.objectstack/data/objectstack.db`. Use it (sign in, invite and sign up a member, create a task), then stop it.\n2. Replace the app's code with HEAD's `examples/app-showcase` and keep `.objectstack/`. Run HEAD's `os dev --seed-admin -p PORT`.\n3. What the developer sees, in order:\n   - two `[schema-drift] sys_secret.organization_id / sys_flow_credential.organization_id: column exists … (orphaned) — \"os migrate apply --allow-destructive\" to drop it.` lines (the drop gate refuses that command for these columns; the ceremony drops them — #24638);\n   - `ERROR Plugin startup failed: com.objectstack.organization-ownership-boot-guard {\"error\":{\"message\":\"This database carries no organization-ownership marker: 17.x or an 18.0 pre-release (18.0.0-next.*) created it …\",\"stack\":\"OrganizationOwnershipBootRefusal: … at assertOrganizationOwnershipMigrated …` plus a `[Kernel] Plugin startup failed: …` line and about ten `at …` stack frames;\n   - then `⟳ This development database is still in the v17 organization-ownership shape — upgrading it in place (a copy is kept first)…` and `✓ Upgraded the development database to the v18 organization ownership …`.\n4. Expected: one plain account of what happened — this database was created by an 18.0 pre-release (or 17.x), `os dev` is upgrading it in place, and here is the copy. Actual: the line names the wrong origin (\"v17\") and comes after an ERROR line with a stack trace for a refusal `os dev` handles itself.\n\nThe upgrade itself is correct: the copy is kept under `.objectstack/data/backups/organization-ownership-TIMESTAMP/`, the ceremony completes, the 18.0 users sign in with their old passwords and read their own data.\n\nThe same \"v17\" sentence is printed for a database HEAD created itself when the first command was `os migrate apply` (#24827), so on this release the sentence is wrong in every case the record met.\n\n## Where\n\n- `packages/cli/src/commands/dev.ts` ~822: the `recover` branch prints the v17 sentence unconditionally. The refusal it reacts to (`organizationOwnershipRefusalMessage`, `packages/runtime/src/organization-ownership-boot-guard.ts`) already says \"17.x or an 18.0 pre-release\", and the IPC message (`ORGANIZATION_OWNERSHIP_REQUIRED_MESSAGE`) carries the tables.\n- The ERROR line and stack come from the kernel's plugin-start failure log in the `serve --dev` child, printed before the child sends the IPC message that `os dev` recovers from.\n"
+}

@@ -1,0 +1,33 @@
+{
+  "number": 24904,
+  "kind": "issue",
+  "title": "docs: the 18.0.0 release text still tells a v17 operator to stay on 17.x — amend the CLI CHANGELOG entry, add the v18 row and ceremony to the upgrade guide and the v18 release page",
+  "state": "open",
+  "state_reason": null,
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "domain:docs",
+    "pm:dispatched",
+    "pm:epic",
+    "priority:p1"
+  ],
+  "assignees": [
+    "os-steve"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-20T13:36:23Z",
+  "updated_at": "2026-10-20T14:03:38Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 2,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/24904",
+  "body": "Filing gate **①**.\n- **finding:** a factual error in shipped release text. The published 18.0.0 tells a v17 operator the opposite of what 18.0.0 does.\n- **reach:** every operator upgrading a v17 database, and every upgrading agent that greps the CHANGELOG.\n- **Measured by:** #24884 Part 1, on the published 18.0.0 (session report to the epic seat). Nothing fails to boot or upgrade; this is text only.\n- **Reader who acts:** the epic seat, with a docs-only PR. AGENTS.md: `packages/*/CHANGELOG.md` and `content/docs/releases/` are RELEASE-OWNED. \"Factual error in a released entry → amend that entry in a dedicated docs-only PR.\"\n- **Dedupe:** none.\n\n## The errors\n1. **`packages/cli/CHANGELOG.md`, the 18.0.0 section.** It still carries the superseded entry from `ae6bd1a`, a pre-release changeset consumed into `.changeset/pre/`. That entry says \"18.0 supports fresh `single` installs only … `os migrate organization-ownership` refuses … keep a v17 database on a 17.x release\". The same section also carries `12d1476`'s correct text: the ceremony is open, with the full plan, then `--apply --plan-file --backup-taken` sequence. Amend the `ae6bd1a` entry in place to the shipped behaviour.\n   - Check every package CHANGELOG's 18.0.0 section for the same pre-release sentences. #24880's `check:closed-ceremony-text` phrases list them; CHANGELOGs are outside that gate by design.\n2. **The `fc34d00` headline** (step 4) says walled postures are \"supported on fresh installs\". In 18.0.0 they are supported on fresh installs **and** on upgraded ones. Amend it.\n3. **`content/docs/upgrading.mdx`** has no v18 row in its release table and never mentions the ceremony. Add the v18 row and the operator sequence:\n   - start, which is refused;\n   - back up;\n   - `os migrate organization-ownership --out PLAN`;\n   - `--apply --plan-file PLAN --backup-taken`;\n   - start again.\n   Note the `--dev` flag for a dev boot without an auth secret; #24884 found that trap.\n4. **`content/docs/releases/v18/index.mdx`** does not describe the ceremony. Add it.\n\nAcceptance: a v17 operator reading any of these four surfaces is sent to the ceremony, and nowhere to 17.x."
+}
