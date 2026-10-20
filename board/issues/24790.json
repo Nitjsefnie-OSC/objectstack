@@ -1,0 +1,37 @@
+{
+  "number": 24790,
+  "kind": "pull_request",
+  "title": "fix(plugin-sharing): re-evaluate position and team sharing rules for the user whose membership changes",
+  "state": "closed",
+  "state_reason": null,
+  "draft": false,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "documentation",
+    "size/xl",
+    "tests",
+    "tooling"
+  ],
+  "assignees": [
+    "os-support-ai"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-20T06:28:17Z",
+  "updated_at": "2026-10-20T07:29:04Z",
+  "closed_at": "2026-10-20T07:28:07Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": "2026-10-20T07:28:07Z",
+  "comments": 3,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/pull/24790",
+  "body": "Security fix (maintainer-ordered; no public card; detail withheld under the disclosure ruling).\n\nClause-②: no\n\n## What changed\n\n`@objectstack/plugin-sharing` now re-evaluates position-recipient and team-recipient sharing rules for the affected user when the membership behind the recipient changes.\n\n- **New hooks, `recipient-membership-recompute.ts`.** `afterInsert`, `afterUpdate` and `afterDelete` on `sys_user_position` and `sys_team_member`, bound under their own package id so a rule rebind cannot remove them. The plugin binds them next to the business-unit recompute.\n- **Which writes trigger it.** Each insert and each delete triggers it. An update triggers it only when its patch touches a column the expansion reads: the user, the position or team, the organization, or the validity window. For each such write, every rule whose recipient is the position or team the row names (before or after the write) is re-evaluated for the user the row names.\n- **Organization scope.** An organization's rule is re-evaluated only for rows of its own organization. A platform-global rule is re-evaluated for every row. Team expansion has no organization scope, so neither does its trigger.\n- **`SharingRuleService.reconcileRuleForUser(rule, userId)`.** The user-scoped pass. Its outcome equals the whole-rule pass restricted to that user. If the rule reaches the user, the user ends up with one grant per matched record at the rule's level. If it does not reach the user (inactive rule, switched-off position, or the user no longer holds the recipient), the user ends up with none. Withdrawal goes through `SharingService.revoke`, one grant at a time, the same way the whole-rule pass withdraws.\n- **User-scoped holder checks.** `PositionGraphService.holdsPosition` and `teamHasMember` / `holdsRole` in `team-graph.ts` read the same rows the expansions read, narrowed to one user. The expansions and the checks build their predicates from one shared function per table, so the two cannot drift apart.\n- **Docs.** `content/docs/permissions/sharing-rules.mdx` now lists the new reconcile moment in its \"Switching a rule off\" table. The sentence in `permissions-matrix.mdx` about when rules are re-evaluated now names it too.\n\n## The invariant restored\n\nWhen a position is assigned to a user or removed from one, every sharing rule whose recipient is that position is re-evaluated for that user in the same write path. A new holder gains the rule's grants. A removed holder loses them before the write returns, and nobody has to re-evaluate the rule by hand. Team membership follows the same rule. Other users' grants are not touched, and neither are rules that name other recipients.\n\n## Cost\n\nThe business-unit recompute does not recompute every rule on every graph write, and it queues its grant half. The reason is that a BU write can move many recipients at once. This change addresses the same cost concern by narrowing the scope instead of deferring the work. A membership row moves exactly one user. Per written row the pass costs:\n\n- one rule listing;\n- for each rule that names the recipient: an indexed holder check (never the recipient's whole member list), that user's grants of the rule, and, only when the rule reaches the user, the rule's criteria read plus the grants the user lacks.\n\nA bulk import of N rows therefore costs N user-scoped passes and never runs a whole-rule pass.\n\n## Tests\n\n- `src/recipient-membership-recompute.test.ts`: a real `ObjectQL` engine over `SqlDriver` (better-sqlite3), so the engine itself supplies each hook context (inserted row, update and delete pre-image, per-row dispatch of a batch insert). Pins:\n  - a new holder gains the rule's grants;\n  - a removed holder loses them, and both read (`buildReadFilter`) and edit (`checkEdit` → `deny`) are refused;\n  - moving an assignment to another user, or to another position, moves the grants with it;\n  - a validity window that closes counts as a removal;\n  - a second assignment of the same position, or a membership role naming it, keeps the grants;\n  - an unrelated position's grants are untouched and its rule is never re-evaluated;\n  - other holders' grants are untouched;\n  - an assignment in another organization does not re-evaluate an organization's rule;\n  - an update that cannot change who holds the position re-evaluates nothing;\n  - a bulk import of 40 assignments makes 20 user-scoped passes (for the named position), no whole-rule pass, and only user-scoped assignment reads;\n  - after the user-scoped passes, a whole-rule `evaluateRule` has nothing left to create, update or revoke;\n  - team: a new member gains, a removed member loses;\n  - binding, write classification and organization pinning.\n- `src/position-graph.test.ts`: `holdsPosition` answers exactly `expandPositionUsers(...).includes(user)` across users, positions, organization scopes, validity windows and the membership-role source, and it reads one user only.\n- **Ablations**, each run once with `scripts/ablation-replace.mjs` and restored to the HEAD blob (`git diff HEAD` empty):\n  1. No membership hook bound: 13 of 18 red.\n  2. Organization pin removed: 2 of 18 red.\n  3. Holder check replaced by the full expansion: the bulk pin red.\n  4. The user-scoped withdrawal revokes nothing: 7 of 18 red (every removal, move and team-removal pin).\n\nReadings at `99997e91e`:\n- `pnpm --filter @objectstack/plugin-sharing test`: 51 files, 1192 tests passed.\n- `pnpm --filter @objectstack/plugin-sharing typecheck`: exit 0. The test layer compiles, and `test-typecheck-debt.json` holds its 3 existing pinned signatures with no change.\n- The new and changed files on their own: 26 tests passed.\n- Ablations 1 to 3 ran at `6d46619c7`; the lines they mutate are unchanged since then. Ablation 4 ran at `99997e91e`.\n\n## Gates\n\nAll gate families that `node scripts/pm/dispatch-gates.mjs --commands` derives for this change set: 99 families, run locally at `99997e91e`.\n- 98 families exit 0. `check:type-check-debt` ran under the verify lock: exit 0, 26 raw tsc errors, none above its recorded number.\n- `node scripts/check-plugin-teardown-shape.mjs --self-test` exits 3 (PREREQUISITE NOT MEASURED). Its pinned positive control is not reachable from this shallow clone. CI runs it.\n- `dispatch-gates --ran` reconciliation: 99 derived, 99 run, 0 unrun.\n- `pnpm --filter @objectstack/spec build` and `check:generated` ran after merging `origin/main`: exit 0, all 14 generated artifacts up to date.\n\nThe full test battery and the type-check lanes are CI's.\n\n---\n_Generated by [Claude Code](https://claude.ai/code/session_01KqkTQNLcxVc588eZpJmp1r)_\n"
+}

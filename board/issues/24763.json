@@ -1,0 +1,33 @@
+{
+  "number": 24763,
+  "kind": "pull_request",
+  "title": "fix(lint): os validate, os build and the object save door refuse a validations[] predicate that reads parent",
+  "state": "open",
+  "state_reason": null,
+  "draft": true,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "documentation",
+    "size/m",
+    "tests",
+    "tooling"
+  ],
+  "assignees": [
+    "baozhoutao"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-20T04:55:23Z",
+  "updated_at": "2026-10-20T05:02:07Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 1,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/pull/24763",
+  "body": "Closes #24720\nClause-②: no (narrowing: `os build` and the object save door refuse a `validations[]` rule whose `condition` or `when` — nested `then` / `otherwise` rules included — reads `parent`, which the runtime's rule evaluator does not bind)\n\n## What changes\n\nA `validations[]` rule's predicates are evaluated by ObjectQL in `ruleScope(record, previous)` (`packages/objectql/src/validation/rule-validator.ts`, `checkPredicate` and `checkConditional`). That scope binds `record` and `previous`, and no master-detail header. The header is bound as `parent` only for a field's own `readonlyWhen` / `requiredWhen`, on an object with exactly one `master_detail`. A rule that read `parent` (for example `parent.status == 'paid'`) still passed `os validate`, because `parent` is a `SCOPE_ROOTS` member and the bare-reference check stays silent on it. At runtime every write the rule judged was refused as unevaluable (`Unknown variable: parent`), the seed's rows at boot included.\n\n- **A root verdict on the rule's own predicates.** `validationRuleParentIssue` in `packages/lint/src/validate-expressions.ts` refuses, at `error`, a predicate that reads `parent`. It covers a `script` / `cross_field` rule's `condition`, a `conditional` rule's `when`, and the same two slots on every rule nested in its `then` / `otherwise`. \"Reads `parent`\" is decided from the parsed AST (`readsParentRoot`, the same reader the field-rule verdict uses), so `record.parent_code` and the string `'parent'` are not judged.\n- **Location and prescription.** The finding is located where `check()` locates the same predicate (`object 'NAME' · validation 'RULE'`, its `when`, or the nested rule's label). The message names the slot, the rule and the root, and points at the field-rule slots where `parent` IS bound (`readonlyWhen` / `requiredWhen`), with the denormalise-onto-the-detail remedy for any other check. This is the shape of the select option `visibleWhen` verdict, with the same rule id (`expression-invalid`).\n- **Both doors.** `os validate` / `os build` and the object save door run the same pass (`runStackExpressionPasses`), so the door's finding is the build's finding.\n- **The runtime is unchanged.** Whether a `validations[]` rule should bind `parent` is a separate design question; this PR keeps today's runtime contract and refuses at authoring what the runtime refuses at write time.\n\n## Evidence\n\nAll readings at the PR head on top of `origin/main` `39e93b9ef9`.\n\n- **New suite** `packages/lint/src/validate-expressions.validation-rule-parent.test.ts`: 12 tests pass. It covers the `script`, `cross_field` and `conditional` (`when` and nested `then`) slots, the `os validate` and `os build` commands, objects with 0, 1 and 2 masters, the object door, and door/build parity. Controls: `parent` on a field's own `readonlyWhen` / `requiredWhen` is still accepted at the build and at the door, and `record` / `previous` reads, `record.parent_code` and the literal `'parent'` stay clean.\n- **Ablation.** I made the verdict return `null` through `scripts/ablation-replace.mjs` (the anchor landed 1 to 0 and the blob changed). 9 of 12 tests went red, and the 3 CONTROL tests stayed green. The tool then restored the file: the blob equals HEAD and `git diff HEAD` is empty.\n- **Public door, measured.** On the stock showcase, `pnpm --filter @objectstack/example-showcase validate` exits 0 (control). With a temporary rule `{ type: 'script', name: 'probe_paid_lock', events: ['insert'], condition: \"parent.status == 'paid'\" }` on `showcase_invoice_line`, it exits 1: `Author-time rules failed (1 issue)`, `rule: expression-invalid at object 'showcase_invoice_line' · validation 'probe_paid_lock'`. The probe was applied and restored by `ablation-replace.mjs`, and the blob equals HEAD afterwards.\n- **Whole package:** `pnpm --filter @objectstack/lint test` passed 149 files and 6956 tests. `pnpm --filter @objectstack/lint typecheck` passed.\n- **Corpus:** `git grep` over `examples/**` and the package objects finds `parent.` only in field `readonlyWhen` slots (`examples/app-showcase/src/data/objects/invoice.object.ts`) and in no `validations[]` rule. So no shipped stack goes red.\n\n## Acceptance notes\n\n- The verdict judges a rule as written, the way the rest of the expression rule does. So a rule with `active: false`, a rule on `events` a stack never fires, and a `conditional` branch whose `when` is never true are refused too, although the server never reaches their `parent` read. I checked the `active: false` case through the built `@objectstack/lint`, and the changeset says so.\n- The object door is pinned in-package through `runRuntimeAuthoringRules({ type: 'object' })`. Unlike the option verdict's PR, there is no `saveMetaItem` pin in `packages/metadata-protocol` here, because that package is outside this card's file surface. The door runs the same pass, and the parity test pins that its finding equals the build's.\n- Clause-② and the bump follow the option `visibleWhen` precedent, by PM decision: a breaking `minor` changeset for `@objectstack/lint`, with `Clause-②: no (narrowing: …)` and an ADR-0087 `not-required (no-migration-prescription)` marker. The build door narrows for inactive and unreachable rules (above), and the publish door now answers `422 INVALID_METADATA` where it answered 200. Only `@objectstack/lint` is bumped, because this diff changes code in no other package.\n- No rule registry or docs row is needed: the verdict uses the existing `expression-invalid` rule, and `content/docs/data-modeling/fields.mdx` already states that `parent` is bound for the field-rule slots only.\n\n---\n_Generated by [Claude Code](https://claude.ai/code/session_01D6F9axfoPzR7t8G1J7Ytzz)_\n\n"
+}

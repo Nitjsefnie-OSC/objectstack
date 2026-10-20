@@ -2,8 +2,8 @@
   "number": 24547,
   "kind": "issue",
   "title": "Active metadata save stores an object without its package namespace prefix that publish-drafts then refuses (NAMESPACE_PREFIX)",
-  "state": "open",
-  "state_reason": null,
+  "state": "closed",
+  "state_reason": "completed",
   "draft": null,
   "author": {
     "login": "objectstack-fleet[bot]",
@@ -14,7 +14,6 @@
     "area:studio",
     "bug",
     "domain:engine",
-    "pm:dispatched",
     "priority:p1",
     "target:v18"
   ],
@@ -24,11 +23,15 @@
   "milestone": null,
   "type": null,
   "created_at": "2026-10-19T13:27:05Z",
-  "updated_at": "2026-10-20T01:25:16Z",
-  "closed_at": null,
-  "closed_by": null,
+  "updated_at": "2026-10-20T02:39:41Z",
+  "closed_at": "2026-10-20T02:37:21Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
   "merged_at": null,
-  "comments": 6,
+  "comments": 7,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/24547",
   "body": "Filing gate: ① product defect — reproduced through a public HTTP door, landing file named (the two runtime save doors disagree on one rule).\nPath: automation.rollup-summary-filter (checklist item priority P1; found while driving its step 7, outside its clauses — no clause failed)\nQA-source: #24545 · automation.rollup-summary-filter · step 7 (incidental, outside clauses)\nType: Bug — violates ADR-0129 D2 (\"every object it defines MUST be named namespace_shortName\").\nReader: the `packages/metadata-protocol` owner picked at triage — first step is the direct/active `saveMetaItem` path in `packages/metadata-protocol/src/protocol.ts`; if the fix is instead an ADR exemption for the direct-save door, it is a maintainer ruling (precedent class: #23388).\nDuplicate check (open AND closed): \"metadata PUT save object unprefixed name namespace prefix not enforced direct save active\" → 16 hits (package-binding / D9.9 ownership families, none match) · \"NAMESPACE_PREFIX publish-drafts refused but saveMetaItem accepts\" → 40 hits (none match) · \"namespace prefix enforcement studio publish only, active object save bypasses prefix rule ADR-0129\" → 29 hits (none exact; #23388 is the same class for a different rule).\nreach: `PUT /api/v1/meta/object/v1_report?package=com.v1.rollup` (package namespace `rollup`) → 200 `state:active`, the object is live; a draft edit of the same object → `POST /api/v1/packages/com.v1.rollup/publish-drafts` → outcome `refused`, code `NAMESPACE_PREFIX`. Measured on stock showcase at 5b14b7f3.\n\n## What happens\n\nFor a package with a declared namespace, the direct (active) object save door accepts an object name that lacks the `namespace_` prefix and makes it live. The draft-publish door for the same package refuses the very same name with NAMESPACE_PREFIX. So an object can be created that can never again be edited through drafts, and the two runtime doors give opposite verdicts on one name in one package. `os validate` (exit 1) and `os build` (exit 2) both refuse the shape — the gap is runtime-only.\n\n## Reproduction (stock showcase, framework 5b14b7f3)\n\n1. Boot showcase, sign in `admin@objectos.ai` / `admin123`.\n2. `POST /api/v1/packages` body `{\"id\":\"com.v1.rollup\",\"name\":\"V1 Rollup\",\"version\":\"0.1.0\",\"type\":\"app\"}` → 201, `manifest.namespace` = `rollup`.\n3. `PUT /api/v1/meta/object/v1_report?package=com.v1.rollup` body `{\"name\":\"v1_report\",\"label\":\"V1 Report\",\"sharingModel\":\"private\",\"fields\":{\"title\":{\"type\":\"text\",\"label\":\"Title\"}}}`\n   - Expected (ADR-0129 D2): refusal NAMESPACE_PREFIX, \"Rename it to rollup_v1_report\".\n   - Actual: 200 `state:\"active\"`; `GET /api/v1/meta/object/v1_report` serves it and `POST /api/v1/data/v1_report {\"title\":\"x\"}` creates a record.\n4. Same PUT with `&mode=draft` and a changed label → 200 `state:\"draft\"`.\n5. `POST /api/v1/packages/com.v1.rollup/publish-drafts` body `{}` → 200 with `outcome:\"refused\"`, `failed[0].code:\"NAMESPACE_PREFIX\"`: \"Object 'v1_report' is missing the package namespace prefix. Rename it to 'rollup_v1_report' (namespace = 'rollup').\"\n\n## Contract\n\n- `docs/adr/0129-object-name-is-the-canonical-id.md:45-55` (D2): every object a package defines MUST be `namespace_shortName`; enforcement named at compile time (`validateNamespacePrefix()`) and at Studio publish.\n- `packages/spec/src/kernel/namespace-prefix.ts:3-14` states the same MUST.\n- `packages/metadata-protocol/src/protocol.ts:26329-26340` (`publishPackageDrafts`) refuses the unprefixed draft; `protocol.ts:27873-27874` itself notes \"a direct-publish save, which no prefix gate reads\".\n- The direct-save door already runs other author-time gates on the same body (it refused a missing `sharingModel` with 422 INVALID_METADATA), so the prefix rule is the one that is skipped.\n\n## Mechanism and fix landing\n\n- `packages/metadata-protocol/src/protocol.ts` — the active/direct `saveMetaItem` path for type `object` under a package with `manifest.namespace` does not call the prefix validator that `publishPackageDrafts` uses (~26366).\n- Fix (one of): apply the same `validateObjectNamespacePrefix` check on the active save (refuse with NAMESPACE_PREFIX), or record a ruling exempting the direct-save door and amend the ADR-0129 D2 chokepoint list. Either way the two doors should agree.\n- Severity hint: medium — reachable by any metadata author with save rights; leaves a live object that drafts can no longer publish.\n"

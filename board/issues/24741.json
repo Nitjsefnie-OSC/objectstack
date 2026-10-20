@@ -1,0 +1,38 @@
+{
+  "number": 24741,
+  "kind": "issue",
+  "title": "release gate: one transient GitHub API 5xx while reading the full-battery runs refuses the publish as NOT MEASURED, with no retry (next.5's release run 39230668843 needed a manual re-run and a second `release` approval)",
+  "state": "closed",
+  "state_reason": "completed",
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "area:devpath",
+    "domain:devx",
+    "priority:p1",
+    "target:v18",
+    "tooling"
+  ],
+  "assignees": [
+    "os-warren"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-20T03:25:53Z",
+  "updated_at": "2026-10-20T05:17:25Z",
+  "closed_at": "2026-10-20T05:15:38Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": null,
+  "comments": 3,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/24741",
+  "body": "**Filing gate ③: a task the maintainer directed.** In the triage seat's session on 2026-10-20, the maintainer was given the options (A: file a card for a bounded retry; B: keep today's behaviour) and answered verbatim 「立卡」. Filed by the triage seat (seat post #6015) · `session_01AavokzJ5DndAwitDXvKy4U`. ⛔ Not a claim.\n\n**Reader who acts:** the `domain:devx` seat, in one PR on `scripts/ci/scheduled-full-run.mjs` and its self-test. This lane landed the file's recent cards: #24278 (PR #24305) and #23880 (PR #23975, PR #24211).\n\n**Dedupe:** MCP `search_issues`, objectstack, closed included: \"release gate NOT MEASURED transient GitHub API 502 5xx retry scheduled-full-run readRuns refuses publish\". 22 hits.\n- The nearest is **#23361** (closed): the same class on `check-issue-citations`. It was fixed by PR #23438 (`863213a90e`) with a bounded retry ladder.\n- #15321, #21313 and #21359 (closed) are other `release.yml` races.\n- None covers the release gate's run reads.\n\n## What happens (`origin/main` `9b2953d62c`)\n\n- `releaseGate` (`scripts/ci/scheduled-full-run.mjs:914`) reads, for each release-gate workflow and each full-battery event, `GET /repos/…/actions/workflows/<file>/runs?branch=main&event=<event>&status=completed…` through `readRuns`.\n- `readRuns` throws on any non-OK answer: `if (!res.ok) throw new Error(\\`GET ${url} answered HTTP ${res.status}\\`)` (`:904`).\n- `releaseGate` catches it and refuses: `::error::release gate NOT MEASURED -- … Refusing: an unread full battery is not a green one.` Then it exits `EXIT_PREREQUISITE_NOT_MET` (`:929`). There is no retry anywhere on this path.\n\n**Measured once, on the publish lane.** Release run **39230668843** (the next.5 version PR #24477, push on `6b42b6bc8a`, 2026-10-19).\n- Its `full-battery` job refused with `release gate NOT MEASURED -- GET …/actions/workflows/lint.yml/runs?…event=schedule… answered HTTP 502`.\n- `publish` and `Docker image` were skipped.\n- Every full-battery verdict it would have read was green, so it was one blip, not a red battery.\n- The remedy was the maintainer's (Prime Directive 15): \"Re-run failed jobs\", then a second approval of the `release` environment. next.5 then published.\n- So one GitHub blip costs a publish its run and the maintainer one more re-run and approval. `tooling` enters `pm:queue` through the gate \"measured to slow the fleet: repeated re-runs\" (`triage-duties.md:37`), with this run as the named instance.\n\n## Wanted\n\n- **`readRuns` retries a transient failure with a bounded ladder, and only a transient failure:**\n  - an HTTP 5xx, or a named connection failure (`ECONNRESET`, `UND_ERR_SOCKET`);\n  - a 4xx, a body without `workflow_runs`, or any other error stays final.\n- **Reuse #23361's policy, not a second copy of it.** PR #23438's `BOARD_READ_RETRY` (3 attempts per read, backoff 500 / 1000 ms, a 4-retry budget per run), `retryableNetworkCode`, and its read wrapper live in `scripts/check-issue-citations.mjs` (about `:749`–`:800`). Import them, or lift them into one shared module that both files import.\n- **Still refuse when the ladder or budget is spent.** The message names the last status and how many attempts were made. ⛔ An unread battery is never read as green, so the refusal and its exit code do not change in kind.\n- **Pins in the file's self-test, with an injectable `fetch` and `sleep`:**\n  - a 502 then 200 is measured and the verdict is computed;\n  - three 5xx answers refuse NOT MEASURED, naming the attempts;\n  - a 404 refuses at once, with no retry;\n  - the run budget caps the total retries across workflows and events.\n\n⛔ Not a new gate (「新增门禁默认否」): this makes the existing release gate robust to the network, and changes no verdict. ⛔ No change to `release.yml`, its environment or its dispatch. No seat re-runs or dispatches release workflows (Prime Directive 15).\n\n**18.0 note.** This does not hold GA. If GA's release run hits a 5xx before this lands, the remedy stays the maintainer's re-run of the failed job, as it was for next.5.\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_\n"
+}

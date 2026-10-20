@@ -1,0 +1,36 @@
+{
+  "number": 24805,
+  "kind": "pull_request",
+  "title": "fix(dogfood): the audit-capability fixture's grant writes carry their holder's organization",
+  "state": "closed",
+  "state_reason": null,
+  "draft": false,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "size/s",
+    "skip-changeset",
+    "tests"
+  ],
+  "assignees": [
+    "os-justin"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-20T07:13:06Z",
+  "updated_at": "2026-10-20T08:08:33Z",
+  "closed_at": "2026-10-20T08:08:31Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": "2026-10-20T08:08:31Z",
+  "comments": 2,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/pull/24805",
+  "body": "Refs #24780\nClause-②: no\n\n**This PR repairs row 1 of the card (`Dogfood Regression Gate (1/3)`). Row 2 (`Console Pin Gate`) belongs to #24749 and is not touched.** The card stays open for the PM to settle after this lands.\n\n## What changed\n\nOne file: `packages/qa/dogfood/test/audit-log-audit-capability.dogfood.test.ts`. Its two `sys_user_permission_set` grant inserts ran in system context with no organization. Each now carries its holder's organization on the execution context (`{ isSystem: true, tenantId: ORG }`):\n\n- **The walled case** (`[#21260] the ledger audit capability is bounded by its holder's organization (scope: org)`, `multiTenant: 'posture-only'`, so the `isolated` posture): the grant to the first owner carries `org.a`, the organization that owner created earlier in the same `beforeAll`.\n- **The first describe** (a `single` boot): the `grant` helper reads the holder's one membership in `sys_member` and carries that organization (the Default Organization on that boot). The helper asserts exactly one non-empty membership. Without that check, an empty id would fall back to derivation and pass without testing anything.\n\nNo assertion of any case changed. `resolveSystemInsertOrganization` and the walled lift stay as they are.\n\n**Why `tenantId` on the context rather than `organization_id` on the row:** the refusal names the context form first (\"pass it on the execution context (`{ context: { isSystem: true, tenantId: ORGANIZATION_ID } }`), or set organization_id on the record itself\"). It is also the form #24667 used for its own two walled fixtures (`builtin-positions.boot.test.ts`, `grant-holder-membership-refusal.test.ts`).\n\n**The file's other system write**, the bulk `sys_audit_log` insert in the first describe, is not this shape and is unchanged. The ledger declares `systemFields: { tenant: false }` (ADR-0131 D7: no organization column), so `resolveTenantFieldName` answers null and the rule does not apply to that object. Its `single` boot would derive an organization anyway. The file makes no other `ql.insert` / update / delete calls.\n\n## Evidence\n\nAll runs used `pnpm --filter @objectstack/dogfood exec vitest run --maxWorkers=2 test/audit-log-audit-capability.dogfood.test.ts`, after building the `@objectstack/dogfood^...` closure at the same commit.\n\n| tree | result |\n|---|---|\n| `f7005cbd8` (the parent of #24667's `fc34d000fc`) | `Test Files 1 passed (1)` · `Tests 13 passed (13)` |\n| `fc34d000fc` (#24667, the walled lift) | `Test Files 1 failed (1)` · `Tests 10 passed \\| 3 skipped (13)`, `SystemWriteOrganizationRequiredError: Insert on 'sys_user_permission_set' was REFUSED … this install runs the 'isolated' tenancy posture` |\n| `74f78159a` (this branch's base, `main` before the fix) | the same red: `1 failed`, `10 passed \\| 3 skipped`, the same refusal, at `_ObjectQL.resolveSystemInsertOrganization` via `plugin-sharing` / `plugin-security` middleware |\n| `187a247d0` (this head: the fix plus `main` at `46bb5e3e5`) | `Test Files 1 passed (1)` · `Tests 13 passed (13)` |\n\nThe bisect pair confirms #24667 as the cause. The case's own subject is unchanged: the holder case still reads `2` rows about its own organization's deleted record and `0` about the other's. That reading needs the grant (now stamped `org.a`) to be honoured for the holder.\n\nThe file runs in exactly one vitest project, `isolated` (it is not in `SHARED_SHOWCASE`). The gate runs `pnpm turbo run test --filter=@objectstack/dogfood` with `OS_TEST_SHARD=k/3`. The boot log shows the file's two boots at posture `single` and posture `isolated`. No boot in this file uses `group`.\n\n## Gates\n\n- Local, on `187a247d0`: the 55 commands of `node scripts/pm/dispatch-gates.mjs --commands` (narrowed to this diff) all exit 0. `--ran` reconciles them as `55 derived, 55 run, 0 NOT-MEASURED, 0 UNRUN`. `pnpm lint` (`eslint . --no-inline-config`): exit 0, no findings.\n- `pnpm --filter @objectstack/dogfood run typecheck`: exit 0. The tsc program lists this file (`--listFilesOnly`, 1 hit).\n- `Dogfood Regression Gate` does not run on `pull_request` or `merge_group`, so its first CI reading of this change is `main`'s push battery after the merge. The local red-then-green above is the pre-merge reading.\n\n## Changeset\n\n`skip-changeset`: the diff is one test file in `@objectstack/dogfood`, a `private: true` package that publishes nothing. No published package's `files[]` changes.\n\n## Acceptance notes\n\n- The dispatch expected `group` and `single` runs of the same lines. Measured: the vitest projects are `shared-showcase` and `isolated`, and the file's boots are `single` (first describe) and `isolated` (second). There is no `group` boot here. Both grant lines answer under the boot they run in: `10 passed` before the lift and `13 passed` after this fix.\n\n---\n_Generated by [Claude Code](https://claude.ai/code/session_01LmjU2x1faLZ39DVTFyVca6)_"
+}

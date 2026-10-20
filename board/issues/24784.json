@@ -1,0 +1,35 @@
+{
+  "number": 24784,
+  "kind": "issue",
+  "title": "group posture: a member whose session has no active organization gets 500 ERR_SYSTEM_WRITE_ORGANIZATION_REQUIRED on a tenant-scoped create, where isolated answers 403 naming the missing organization",
+  "state": "open",
+  "state_reason": null,
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "area:access",
+    "bug",
+    "domain:services",
+    "pm:dispatched",
+    "priority:p1",
+    "target:v18"
+  ],
+  "assignees": [
+    "os-justin"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-20T05:43:38Z",
+  "updated_at": "2026-10-20T08:17:59Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 4,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/24784",
+  "body": "Filing gate: ① product defect with a reproduction (QA-measured on a walled boot, confirmed by an independent RUNNER rule 7 re-derivation).\n\nPath: access-security.no-active-org-session-semantics\nQA-source: #24783 · access-security.no-active-org-session-semantics · acceptance[1] (also acceptance[5], acceptance[6], negative[3])\nChecklist item priority: P0 (clause fails, so the card inherits P0 under the filing gate's tri-state rule)\ntype: Bug\n\nreach: measured through the public HTTP door at framework 580fd4ed: on an `OS_TENANCY_POSTURE=group` boot, `POST /api/v1/data/showcase_task` from a member of organization A whose session has `activeOrganizationId: null` answers `500 {\"error\":\"Internal server error\",\"code\":\"ERR_SYSTEM_WRITE_ORGANIZATION_REQUIRED\"}`. Reproduced twice by the runner and twice by a second agent on fresh boots.\n\n## What happens\n\nOn a walled `group` boot, a user who belongs to an organization but whose session has no active organization sends a create on a tenant-scoped object. The Layer 0 wall lets the session write through. The engine then infers \"system write\" from the missing `tenantId`, and refuses with `SystemWriteOrganizationRequiredError`, whose status is fixed at 500. The REST layer logs it as `[REST] Unhandled error`.\n\nNothing is written: no row, no NULL `organization_id`, so the failure is closed. The defect is the answer.\n\n- The same steps on `isolated` answer `403 PERMISSION_DENIED` \"[Security] Access denied: 'showcase_task' is scoped to an organization, and this session has no active organization — so this insert has no organization to place the record in. Join or select an active organization and retry.\"\n- A user with no membership at all gets that same 403 on `group` too.\n\n## Reproduction\n\nThe boot is a walled scratch app: a copy of examples/app-showcase whose own package.json declares `@objectstack/organizations` (installed there), run from that copy with:\n- `OS_TENANCY_POSTURE=group`\n- `OS_PLATFORM_OWNER_EMAIL=admin@objectos.ai`\n- `OS_AUTH_MEMBERSHIP_POLICY=invite-only`\n- `os dev --seed-admin -p PORT -d file:RUNDIR/grp.db`\n\nSteps:\n1. As the operator `admin@objectos.ai`, call `POST /api/v1/auth/admin/create-user {\"email\":\"qa-a@wall.test\",\"password\":\"Passw0rd!x1\",\"name\":\"A\"}`. Sign in as the new user, call `POST /api/v1/auth/change-password`, then sign in again to get token T.\n2. As T, call `POST /api/v1/auth/organization/create {\"name\":\"qa-org-a\",\"slug\":\"qa-org-a\"}`, then `POST /api/v1/auth/organization/set-active {\"organizationId\":\"ORG_A\"}`.\n3. As T, create `showcase_account {\"name\":\"a\"}`, then `showcase_project {\"name\":\"p\",\"account\":\"ACCOUNT_ID\"}`.\n4. As T, call `POST /api/v1/auth/organization/set-active {\"organizationId\": null}`. `GET /api/v1/auth/get-session` now shows `session.activeOrganizationId: null`.\n5. As T, call `POST /api/v1/data/showcase_task {\"title\":\"x\",\"project\":\"PROJECT_ID\"}`.\n\nResults:\n- expected: a 4xx from the closed ADR-0112 vocabulary naming the missing active organization. This is the isolated answer above, and what the checklist clause requires.\n- actual: `500 {\"error\":\"Internal server error\",\"code\":\"ERR_SYSTEM_WRITE_ORGANIZATION_REQUIRED\"}`, and the log line `[REST] Unhandled error: SystemWriteOrganizationRequiredError: Insert on 'showcase_task' was REFUSED: a system-context write on a tenant-scoped object must carry an organization, and this install runs the 'group' tenancy posture …`.\n\n## Mechanism (read at 580fd4ed by the verifying agent)\n\n1. `packages/plugins/plugin-security/src/security-plugin.ts` `callerHasOrganizationScope` (about :656–663): under a union-scope posture it answers true whenever `accessible_org_ids` is non-empty, regardless of `tenantId`. So `organizationWallRefusal` (about :7850) returns null for a member with no active org, and the ADR-0123 D2 \"no active organization\" refusal (about :3947–3973) never fires.\n2. `packages/objectql/src/engine.ts` calls `resolveSystemInsertOrganization` for every insert (about :16301). That function (about :7384) treats \"no `execCtx.tenantId`\" as a system write. It has no `isSystem` check.\n3. `packages/objectql/src/tenancy/system-write-organization.ts` (about :366) fixes the error's status at 500. The ledger entry in `packages/spec/src/api/error-code-ledger.zod.ts` (about :776) describes the caller as \"server-side automation\", not a request.\n\nThe write is evaluated as the session: object permissions applied first, and no permission or RLS bypass was observed. Only the error text says \"system-context\".\n\n## Filing-gate answers\n\n- Category: ① a defect against the declared contract of `access-security.no-active-org-session-semantics` acceptance[1] (\"refused LOUDLY with a 4xx whose message NAMES the missing active organization — not a generic denial, not a 500\") and negative[3] (\"a 500 … on any of the three paths — the state is declared legal, so crashing is a defect\").\n- Acting reader: the lane owning the Layer 0 write wall in `packages/plugins/plugin-security` (`domain:security`). Candidate fix: under a union-scope posture, a write also requires an active organization, so it answers the same ADR-0123 D2 403 that `isolated` answers. Alternatively, the engine maps a non-system caller to that refusal instead of the 500.\n- Duplicate search (open AND closed), objectstack:\n  - \"group posture no active organization insert 500 ERR_SYSTEM_WRITE_ORGANIZATION_REQUIRED\" → 21 hits.\n  - \"no active organization session write 500 walled group posture member\" → 7 hits.\n  - None is this defect. The nearest are #21476 (closed: an anonymous public-form submit 500s on a walled posture with the same code, a different caller) and #24343 (open: NULL organization_id rows from framework writers on a walled control plane). Also checked #24543–#24751, this sweep's earlier cards: none.\n\nFound by the 18.0 round-3 walled pass; full evidence is in #24783.\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_"
+}

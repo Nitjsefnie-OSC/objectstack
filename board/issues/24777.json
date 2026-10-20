@@ -1,0 +1,36 @@
+{
+  "number": 24777,
+  "kind": "pull_request",
+  "title": "fix(dogfood): the wall CONTROL cases' packages declare the CRM dependency and their publish lines read the receipt",
+  "state": "closed",
+  "state_reason": null,
+  "draft": false,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "size/s",
+    "skip-changeset",
+    "tests"
+  ],
+  "assignees": [
+    "os-justin"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-20T05:06:23Z",
+  "updated_at": "2026-10-20T05:43:41Z",
+  "closed_at": "2026-10-20T05:43:39Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": "2026-10-20T05:43:39Z",
+  "comments": 2,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/pull/24777",
+  "body": "Fixes #24725\n\nClause-②: no\n\nThe two CONTROL cases of `packages/qa/dogfood/test/wall-environment-metadata-refusal.dogfood.test.ts` that PR #24724 held off now publish for real and assert it. They are the walled `CONTROL: the platform operator writes at every one of these doors` case (both postures, `isolated` and `group`) and the `single (CONTROL)` case. Before this change, each one's `publish-drafts` was refused with a `200`, and the status-only `ok()` read that refusal as a write.\n\nThe ruled closure narrowing (PR #24630, `9f12d06770`) is unchanged, as are every save-door and publish rule, every other case in this file (the `/packages` case PR #24724 changed included), and every other dogfood file. This PR changes one test file and nothing else.\n\n## What changes (two cases, one file, +19 / -4)\n\n- **Each case's package declares the CRM dependency at create.** `POST /packages` now sends `dependencies: { [CRM_PKG]: '*' }`, where `CRM_PKG` is the file's existing constant for `com.example.crm` (`examples/app-crm`'s `manifest.id`). This covers `com.em.PREFIX.opctl` (walled) and `com.em.sin.a` (`single`).\n- **Each publish line asserts the receipt in `data`.** The receipt must read `{ success: true, outcome: 'published', publishedCount: 1 }`, with `failed[]` as the assertion message. The form is copied byte for byte from the `/packages` case. It stays inline rather than moving into a helper, so the `/packages` case's lines stay untouched and a failure points at each case's own line.\n- The view names stay on `crm_lead` (`crm_lead.em_PREFIX_pkgv`, `crm_lead.em_sin_pv`), so no later line changes. `ok()` stays status-only for every other line.\n\n## Evidence\n\nEvery run used the same command, `pnpm exec vitest run --maxWorkers=2 test/wall-environment-metadata-refusal.dogfood.test.ts` in `packages/qa/dogfood`, under the shared verify lock.\n- The closure was built by `pnpm turbo run build --filter=@objectstack/dogfood --concurrency=2`: 66/66 tasks, the dogfood gate's own build target.\n- The file runs both walled postures (`isolated`, `group`) and the `single` control in one run. That is how the gate's `turbo run test --filter=@objectstack/dogfood` executes it, since `OS_TEST_SHARD` only slices whole files. So one run covers every variant the gate runs.\n- Each instrumented or mutated run went through `scripts/ablation-replace.mjs` in WRAP mode. Each was restored and proven hash-equal to `HEAD`: blob `16c8fd8a2` for R0, `3bfd0b150` for R2 to R4, with `git diff HEAD` empty.\n\n| Run | Tree | Result |\n|---|---|---|\n| R0 (before, instrumented) | `580fd4ed3` (`origin/main`), with a log of each CONTROL `publish-drafts` receipt | `23 passed`: the false green. All three receipts are `200 {\"success\":false,\"outcome\":\"refused\",\"publishedCount\":0,\"failedCount\":1,...}`, each with `list-view-object-outside-closure`: `crm_lead.em_iso_pkgv` into `com.em.iso.opctl`, `crm_lead.em_gro_pkgv` into `com.em.gro.opctl`, and `crm_lead.em_sin_pv` into `com.em.sin.a` |\n| R1 (green) | `cff4ff61e`, this change | `23 passed` |\n| R2 (after, instrumented) | `cff4ff61e` plus the receipt log | `23 passed`. All three receipts are `200 {\"success\":true,\"outcome\":\"published\",\"publishedCount\":1,\"failedCount\":0,...}`, for the same three views |\n| R3 (ablation) | `cff4ff61e` with `dependencies` removed from the two CONTROL packages only (the `/packages` case keeps its own) | `3 failed / 20 passed`. The failures are at the receipt assertion, `:333:10` (isolated and group) and `:378:8` (single). Received `{ success: false, outcome: 'refused', publishedCount: 0 }`. The message is `failed[]`: `view/crm_lead.em_sin_pv failed author-time validation: 1 issue — views[0].object [list-view-object-outside-closure]` (the same for `em_iso_pkgv` and `em_gro_pkgv`) |\n| R4 (doors after the publish, instrumented) | `cff4ff61e` plus logs of the next doors | `23 passed`. In both walled postures, `duplicate` answers `200` with `copiedCount: 1`, and the copy holds `crm_lead.em_PREFIX_pkgv` as `active`. `DELETE /packages/com.em.PREFIX.opctl` answers `200` with `deletedCount: 1` (the published view) and `registryRemoved: true`, and the operator's `GET` then answers `404`. Under `single`, A's `DELETE /packages/com.em.sin.a` answers `200` with `deletedCount: 1`, and no `sys_metadata` row of the package remains |\n\nWhat the runs establish:\n- On `main` both CONTROLs measured nothing at the `publish-drafts` door (R0).\n- With the dependency declared, the operator (walled) and A, a `manage_metadata` holder below the operator, under `single` really publish. A's create with `dependencies` answers `201` (R1, R2).\n- Each CONTROL can now fail at that door, and names the cause when it does (R3).\n- Each door after the publish now acts on a package holding a published view, and answers as before (R4).\n\n## Gates (local subset, on `cff4ff61e`)\n\n- `tsc --noEmit` in `packages/qa/dogfood`: `TSC_EXIT=0`, and `--listFiles` includes this file.\n- `node scripts/pm/dispatch-gates.mjs --commands` derived 55 families. 54 exit 0. `pnpm check:dual-build-cjs-loads` exits 3 with PREREQUISITE NOT MET: it reads every package's `dist`, and eight packages outside the dogfood closure are unbuilt locally. That family is NOT MEASURED locally, and CI's `Lint & Repo Gates` reads it. `--ran` reconciliation: `55 derived famil(ies) accounted for — 54 run, 1 NOT-MEASURED`, `0 UNRUN`.\n- `pnpm lint` (`eslint . --no-inline-config`): `LINT_EXIT=0`, no finding.\n- Dogfood is not in the PR or queue fast set. It runs on `main`'s hourly full battery, and the runs above are its pre-merge reading.\n\n## Changeset\n\nNone. `skip-changeset` applies: the diff is one file under `packages/qa/dogfood/test/`, and `@objectstack/dogfood` is `\"private\": true`, so it publishes nothing.\n\n## Acceptance notes\n\n- `ok()` still reads only the status for every other line of these two cases. R4 read the bodies of `duplicate` and `DELETE` in addition, and both carry a success receipt. No other door's body was read here.\n- Under `single`, A's `GET /packages/com.em.sin.a` after the delete answers `403`, not `404`. That is the read gate as written: package reads need `studio.access` or `setup.access` (`packages/runtime/src/domains/packages.ts`), which A does not hold. It is not a line of this file.\n\n---\n_Generated by [Claude Code](https://claude.ai/code/session_01LmjU2x1faLZ39DVTFyVca6)_\n"
+}

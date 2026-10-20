@@ -1,0 +1,36 @@
+{
+  "number": 24754,
+  "kind": "issue",
+  "title": "docs(readme): say \"ontology-driven\" beside \"the ontology is the software\" — the mechanism line that sets ObjectStack apart from metadata-driven platforms (maintainer-directed)",
+  "state": "closed",
+  "state_reason": "completed",
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "documentation",
+    "domain:skills",
+    "priority:p2"
+  ],
+  "assignees": [
+    "os-justin"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-20T04:41:57Z",
+  "updated_at": "2026-10-20T08:28:38Z",
+  "closed_at": "2026-10-20T08:26:38Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": null,
+  "comments": 9,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/24754",
+  "body": "Ruled: 6286329964 · letter 甲 · 2026-10-20T08:02Z — the Chinese line stays 「本体即软件。」, the English definition line stays in label form with 「no second application」, the new paragraph stands; state `pm:dispatched` (in flight, assignee unchanged; director seat, summon #45 continuation 1, batch #375 item 1).\n\n**Filing gate ③, a task the maintainer directed.** In the skills seat 1 session (`session_01HEdP5tPhqQfzwRmKDxwn85`, seat post #7623) on 2026-10-20, the maintainer asked, verbatim: 「salesforce 之前叫元数据驱动，我们现在可以叫本体驱动吗」, then 「本体驱动 会不会和本体即软件更搭」, then directed: 「立卡，更新 README」 and 「你负责用〔达档模型名〕派发」 (the model's name is masked here by the model-identifier rule; it is the `CONTRACT_REVIEW_TIER` constant). Filed by the `domain:skills` seat 1 (`os-justin`). ⛔ Not a claim. Self-labelled under exception 二 (SKILL.md 域车道表: 立卡人自贴、正文齐三件 ⇒ 执行席直接认领, triage spot-checks) because the maintainer named this seat to dispatch it; root `README.md` has no row in the lane table.\n\n**Reader who acts:** the `domain:skills` seat's developer, dispatched at `CONTRACT_REVIEW_TIER` on the maintainer's word, in one PR to `README.md` only. The PR stays draft: the wording is the maintainer's positioning, so the seat posts the 速读 and lands only on the maintainer's word on the text (he is online), not by auto-merge.\n\n**Dedupe:** REST enumeration of this repository, `GET /repos/objectstack-ai/objectstack/issues?state=all&since=YYYY-MM-DDThh:mmZ&per_page=100` (the `since` value being 2026-10-17T00:00:00Z; the digits were moved out of the quotation by the director seat so the body could be re-stamped, nothing else of this paragraph changed) (9 pages, 806 items, pull requests skipped), title+body matched against `/ontology-driven|本体驱动|本体即软件|ontology is the software|README/i` → 11 hits, none on point (other READMEs, QA runs, seat posts, the protocol.ts split decision). The last README positioning PR is #22955 (`1f312fdfa`, the essay/compare/deck links). No open card.\n\n## What the README says today (`origin/main`)\n\n- Lines 7–14, the thesis block: 「## The ontology is the software.」 / 「**One executable business ontology.** AI writes it, the runtime runs it, agents operate it, you own it.」 / 「本体即软件。」 / 「Apps small enough for AI to hold whole.」; line 16 the tag row `Executable · AI-writable · Agent-operable · You own it · Apache-2.0`.\n- Lines 79–96, 〈What we mean by ontology〉: the definition (objects, fields, relations, actions, permissions, flows, agent and tool definitions = a business ontology), the two boundaries (not a knowledge-representation ontology; not a semantic layer over existing systems), projections, where code goes, and the links to the concept page, the glossary and the compare page (which sets ObjectStack beside knowledge ontologies, semantic layers, operational ontologies, metadata platforms and AI code generation).\n- Lines 214–217, the closing thesis quote.\n- The word 「metadata-driven」 does not occur in the README; 「metadata」 occurs as the thing the agent writes (line 28) and Studio authors (line 77).\n\n## What to change (the seat's reading of the maintainer's words; the maintainer rules on the final wording)\n\n1. **The mechanism line, paired with the thesis.** 「The ontology is the software」 is the claim about what ObjectStack is; 「ontology-driven」 (本体驱动) is the adjective for how it runs, the successor of 「metadata-driven」 as Salesforce's generation used it. Add it where the thesis is stated — the block at lines 7–14 and/or the tag row at line 16 — so the pair reads as one statement: the ontology is the software, and the software is ontology-driven. Bilingual like the block itself (「本体即软件。本体驱动。」 or the dev's better rendering).\n2. **One or two sentences in 〈What we mean by ontology〉 that say what the word adds over metadata-driven:** metadata-driven names the mechanism (behaviour generated from declarative configuration); ontology-driven names what that definition is — the business ontology itself, the one source that the runtime, the API, the UI and the agents all consume, with no second hand-written application beside it. Keep the section's existing boundaries intact (not a knowledge-representation ontology, not a semantic layer): the new sentences must not re-open them.\n3. ⛔ Not in this PR: the compare page, the concept page, the glossary, `docs/NORTH-STAR.md`, AGENTS.md and the four-axis text still say 「metadata」 in their own voices; if the README change contradicts any of them, the developer names the line in the PR body as a finding, and the seat carries it to the maintainer. No new section, no rewrite of the README's structure, no change to the demo, install or package sections.\n\n## Acceptance\n\n- `grep -c \"ontology-driven\" README.md` ≥ 1 and `grep -c \"本体驱动\" README.md` ≥ 1; the thesis block and 〈What we mean by ontology〉 keep their links; `pnpm check:doc-anchors` and the rest of the derived gate list are green.\n- The PR body quotes the maintainer's four sentences, shows before/after for every changed line, and carries a `## 维护者速读(草稿)`; the seat's 速读 goes to the maintainer, who rules on the wording before the seat lands it.\n- `Fixes` closes this card.\n\n## Related\n\n- README positioning history: #22955 (`1f312fdfa`), #22241 (`31d24a52`), #22280 (`ea4aa5cd`).\n- The seat's assessment given to the maintainer in chat (2026-10-20): 「本体即软件」 is the thesis, 「本体驱动」 the mechanism adjective; the pair is a two-level claim, and the term needs a one-line definition on first use.\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_"
+}

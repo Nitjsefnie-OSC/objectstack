@@ -1,0 +1,34 @@
+{
+  "number": 24749,
+  "kind": "issue",
+  "title": "hourly full run: red on main (CI)",
+  "state": "open",
+  "state_reason": null,
+  "draft": null,
+  "author": {
+    "login": "github-actions[bot]",
+    "id": 41898282,
+    "type": "Bot"
+  },
+  "labels": [
+    "area:devpath",
+    "bug",
+    "domain:devx",
+    "pm:dispatched",
+    "priority:p1"
+  ],
+  "assignees": [
+    "os-warren"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-20T04:29:31Z",
+  "updated_at": "2026-10-20T07:37:36Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 5,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/24749",
+  "body": "os-hourly-full-run-ci — machine-findable marker for this generated card. ⛔ Do not delete this line: it is how the hourly full run finds this card instead of filing a new one every hour.\n# hourly full run: red on main (CI)\n_Swept 2026-10-20T07:36:33.635Z · [run log](https://github.com/objectstack-ai/objectstack/actions/runs/39384364728) · commit `a43405d596d4d670dc761e90c9fc20822dc806a9` · conclusion `failure`._\n`CI` runs the FULL battery on `main` every hour (#16467). A `push` run on\n`main` tests only the packages the merge touched, and a merge-queue build tests only what the group\ncontained — so this hourly run is the only thing that says whether the WHOLE tree is green, and\nthis card is the only channel that reports it. Nothing is blocked by it.\n⛔ The remedy is never to narrow, skip or delete the failing check to make the hourly run green.\nFix what it names and let the next hourly run refresh this card; a card nobody reopens is closed by\nthe next green run being uneventful, not by editing this one.\n## What landed since the last green hourly run\nRange: `0904d856e3` (run 39362079574, the last green `CI` schedule run) .. `a43405d596` — [compare](https://github.com/objectstack-ai/objectstack/compare/0904d856e31fd065c71af725cf3ad4ad0363dc76...a43405d596d4d670dc761e90c9fc20822dc806a9)\n- `4bc3becd5f` feat(spec)!: retire the list view's filterableFields — declared as the userFilters.fields shorthand, read as a Filter-panel whitelist; no per-view whitelist replaces it (#24721)\n- `9b2953d62c` fix(runtime)!: PATCH /packages/:id refuses a read-only package with 422 WRITABLE_PACKAGE_REQUIRED (#24719)\n- `014863d5d2` fix(types): an unevaluable hook condition's refusal answers 400 VALIDATION_ERROR at every data door (#24714)\n- `f1298b3487` test(runtime): judge each share-link password pair once in the refusal-order file, so its loop cases fit the 5000 ms default (#24704)\n- `7e7e605de3` feat(cli,plugin-audit): os migrate audit-mail-bodies masks the mail bodies that pre-#24688 audit and activity copies still hold in clear (#24722)\n- `4b114eda57` fix(metadata-core, metadata-protocol): two refusals say what 18.0 supports, not the ownership command 18.0 refuses (#24726)\n- `b27f8ded5c` feat(plugin-security): organization administrators assign positions and permission sets inside the D12 organization boundary (#24732)\n- `4a2ca57e74` docs(data-modeling): field-types and validation-rules say what `expression` means on a stored field, beside its `formula` meaning (#24734)\n- `39e93b9ef9` fix(plugin-sharing,plugin-webhooks): by_object lists sort by object instead of grouping on its API name (#24733)\n- `f7005cbd8c` feat(runtime): PATCH /api/v1/packages/:id edits a package's manifest dependencies (#24703)\n- `fc34d000fc` feat(objectql,cli,plugin-webhooks)!: 18.x step 4: the walled lift (8b walled half, the os serve lift, the declared-webhook name guard, declared webhooks deployment-wide) (#24667)\n- `9bc4ddeb84` docs(pm-dispatch): retire rule A — the spec floor follows the commit pin since objectstack-ai/objectui#12958 (#24742)\n- `580fd4ed3c` docs(pm-skill): record the intermittent REST-read reference expansion in platform-readings (#24744)\n- `1f949daeda` feat(service-storage, plugin-audit): the parent gates ask the parent's by-id update alone; explain composes the on-behalf-of write (#24745)\n- `7a7a43516c` ci(scheduled-full-run): the release gate retries a transient 5xx or connection reset on a run listing, inside one budget per gate run (#24748)\n- `4e0f5f50dc` docs(qa): 18.0 sweep round 9 — three pin over-claims narrowed, comma-range line citations re-pointed (#24752)\n- `576d0f3733` fix(showcase): a paid invoice's lines can no longer be added, removed or moved, so its total stays what was paid (#24731)\n- `795ff708d8` docs(adr): ADR-0047 records the 18.0 retirement of filterableFields — no replacement key, no rewrite (#24756)\n- `74f78159af` fix(dogfood): the wall CONTROL cases' packages declare the CRM dependency and their publish lines read the receipt (#24777)\n- `7d45c8e29a` fix(plugin-security): the shipped sets stop copying the identity objects' declared row scopes (#24761)\n- `3230d66cc1` fix(types,rest): a /data write's NOT NULL refusal names the field by its label (#24759)\n- `46bb5e3e54` docs(qa): 18.0 sweep round 10 — the walled boot's release attribution, two comma-range citations, the console-dist fact re-measured (#24788)\n- `a43405d596` docs(pm-dispatch): concentrated test runs file one card per defect, with no per-fire quota (#24743)\n_Filed by `.github/workflows/scheduled-full-run-card.yml`. Generated by [Claude Code](https://claude.ai/code)_"
+}

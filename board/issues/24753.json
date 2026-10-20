@@ -1,0 +1,34 @@
+{
+  "number": 24753,
+  "kind": "issue",
+  "title": "plugin-approvals: the submitter is never notified of the final decision — approving or rejecting a request emits no notification to them",
+  "state": "open",
+  "state_reason": null,
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "area:workflow",
+    "bug",
+    "domain:services",
+    "pm:dispatched",
+    "priority:p2"
+  ],
+  "assignees": [
+    "os-justin"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-20T04:37:34Z",
+  "updated_at": "2026-10-20T08:06:45Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 3,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/24753",
+  "body": "立卡门类别 ①:有具名落点且可稳定复现的界面体验缺陷。\n动手的读者:objectstack 开发席(pm-dispatch 派发的 os-dev),在 plugin-approvals 的决定落地处补一个面向提交人的通知 topic。\n查重:objectstack 搜 \"submitter not notified when approval request approved or rejected\" 命中 4、\"approval decision outcome notification approved rejected submitter inbox\" 命中 10,均为别的通知问题(#22607 开启通知、#23556 记录名、#21847 空正文)(均含 closed);第一遍 objectui#13113、#13114、#13115 未收录此项。\n\nreach: 界面实测一次,服务端 GET /api/v1/data/sys_notification 读回。\n\n预期:提交人的请求被批准或驳回时,提交人的收件箱收到一条通知(带记录名、结果、意见,深链到请求)。驳回对话框写着 \"A rejection is final for every approver\",提交人更需要知道。\n实际:showcase 种子请求 EXP-2001 的提交人是 Mei(phone.demo@example.com),审批人 Ada(auditor.demo@example.com)在收件箱驳回;EXP-2003 由 admin 提交,两组都批准。之后 Mei 的铃铛和首页 Notifications 都是 \"You're all caught up\";sys_notification 里只有 approval.requested、approval.reminder 和流程自己的 notify,没有任何决定类 topic。\n\n源码落点:packages/plugins/plugin-approvals/src/approval-service.ts。现有 notify topic 只有 approval.requested / reminder / reassigned / returned / request_info / comment / ooo_substituted / ooo_skipped / escalated / sla_breached;approve 与 reject 的落地路径不发给 submitter_id。send-back(returned)与 request_info 已经通知提交人,可沿用同一形状。\n\n环境:framework 4bc3becd5f4a,console pin objectui@12dc7b47c340(dist 盖章一致),stock showcase --seed-admin,Chromium 141;源码对照 objectui main 4b677464。来源:UX 走查第二遍(派发会话 session_01CfRDy7SuTfUqaTu2AEH2Hi)。\n\ntype: Bug"
+}

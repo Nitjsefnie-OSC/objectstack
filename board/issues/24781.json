@@ -1,0 +1,34 @@
+{
+  "number": 24781,
+  "kind": "issue",
+  "title": "rest: POST /api/v1/batch answers 500 for an update or delete op whose id is the empty string, where a missing id answers 400 VALIDATION_FAILED",
+  "state": "open",
+  "state_reason": null,
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "area:api",
+    "bug",
+    "domain:cli",
+    "pm:dispatched",
+    "priority:p3"
+  ],
+  "assignees": [
+    "os-justin"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-20T05:38:42Z",
+  "updated_at": "2026-10-20T08:21:15Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 2,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/24781",
+  "body": "Filing gate: ① a product defect with a named location and a live reproduction.\nReader: the `packages/rest` lane (`batch-routes.ts`), next PR touching the cross-object batch door.\nDedupe (open AND closed): \"batch empty string id update delete 500 DATABASE_ERROR requires an id\" → 0 hits; \"cross-object /api/v1/batch blank id answers 500 instead of 400\" → 7 hits, none on this (nearest: #24768, a NOT NULL door-parity card; #23491, the dispatcher PATCH schema gate — both different defects).\nreach: public HTTP entry, measured once (twice) — `POST /api/v1/batch` on a stock showcase boot answers 500.\nPath: api-backend.batch-transactional-discovery\nQA-source: #24779 · api-backend.batch-transactional-discovery · observed beside the clauses (no clause failed)\nChecklist item priority: P1\ntype: Bug\n\n## What happens\n\n`POST /api/v1/batch` checks up front that every `update` / `delete` op names a target id, and answers 400 `VALIDATION_FAILED` \"Operation 'update' on 'showcase_task' requires an id\" when it does not. The check is `op.id == null && op.data?.id == null` (`packages/rest/src/batch-routes.ts`, the loop after `enforceBatchSize`), so an id that is the **empty string** passes it and reaches the engine, which throws `Update requires an ID or options.multi=true`. That throw is answered as a server fault:\n\n- `update` with `\"id\": \"\"` → **500** `{\"error\":\"Internal data error\",\"code\":\"DATABASE_ERROR\"}`\n- `delete` with `\"id\": \"\"` → **500** `{\"error\":\"Internal server error\",\"code\":\"INTERNAL_ERROR\"}`\n\nServer log: `[REST] Unhandled error: Error: Update requires an ID or options.multi=true` (and `Delete requires …`).\n\nA malformed client request is answered as a 5xx (the caller is told the server broke, and a retry policy keyed on 5xx retries it), and the two verbs disagree on the code.\n\n## Reproduction (stock showcase, `objectstack dev --seed-admin`, framework `580fd4ed`)\n\n1. Sign in as admin@objectos.ai (`POST /api/v1/auth/sign-in/email`), keep the cookie.\n2. `POST /api/v1/batch` body `{\"operations\":[{\"object\":\"showcase_task\",\"action\":\"update\",\"id\":\"\",\"data\":{\"done\":false}}],\"atomic\":true}`\n   - expected: 400 `VALIDATION_FAILED` \"… requires an id\" (what the same op with no `id` key answers)\n   - actual: 500 `DATABASE_ERROR` \"Internal data error\"\n3. Same with `{\"object\":\"showcase_task\",\"action\":\"delete\",\"id\":\"\"}` → actual 500 `INTERNAL_ERROR`.\n\nControls on the same boot:\n- no `id` key → 400 `VALIDATION_FAILED` \"Operation 'update' on 'showcase_task' requires an id\";\n- `\"id\":\"nonexistent123\"` → 404 `RECORD_NOT_FOUND`;\n- the per-object doors already treat the empty string as absent: `POST /api/v1/data/showcase_task/batch` and `/updateMany` with `{\"id\":\"\"}` answer a per-row `VALIDATION_FAILED` \"Record id is required for update\".\n\nReproduced twice on fresh requests.\n\n## Mechanism and fix direction\n\nThe cross-object door's up-front check uses `== null`, while the per-object doors' row check treats a blank id as missing. Treat an empty (or non-string-ish) id as missing in that check so it answers the same 400, and pin both verbs (status + `code`, and that the engine is never called).\n\nFull evidence chain: run record #24779."
+}

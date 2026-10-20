@@ -1,0 +1,37 @@
+{
+  "number": 24797,
+  "kind": "pull_request",
+  "title": "fix(plugin-audit,plugin-auth): a refused sign-in and an account lockout each write an audit row",
+  "state": "closed",
+  "state_reason": null,
+  "draft": false,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "documentation",
+    "size/l",
+    "tests",
+    "tooling"
+  ],
+  "assignees": [
+    "os-support-ai"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-20T06:51:56Z",
+  "updated_at": "2026-10-20T08:05:17Z",
+  "closed_at": "2026-10-20T08:04:16Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": "2026-10-20T08:04:15Z",
+  "comments": 3,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/pull/24797",
+  "body": "Security fix (maintainer-ordered; no public card; detail withheld under the disclosure ruling).\n\nClause-②: no\n\n## The invariant this restores\n\nA refused sign-in and an account lockout each write a `sys_audit_log` row, as a successful sign-in already writes `login`. Each row records the account, the outcome, the time and the client IP. The rows show under Setup → Audit Log's *Auth* preset, and `sys_audit_log.action` declares their actions.\n\n## What changed\n\n**`@objectstack/plugin-audit`**\n\n- `sys_audit_log.action` gains `login_failed` and `account_locked`, writer-first. The `auth_events` list view (the *Auth* preset) now filters on `login`, `logout`, `login_failed` and `account_locked`. The writer inventory in `sys-audit-log-retired-actions.test.ts` names their writer.\n- The `audit` service sink (`createAuthEventAuditSink`) takes two event classes:\n  - **Session events** (`login`, `logout`) are unchanged. They name `sys_session` and the session id, and `actor` is the subject.\n  - **Account events** (`login_failed`, `account_locked`) name the account: `user_id` is the account, and the target is `sys_user` and its id. `actor` is null, because a refused attempt authenticated nobody. The ledger's record read gate judges these rows by that `sys_user` record. The lost-row report no longer says a refused sign-in succeeded.\n- New exported types: `AuthEventAuditAction` and `AuthAccountAuditAction`. `AuthSessionAuditEvent.action` widens to `AuthEventAuditAction`.\n- Translation bundles carry the two new options. The README action and view tables and `content/docs/kernel/runtime-services/audit-service.mdx` describe the account events. The README table also gains the `platform_admin_standing_change` row it was missing, so its value count is correct.\n\n**`@objectstack/plugin-auth`**, at the `/sign-in/email` lockout seam (ADR-0069 D2):\n\n- A refused sign-in that names an existing account emits `login_failed`. Its `reason` is the refusal's machine code (`INVALID_EMAIL_OR_PASSWORD`, …), taken only when it is shaped as an error code. This happens whether or not `lockoutThreshold` is set.\n- The refused sign-in that stamps the lock also emits `account_locked`, with `locked_until` and `threshold`. `recordSignInOutcome` now returns the lock it actually wrote, so a lock write that did not land is never reported as a lock.\n- A sign-in refused by the lock gate emits `login_failed` with `reason: ACCOUNT_LOCKED`.\n- The client fingerprint is read by better-auth's own rule, `getIP(headers, options)` plus `user-agent`. That is the rule `internalAdapter.createSession` uses to stamp the session row a `login` row copies. The IP source is unchanged; no new IP rule is introduced.\n- The account is resolved the way the credential check resolves it. The submitted identifier is never recorded, and an identifier that resolves to no account emits nothing. The password is never read.\n\nA successful sign-in is unchanged: the session hook records `login`, and no account event is emitted.\n\n## Tests\n\n- `packages/plugins/plugin-auth/src/auth-account-event-audit.test.ts` (new). It runs a real `AuthManager` and better-auth pipeline through `handleRequest`, with a recording audit sink, and checks:\n  - one refused sign-in yields one `login_failed` naming the account, the code and the client, with no password material in any event;\n  - its IP and user agent equal those of the `login` event for the same client;\n  - it is recorded with lockout off;\n  - it names the account the credential check resolved;\n  - an unresolvable identifier yields nothing;\n  - reaching the threshold yields `login_failed` ×3, then `account_locked`, whose `locked_until` equals the stored lock;\n  - a sign-in refused while locked yields `login_failed` with `ACCOUNT_LOCKED`, and no second lock;\n  - refusals below the threshold yield no lock;\n  - a successful sign-in yields `login` and no account event.\n- `packages/plugins/plugin-audit/src/auth-event-audit.test.ts`: account events land as rows about the account, with `actor` null and the outcome and client recorded. Session events still name their session.\n- `sys-audit-log-retired-actions.test.ts`: the declared actions are exactly the actions with a writer, set equality in both directions.\n\n**Ablation**, run once on the committed implementation with `scripts/ablation-replace.mjs` in wrap mode. Every leg was restored, with blob equal to HEAD and an empty `git diff HEAD`.\n\n| Leg | Mutation | Result |\n|---|---|---|\n| A | after-hook `login_failed` emission disabled | 6 cases red |\n| B | `account_locked` emission disabled | 1 case red, the threshold case |\n| C | lock-gate `login_failed` emission disabled | 1 case red, the locked-refusal case |\n| D | sink credits the subject as `actor` on an account event | 2 cases red |\n\n## Gates (local, at `789c68ff9`, after merging `origin/main` at `74f78159a`)\n\n- **Build.** The dependency closure was built with `turbo run build --filter=@objectstack/plugin-auth^... --filter=@objectstack/plugin-audit^...`. After the merge, `@objectstack/cli...` was built too, since `check:i18n` runs the built CLI. Both exited 0.\n- **Typecheck.** Both exited 0:\n  - `pnpm --filter @objectstack/plugin-audit typecheck`;\n  - `pnpm --filter @objectstack/plugin-auth typecheck`, which includes `tsconfig.examples.json` and `check:test-typecheck`.\n- **Tests.** All exited 0:\n  - `@objectstack/plugin-audit`: 59 files, 966 tests, re-run after the merge;\n  - `@objectstack/plugin-auth`: 166 files, 3187 passed and 10 skipped before the merge; the three touched suites (`auth-account-event-audit`, `auth-session-audit`, `auth-manager`, 332 tests) re-run after it. `auth-account-event-audit` was re-run again after the last commit.\n- **Gate families.** `node scripts/pm/dispatch-gates.mjs --commands` derived 101 families for this change set. All were run at the final head, plus `pnpm --filter @objectstack/spec check:generated` and `node scripts/check-nul-bytes.mjs`. `--ran` reconciliation: 101 derived, 100 run with exit 0, 1 NOT MEASURED, 0 unrun.\n  - NOT MEASURED: `node scripts/check-plugin-teardown-shape.mjs --self-test` exited 3 (PREREQUISITE NOT MET). Its positive-control fixture is pinned to a commit this shallow checkout cannot reach. CI runs it on a full checkout.\n  - The first battery round caught one real finding: `check:query-options-erasure` reported the new account lookup erasing its query type. That is fixed in `789c68ff9`, and the ratchet holds at 64 sites.\n- CI check-runs on this PR are the authority for every other family.\n\n---\n\n_Generated by [Claude Code](https://claude.ai/code/session_01KqkTQNLcxVc588eZpJmp1r)_\n"
+}

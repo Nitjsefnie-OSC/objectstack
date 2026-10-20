@@ -1,0 +1,31 @@
+{
+  "number": 24802,
+  "kind": "issue",
+  "title": "qa(checklist): clauses for the four defects 18.0 round 3 found outside the ledger, plus two RUNNER rules — a pin scores only the layer it drives, and every run keeps an off-clause probe budget",
+  "state": "open",
+  "state_reason": null,
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "domain:devx",
+    "pm:dispatched"
+  ],
+  "assignees": [
+    "os-warren"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-20T07:04:10Z",
+  "updated_at": "2026-10-20T07:32:16Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 2,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/24802",
+  "body": "Filing gate: ③ a task the maintainer directed — the maintainer's words are quoted verbatim below.\nReader: a `checklist-author` dispatch from the 18.0 QA wave's dispatch session (`session_01CfRDy7SuTfUqaTu2AEH2Hi`): one ledger PR under `docs/qa/platform-checklist/` (area files and `RUNNER.md`).\nDedupe (open AND closed), objectstack: \"checklist RUNNER rule a pin scores only the layer it drives unit pin cannot score full stack clause\" → 21 hits, none on this (nearest: #23950 and #21735, clause re-point families; #24173, a RUNNER wording fix); \"QA runner off-clause exploratory probe budget findings beside the clauses checklist\" → 92 hits, none on this (nearest: the anchor #24579, which collects re-points, not new clauses or rules).\n\n## Directed-by\n\nIn Claude Code session `session_01CfRDy7SuTfUqaTu2AEH2Hi` on 2026-10-20, the maintainer asked why round 3 (`580fd4ed`) found four defects that rounds 1 and 2 did not. The session's answer ended with this proposal, verbatim:\n\n> - **补清单条款:** 把这 4 个点补进测试清单：批量接口的空字符串 id、warning 规则的日志措辞、@ 提及的收件人要按读权限过滤、group 模式下没有当前组织的成员写入。按立卡门的规定，清单缺项是去补清单本身，不是立卡，可以用 checklist-author 技能来做。\n> - **RUNNER 加一条:** 用自动测试判 walled 这类条款时，要核对测试走到了哪一层，单元级测试只能判单元级的条款。\n> - **每轮留探测时间:** 以后每轮都给 runner 留一段清单之外的探测时间。这一轮 4 张卡里有 2 张就是这样找到的。\n\nThe maintainer answered, verbatim: 「同意建议的改进」\n\n## Why these were missed\n\nAll four defective code paths were already present at round 1's subject `5b14b7f3`. The rounds missed them for two reasons.\n\n- **No clause asked.** #24781 (an empty-string id on `POST /api/v1/batch` answers 500) and #24782 (an unevaluable `warning` rule logs \"write rejected … fails closed\" while the write lands) sit beside clauses that pass. Both were found by a runner probing past its clauses.\n- **A pin was read as covering a layer it never reaches.** #24784: `packages/plugins/plugin-security/src/no-active-organization-write-refusal.test.ts` has a `group` CONTROL that \"lands\" at the plugin-security layer. On a full walled boot the engine refuses the same write with a 500. Rounds 1 and 2 scored the walled legs from that pin, because a walled boot was refused at the time.\n\n## Scope\n\n1. **Clauses**, one per defect. Each gets a `QA-source:` citation, a `revision` bump and a `history` row. Each stays red until its card's fix lands, and its `knownGaps` names that card.\n   - `api-backend.batch-transactional-discovery`, negative: an `update` or `delete` op whose id is the empty string answers 400 `VALIDATION_FAILED`, exactly as a missing id does, and never a 5xx. Card: #24781.\n   - `records-forms.validation-rule-type-matrix`, negative: an unevaluable `severity: 'warning'` rule lets the write land, and no log line beside it reports a rejection. Card: #24782. Round 3 authored such a rule on a runtime-created object; that recipe is in #24779. It also closes the round-2 fixture gap \"no way to author a non-evaluable CEL through the doors\".\n   - `access-security.no-active-org-session-semantics`, walled leg: on `group`, a member whose membership set is non-empty and whose session has no active organization never gets a 5xx on a tenant-scoped create, and nothing is stamped with a NULL `organization_id`. Card: #24784. Which answer `group` should give (land, or 4xx) is #24784's to decide; the clause asserts only no 5xx and no NULL stamping. The item's `automated.ref` should say the pin's `group` CONTROL stops at the plugin-security layer.\n   - `records-forms.record-discussion-mentions`, a clause for #24785's fix. Under RUNNER rule 2 this clause lands only after #24785's fix PR has merged. If the fix PR is still open when this PR is ready, this PR omits the clause and its report says so.\n2. **RUNNER rule — a pin scores only the layer it drives.** Before a pin scores a clause whose oracle is a public door's answer, the runner names the layer the pin reaches: a plugin unit, the engine, or HTTP. A pin that stops above the layer the clause's oracle sits at scores that clause `partial`, naming the missing layer. #24784 is the worked instance. Place it beside rule 6 (pin evidence), not inside the walled-boot entry.\n3. **RUNNER rule — an off-clause probe budget.** Each run keeps time after its clauses for probing the selector's doors past the clauses. Examples: boundary values (empty strings, missing or unknown ids), the opposite severity or posture of an asserted path, recipients outside the asserted scope. A finding that passes the filing gate is filed with `QA-source: … · observed beside the clauses`. The run record says how long the probes took and what they covered. In round 3 this budget found #24781 and #24782.\n\nNot in scope: the round-3 re-points and accuracy findings in #24579 comment 6284472874. Those belong to the anchor lane.\n\nGates: `node scripts/check-platform-checklist.mjs`, plus whatever `node scripts/pm/dispatch-gates.mjs --commands` derives for the touched paths.\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_"
+}

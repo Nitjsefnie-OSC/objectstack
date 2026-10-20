@@ -1,0 +1,32 @@
+{
+  "number": 24782,
+  "kind": "issue",
+  "title": "objectql(validation): an unevaluable severity:'warning' rule logs \"write rejected: … fails closed\" twice while the write is accepted 201 and persists",
+  "state": "open",
+  "state_reason": null,
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "area:records",
+    "bug",
+    "domain:engine",
+    "pm:queue",
+    "priority:p3"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-20T05:39:27Z",
+  "updated_at": "2026-10-20T07:02:38Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 0,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/24782",
+  "body": "Filing gate: ① a product defect with a named location and a live reproduction (an operator-facing log line that states the opposite of what the server did).\nReader: the `packages/objectql` validation lane (`src/validation/rule-validator.ts`), next PR touching the rule-validator advisory branch.\nDedupe (open AND closed): \"validation rule warning severity unevaluable logs write rejected but write persists\" → 22 hits, none on this (nearest: #22726, warning hits not surfaced to the client — closed, different; #13889, warning-rule log volume on machine paths — closed, different; #24720, a `parent`-reading rule refused as unevaluable — open, error severity, different).\nreach: public HTTP entry, measured twice — `POST /api/v1/data/OBJECT` on a stock showcase boot with a runtime-authored object answers 201 while the server log says the write was rejected.\nPath: records-forms.validation-rule-type-matrix\nQA-source: #24779 · records-forms.validation-rule-type-matrix · negative[1] (the clause passed — the warning rule does not block; the defect is the log beside it)\nChecklist item priority: P1\ntype: Bug\n\n## What happens\n\n`rule-validator.ts` states the contract in its header: \"`severity` still governs blocking: an unevaluable `warning`/`info` rule is logged, never thrown — advisory rules stay advisory.\" The write path does exactly that: the write answers 201 and the row persists. But the log lines it prints for that rule say the opposite:\n\n```\nWARN Validation rule 'qa_unevaluable_warn' predicate failed to evaluate (…) — write rejected: a rule that cannot be evaluated fails closed, it is never skipped\nWARN Validation rule 'qa_unevaluable_warn' (warning): Validation rule 'qa_unevaluable_warn' could not be evaluated (…) — write rejected.\n```\n\nThe first is the predicate evaluator's fail-closed sentence (~L4517; the `when`-predicate twin ~L4699 carries the same words), emitted before severity is consulted; the second is the advisory branch's per-write `warn`, which embeds the unevaluable violation's own message, also ending \"write rejected\". An operator reading the log for a disputed write is told it was refused when it was stored — twice.\n\n## Reproduction (stock showcase, `objectstack dev --seed-admin`, framework `580fd4ed`)\n\n1. Admin cookie session.\n2. `PUT /api/v1/meta/object/qa_vr_probe` with `{\"name\":\"qa_vr_probe\",\"label\":\"QA\",\"sharingModel\":\"public_read_write\",\"fields\":{\"title\":{\"type\":\"text\"}},\"validations\":[{\"type\":\"script\",\"name\":\"qa_unevaluable_warn\",\"severity\":\"warning\",\"message\":\"x\",\"condition\":\"int(record.title) > 1\"}]}` → 200.\n3. `POST /api/v1/data/qa_vr_probe` `{\"title\":\"abc\"}` → **201**, row persisted (correct).\n4. Server log: the two lines above, both saying \"write rejected\".\n\nExpected: a log line that says the advisory rule could not be evaluated and the write proceeded (advisory). Actual: \"write rejected … fails closed\", twice. Control: the same rule at `severity:\"error\"` → 400 `VALIDATION_FAILED` naming the rule — there the sentence is true.\n\n## Fix direction\n\nDecide the verb after severity: the fail-closed sentence belongs to the error-severity path only; the advisory path should say the rule was skipped as advisory (one line, not two). Pin the log text for both severities.\n\nFull evidence chain: run record #24779 (records-forms.validation-rule-type-matrix block in the runner A evidence comment)."
+}
