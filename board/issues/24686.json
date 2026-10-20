@@ -1,0 +1,37 @@
+{
+  "number": 24686,
+  "kind": "issue",
+  "title": "pm-dispatch: after the hotcrm charter PR, three lines still reserve `type` or first touch for triage without the single-lane-repo qualifier — lanes/hotcrm.md:51, cross-repo-coordination.md:37, filing-gate.md:26 (remainder of hotcrm#2178 ruling A)",
+  "state": "closed",
+  "state_reason": "completed",
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "area:devpath",
+    "domain:skills",
+    "priority:p2",
+    "tooling"
+  ],
+  "assignees": [
+    "os-justin"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-19T23:30:12Z",
+  "updated_at": "2026-10-20T00:53:59Z",
+  "closed_at": "2026-10-20T00:52:21Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": null,
+  "comments": 6,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/24686",
+  "body": "**Filing gate ③, the remainder of a maintainer-directed task.** On objectstack-ai/hotcrm#2178 the maintainer ruled 「A」 (recorded by the `repo:hotcrm` seat in comment `6265194393`, matching the director's delta `6264888052`; the director's ledger `6265393657` on #12708 carries it as batch #371 item 3): the single-lane `repo:hotcrm` seat grades its cards at first touch. The 口径 scoped the first text PR to `lanes/hotcrm.md:8` and `:33` and 「⛔ nothing else in that PR」; that PR landed as #24521 (`2667e2402`). The lines below are the same ruling's leftovers, recorded on #24517 and in the at-tier audit record on PR #24521 (comment `6279602320`, ③ items 7–8). Filed by the `domain:skills` seat 1 (`os-justin`, session `session_01HEdP5tPhqQfzwRmKDxwn85`). ⛔ Not a claim.\n\n**Reader who acts:** the `domain:skills` lane seat, in one line-neutral text PR under `.claude/skills/pm-dispatch/references/` (governed, Tier S: at-tier review, then the seat lands it).\n\n**Dedupe:** MCP semantic search on this repository, closed included, \"single-lane repo seat grades type first touch triage only producer rule 4 carve-out hotcrm charter line 51 cross-repo-coordination\": 40 hits, 0 open on point. Nearest: #24517 (closed, the parent), #9131 (closed, the 2026-08 three-repo triage unification that never covered hotcrm), #23733 (closed, 例外二 self-labelled cards). Dedupe words: single-lane type first touch; rule 4 carve-out; hotcrm charter line 51.\n\n## What is wrong (objectstack `origin/main` `3a931fca1`, `.claude/skills/pm-dispatch/references/`)\n\nThe single-lane rule is `cross-repo-coordination.md:9-10`: 「单车道仓 `repo:*` 席自理机械三务,⛔ 不产 `domain:*`」 and 「机械三务 = 自扫 sweep、自打 `type`、自做 `finding` 首触定级」. After PR #24521, `lanes/hotcrm.md:8` points at it. Three lines still say the opposite with no single-lane qualifier:\n\n1. `lanes/hotcrm.md:51` — 「- `domain:*` 与 type 留给分诊;催办不代裁。」 Line 8 of the same file now delegates 机械三务, which includes 自打 `type`, so the file disagrees with itself on `type`.\n2. `cross-repo-coordination.md:37` (rule 4) — 「- 分诊座位唯一生产:定级/路由/type/查重/shadow/`duplicate_of`;执行席永不定级或路由裸卡。」 Lines 7–10 of the same file scope central triage to the multi-lane repos and give the single-lane `repo:*` seat first-touch grading and `type`; line 37 is unscoped.\n3. `filing-gate.md:26` — 「- 缺件卡由分诊首触补齐能从卡与一次检索推导的三件,写进定级评论并定级。」 First touch of a single-lane repo's card is that repo's seat, not triage; the line names only 分诊.\n\nToday the specific clause governs a hotcrm card, so no seat has acted wrongly; the cost is that a reader of any one of the three lines alone is told the pre-ruling rule.\n\n## What to change\n\n- One text PR, line-neutral in each file (`lanes/hotcrm.md` 53/53, `cross-repo-coordination.md` 51/51, `filing-gate.md` 64/64 against their ceilings), every line within the 120-byte line cap.\n- `:51` — `type` follows 机械三务 (the seat applies it); `domain:*` stays triage's.\n- `:37` — a multi-lane-repo qualifier, or a pointer to lines 9–10 as the single-lane exception.\n- `:26` — the first-touch actor is 分诊 for multi-lane repos and the `repo:*` seat for single-lane repos.\n- `filing-gate.md:27` is the subject of the open decision card #24610 and stays out of this PR; if #24610 is ruled first, fold its one line into the same PR.\n\n## Acceptance\n\n- Each of the three lines names the single-lane exception or defers to `cross-repo-coordination.md:9-10`; `grep -n \"type 留给分诊\" .claude/skills/pm-dispatch/references/lanes/hotcrm.md` answers nothing (control: `grep -c \"机械三务\"` on the same file answers at least 1).\n- The line ratchet and id-lint guards pass; no changeset (`.claude/**` publishes nothing).\n- The PR body quotes the ruling (hotcrm#2178 → A, `6265194393`) and names the audit record `6279602320` that raised the leftovers."
+}

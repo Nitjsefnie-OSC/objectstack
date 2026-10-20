@@ -1,0 +1,38 @@
+{
+  "number": 24644,
+  "kind": "issue",
+  "title": "chore(objectui): move the console pin from 4016370af3c9 to the newest green objectui main past objectui#13050 (12dc7b47), and re-run F1 on it",
+  "state": "closed",
+  "state_reason": "completed",
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "area:devpath",
+    "domain:devx",
+    "pm:epic",
+    "priority:p2",
+    "tooling"
+  ],
+  "assignees": [
+    "os-steve"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-19T20:25:01Z",
+  "updated_at": "2026-10-19T23:02:32Z",
+  "closed_at": "2026-10-19T22:55:02Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": null,
+  "comments": 3,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/24644",
+  "body": "**Filing gate: execution of the 18.x line.** This card is the step that ruling 6266750393 and the epic seat's round order on #15194 name: \"When objectui#13050 and #24550 have both landed, dispatch the `.objectui-sha` pin move and an F1 re-run on the new pin (method 6263864885).\" Both have landed:\n- objectstack-ai/objectui#13050 (the console half of regime C for sharing rules) merged as objectui `12dc7b47` at 2026-10-19T20:20Z;\n- PR #24599 (#24550: the `/meta` door no longer authors sharing rules, and Setup lists declared rules) merged as `1e8b6284c`.\n\n**Reader who acts:** the epic seat (`epic:#15194`, `session_01Y5583bs2RDd53MH6kM1ca3`), which files and dispatches this card. **Dedupe:** no open card moves `.objectui-sha`. The previous move was #24457 (PR #24476, `0707b4ae3712` → `4016370af3c9`).\n\n## Measured at filing\n\n- objectstack `main`'s `.objectui-sha` is `4016370af3c9c9dafec2bc5299afd8e8079701b8` (PR #24476). That pin is before objectui `12dc7b47`.\n- objectui `main` was `2493e85a3992` at filing, and it contains `12dc7b47`.\n- The previous move's file shape was `.objectui-sha`, `sdui.manifest.json`, `scripts/sdui-manifest.record.json`, `packages/sdui-parser/objectui-lockstep.json` and one changeset. `check-governed-merges` read it as **not governed**. Re-run that check on this PR's final file list.\n\n## Done when\n\n1. **The pin moves.** `scripts/bump-objectui.sh` moves `.objectui-sha` to the newest objectui `main` commit that contains `12dc7b47` and is green, read at the move: its `commits/SHA/check-runs` show every run completed with no failure. Every regenerated file comes from the script, never from a hand edit.\n2. **The console build takes the same path end to end as PR #24476 recorded:**\n   - `build-console.sh`'s `.objectstack-sha` branch runs;\n   - all seven `@objectstack/*` packages that objectui installs are this tree's;\n   - `gen-sdui-manifest-node.mjs`, `check:console-sha`, `check:console-injection --require-stamp` and `scripts/check-sdui-manifest.mjs` all pass.\n\n   Record the readings in the PR body. Where the in-build injection assertion is vacuous (objectui's install IS this tree), measure injection independently, as os-dev-report 6263864885 did.\n3. **F1 re-test on the new pin, measure-only,** with the method of 6263864885 / 6262553400, every value re-measured: the byte probe for the 17.x `permissionSets` tombstone across the bundle's JS assets; banners on the 4 permissionSets editor pages and the 3 finance pages of a fresh showcase under `single`, for both builds; the positive control on both builds; both release paths refusing the control bundle. Post the os-dev-report on #15194.\n4. **The regime C console page works on this tree,** as a smoke run (Playwright Chromium, fresh showcase under `single`):\n   - Setup lists the 2 declared showcase sharing rules read-only, with provenance;\n   - Disable writes `POST /api/v1/security/_activation/sharing_rule/:name`, and the rule stays listed, switched off;\n   - Clone creates an organization rule under a new name;\n   - a principal without the `sys_sharing_rule` create grant sees no Clone;\n   - `PUT /api/v1/meta/sharing_rule/<new name>` answers `403 NOT_CREATABLE`.\n\n## Boundaries\n\n- ⛔ Not a release act. The Version Packages PR is not touched, and no release workflow is dispatched.\n- ⛔ No objectui source change. If the build or F1 shows a defect in objectui, report it with its reading, and the seat files it on objectui."
+}

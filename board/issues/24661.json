@@ -1,0 +1,36 @@
+{
+  "number": 24661,
+  "kind": "pull_request",
+  "title": "fix(spec): 18.0 upgrade-guide entries say 18.0 supports fresh installs only",
+  "state": "closed",
+  "state_reason": null,
+  "draft": false,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "documentation",
+    "size/m",
+    "tooling"
+  ],
+  "assignees": [
+    "baozhoutao"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-19T21:59:23Z",
+  "updated_at": "2026-10-19T23:01:47Z",
+  "closed_at": "2026-10-19T23:01:45Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": "2026-10-19T23:01:45Z",
+  "comments": 1,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/pull/24661",
+  "body": "Refs #24637\n\nClause-②: no\n\nThe `domain:spec` row of #24637. The parent closes once this PR and its three children land (#24651, #24652, #24653 are not addressed here), so this PR does not close it.\n\n## What changes\n\nIn 18.0, `os migrate organization-ownership` refuses plan and apply on every database (exit 1, `NOT_IMPLEMENTED`, nothing read or written), and 18.0 supports fresh installs only. Seven ADR-0087 semantic entries under `packages/spec/src/migrations/entries/semantic/` compile into the 18.0 upgrade guide, and they still prescribed `--out PLAN` then `--apply --plan-file PLAN` as if 18.0 upgraded a v17 database.\n\nEach entry now says what 18.0 supports for a v17 database, in the words PR #24635 (`f89d29e382`) landed in the CLI and the boot refusal:\n\n> 18.0 supports fresh installs only and does not upgrade a v17 database: keep a v17 database on a 17.x release until the 18.x release that carries the upgrade path.\n\nEach entry keeps the plan and apply steps, now introduced as \"In that 18.x release, ...\".\n\n| entry | fields changed |\n|:--|:--|\n| `sys-metadata-organization-column-retired`, `-audit-`, `-commit-`, `-history-` | `replacement` and `acceptanceCriteria` lead with the 18.0 sentence and qualify the ceremony as 18.x; in `reason`, \"the v18 ceremony\" becomes \"the 18.x ceremony\", and the boot-refusal clause says it refuses in 18.0 on every such database |\n| `ups-permission-set-id-column-retired` | `replacement` and `acceptanceCriteria` the same way; `reason` names \"the 18.x ceremony\" |\n| `sharing-rule-declared-mirror-retired` | `replacement` leads with the 18.0 sentence; `surface` and `acceptanceCriteria` name the ceremony as 18.x |\n| `cli-organization-ownership-apply-plan-file-required` | see below |\n\n### The `cli-organization-ownership-apply-plan-file-required` entry\n\nThe command itself is this entry's whole subject. I kept the entry and rewrote the guidance rather than deleting it:\n\n- The upgrade guide renders each entry as `` `surface` → replacement ``, then \"Why not automatic\" (`reason`) and \"Done when\" (`acceptanceCriteria`) (`packages/spec/scripts/build-upgrade-guide.ts`). Nothing checks the prose against the CLI. The entry's id and step are registered, and `.changeset/pre/15211-cli-apply-reviewed-plan.md` cites it.\n- The `surface` stays as it is: the bare `--apply --backup-taken` invocation that `@objectstack/cli` 18.0.0-next.1 shipped. A script written against that prerelease is still a real reader, and in 18.0 the invocation is refused.\n- The `replacement` now opens with \"nothing in 18.0: 18.0 refuses this invocation, as it refuses every plan and apply of `os migrate organization-ownership` on every database\". Then it gives the 18.0 sentence, then the plan-file rule, introduced as \"In that 18.x release\".\n- `reason` adds one sentence on why 18.0 holds the ceremony back. The ceremony is knowingly incomplete, and an incomplete ceremony must never certify a v17 database that the boot would then serve. This paraphrases the docblock on `ORGANIZATION_OWNERSHIP_UPGRADE_UNAVAILABLE`.\n- `acceptanceCriteria` now opens with what holds on 18.0, then keeps the 18.x plan-file criteria.\n\nDeleting the entry would drop the 18.x plan-file rule from the guide, and it would leave a next.1 script with no entry that names its invocation.\n\nOnly text changes. Every entry keeps its `id`, its step and its fields.\n\n## Census\n\n```\ngit grep -n -E \"organization-ownership (--apply|--out|--dev)|--plan-file\" -- packages/spec/src ':!*.test.ts'\n```\n\nAt `a58972d67b`, every hit in the seven entries sits after the 18.0 sentence or under an \"In that 18.x release\" / \"In the 18.x release that carries the upgrade path\" qualifier. The one hit not in an entry is the code comment at `system/migration.zod.ts:174`, which is out of scope by the card's rule. The cli entry's `surface` (line 10) names the refused invocation and prescribes nothing.\n\nIn a rendered single-file guide (`tsx scripts/build-upgrade-guide.ts --out`, written to a scratch path), the sentence \"18.0 supports fresh installs only\" appears 12 times: 7 replacements and 5 acceptance criteria. `sharing-rule-declared-mirror-retired`'s acceptance criteria say \"18.0 upgrades no v17 database\" instead.\n\n## Verification (head `a58972d67b`)\n\n- `pnpm --filter @objectstack/spec build`: `VERDICT command-exit 0`.\n- `pnpm --filter @objectstack/spec test`: `Test Files 702 passed (702)`, `Tests 21349 passed | 1 todo (21350)`.\n- `pnpm --filter @objectstack/spec typecheck`: exit 0. check:test-typecheck reports OK.\n- `pnpm --filter @objectstack/spec check:generated`: \"All 14 generated artifacts are up to date\", with no tracked file changed. No baseline pins this text.\n- `node scripts/pm/dispatch-gates.mjs --commands` derived 83 commands, and all of them were run:\n  - 80 exit 0, including `check:upgrade-guide`, `check:spec-changes`, `check:adr-0087-registration --base origin/main`, `check:doc-authoring`, `check:nul-bytes`, `check:empty-changeset` and `check:changeset-no-major`.\n  - 3 exit 3, PREREQUISITE NOT MET, so NOT MEASURED here: `check:doc-formula-expressions` (`@objectstack/formula` not built), `check:dual-build-cjs-loads` (workspace `dist/` absent) and `check:lean-entry-closure` (`@objectstack/objectql` not built). None reads these entries. They are declared to CI.\n- No open PR touches `packages/spec/src/migrations/entries/semantic/`. I checked all 14 open PRs' file lists over REST.\n\n## Acceptance notes\n\n- Out of scope by the card's rule: `packages/spec/CHANGELOG.md` history, and the code comment at `packages/spec/src/system/migration.zod.ts:174`.\n- The boot guard, the plugin-security report and the docs rows are #24651, #24652 and #24653.\n\n---\n_Generated by [Claude Code](https://claude.ai/code/session_01D6F9axfoPzR7t8G1J7Ytzz)_\n"
+}

@@ -1,0 +1,37 @@
+{
+  "number": 24699,
+  "kind": "pull_request",
+  "title": "fix(spec, runtime): endpoint refusal, hint and describes no longer name 17.x as the running major",
+  "state": "closed",
+  "state_reason": null,
+  "draft": false,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "documentation",
+    "size/s",
+    "tests",
+    "tooling"
+  ],
+  "assignees": [
+    "baozhoutao"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-20T00:30:53Z",
+  "updated_at": "2026-10-20T02:14:03Z",
+  "closed_at": "2026-10-20T02:14:01Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": "2026-10-20T02:14:01Z",
+  "comments": 1,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/pull/24699",
+  "body": "Closes #24654\n\nClause-②: no\n\n## What changed\n\nFour customer-facing sentences said \"in 17.x\", but 18.x is the running major and the behaviour they describe has not changed. Each one now says what the runtime does without naming a version, so it cannot go stale again at 19.0. ⛔ No behaviour change, no new gate.\n\n| where | reader | now reads |\n|:--|:--|:--|\n| `packages/spec/src/api/endpoint-publish-gate.ts` | the `os build` / `os validate` refusal for a `script` / `proxy` endpoint | \"This runtime executes only 'object_operation' and 'flow' endpoints. `script` is refused because ...\" |\n| `packages/runtime/src/endpoint-executor.ts` (`hint`) | the API caller, in the `unsupported` answer | \"This runtime executes only 'object_operation' and 'flow' endpoints. 'script' and 'proxy' are rejected at publish ...\" (word for word the same first sentence as the spec refusal) |\n| `packages/spec/src/api/endpoint.zod.ts` `type` describe | readers of the published schema | \"Implementation type — this runtime EXECUTES only 'object_operation' and 'flow'. ...\" |\n| `packages/spec/src/api/endpoint.zod.ts` `ApiMapping.transform` describe | the same | \"Transformation function name — NOT EXECUTED by this runtime, and publish REJECTS the key ...\" |\n\nSame PR, maintainer-facing JSDoc: `packages/runtime/src/api-mapping.ts` (the mirrored `transform` describe row) and `packages/runtime/src/endpoint-executor.ts` (the `params` \"always `{}`\" notes and the `planEndpointTarget` doc).\n\n**Bounded in-place fix, named here:** `packages/spec/src/api/endpoint.zod.ts`, `ApiEndpoint.target` describe, said the Script Name / Proxy URL spellings \"stay unreachable in 17.x\". It is the same defect class, in the same file, on the same schema, and the same gate family covers it (`check:docs`). It now reads \"stay unreachable on this runtime\". Evidence: the regenerated `content/docs/references/api/endpoint.mdx` row for `target`.\n\nPins: no test asserted the old text (`git grep -nE \"execute in 17|EXECUTED in 17|EXECUTE in 17\"` over `*.test.ts` returns 0 hits). Two test TITLES in `packages/runtime/src/endpoint-executor.test.ts` repeated \"in 17.x\". They were reworded and their assertions are unchanged.\n\nRegenerated with repo tooling: `pnpm --filter @objectstack/spec check:generated --fix` found `check:docs` stale (1 of 14), regenerated `content/docs/references/api/endpoint.mdx` and re-checked it green. Changeset: `.changeset/24654-endpoint-text-version-free.md`, `patch` for `@objectstack/spec` and `@objectstack/runtime`.\n\n## Verification (head `f8e3a95abf`, which includes a merge of `origin/main` `0431002104`)\n\n- `pnpm --filter @objectstack/spec build && pnpm --filter @objectstack/spec check:generated`, post-merge: \"All 14 generated artifacts are up to date\", lock VERDICT command-exit 0.\n- `pnpm --filter @objectstack/spec test` at `f8e3a95abf`: 701 files passed, 1 skipped; 21347 tests passed. `pnpm --filter @objectstack/spec typecheck`: exit 0.\n- `pnpm --filter @objectstack/runtime test && pnpm --filter @objectstack/runtime typecheck` at `018b472bd5` (the change itself, before the merge): 425 files passed; 6678 tests passed, 19 skipped; typecheck exit 0. The merge brought no change to the files this PR edits. The runtime suite was not re-run on the merge head; CI runs it there.\n- `node scripts/pm/dispatch-gates.mjs --commands` derived 110 commands at `f8e3a95abf`. All of them were run, and `--ran` reconciles: \"110 derived famil(ies) accounted for — 109 run, 1 NOT-MEASURED\".\n  - NOT MEASURED: `check:dual-build-cjs-loads`. Reason: PREREQUISITE NOT MET (exit 3). It needs a full workspace build, and this worktree only built the runtime dependency closure.\n  - `check:lean-entry-closure` first exited 1 because `@objectstack/spec` dist was missing: a spec rebuild was running at the same time. Re-run after the build finished: exit 0.\n\n## Acceptance notes\n\nOther \"in 17.x\" sites outside this card's file surface. None of them was edited here:\n\n- `packages/rest/src/openapi-endpoints.ts:218`: `unsupportedReason` says \"which this runtime does not execute in 17.x\". This is customer-facing OpenAPI output for the same endpoint family. It is reported to the seat as a finding.\n- `skills/objectstack-api/SKILL.md:163`: \"`script` / `proxy` do not execute in 17.x\". This is the published skill text, a Tier H surface. It is reported to the seat.\n- `packages/spec/src/stack.zod.ts:845` (JSDoc), `packages/spec/src/contracts/metadata-service.ts:210` (JSDoc, with the test title `metadata-service.test.ts:485`), `packages/spec/src/automation/flow-node-expression-paths.ts:126` (JSDoc), `packages/spec/liveness/api.json:15` (ledger note): maintainer-facing only.\n\n---\n\n_Generated by [Claude Code](https://claude.ai/code/session_01D6F9axfoPzR7t8G1J7Ytzz)_\n"
+}

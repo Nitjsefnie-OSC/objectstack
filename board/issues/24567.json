@@ -2,8 +2,8 @@
   "number": 24567,
   "kind": "issue",
   "title": "platform-checklist + cli: three findings from the 18.0 QA sweep at 5b14b7f3 — two clauses mis-asserted against documented contracts, and a refusal that prescribes a withdrawn command (family card)",
-  "state": "open",
-  "state_reason": null,
+  "state": "closed",
+  "state_reason": "completed",
   "draft": null,
   "author": {
     "login": "objectstack-fleet[bot]",
@@ -14,7 +14,6 @@
     "area:devpath",
     "bug",
     "domain:cli",
-    "pm:dispatched",
     "priority:p1",
     "target:v18"
   ],
@@ -24,11 +23,15 @@
   "milestone": null,
   "type": null,
   "created_at": "2026-10-19T13:46:11Z",
-  "updated_at": "2026-10-19T20:23:12Z",
-  "closed_at": null,
-  "closed_by": null,
+  "updated_at": "2026-10-19T20:58:58Z",
+  "closed_at": "2026-10-19T20:56:43Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
   "merged_at": null,
-  "comments": 10,
+  "comments": 12,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/24567",
   "body": "Filing gate: ① — fold card (the per-session quota is three standalone defect cards; these three findings ride one card with a list, one row per location)\nPath: platform-core.v18-boot-refusals · access-security.security-catalog-one-holder-and-boot-report · cli.organization-ownership-ceremony\ntype: Bug (rows 1–2: the checklist's declared clauses contradict the documented product contract; row 3: a runtime refusal string sends the operator to a command the same release refuses; the relay channel sets no issue type, so it is pre-filled here for triage)\nChecklist item priority: row 1 P0 (its acceptance[2] fails → inherits P0) · row 2 P1 (acceptance[1] fails → inherits P1) · row 3 P0 item, clause passes — no inheritance, severity low\nActing reader: rows 1–2 — the seat that owns docs/qa/platform-checklist (domain:devx), one checklist-edit PR revising both clauses (bump `revision`, add a `history` entry); row 3 — the domain:cli lane seat, at dispatch (packages/cli/src/commands/migrate/apply.ts:589 and the help example at organization-ownership.ts:332)\nDedupe: search_issues \"v18-boot-refusals checklist clause refused boot did not alter the database schema sync before organization ownership guard\" (open + closed) → 33 hits; search_issues \"security-catalog-one-holder install-local conflicts checklist item clause test-fix\" → 31 hits; search_issues \"drop gate refusal tells operator run migrate organization-ownership which 18.0 refuses NOT_IMPLEMENTED\" → 72 hits. None a duplicate: the only open hits are this card and the two folded into it; nearest closed: #23871 (the boot refusal's prescription, a different message site), #23950 / #23121 (earlier clause re-point family cards, other clauses)\n\nFolded into this card: #24568 (row 2) and #24566 (row 3), closed as folded. Found by the 18.0 release QA sweep; the two `fail`s were confirmed by an independent RUNNER rule 7 re-derivation, which classified both as assertion defects (product right, clause wrong).\n\n## Row 1 — platform-core.v18-boot-refusals · acceptance[2] (P0) — re-word the clause\n\nQA-source: #24556 · platform-core.v18-boot-refusals · acceptance[2]\n\nreach: `OS_DATABASE_URL=file:COPY.db objectstack serve -p PORT` on a copy of a 17.7.0-created SQLite → exit 1 with the ownership refusal (correct), but the additive v18 schema sync has already altered the copy: +37 tables, a `__search` column on 21 sys tables, `bundle_member`/`draft_changes` on `sys_metadata`, ~40 indexes, no row content changed (measured twice; on a one-object stack the changes sat in the `-wal` while the main-file checksum stayed equal).\n\n- Clause today: \"the refused boot did not alter the database\" (verify: checksum before == after).\n- Why the clause is wrong: `packages/runtime/src/organization-ownership-boot-guard.ts` documents the guard as ordered after the engine (whose `start()` runs the additive schema sync the ceremony depends on) and ahead of every plugin that writes a row; ADR-0131 D10 forbids auto-migration (drop / delete / attribute), not additive sync. No cited source requires a byte-unchanged file.\n- Proposed clause: \"the refused boot wrote no row and ran no D10 step\", verified by a row-level diff read through SQLite (so the `-wal` is included), not a file checksum.\n- Open question for the maintainer (not a defect on this evidence): the refusal tells the operator to keep this database on a 17.x runtime after the v18 boot has added v18 schema to it.\n- Full reproduction: #24556, section \"Fails\".\n\n## Row 2 — access-security.security-catalog-one-holder-and-boot-report · acceptance[1] (P1) — re-point the clause\n\nQA-source: #24558 · access-security.security-catalog-one-holder-and-boot-report · acceptance[1]\n\nreach: POST /api/v1/marketplace/install-local (from a scratch copy of the showcase) with a package redeclaring a shipped permission set / position name → 422 `{code:\"PLUGIN_REGISTER_FAILED\", message}`, no `conflicts[]`; the names and holders are inside the message; nothing installed (27 → 27 packages). Measured with two packages.\n\n- Clause today: \"… 422 NAMESPACE_CONFLICT (or PLUGIN_REGISTER_FAILED) with conflicts[], and nothing is recorded as installed\".\n- Why the clause is wrong: the install-local door (`packages/cloud-connection/src/marketplace-install-local-plugin.ts` ~1593–1602) answers its OWN registered `PLUGIN_REGISTER_FAILED` interpolating only the message — that route's documented contract in `packages/spec/src/api/error-code-ledger.zod.ts` (~999–1003); no pin in the item's `automated.ref` asserts `conflicts[]` at this door.\n- Proposed clause: \"422 PLUGIN_REGISTER_FAILED whose message names each conflicting name and its holder, and nothing is recorded as installed\" (holds today). A structured `conflicts[]` on this door would be a separate enhancement decision.\n- Full reproduction: #24558, section \"Fails\".\n\n## Row 3 — cli.organization-ownership-ceremony · acceptance[3] (P0 item; clause passes) — fix the refusal text\n\nQA-source: #24556 · cli.organization-ownership-ceremony · acceptance[3]\n\nreach: `os migrate apply --allow-destructive --yes --database-url file:COPY.db` on a 17.7.0-created copy → the drop-gate refusal says to run `os migrate organization-ownership --out PLAN`, review it, then `--apply --plan-file PLAN`; running that command → refused `NOT_IMPLEMENTED` (measured on a live CLI at 5b14b7f3).\n\n- Where: `packages/cli/src/commands/migrate/apply.ts:589` (the prescription) against `packages/cli/src/commands/migrate/organization-ownership.ts:1107-1115` (`ORGANIZATION_OWNERSHIP_UPGRADE_UNAVAILABLE_CODE = 'NOT_IMPLEMENTED'`, fresh installs only); the command's own help example at `organization-ownership.ts:332` has the same problem.\n- Expected: the drop-gate refusal states what 18.0 actually supports for this database — the position the boot guard's refusal already states — not a withdrawn command.\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_\n"

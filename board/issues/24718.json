@@ -1,0 +1,33 @@
+{
+  "number": 24718,
+  "kind": "pull_request",
+  "title": "fix(plugin-security): the platform-admin promotion WITHHELD warning says what 18.0 supports for a v17 database",
+  "state": "open",
+  "state_reason": null,
+  "draft": false,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "documentation",
+    "size/s",
+    "tests",
+    "tooling"
+  ],
+  "assignees": [
+    "os-justin"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-20T01:57:39Z",
+  "updated_at": "2026-10-20T02:22:23Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 2,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/pull/24718",
+  "body": "Fixes #24709\n\nClause-②: no\n\n## What this changes\n\nThe boot warning \"[security] platform-admin promotion WITHHELD: an unscoped grant exists whose permission-set name (sys_user_permission_set.permission_set) was never written\" ended by sending the operator to the organization-ownership migration: \"The organization-ownership migration's id-to-name rewrite (ADR-0131 D10) names it; the next pass after that reads it by name.\" 18.0 refuses that migration on every database, so an operator booting a v17-shaped database with an unnamed grant was pointed at a refusal.\n\nThe warning now ends with the sentence the boot refusal and the two sibling release-text rows already carry (PR #24635 and PR #24679 landed it): \"18.0 supports fresh installs only and does not upgrade a v17 database: keep a v17 database on a 17.x release until the 18.x release that carries the upgrade path.\"\n\nText only. The withholding does not move: `findPlatformAdminGrantHolder`, the `unnamedHolder` guard, the returned `adminPromoted: false` / `admin_grant_unnamed` result, the `logger.warn` / `logger.info` fallback and every other clause of the warning (what is withheld, why, \"this pass will not mint a second one\") are unchanged.\n\nFiles: `packages/plugins/plugin-security/src/bootstrap-platform-admin.ts` (the string only, 2 lines), `packages/plugins/plugin-security/src/grant-readers-unnamed-grant.test.ts` (one new case), `.changeset/24709-platform-admin-withheld-18-text.md` (`@objectstack/plugin-security` patch).\n\n## Pin\n\nOne case in `grant-readers-unnamed-grant.test.ts`, beside the existing unnamed-holder cases, which already build the state (an unscoped `admin_full_access` grant written with a NULL name, an older account the age rule would otherwise promote). It runs `bootstrapPlatformAdmin` with a capturing logger and asserts:\n\n- the pass took the unnamed-holder branch (`adminPromoted: false`, `reason: 'admin_grant_unnamed'`) and logged the WITHHELD warning exactly once (anti-vacuity);\n- the whole warning text equals the kept clauses followed by the 18.0 sentence, and ends with it;\n- the text names none of `organization-ownership`, `os migrate`, `--out`, `--apply`, `--plan-file`, `ceremony`, `id-to-name`.\n\n## Evidence (head `7357dcca56`)\n\n- Closure build: `pnpm --workspace-concurrency=2 --filter '@objectstack/plugin-security^...' build`, under the verify lock, VERDICT command-exit 0.\n- Pin file alone: `pnpm --filter @objectstack/plugin-security exec vitest run --maxWorkers=2 src/grant-readers-unnamed-grant.test.ts` is 8 passed (7 existing plus the new case), VERDICT command-exit 0, run again after the ablation was restored: 8 passed.\n- Typecheck: `pnpm --filter @objectstack/plugin-security typecheck` exit 0, including `check:test-typecheck` (the test layer compiles, 0 errors).\n- Ablation (the diff changes a test-pinned string): the old clause put back through `scripts/ablation-replace.mjs` (anchor hit once, blob `eac7d8f87baa` to `f9123b5ffce1` on disk). The test imports `./bootstrap-platform-admin.js` from `src`, so no rebuild leg applies. Result: 1 failed, 7 passed, the new case red with the old clause as the received text, the expected direction (red). Restore proven on disk: blob equals the HEAD blob and `git diff HEAD` is empty.\n- Gates: `node scripts/pm/dispatch-gates.mjs --commands --repo objectstack-ai/objectstack` derived 68 commands; each was run with its exit captured before any pipe, then `--ran` reconciled: 68 derived, 67 run (all exit 0), 1 NOT-MEASURED, 0 UNRUN. `pnpm check:i18n` first exited 3 (prerequisite not met), was re-run after building its stated closure, and exited 0.\n- NOT MEASURED: `pnpm check:dual-build-cjs-loads`, reason: it reads the built output of every package and exits 3 (prerequisite not met) without a whole-workspace build, which CI's `Build Core` owns; this diff changes no export, `package.json` or build config.\n- Left to CI: the full plugin-security suite, `test:repo`, the type-check lanes, and the lint workflow's repo-wide gates.\n\n## Acceptance notes\n\n- Not changed, by the ruling that only the warning string moves: the doc comment in `bootstrap-platform-admin.ts` (the \"By name, and the grant that names nothing\" section), the comment above the `unnamedHolder` guard, the header of `grant-readers-unnamed-grant.test.ts` and a comment in `cleanup-package-permissions.ts` all still describe the v18 ceremony's rewrite in the future tense. They are developer-facing comments, not operator text; noted, not filed.\n- The second `promotion WITHHELD for ...` warning in the same file (the Default Organization one) is a different condition and names no migration; unchanged.\n- Order note from the card: #24681 (the 18.x steps that reopen the ceremony) re-states the surfaces #24635 taught, and this line joins them when it lands. #24681 remains open and this PR does not touch its files.\n- #24637 remains open: this is its `domain:services` row 2, and other rows of that family are outside this PR.\n- `origin/main` moved by five commits while this was open (none touches plugin-security or this changeset), so main was not merged in.\n\n---\n_Generated by [Claude Code](https://claude.ai/code/session_011TdZ8GjixNZFLz1xJD9zzK)_\n"
+}

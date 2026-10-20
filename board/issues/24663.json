@@ -1,0 +1,37 @@
+{
+  "number": 24663,
+  "kind": "issue",
+  "title": "release: the console injection assertion is still vacuous at an .objectstack-sha pin whose objectui install IS this tree — its describe probe skips every literal it could witness, and passes the control bundle",
+  "state": "closed",
+  "state_reason": "completed",
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "domain:devx",
+    "pm:epic",
+    "priority:p2",
+    "tooling"
+  ],
+  "assignees": [
+    "os-steve"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-19T22:00:36Z",
+  "updated_at": "2026-10-19T23:15:03Z",
+  "closed_at": "2026-10-19T23:08:35Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": null,
+  "comments": 3,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/24663",
+  "body": "**Filing gate ②: a measured finding.** It comes from os-dev-report 6277654282 on #15194 (the F1 re-test at pin `12dc7b47`) and os-dev-report 6278269372 on #24644, `out_of_scope_findings` 2. It is a residual of #24510, closed: \"the console injection assertion has a real witness on a `.objectstack-sha` pin, instead of passing vacuously\".\n- **Reader who acts:** the epic seat (`epic:#15194`, `session_01Y5583bs2RDd53MH6kM1ca3`).\n- **Dedupe:** semantic search for \"console spec injection assertion vacuous describeCandidates no observable skew freshWitness null\". It found only #24510 and #10428, both closed.\n\n## Measured (PR #24660's build, pin `12dc7b47`, objectui's own `.objectstack-sha` `f4755a68a797`)\n\n- `pnpm objectui:build` prints \"no observable skew, so nothing for this check to assert\". The stamp records `freshWitness: null`.\n- `node scripts/assert-console-spec-injection.mjs`, run against objectui's own `f4755a68a797` reference on the **control** bundle, **exits 0**. So the in-build assertion would pass a console that was not injected.\n- **Cause:** `describeCandidates` (`scripts/console-spec-probes.mjs:100-107`) drops every describe literal shorter than 32 or longer than 160 characters, and every literal with an escape. At this pin, every literal that tells the two specs apart falls outside that filter.\n- **The difference is measurable.** The dev's 4 independent witness strings read injected 1/1/1 with stale 0, and control 0/0/0 with stale 1.\n- `check:console-injection --require-stamp` still refuses the control bundle (exit 1), so the release path is covered today, by that gate alone.\n\n## Wanted\n\n1. Widen `describeCandidates`, or add a second candidate source (unescaped substrings of the long literals, or the schema `.describe` keys themselves), so that at a pin like this one the stamp carries a non-null `freshWitness` and the assertion exits 1 on the control bundle.\n2. Pin this with a fixture shaped like this pin: every distinguishing literal over 160 characters or escaped. Reverse-verify it.\n3. Change no release workflow. This is the assertion and its probes only."
+}

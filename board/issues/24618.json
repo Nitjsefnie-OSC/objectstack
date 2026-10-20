@@ -2,8 +2,8 @@
   "number": 24618,
   "kind": "issue",
   "title": "analytics: the in-memory date bucket shifts a timezone-naive `Field.date` one day EARLIER under any negative-offset `timezone` (America/New_York → 2026-10-01 buckets as 2026-09-30), so it disagrees with the SQL pushdown path",
-  "state": "open",
-  "state_reason": null,
+  "state": "closed",
+  "state_reason": "completed",
   "draft": null,
   "author": {
     "login": "objectstack-fleet[bot]",
@@ -14,7 +14,6 @@
     "area:reports",
     "bug",
     "domain:engine",
-    "pm:dispatched",
     "priority:p1"
   ],
   "assignees": [
@@ -23,11 +22,15 @@
   "milestone": null,
   "type": null,
   "created_at": "2026-10-19T16:16:19Z",
-  "updated_at": "2026-10-19T19:40:18Z",
-  "closed_at": null,
-  "closed_by": null,
+  "updated_at": "2026-10-19T20:40:28Z",
+  "closed_at": "2026-10-19T20:39:03Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
   "merged_at": null,
-  "comments": 4,
+  "comments": 5,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/24618",
   "body": "Filing gate: **① a product defect with a named landing point and a reproduction** (`pm:queue` class).\nReader: the lane owning `packages/core/src/utils/datetime.ts` and the in-memory aggregation path (`packages/objectql/src/in-memory-aggregation.ts`, `packages/services/service-analytics/src/dataset-executor.ts`) — the fix PR there.\nDedupe (open AND closed, semantic search on objectstack-ai/objectstack): \"date field bucketed one day earlier under non-UTC timezone analytics in-memory aggregation bucketDateKey\" → 12 hits, all closed, none on this path (nearest: #21485 driver-sql on PostgreSQL `::timestamptz` shift — a different path, closed; #21647 / #21630 date_trunc echo); \"in-memory grouping timezone-naive date calendar day shifted negative offset America/New_York\" → 1 hit (#21647, closed, different defect). First-round wave cards (#24546 #24547 #24548 #24561 #24562 #24563 #24564 #24565 #24576 #24543 #24567 #24579) checked — none covers it.\n\nreach: public HTTP entry measured — `POST /api/v1/analytics/query` with `timezone: \"America/New_York\"` returns wrong bucket keys and wrong per-bucket counts on a stock showcase boot (reproduced by two independent runners).\nPath: api-backend.aggregate-contract-matrix\nQA-source: #24595 · api-backend.aggregate-contract-matrix · negative[2]\nChecklist item priority: P1\ntype: Bug\n\n## What is wrong\n\nThe in-memory date-bucket labeller shifts a `Field.date` value — a timezone-naive calendar day under ADR-0053 (\"never converted to an instant and never timezone-shifted\") — one calendar day EARLIER whenever the requested reference timezone has a negative UTC offset. The SQL pushdown path labels the same rows correctly, so the two bucket paths disagree, and bucket totals move across day / week / month / quarter / year edges.\n\n## Reproduction (stock showcase, `--seed-admin`, admin bearer)\n\n1. `POST /api/v1/analytics/query` body `{\"cube\":\"showcase_delivery\",\"measures\":[\"showcase_delivery.count\"],\"timeDimensions\":[{\"dimension\":\"showcase_delivery.due_date\",\"granularity\":\"day\"}],\"timezone\":\"UTC\"}` → keys equal the stored `due_date` values (2026-10-01, 2026-10-13, 2026-10-21, …); the answer carries `sql` (`strftime('%Y-%m-%d', due_date)`), i.e. the driver path.\n2. Same body with `\"timezone\":\"America/New_York\"` → expected the same keys; actual 2026-09-30, 2026-10-12, 2026-10-20, … (every key one day early), no `sql` (in-memory path; `/analytics/sql` answers 501 for it).\n3. Same with `\"granularity\":\"month\"` → expected `{2026-10: 6, 2026-11: 4}`; actual `{2026-09: 1, 2026-10: 5, 2026-11: 4}`. Quarter: `{2026-Q3: 1, 2026-Q4: 9}` instead of `{2026-Q4: 10}`.\n4. America/Los_Angeles shifts identically; zero-offset (`Etc/UTC`, `Africa/Abidjan`) and positive-offset zones (`Asia/Tokyo`) do not.\n\n## Mechanism\n\n- `bucketDateKey` (`packages/core/src/utils/datetime.ts:313-334`) does `new Date(String(value))` — `'2026-10-01'` parses as UTC midnight — then `calendarPartsInTzOrUtc(d, timezone)`; there is no date-vs-datetime branch.\n- `projectGroupValue` → `bucketDateValue` (`packages/objectql/src/in-memory-aggregation.ts`) passes `timezone` without the field type; `dataset-executor.ts` resolves it as `selection.timezone ?? contextTimezone ?? 'UTC'`.\n- The parity gate `packages/verify/src/date-bucket-parity.ts` probes date columns only at UTC, and `engine-aggregate-timezone.test.ts` uses instant values only, so nothing pins this.\n\n## Expected fix shape\n\nA `date` dimension buckets on its `YYYY-MM-DD` parts directly (zone-independent) on the in-memory path, matching the driver; a `datetime` keeps the zone. Add a non-UTC date probe to the parity gate.\n\n## Reach today and why it matters\n\nOnly callers passing an explicit `timezone` hit it: setting the org timezone (`PUT /api/settings/localization`) did not reach analytics in this build, and objectui at 4016370a sends no analytics `timezone`. It becomes user-visible on every date-dimension dashboard viewed from the Americas once the org/user timezone is threaded into analytics (ADR-0053 Phase 2) — fix before that lands.\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_\n"

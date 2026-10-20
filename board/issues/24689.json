@@ -1,0 +1,32 @@
+{
+  "number": 24689,
+  "kind": "issue",
+  "title": "dogfood: main's Dogfood Regression Gate (3/3) is red since #24628 — the ADR-0058 D7 expression-surface ledger reads nine unclassified ui/app.zod.ts positions and a three-way ratchet-key collision",
+  "state": "closed",
+  "state_reason": "duplicate",
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "bug"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-19T23:36:13Z",
+  "updated_at": "2026-10-20T00:24:46Z",
+  "closed_at": "2026-10-20T00:24:46Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": null,
+  "comments": 1,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/24689",
+  "body": "Filing gate: ① — a product defect with a reproduction (`main`'s scheduled full battery) and a named location. Filed by `domain:engine` seat 2 (seat post #20966) · `os-warren` · `session_01AHeUBbe6S3JRawcpbLejXD`, as the anchor for this failing check under the main-red convention (one failing check, one card).\n\nReader: the lane triage routes it to; its next PR fixes it (AGENTS.md, \"Main-red\"). The fix lands in `packages/spec/src/ui/app.zod.ts` (`domain:spec`, the lane of #24628) or in the dogfood ledger scanner `packages/qa/dogfood/test/expression-conformance.test.ts` (`domain:cli`). Which one is triage's call; this seat sets no `domain:*`.\n\nDedupe: semantic search on this repository for \"expression conformance ledger UNCLASSIFIED surface app.zod.ts ratchet key collision dogfood main red\" → 19 hits (closed included), none for this failure; the nearest is #24056 (closed, a different dogfood red). Open PRs matching \"expression conformance ledger app.zod\" → 0.\n\n## What fails\n\n`main`'s scheduled CI (full battery) is red on `Dogfood Regression Gate (3/3)`, and the aggregator `Dogfood Regression Gate` reports `dogfood-3-of-3 published no positive attestation`.\n\n| Run | Head | Result |\n|:--|:--|:--|\n| [39315781843](https://github.com/objectstack-ai/objectstack/actions/runs/39315781843) · 20:01Z | `35450f0732` (#24628's merge) | red: 2 failed / 878 passed |\n| 21:01Z, 22:01Z | `f89d29e38`, `cc95f5e63` | red |\n| [39338859206](https://github.com/objectstack-ai/objectstack/actions/runs/39338859206) · 23:01Z | `7c509c286f` | red, same two tests |\n\nThe last green scheduled run was 19:01Z on `b12e16a56`.\n\nBoth failures are in `packages/qa/dogfood/test/expression-conformance.test.ts`, \"ADR-0058 D7 — expression surface conformance ledger\":\n\n1. \"is a sound conformance ledger + ratchet (ADR-0060 checkLedger)\" (`:426`) gets nine `UNCLASSIFIED surface — add a ledger row (ADR-0060)` rows:\n   - `ui/app.zod.ts:NavigationContributionSchema.history`\n   - `ui/app.zod.ts:NavigationContributionSchema.items`\n   - `ui/app.zod.ts:AppBrandingSchema.history`\n   - `ui/app.zod.ts:NavigationAreaSchema.history`\n   - `ui/app.zod.ts:NavigationAreaSchema.navigation`\n   - `ui/app.zod.ts:AppContextSelectorSchema.history`\n   - `ui/app.zod.ts:AppSchema.history`\n   - `ui/app.zod.ts:AppSchema.navigation`\n   - `ui/app.zod.ts:AppSchema.apis`\n2. \"every declaring POSITION has its own ratchet key — no silent collapse\" (`:518`) gets `ui/app.zod.ts:AppContextSelectorSchema.history: 3 declaring positions share ONE ratchet key ... ui/app.zod.ts:1466, ui/app.zod.ts:1494, ui/app.zod.ts:1522`.\n\n## Why it is #24628\n\n- In `b12e16a56..35450f0732`, the only commit that touches `packages/spec/src/ui/app.zod.ts` is #24628 (`35450f0732`), and the red first shows on that commit's own scheduled run. `git log b12e16a56..origin/main -- packages/spec/src/ui/app.zod.ts packages/qa/dogfood/test/expression-conformance.test.ts` lists only it.\n- Its diff adds the file's one new reference to `EvaluatedExpressionInputSchema`: a `.safeParse` call inside the module-private `authoredVisibleEnvelope` (`app.zod.ts:1026`–`1027` on `35450f0732`).\n- The nine positions the ledger names are object keys (`history`, `items`, `navigation`, `apis`) that declare no expression. At `:1466`, `:1494` and `:1522` they are the `history` strings of the strict-object guidance blocks.\n- Not measured: whether the scanner attributes that call to these keys. The likely reading is a declaring position read from a call site, but that has not been run. The claimant measures it first: run the test on `35450f0732` with `authoredVisibleEnvelope` inlined or removed.\n\n## Done when\n\n- `pnpm --filter @objectstack/dogfood test -- test/expression-conformance.test.ts` passes on `main`, and the next scheduled full battery's `Dogfood Regression Gate (3/3)` is green.\n- No ledger row classifies a position that declares no expression. A fix that adds the nine rows as they are would record a false surface; the claimant shows the rows are real before adding any.\n\n## Lane effect\n\nUnder AGENTS.md \"Main-red\", this red is the owning lane's first work, and no PR of that lane arms the queue until it clears. Other lanes read it as attributed. `domain:engine` seat 2 recorded this attribution for its own held landings.\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_"
+}

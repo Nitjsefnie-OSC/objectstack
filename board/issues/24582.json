@@ -12,7 +12,7 @@
   },
   "labels": [
     "domain:engine",
-    "pm:blocked",
+    "pm:dispatched",
     "pm:epic",
     "priority:p1"
   ],
@@ -20,11 +20,11 @@
   "milestone": null,
   "type": null,
   "created_at": "2026-10-19T14:29:39Z",
-  "updated_at": "2026-10-19T14:48:25Z",
+  "updated_at": "2026-10-19T23:14:27Z",
   "closed_at": null,
   "closed_by": null,
   "merged_at": null,
-  "comments": 3,
+  "comments": 5,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/24582",
   "body": "Filing gate **③**: a task the maintainer directed. It is a step of the 18.x line, under ruling records 6266750393 and 6267391172 on #15194. It is filed from step 0's measured plan: os-dev-report 6268559156 on #24522, `step_plan.steps[5]`, plus its `line_facts` F1–F6 and `flags`.\n- **Reader who acts:** the epic seat (`epic:#15194`, `session_01Y5583bs2RDd53MH6kM1ca3`).\n- **Dedupe:** none.\n\nPart of #15212 (C8) and #24489 · **Step 6: opening the ceremony** · ⛔ Not an 18.0 gate.\n\n## The line's rule (binding)\nOnce merged, `main` stays releasable:\n- **R1.** A fresh install boots.\n- **R2.** #24522's 18.0→HEAD harness is green, RESTATED by this step: an 18.0 database now takes the ceremony.\n- **R3.** A v17 database is refused until step 6.\n- **R4.** A walled posture is refused at boot until step 4.\n\n**Ordering:** after step 5 (5a–5d) has merged, and after the maintainer rules on how an 18.0 database is recognised (Q3 in 6268559156).\n\n## Scope (from the measured plan; re-measure before building)\n- **#24489, items 1, 4 and 6.** Delete the refusing `MigrateOrganizationOwnership` subclass and restore the default export to `OrganizationOwnershipCeremony`. Delete the release-refusal test. Put dogfood boot-refusal-order step 2 back on the binary. The 19 import sites are optional.\n- **The deferred flips (PR 2b from step 2).** `sys_secret` and `sys_flow_credential` go to `tenant:false`, landing together with the open ceremony (F2). Their inventory rows become column-drop.\n- **The guard's verdict on an 18.0 database (F4), and the step-set check (F5).** A verified marker from a shorter ceremony must not certify the database.\n  - The decision: **(a)** a birth marker written by the guard on a datastore created from empty, or **(b)** shape probes added to `findV17ShapeTables`.\n  - It amends the `migration.zod.ts:181-185` prohibition if (a). The maintainer rules it.\n- **The boot-guard refusal text.** Stop telling an 18.0 database to \"keep on 17.x\" (out-of-scope finding 1).\n- **Close the `tenancy: { enabled: false }` gap in the guard** (`boot-guard.ts:205` checks only `systemFields.tenant`).\n- **R2 and R3 are restated in the harness, by name.**\n\nNot dispatched yet. The seat claims it when its ordering is met."

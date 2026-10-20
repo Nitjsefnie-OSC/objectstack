@@ -1,0 +1,36 @@
+{
+  "number": 24675,
+  "kind": "pull_request",
+  "title": "docs(metadata-core): name the real write-path labels on MetadataEvent.source",
+  "state": "closed",
+  "state_reason": null,
+  "draft": false,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "documentation",
+    "size/s",
+    "tooling"
+  ],
+  "assignees": [
+    "os-warren"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-19T22:43:54Z",
+  "updated_at": "2026-10-20T01:41:38Z",
+  "closed_at": "2026-10-20T01:41:35Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": "2026-10-20T01:41:35Z",
+  "comments": 2,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/pull/24675",
+  "body": "Fixes #24336\nClause-②: no\n\n## What changed\n\n`MetadataEventSchema.source` in `@objectstack/metadata-core` described itself as `Origin label: \"fs\", \"studio\", \"rest\", \"ai\", \"git-import\", …`. No producer on this tree writes `studio`, `rest`, `ai` or `git-import`, so a reader of the published schema was pointed at values it will never see. The describe now says what the field is: the write path that produced the event, an open label its writer stamps, not an enum of authoring surfaces to pick from or match against. Its examples are labels real producers stamp: `protocol.saveMetaItem`, `protocol.publishMetaItem`, `migrate-stored`, `sys-metadata-repo` (`SysMetadataRepository`'s default) and `fs` (`FileSystemRepository`). The field stays `z.string()`.\n\nThe two `sys-metadata-history.object.ts` comments (the module header and the comment above `source`) now agree with the describe. They list the labels that actually reach the `sys_metadata_history.source` column, and they no longer list `fs`: `FileSystemRepository` writes its events to its own JSONL change log, never to this table.\n\nNo key, type, export, accepted value or emitted value changes. One `patch` changeset on `@objectstack/metadata-core` (`.changeset/24336-metadata-event-source-describe.md`, carrying `Clause-②: no`).\n\n## Producers measured on `origin/main` `bfc1539fe0` (non-test code)\n\n| producer | label(s) written | reaches |\n|:--|:--|:--|\n| `SysMetadataRepository` (`packages/metadata-protocol/src/sys-metadata-repository.ts`) | the caller's `opts.source`, else `sys-metadata-repo` (put / delete), `sys-metadata-repo.publish` (promoteDraft and the promoted draft-row drop), `sys-metadata-repo.revert` (restoreVersion); `history()` passes the stored value through and answers `sys-metadata-repo` for a row that stored none | `sys_metadata_history`, `MetadataEvent` |\n| the protocol (`packages/metadata-protocol/src/protocol.ts`) | `protocol.saveMetaItem`, `protocol.publishMetaItem`, `protocol.deleteMetaItem`, `protocol.rollbackMetaItem`, `protocol.revertCommit` | via `SysMetadataRepository` |\n| stored-row rewrites | `migrate-stored` (the protocol's `migrateStoredMetadata`, and `service-automation`'s `flow-credential-migration.ts`) | via `saveMetaItem` |\n| CLI `os migrate security-catalog-overlays` | `os migrate security-catalog-overlays` | via `SysMetadataRepository.delete` |\n| `@objectstack/metadata` `DatabaseLoader` (`database-loader.ts`) | `database-loader` | `sys_metadata_history` directly |\n| `@objectstack/metadata-fs` `FileSystemRepository` | `fs` | its own JSONL change log and events, not the table |\n| `InMemoryRepository` (metadata-core) | `in-memory` | events; no non-test instantiation |\n| `LayeredRepository` (metadata-core) | the layer label prefixed to the inner label (`LAYER:SOURCE`) | events; no non-test instantiation |\n\nThe card's list missed `DatabaseLoader`, the three further protocol labels, the CLI migration and the two metadata-core repositories; none of them writes `studio`, `rest`, `ai` or `git-import` either. No consumer compares `source` against a fixed value.\n\nGenerated artifacts: nothing reads this describe. A repo-wide search for `Origin label` and `git-import` finds only the source line, the governed ADR sketch below and two changelog/changeset entries of the earlier spec-half fix. `metadata-core` is not `packages/spec`, so `check:generated` does not cover it and nothing was regenerated.\n\n## File surface\n\n- `packages/metadata-core/src/types.ts`: `MetadataEventSchema.source`'s `.describe()` only.\n- `packages/metadata-core/src/objects/sys-metadata-history.object.ts`: the module header bullet and the comment above `source`.\n- `.changeset/24336-metadata-event-source-describe.md`.\n\n## Verification (head `197216c57f`)\n\n- `pnpm --filter '@objectstack/metadata-core...' build` (metadata-core and its dependency closure): exit 0. The built `dist/index.js` and `dist/index.cjs` each carry the new describe once and `git-import` zero times.\n- `pnpm --filter @objectstack/metadata-core test`: 18 files, 774 tests passed. `pnpm --filter @objectstack/metadata-core typecheck` (`tsc --noEmit && tsc --noEmit -p tsconfig.test.json`): exit 0.\n- Derived gate list (`node scripts/pm/dispatch-gates.mjs --commands`, from the real diff): 57 commands, every one run with its exit code captured before any pipe. 56 exited 0. `pnpm check:lean-entry-closure` first answered PREREQUISITE NOT MET (exit 3) and exited 0 after building `@objectstack/objectql`'s closure.\n- NOT MEASURED: `pnpm check:dual-build-cjs-loads`. It refuses with exit 3 until all of the roughly 90 workspace packages are built, and only a whole-workspace build satisfies it. CI's `Lint & Repo Gates` runs it. Declared narrowing.\n- `node scripts/pm/dispatch-gates.mjs --ran`: 57 derived families accounted for, 56 run, 1 NOT MEASURED, 0 UNRUN.\n- No ablation: the diff changes describe and comment prose only, and no test pins that text.\n\n## Acceptance notes\n\n- Rider for `domain:spec`, not taken here (it is that lane's file): `packages/spec/src/api/protocol.test.ts` (around lines 2141 to 2162) calls its fixture \"a verbatim-shaped capture of a real `historyMetaItem` return\", but the update event carries `source: 'studio'`. A real save through that door stamps `protocol.saveMetaItem`.\n- For a person, governed (Tier H) and not touched: `docs/adr/0008-metadata-repository-and-change-log.md` line 226, the section 2.4 sketch, still reads `source: string; // 'fs', 'studio', 'rest', 'ai', 'git-import', …`. It is illustration only, and correcting it is a maintainer's edit.\n- Cloud's writers were not read. The new describe calls the label open, so a cloud write path that stamps its own label still fits the contract.\n\n---\n_Generated by [Claude Code](https://claude.ai/code/session_01AHeUBbe6S3JRawcpbLejXD)_\n"
+}

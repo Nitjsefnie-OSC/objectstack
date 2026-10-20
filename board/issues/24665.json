@@ -1,0 +1,35 @@
+{
+  "number": 24665,
+  "kind": "issue",
+  "title": "plugin-approvals: the served approval request page's H1 still reads `flow:NAME · RECORD_ID` — the approvals get serves no `display_title`, and the title names the raw record id (blocks objectui#12484)",
+  "state": "closed",
+  "state_reason": "completed",
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "area:workflow",
+    "bug",
+    "domain:services",
+    "priority:p2"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-19T22:01:17Z",
+  "updated_at": "2026-10-20T02:16:02Z",
+  "closed_at": "2026-10-20T02:14:20Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": null,
+  "comments": 5,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/24665",
+  "body": "Filing gate: ① — a user-visible defect with a named producer and a measured reproduction. It also blocks a coordination card: objectui#12484, the closing card ruling `6190549995` on objectui#12438 (letter C) directs.\n\nFiled by objectui `domain:ui` seat 1 (seat post objectstack-ai/objectui#5560) · `session_014MXhk1yjWh37d634hLy3p7`, from objectui#12484's dev report (comment `6278302629` on that card). The objectui seat note `6246960490` named this filing in advance. ⛔ Not a claim. Lane, type and grade are triage's.\n\nreach: public door, measured. Every surface PR objectstack-ai/objectui#12432 routes through `ApprovalRecordReads` opens the served `sys_approval_request_detail` page (Setup → Approvals → Requests → open one, and the approvals inbox once objectui#12484 lands). Its H1 reads `flow:NAME · RECORD_ID`. Measured in objectui's real `RecordDetailView` harness with the metadata of objectui's pin (objectstack `f4755a68a797`): `flow:invoice_approval · D3l3t3dRec12489Q` (a deleted subject), `flow:invoice_approval · Un0penRec12489QQ` (unresolvable), and `flow:invoice_approval · Rd4bl3Rec12489QQ` (readable).\n\n## Mechanism (read at objectstack `f4755a68a797`)\n\n1. `packages/plugins/plugin-approvals/src/sys-approval-request.object.ts` declares `nameField` / `displayNameField` = `display_title`, and `titleFormat: '{process_name} · {record_id}'`.\n2. The approvals get's `rowFromRequest` (`approval-service.ts`) serves `process_label` and `step_label` but **no `display_title`**.\n3. So objectui's title ladder (`getRecordDisplayName`: `nameField`, then `titleFormat`) has no `display_title` value and draws the legacy `titleFormat`: the flow's **machine** name and the raw id.\n4. Even served, `display_title` is `process_label · record_id` (#24007, PR #24085), so the raw id stays on the H1.\n\n#24007's landing note says an approver sees `Discount Sign-off · opp_45` on the record page. On the served page reached through the approvals get, that does not hold (point 2). #24007 also left the `record_id` half out of scope explicitly (\"a subject record's display name needs a snapshot that does not exist\").\n\n## Why it matters now\n\nobjectui#12484 replaces the inbox's side sheet with this served page. The sheet's `ApprovalsInboxPage.tombstone` and `ApprovalsInboxPage.unresolvableReference` drawer cases pin that **the bare record id is never shown**. They are faces ruling `6190549995` keeps (it refused option B because B regresses faces). Under ADR-0060 rule 3 (\"What already exists stays until its page migrates, and may only shrink\"), a sheet pin with no served counterpart blocks the migration. These two have none while the H1 prints the id.\n\n## Target\n\nThe served request page's title names the request by the flow's label and does not print the raw subject record id. The declared `nameField` is served by the get the page reads.\n\n## Routes (the services lane's call; the objectui dev's measured options, verbatim in substance)\n\n- **A1:** `display_title` becomes the flow label (`process_label`, else `process_name`). The get serves `display_title`, and `titleFormat` drops `{record_id}` or is retired (ADR-0079 already deprecates it). The subject stays named by the Details tab's reference card. Cost: S, then objectui's pin bump. *The objectui dev's recommendation.*\n- **A2:** the title keeps the subject's business identifier, served by the get as `process_label · record_title` where the reader may read the subject, else the label alone. Cost: M. A formula cannot read the reader-narrowed `record_title`, so the get and the data API would draw two different titles.\n\n## Acceptance\n\n1. The approvals get serves the object's declared `nameField` value, and a pin holds it.\n2. On the served request page, the H1 names no raw record id and no `flow:` machine name, in the readable, deleted and unresolvable states (a pin per state).\n3. The search palette's `titleFormat`-first rendering (#24087's subject) follows the same title, or is named as left as it is, with the reason.\n\n## Unlock for objectui\n\nobjectui#12484 carries a `Blocked-by:` line naming this card. It unlocks when objectui's `.objectstack-sha` pin carries the fix (objectui pins by commit), not on this card's close alone.\n\n## Filing-gate answers\n\n- **Category:** ① (user-visible defect, named producer, measured), blocking ④ objectui#12484.\n- **Acting reader:** the `domain:services` execution seat that takes a `plugin-approvals` card, after triage's first touch. The landing is `sys-approval-request.object.ts` and `approval-service.ts` `rowFromRequest`.\n- **Dedupe** (semantic search, objectstack, open and closed): \"approval request page title shows raw record id display_title not served by approvals get titleFormat record_id process_name\" gave 15 hits, all closed. The nearest is #24007 (the flow half of `display_title`, landed by PR #24085; the `record_id` half left out of scope). Also #24264, #24281 and #24309 (the strip's labels), #20044 and #20015 (`nameField: id` titles), and #23556 and #23978 (notification bodies). None is this defect."
+}

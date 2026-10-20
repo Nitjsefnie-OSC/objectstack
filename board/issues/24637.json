@@ -2,8 +2,8 @@
   "number": 24637,
   "kind": "issue",
   "title": "18.0 release text still sends operators to `os migrate organization-ownership --out / --apply --plan-file`, which 18.0 refuses on every database (family close-out: spec upgrade-guide entries, runtime boot refusals, plugin-security report, docs)",
-  "state": "open",
-  "state_reason": null,
+  "state": "closed",
+  "state_reason": "completed",
   "draft": null,
   "author": {
     "login": "objectstack-fleet[bot]",
@@ -11,17 +11,27 @@
     "type": "Bot"
   },
   "labels": [
-    "bug"
+    "area:devpath",
+    "bug",
+    "domain:spec",
+    "priority:p1",
+    "target:v18"
   ],
-  "assignees": [],
+  "assignees": [
+    "baozhoutao"
+  ],
   "milestone": null,
   "type": null,
   "created_at": "2026-10-19T18:56:28Z",
-  "updated_at": "2026-10-19T18:56:28Z",
-  "closed_at": null,
-  "closed_by": null,
+  "updated_at": "2026-10-20T02:23:49Z",
+  "closed_at": "2026-10-20T02:23:49Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
   "merged_at": null,
-  "comments": 0,
+  "comments": 8,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/24637",
   "body": "Filing gate ①, the release-text exception: wording that a release fixes in place, filed before the reach is measured. The spec rows below compile into the 18.0 upgrade guide at release. The family's reach was measured once: the `os migrate apply` row (#24567 row 3) dead-ended an operator at `NOT_IMPLEMENTED`.\n\nFiled by `domain:cli` seat 1 (seat post #6024) · `zhuangjianguo` · session `session_01SYEJqDL3NXxrJRBVqaMu9T`, from #24567 row 3's dev report (PR #24635, `out_of_scope_findings[1]` and `[2]`). ⛔ Not a claim. Grade and routing are triage's. **Reader who acts:** triage routes each row to its lane, one PR per lane.\n\n## The family\n\n- In 18.0, the registered `os migrate organization-ownership` refuses plan and apply on every database: `ORGANIZATION_OWNERSHIP_UPGRADE_UNAVAILABLE`, `NOT_IMPLEMENTED` (`packages/cli/src/commands/migrate/organization-ownership.ts` about `:1107`–`:1115`). 18.0 supports fresh installs only.\n- Any 18.0 text that tells an operator or author to run `--out PLAN` / `--apply --plan-file PLAN` / `--dev` therefore sends them to a refusal.\n- The landed member is #24567 row 3 (PR #24635, `domain:cli`). The drop-gate refusal, `os dev`'s way on and the command's help now say: \"18.0 supports fresh installs only and does not upgrade a v17 database: keep a v17 database on a 17.x release until the 18.x release that carries the upgrade path.\" The rows below should say the same.\n\n## Rows (read on `origin/main` `973917c57`; code comments are excluded, since no reader sees them)\n\n| lane | location | what it says now |\n|:--|:--|:--|\n| `domain:spec` | `packages/spec/src/migrations/entries/semantic/18.sys-metadata-organization-column-retired.ts` (:22–23), `18.sys-metadata-audit-…`, `18.sys-metadata-commit-…`, `18.sys-metadata-history-…` (each :22–23, :43) | upgrade-guide entries prescribing `--out PLAN` then `--apply --plan-file PLAN` |\n| `domain:spec` | `18.sharing-rule-declared-mirror-retired.ts` (:21), `18.cli-organization-ownership-apply-plan-file-required.ts` (:10–26) | the same command, as the remedy and as the entry's subject |\n| `domain:cli` | `packages/runtime/src/organization-ownership-boot-guard.ts` (:242, :257, :343; the ceremony name at :110) | boot-refusal branches (unverified marker, read failure) naming `--out PLAN` / `--apply --plan-file PLAN --backup-taken` with no 18.0 sentence |\n| `domain:services` | `packages/plugins/plugin-security/src/catalog-reference-report.ts` (:437–438) | a report line prescribing `--out plan.json` then `--apply --backup-taken --plan-file plan.json` |\n| `domain:devx` | `content/docs/deployment/cli.mdx` (about :200–222, :1027–1029, :1477–1494), `content/docs/concepts/metadata-lifecycle.mdx` (:109), `content/docs/permissions/capabilities.mdx` (:220), `content/docs/permissions/permission-sets.mdx` (:399) | the gate \"waits for a verified … --apply --plan-file run\", and plan/apply walkthroughs with no 18.0 qualifier |\n\n**What done looks like:** each row says what 18.0 supports for a v17 database in the landed member's terms, or carries an 18.0 qualifier where it describes the 18.x ceremony. An entry that 18.0's own behaviour makes false is corrected before the GA guide is cut. The census command is `git grep -n -E \"organization-ownership (--apply|--out|--dev)|--plan-file\" -- packages content/docs ':!*.test.ts'`, with code comments excluded.\n\n## Dedupe\n\n- MCP `search_issues` \"organization-ownership command refused in 18.0 still named in refusal text upgrade guide ADR-0087 entries plan-file\": 45 hits. The family's members are #24566 (folded into #24567, closed) and #23871 (an earlier boot-refusal wording, closed). The epic is #15194. None covers these rows.\n- The control query reaches the family (#24566, #23871).\n- Dedupe words: organization-ownership prescription 18.0 refuses; withdrawn command refusal text; NOT_IMPLEMENTED ceremony named in runtime message; ADR-0087 entry plan-file 18.0.\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_"

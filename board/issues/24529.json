@@ -2,8 +2,8 @@
   "number": 24529,
   "kind": "issue",
   "title": "feat(plugin-webhooks): 18.x step 1 (8b-0g′): declared webhooks are read from the registry, the seeder retires, expand-first",
-  "state": "open",
-  "state_reason": null,
+  "state": "closed",
+  "state_reason": "completed",
   "draft": null,
   "author": {
     "login": "objectstack-fleet[bot]",
@@ -12,7 +12,6 @@
   },
   "labels": [
     "domain:services",
-    "pm:dispatched",
     "pm:epic",
     "priority:p1"
   ],
@@ -22,11 +21,15 @@
   "milestone": null,
   "type": null,
   "created_at": "2026-10-19T12:39:05Z",
-  "updated_at": "2026-10-19T19:21:02Z",
-  "closed_at": null,
-  "closed_by": null,
+  "updated_at": "2026-10-19T23:02:26Z",
+  "closed_at": "2026-10-19T22:51:30Z",
+  "closed_by": {
+    "login": "os-zhuang",
+    "id": 277994282,
+    "type": "User"
+  },
   "merged_at": null,
-  "comments": 5,
+  "comments": 6,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/24529",
   "body": "Filing gate **③**: a task the maintainer directed. These are steps 1–3 of the 18.x line, under ruling records 6266750393 and 6267391172 on #15194. The second records the maintainer's 「用量很多，不用节约」: steps 1–3 start now, in parallel.\n- **Reader who acts:** the epic seat (`epic:#15194`, `session_01Y5583bs2RDd53MH6kM1ca3`), which dispatches it now.\n- **Dedupe:** none. Before this card, the stage lived only in the plan rows on #15212.\n\nPart of #15212 (the C8 card), from decision #24435 Q2 A (ruling 6259141885) · **Step 1: 8b-0g′, declared webhooks read from the registry** · ⛔ Not an 18.0 gate.\n\n## The line's rule (binding)\nOnce merged, this PR leaves `main` releasable:\n- **R1.** A fresh install boots and serves.\n- **R2.** A database an 18.0 install created upgrades to that commit, boots, and keeps its data. #24522's harness proves this.\n- **R3.** A v17 database is still refused.\n- **R4.** A walled posture is still refused at boot.\n\n**Expand first.** This step only adds: the new write shape, plus reads that accept both the 18.0 shape and the new one. It never moves or deletes an 18.0 row and never drops a column. Each such removal is written down for the step-5 ceremony.\n\n**Merge gate.** The PR stays a draft until #24522's harness has merged. It lands after it has merged `main` and is green on R1–R4.\n\n## Scope\n- Per #24435 Q2 A (ruling 6259141885), read declared webhooks from the metadata registry at dispatch. Retire `bootstrapDeclaredWebhooks`, so a fresh boot writes zero `sys_webhook` rows for declared webhooks. Switch a declared webhook off through the activation ledger (regime C, as `sharing_rule` did in #24428).\n- **On an 18.0 database:** the seeded `sys_webhook` rows from 18.0 stay in place. The reader must not fire a declared webhook twice. Measure and choose: a seeded row is recognised and ignored in favour of the registry entry, or the registry entry defers to it. Organization-authored webhooks stay rows. Deleting the seeded rows is a step-5 ceremony item.\n- Plan amendment 13 (6259616282) on #15212 carries the stage detail. Read it.\n\n## Acceptance\n- The new shape is pinned on a fresh install. The dual read is pinned on an 18.0-shaped row.\n- The harness stays green.\n- The report lists every removal the step-5 ceremony owes, table by table.\n- Measure first. If expand-first is impossible or unsafe for any part, stop and report that part with the alternative. Do not build a destructive change."

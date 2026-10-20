@@ -1,0 +1,34 @@
+{
+  "number": 24693,
+  "kind": "issue",
+  "title": "security(plugin-audit): mask the mail bodies already copied into sys_audit_log / sys_activity before #24688 — a cleanup, and the precondition for giving organization admins their own mail bodies back",
+  "state": "open",
+  "state_reason": null,
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "domain:services",
+    "pm:dispatched",
+    "pm:epic",
+    "priority:p2",
+    "security"
+  ],
+  "assignees": [
+    "os-steve"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-19T23:57:44Z",
+  "updated_at": "2026-10-20T02:08:51Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 2,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/24693",
+  "body": "**Filing gate ②: a measured finding.** It is residual R2 of the contract review of PR #24688 (#24625, the identity-mail read gate), recorded on PR #24688.\n- **Reader who acts:** the epic seat (`epic:#15194`, `session_01Y5583bs2RDd53MH6kM1ca3`).\n- **Dedupe:** none. #24688 masks new mirror writes only, and #24681 (steps 5+6) states that the ceremony does not rewrite the ledger.\n\n## Measured\n\n- **After #24688:** the audit and activity writers mask `body_text` / `body_html` of `sys_email` and `sys_identity_email` to the credential mask on all four snapshot sides and on the activity row (`audit-writers.ts` ~1758-1762).\n- **Rows written before #24688** still hold those bodies in clear, at rest, in `sys_audit_log` and `sys_activity`. That includes reset and invitation links. Today they are served only to a reader who is also served the body field, so this is no open door now. It is a credential copy at rest.\n- **It blocks a later relaxation.** #24688's report proposes giving organization admins their own non-identity mail bodies back (\"option B\") after the #24581 ceremony moves the identity rows out. The review judged option B unsafe on the step 6 guard alone, for two reasons:\n  - relaxing the `sys_email` body gate would re-open these legacy ledger copies;\n  - the ceremony's magic-link selector is a heuristic on body content.\n\n## Wanted\n\n1. **A one-time, idempotent cleanup.** Follow the existing `os migrate audit-metadata-bodies` pattern (measure what exists before building). It masks the mail-body fields in existing `sys_audit_log` and `sys_activity` rows whose object is `sys_email` or `sys_identity_email`. It reports counts and never prints a value. Decide, measure and state whether it runs as a ceremony step or as its own `os migrate` command. The ceremony files belong to #24581/#24582 until they land, so if it becomes a ceremony step, it goes after that PR.\n2. **Pins:** an 18.0-shaped fixture with pre-fix mirror rows. After the cleanup, 0 rows hold a clear body; non-body fields are untouched; re-running is a no-op. Reverse-verify.\n3. **Record the precondition** for option B on this card: the cleanup has run, and the identity selector is one exported definition (the one #24681 uses).\n\n⛔ No credential, token, link or body value in tests, logs, PR text or reports."
+}

@@ -1,0 +1,37 @@
+{
+  "number": 24658,
+  "kind": "pull_request",
+  "title": "fix(service-automation)!: a runAs:'user' hook fired by a user-triggered runAs:'system' flow's write runs on that user's own grants",
+  "state": "closed",
+  "state_reason": null,
+  "draft": false,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "documentation",
+    "size/m",
+    "tests",
+    "tooling"
+  ],
+  "assignees": [
+    "marchtian"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-19T21:28:23Z",
+  "updated_at": "2026-10-19T23:08:35Z",
+  "closed_at": "2026-10-19T23:08:33Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": "2026-10-19T23:08:33Z",
+  "comments": 4,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/pull/24658",
+  "body": "Fixes #24614\n\nClause-②: no (narrowing). A `runAs:'user'` hook fired by a user-triggered `runAs:'system'` flow's write now runs on that user's own grants instead of the member baseline. For a user whose grants sit below the baseline, as triage's \"both directions\" names, the hook's reads narrow. #24519's ruling `6271152775` item 1 declares no arm for its own producer. This seat takes the stricter, narrowing arm until the dev's measurement says whether any principal's grants can sit below the baseline. If none can, the seat re-grades and drops the arm.\n\n## What changes\n\n`resolveRunDataContext`'s `runAs:'system'` arm (`packages/services/service-automation/src/runtime-identity.ts`) no longer carries `positions: []` / `permissions: []` beside a named user. This applies ruling `6271152775` (on #24519) to this producer: a context that names a user carries no empty arrays, so the hook seed from PR #24518 resolves that user's own grants in the run's organisation.\n\n- **Named-user system run:** `{ isSystem: true, actor, userId, tenantId?, flowRunId? }`. A `runAs:'user'` hook one of its writes fires de-elevates to this context, finds no `permissions`, and resolves the user's positions, permission sets and peers through the request path's resolver.\n- **Post-decision system segment:** after an approval decision the run's user is the decider (ruling `6267719791` Q1 A), so the hooks the post-decision writes fire now run on the decider's grants.\n- **Unchanged:** `isSystem`, `actor`, `userId` and `tenantId` exactly as before; the run's own authority (the security middleware's `isSystem` bypass is its first gate, and nothing ahead of it reads the arrays); a user-less system run (a schedule) keeps `positions: []` and `permissions: []`, and a `runAs:'user'` hook it fires is still refused for want of a user; the `runAs:'user'` arm.\n- **Published type:** `RunIdentityContext` / `RunDataContext` declare `positions` and `permissions` optional, because the named-user system envelope no longer carries them. The changeset names it.\n\nThe `engine.ts` docblock on the decision segment, which leaned on \"a system run's data context carries none\", is rewritten to say what the hook now resolves.\n\n## Measurement (real stack)\n\n`runas-system-user-hook-grants.integration.test.ts`, beside `runas-user-hook-org-peers.integration.test.ts`: ObjectKernel, ObjectQLPlugin, driver-sql on better-sqlite3 `:memory:`, the identity objects, the real SecurityPlugin and the real AutomationEngine with its CRUD nodes. A `runAs:'system'` flow triggered by a user writes, and a `runAs:'user'` hook on the written object reads.\n\n- **Above the baseline:** a user holding a set the baseline does not grant. The hook now reads what the user's own request reads; under the old envelope it was refused (`PERMISSION_DENIED`, 403).\n- **Below the baseline:** the direction exists and is pinned: a principal whose own grants read fewer rows than the baseline does. The hook now reads exactly what that user's own request reads. The grant detail is in the report to the seat, not here.\n- **Decider:** a `runAs:'system'` flow pauses at a service-resumable gate and is resumed with a decider. The submit write's hook runs on the submitter's grants and the post-decision write's hook on the decider's.\n- **CONTROL, user-less:** a schedule-shaped run keeps `positions: []`, `permissions: []` and no `userId`, and the hook is refused with `HOOK_UNSCOPED_DATA_ACCESS` (403).\n- **CONTROL, the baseline:** the old envelope fired by hand answers the baseline, the point each direction moved from.\n\nThe existing pins of the old shape moved with it: `crud-runas.test.ts`, the system case in `runas-grant-resolution.integration.test.ts` (its \"resolver not consulted\" proof is now no grant-table read and no authz fact filled), the two system-envelope assertions in `resume-decider-identity.integration.test.ts`, and the two `runAs:'system'` expectations in `plugin-approvals`' `restored-approval-continuation.test.ts` (the `parked()` helper's and the post-decision one), which now expect `{ userId, isSystem: true }` with no `permissions` key.\n\n## Ablation (one run, on committed `59575b2c4`)\n\n`node scripts/ablation-replace.mjs` restored the empty arrays in the system arm (anchor 1 to 0, blob `4817a333` to `bc398da1`) and ran the new file plus `crud-runas.test.ts`: 5 failed, 39 passed. The three flow-driven real-stack pins went red: the below-baseline hook read the baseline's rows instead of the user's, the decider test's submit-write hook did the same, and the above-baseline pin failed on its envelope assertion (the write carried `permissions`). The two named-user shape pins in `crud-runas.test.ts` went red too. GUARD, the user-less CONTROL and the user-less unit pin stayed green, as predicted. Restored: blob back to `4817a333` (HEAD), `git diff HEAD` empty, `git status --porcelain` empty.\n\n## Tests and gates (head `0f452e832`, after merging `origin/main` `f89d29e38` with `os-regen-merge.sh`)\n\n- `@objectstack/service-automation`: `vitest run`, 194 files / 2587 tests passed at `0f452e832`; `typecheck` (tsc plus `check:test-typecheck`) exit 0.\n- `@objectstack/plugin-approvals`: `vitest run` against this tree's built `service-automation`, 83 files / 1132 tests passed, 0 failed (every file loads; an earlier count of 1120 left out two mirror files that could not load before `trigger-record-change` was built); `typecheck` exit 0, its test-layer debt ledger holding.\n- Other importers of the changed export, at `bf00bb57c`: `@objectstack/trigger-record-change` 114/114, `@objectstack/trigger-schedule` 174/174, `@objectstack/verify`'s six system-run files 70/70.\n- Derived gate families (`dispatch-gates.mjs --commands` on the final diff, 70 commands, `check:i18n` and `check:i18n-stale-fill` added by the `plugin-approvals` path): all exit 0, and `--ran` answered 70 derived, 70 run, 0 NOT-MEASURED, 0 UNRUN at `0f452e832`.\n\n**Round 1 (seat rework record `6277856952`):** the claim's surface took `plugin-approvals`' `restored-approval-continuation.test.ts` for its two `runAs:'system'` expectations only; both now expect no `permissions` beside the user, and the package's suite passes in full.\n\n## Acceptance notes\n\n- The objectql hook seed resolves positions, permission sets and peers but no `email`, so a row policy on `current_user.email` in the user's own sets drops out in such a hook until the email twin lands (code-read, not measured here); #24639 carries it.\n\n---\n_Generated by [Claude Code](https://claude.ai/code/session_01Nk17Z26X5DB59iQztDBADH)_\n"
+}

@@ -2,8 +2,8 @@
   "number": 24336,
   "kind": "issue",
   "title": "metadata-core: `MetadataEventSchema.source`'s describe and the `sys_metadata_history.source` docs name labels (\"studio\", \"rest\", \"ai\", \"git-import\") that no producer writes — the family's collector after #24328",
-  "state": "open",
-  "state_reason": null,
+  "state": "closed",
+  "state_reason": "completed",
   "draft": null,
   "author": {
     "login": "objectstack-fleet[bot]",
@@ -13,18 +13,23 @@
   "labels": [
     "documentation",
     "domain:engine",
-    "pm:queue",
     "priority:p3"
   ],
-  "assignees": [],
+  "assignees": [
+    "os-warren"
+  ],
   "milestone": null,
   "type": null,
   "created_at": "2026-10-18T13:48:24Z",
-  "updated_at": "2026-10-18T13:48:24Z",
-  "closed_at": null,
-  "closed_by": null,
+  "updated_at": "2026-10-20T01:48:18Z",
+  "closed_at": "2026-10-20T01:41:37Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
   "merged_at": null,
-  "comments": 0,
+  "comments": 4,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/24336",
   "body": "**Filing gate ①**: wrong text with a named landing. This is the family's collector card under the same-family rule: #24328 (the spec half, PR #24334) was the first position, and this card covers the rest.\n- **`reach:`** exception: release-text. `@objectstack/metadata-core` is published, and its built `dist/index.js` and `dist/index.cjs` carry the describe (the #24328 dev's reading, built from `8deed12d3`). No live door was read; the producers are named below from code.\n- A reader of the published schema is told `source` carries surface labels such as `\"studio\"` or `\"ai\"`. The producers write code-path labels and `'fs'`, so a consumer that branches on the documented values never matches.\n\n**Filed by** `domain:spec` seat 2 (#18549) · `zhuangjianguo` · session `session_019oFY6Hi35J7atvgVFnmoaK`, from the #24328 dev's `out_of_scope_findings[0]` (PR #24334, report on #24328). The seat verified it below. ⛔ Not a claim. Self-labelled `domain:engine` under the filer exception (`packages/metadata-core`); grade and `area:*` are triage's.\n\n## Measured on `origin/main` `ec749fbb44`\n\n**The positions** (the enumeration nail: `git grep -n '\"git-import\"'` and `git grep -n \"'studio'\"` over `packages/`, `docs/adr/` and `content/`):\n\n| position | text | shipped? |\n|:--|:--|:--|\n| `packages/metadata-core/src/types.ts:148`, `MetadataEventSchema.source` | `.describe('Origin label: \"fs\", \"studio\", \"rest\", \"ai\", \"git-import\", …')` | yes: the package `dist` |\n| `packages/metadata-core/src/objects/sys-metadata-history.object.ts:35`–`:36`, the module header | \"`source` records the producer ('sys-metadata-repo', 'fs', 'studio', …)\" | code comment |\n| the same file, `:136`–`:137`, above the `source` field | \"Producer of the event ('sys-metadata-repo', 'fs', 'studio', 'api', …)\" | code comment |\n| `packages/spec/src/api/protocol.test.ts:2141`–`:2162` | the fixture is called \"a verbatim-shaped capture of a real `historyMetaItem` return\", but its update event carries `source: 'studio'` | test only |\n| `docs/adr/0008-metadata-repository-and-change-log.md:226`, the §2.4 sketch | `source: string; // 'fs', 'studio', 'rest', 'ai', 'git-import', …` | governed (Tier H): illustration only |\n| `packages/spec/src/api/protocol.zod.ts:1884`, the spec's history response | the same list | fixed by PR #24334 (#24328), not here |\n\n**What the producers write** (non-test code; the #24328 seat check `6250650493` re-read these):\n\n- `SysMetadataRepository` defaults to `'sys-metadata-repo'` (`sys-metadata-repository.ts:1121`, `:1150`, `:1271`), plus `'sys-metadata-repo.publish'` (`:1467`) and `'sys-metadata-repo.revert'` (`:1619`).\n- The protocol passes `'protocol.saveMetaItem'` (`protocol.ts:22655`) and `'protocol.publishMetaItem'`, and the internal migration passes `'migrate-stored'`.\n- `@objectstack/metadata-fs`'s `FileSystemRepository` writes `'fs'` into its own change log and events (`packages/metadata-fs/src/repository.ts:674`, `:1045`). This schema is shared by both repositories, so for this schema `'fs'` is a real label. The spec's history response is different: that door reads `SysMetadataRepository` only.\n- No non-test code under `packages/**` writes `'studio'`, `'rest'`, `'ai'` or `'git-import'`. No consumer compares `source` against them. Cloud's writers were not read.\n\n## The work\n\nOne PR on `packages/metadata-core`, describe text and comments only:\n\n- Make `MetadataEventSchema.source`'s describe say what the label is: an open label naming the write path, not an authoring-surface enum, with labels the producers really write (for example `'sys-metadata-repo'`, `'protocol.saveMetaItem'`, `'migrate-stored'`, `'fs'`). Keep it `z.string()`.\n- Make the two `sys-metadata-history.object.ts` comments agree with that.\n- Riders, if the reader agrees: the `protocol.test.ts` fixture label (a `packages/spec` test, `domain:spec`'s file; say so in the PR's file-surface declaration), so that a \"verbatim-shaped capture\" carries a label a real save stamps. ⛔ The ADR-0008 sketch is a governed surface: leave it, or name it in Acceptance notes for a person.\n- A `patch` changeset on `@objectstack/metadata-core` with `Clause-②: no`. Regenerate anything `check:generated` proves stale.\n\n**Reader who acts:** the `domain:engine` seat (`packages/metadata*`), one PR.\n\n## Grade (a suggestion; triage's call)\n\np3. Describe and comment wording only. No door's behaviour or accepted shape changes.\n\n## Dedupe\n\nTwo semantic searches of this repository's issues:\n- \"MetadataEventSchema source describe origin label metadata-core\": 6 hits. #24328 is this family's first card. The other 5 (#23808, #15206, #14180, #6761, #4587) are closed and about other subjects.\n- \"sys_metadata_history source producer studio label comment\": 1 hit, #24328.\n\nDedupe words: MetadataEventSchema source describe origin label; metadata-core event source studio rest ai git-import; sys_metadata_history source producer comment studio api.\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_"
