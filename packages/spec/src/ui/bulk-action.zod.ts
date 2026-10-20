@@ -389,7 +389,9 @@ const BulkConfirmTextSchema = z.union([
     sourceRequired: BULK_CONFIRM_TEXT_DIALECT_ONLY,
     dialectOnly: BULK_CONFIRM_TEXT_DIALECT_ONLY,
   }),
-  z.string().refine((source) => source.trim() === ''),
+  // `trim()`'s whitespace set is exactly `\s` (ECMA-262), so this arm takes the blank strings
+  // `NON_BLANK_STRING` refuses — as a `pattern` the JSON Schema carries, not a dropped refinement.
+  z.string().regex(/^\s*$/),
 ], { error: () => BULK_CONFIRM_TEXT_DIALECT_ONLY });
 
 /**
