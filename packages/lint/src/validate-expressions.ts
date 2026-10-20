@@ -3413,9 +3413,9 @@ const BULK_CONFIRM_TEXT_SLOT = "A bulk action's `confirmText`";
  * ⚠️ Every finding is a `warning` in 18.x, never an `error`: each of these
  * texts parsed before the slot was typed, so a refusal would be a narrowing no
  * ADR-0087 conversion carries (the 「甲」 ruling) — its refusal waits for
- * protocol 19. The containers walked are the ones the dispatch-contract rule
- * walks: a view's `list` and each `listViews.<key>`, and an object's
- * `listViews.<key>`.
+ * protocol 19. The containers walked: a view's `list` and each
+ * `listViews.<key>`, a standalone list view (the flattened overlay or the
+ * ViewItem record), and an object's `listViews.<key>`.
  */
 function bulkConfirmTextIssues(stack: AnyRec, scope: { views: boolean; objects: boolean }): ExprIssue[] {
   const issues: ExprIssue[] = [];
@@ -3457,6 +3457,17 @@ function bulkConfirmTextIssues(stack: AnyRec, scope: { views: boolean; objects: 
     for (const [vi, view] of recordsOf(stack.views).entries()) {
       if (!view || typeof view !== 'object') continue;
       const viewName = typeof view.name === 'string' ? view.name : typeof view.object === 'string' ? view.object : `#${vi}`;
+      // The two standalone shapes `PUT /api/v1/meta/view` carries and the
+      // publish gate snapshots as `views: [item]` — recognised as the list-view
+      // field rules recognise them (`validate-list-view-field-refs.ts`): the
+      // flattened list overlay (the `ListView` at the top level) and the
+      // ViewItem record (one level down, in `config`). Without them a view
+      // write would run this pass over nothing.
+      const config = view.config;
+      if (view.viewKind === 'list') {
+        const record = config !== null && typeof config === 'object' && !Array.isArray(config);
+        judgeContainer(record ? config : view, `view '${viewName}' (${record ? 'ViewItem record' : 'flattened list overlay'})`);
+      }
       judgeContainer(view.list, `view '${viewName}' · list`);
       judgeListViews(view.listViews, `view '${viewName}'`);
     }
