@@ -12,18 +12,18 @@
   },
   "labels": [
     "domain:spec",
-    "pm:queue",
+    "pm:blocked",
     "priority:p2"
   ],
   "assignees": [],
   "milestone": null,
   "type": null,
   "created_at": "2026-10-20T13:26:27Z",
-  "updated_at": "2026-10-20T13:26:27Z",
+  "updated_at": "2026-10-20T14:52:43Z",
   "closed_at": null,
   "closed_by": null,
   "merged_at": null,
-  "comments": 0,
+  "comments": 1,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/24897",
   "body": "Filing gate **③**: a task the maintainer's rulings direct. The ADR notes the 18.x line owes are batched into one Tier H PR, which the maintainer merges (`docs/adr/**` is governed).\n- **Reader who acts:** the epic seat (`epic:#15194`).\n- **Dedupe:** none open. Searched \"ADR-0131 dated note 18.x\" (80 hits, all closed or unrelated).\n\n## What the notes must record (each one cites its source)\n1. **Release scope.** 18.0.0 published with steps 1–6 and step 7 parts 7a-1, 7a-3, 7b-3 and 7c. The rest of step 7 follows. Source: record 6291577585 on #15194. This replaces ADR-0131's release-scope note (~817-830), which still says the ceremony comes in a later release.\n2. **D9, the lean-embedding exception.** `Engine.resolveSystemInsertOrganization` answers `no-organization-object` and stores NULL when the composition registers no `sys_organization`. The counter keeps `__global__` there (#24845). Production `os serve` refuses a boot with no auth secret (#24845, under #3963 A1). Source: #24583 reports 6284717698 and 6288405082.\n3. **D1 at the DDL.** The tenant column is NOT NULL at createTable from 7b-0. 18.0.0-born databases and pre-existing shards and Turso remote stores keep the nullable column the ceremony could not tighten. Source: execution record 6285122667, plus 7b-0's measurement.\n4. **D2, declared sharing rules.** They are deployment-wide through a typed marker (`deploymentWide`), the shape of the declared-webhook ruling A. Source: 6285122667, #24828.\n5. **D8's gate is implemented** (`check-tenant-chokepoint` refuses an IS NULL arm on a tenant column). Source: #24880.\n6. **The D7 attribution field** (`sys_audit_log.tenant_id`) keeps its NULL arm by design. Source: #24825 review 6287357347.\n\nLands after step 7 (#24583) has merged, so the notes describe shipped code."

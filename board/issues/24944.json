@@ -1,0 +1,34 @@
+{
+  "number": 24944,
+  "kind": "issue",
+  "title": "rest: list export writes a lookup cell from a fixed key list on the expanded record and never reads the target's nameField — HotCRM contacts export as their job title",
+  "state": "open",
+  "state_reason": null,
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "area:records",
+    "bug",
+    "domain:cli",
+    "pm:dispatched",
+    "priority:p1"
+  ],
+  "assignees": [
+    "os-justin"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-20T17:17:35Z",
+  "updated_at": "2026-10-20T19:30:29Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 1,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/24944",
+  "body": "Filing gate **③ a task the maintainer set**: objectstack-ai/hotcrm#2207, the maintainer's browser round on ObjectStack 18.0.0 (「hotcrm 升级到 objectstack 18.0 然后重新安排一轮浏览器测试」). Each defect gets its own card, by the maintainer's ruling 「按照按照具体的issue单独提交卡片，不受数量限制。」 (recorded on objectstack-ai/hotcrm#2188, `6283467378`). This is finding **F-01** of track 1 (the full functional pass), by the cloud tester `session_019R3C7cvMNrmxf1AwtEt7N2`. It was measured on HotCRM `main` `16c28664` with `@objectstack/*` 18.0.0 (framework `06cab4849`, console objectui `616df6598b42`), in Chromium at 1440×900 on a locally booted, seeded install with demo staff. The evidence is on the branch `claude/qa-v18-full-pass` at `dda91814d` ([`REPORT.md`](https://github.com/objectstack-ai/hotcrm/blob/dda91814dfe304ec48e616f5886491ecd7e8ade3/qa/2026-10-20-v18-full/REPORT.md)), which is never merged. Filed by the `repo:hotcrm` seat 2 (`os-support-ai`, session `session_01KqkTQNLcxVc588eZpJmp1r`). ⛔ Not a claim. Grade: triage's.\n\n**Reader (who acts):** objectstack triage routes it. HotCRM's declaration is right: `crm_contact` declares `nameField: 'full_name'` (`src/sales/objects/contact.object.ts:319`).\n\n## The finding, as measured\n\n- **Persona / URL / steps:** service.manager, `/_console/apps/app.objectstack.hotcrm/crm_case` (All Cases) → Display → **Export as CSV**. The console sent `GET /api/v1/data/crm_case/export?format=csv&fields=case_number,subject,crm_account,crm_contact,…` → `200 text/csv`.\n- **Expected:** the Contact column names the contact, as the grid does (\"John Smith\").\n- **Actual:**\n  - `CASE-00001,Login issues after platform upgrade,Acme Corporation,VP of Engineering,…`. \"VP of Engineering\" is John Smith's job `title`. CASE-00002 and CASE-00007 export \"Chief Procurement Officer\".\n  - The same happens through the REST door as other personas. `crm_lead/export?fields=converted_contact` gave \"VP of Operations\" for Wren Halvorsen (na.rep). `crm_opportunity/export?fields=primary_contact` gave \"Director of Commercial Systems\" (manager).\n  - Lookups to `crm_account` and `sys_user` export the right names.\n- **Evidence:** [`81-ADM-005-export-csv-content.png`](https://github.com/objectstack-ai/hotcrm/blob/dda91814dfe304ec48e616f5886491ecd7e8ade3/qa/2026-10-20-v18-full/shots/81-ADM-005-export-csv-content.png) (the downloaded file's first lines), [`81-ADM-005-svcmgr-crm_case-export-csv.png`](https://github.com/objectstack-ai/hotcrm/blob/dda91814dfe304ec48e616f5886491ecd7e8ade3/qa/2026-10-20-v18-full/shots/81-ADM-005-svcmgr-crm_case-export-csv.png).\n- **Reach:** every list export (Display → Export as CSV / XLSX) and `GET /api/v1/data/:object/export`, for any lookup whose target has no literal `name` column.\n\n## Seat review (source at 18.0.0, `06cab4849`)\n\n- `packages/rest/src/export-format.ts:336-341` `displayFromRecord` uses the lookup field's own `displayField`. Without one, it falls back to the first scalar key from `NAME_KEY_FALLBACKS` (`:107-109`): `['name', 'title', 'label', 'full_name', …]`.\n- The target object's `nameField` is never read:\n  - `packages/core/src/utils/import-field-meta.ts:94` carries only the lookup's own `displayField`;\n  - the expand loads the whole target record (`packages/rest/src/data-action-routes.ts:1227-1231`).\n- `crm_contact` has no `name` column, and `title` (Job Title) comes before `full_name`, so the job title wins.\n- Account and sys_user come out right only because each has a literal `name` column. Account's own `nameField` is `display_title` (`src/sales/objects/account.object.ts:19`), so it is ignored there too.\n- The engine already has the rule: `packages/objectql/src/record-title.ts:79-84` `titleFieldOf(schema)` returns `nameField ?? displayNameField`. The export does not use it.\n- Unchanged on `main`. The file's last commit is from 2026-10-01.\n\n## Dedupe\n\nMethod: every objectstack-ai/objectstack issue title (every state, #1–#24940) and every objectstack-ai/objectui issue title (#7–#13272), listed through the repo-scoped `issues?state=all` endpoint (refreshed with `since=2026-10-20T16:00Z`) and matched case-insensitively. The search API is refused for this session.\n- Related, closed: objectstack-ai/objectstack#2481 (the feature that added this formatter; its body promises `nameField` resolution); objectstack-ai/objectui#13107 (the same \"VP of Engineering\" symptom in the console's bulk confirm, fixed client-side); objectstack-ai/objectui#10479 (the client's lookup label ranks `displayField`, then `nameField`).\n- **New.**\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_"
+}

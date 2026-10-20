@@ -10,16 +10,22 @@
     "id": 332303061,
     "type": "Bot"
   },
-  "labels": [],
+  "labels": [
+    "area:workflow",
+    "bug",
+    "domain:services",
+    "needs-user-decision",
+    "priority:p2"
+  ],
   "assignees": [],
   "milestone": null,
   "type": null,
   "created_at": "2026-10-20T14:03:04Z",
-  "updated_at": "2026-10-20T14:03:46Z",
+  "updated_at": "2026-10-20T17:34:42Z",
   "closed_at": null,
   "closed_by": null,
   "merged_at": null,
-  "comments": 0,
+  "comments": 4,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/24914",
   "body": "Filing gate **① a product defect with reach measured**. Measured for objectstack-ai/hotcrm#2073 item 8 (PR objectstack-ai/hotcrm#2203) by its dev, on HotCRM with `@objectstack/*` 18.0.0-next.5, as a `sales_rep` in zh-CN, in Chromium at 1440×900 on a locally booted install with demo staffing. The reading was the same before and after the PR. Filed by the `repo:hotcrm` seat 2 (`os-support-ai`, session `session_01KqkTQNLcxVc588eZpJmp1r`). ⛔ Not a claim. Grade: triage's.\n\n**Reader (who acts):** objectstack triage. A console half is named below for routing.\n\n## The finding, as measured\n\n- **Where:** HotCRM's Convert Lead screen flow (`lead_conversion`). A rep converts a lead whose company exactly equals an account the rep cannot read. The flow's `create_account` node (`create_record` on `crm_account`) is refused by the per-organization unique account name.\n- **Expected:** a refused write in a user-facing screen flow reaches the user as a sentence they can act on, in their locale, the way a refused record save does in the console. At least it should carry no internal identifiers.\n- **Actual:** the dialog body and the toast both show, in English under zh-CN:\n  > Node 'create_account' failed: create_record(crm_account) failed: Duplicate record refused on 'crm_account': a unique constraint already holds these values. No record was written.\n\n  The run answers 400 `FLOW_FAILED`, and nothing is written.\n- **class:** a. **Reach:** any screen flow, in any app, whose write node the engine refuses: unique constraints, validation rules, permission refusals. In HotCRM the measured case is lead conversion; other screen flows with a write node behind the screen are not measured.\n\n## Seat review\n\n- **Landing (objectstack):** `service-automation`'s failed-node error. It wraps the driver or engine refusal in `Node '<id>' failed: <op>(<object>) failed: …` and surfaces it verbatim on the `FLOW_FAILED` envelope. The inner refusal already reads as a user sentence, but the wrapper adds the node id, the operation and the object API name, and none of it is localized.\n- **Console half (objectui, for triage to route):** the flow runner prints the envelope's message as the dialog body and the toast, with no mapping from a known refusal code to a localized sentence.\n- **Not this card:** a flow author's own refusal through a refusing `end` node (`outcome: 'refused'`, objectstack#15788) already reaches the user as authored, and HotCRM's conversion refusals use it. This card is about an engine refusal that no author wrote.\n\n## Dedupe\n\nMethod: a grep of every objectstack and objectui issue title (the repo-scoped `issues?state=all` listings, plus the issues since 2026-10-20) for `node … fail`, `failed node`, `FLOW_FAILED`, `flow error`, `raw error`, `create_record … fail` and `error … toast / locale / translat`.\n- 25 hits. The nearest:\n  - objectstack#12975: the `/data` door ships the `CODE:` prefix inside a user-facing error, closed;\n  - objectui#12977: the organization error map lacks a row, closed;\n  - objectstack#17265: a hook's refusal on a script action answers 500 with no toast, closed;\n  - objectstack#15788: author refusals on a flow's `end` node, closed.\n\n  None covers an engine refusal inside a flow node reaching the user raw. **New.**\n"

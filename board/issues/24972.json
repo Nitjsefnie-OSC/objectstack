@@ -1,0 +1,33 @@
+{
+  "number": 24972,
+  "kind": "pull_request",
+  "title": "liveness(webhook): a declared webhook's label and description are live on the Studio metadata list",
+  "state": "open",
+  "state_reason": null,
+  "draft": false,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "documentation",
+    "size/s",
+    "tests",
+    "tooling"
+  ],
+  "assignees": [
+    "baozhoutao"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-20T19:34:51Z",
+  "updated_at": "2026-10-20T19:36:42Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 1,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/pull/24972",
+  "body": "Closes #24900\n\nClause-②: no\n\n## What this does\n\nRe-grades a declared webhook's `label` and `description` from `dead` to `live` in `packages/spec/liveness/webhook.json`. It records the reader and producer the card asked for, and carries the re-grade to the one test and the two prose sites that restated the old verdict.\n\nThe 2026-10-19 `dead` verdict measured only the Setup `sys_webhook` list, which lost the declared webhook when the boot seeder retired (ADR-0131 D2). A second surface reads the declared registry item itself and was never cut.\n\n- **Reader** (objectui, at the `.objectui-sha` pin `616df6598b42`): `ResourceListPage.tsx#defaultColumns` (`webhook` registers no `listColumns` and no `ListPage`, so `DefaultMetadataList` draws `label` and `description` through `row.item[c.key]`), and `QuickFind.tsx#MetadataQuickFind`. `webhook` has no registered preview and no Setup catalog.\n- **Producer** (measured by booting): `pnpm dev -- --fresh` on `examples/app-showcase` at `223ae939bb`, with a probe `label` and `description` authored on its declared webhook (reverted, hash-verified), signed in as the dev admin. `GET /api/v1/meta/webhook` answered 200, and its one item carried both probe values with `_packageId: com.example.showcase`. `GET /api/v1/meta/types` lists `webhook`, and that package has `scope: project`.\n- **Not readers, checked:** in `plugin-webhooks`, `auto-enqueuer.ts#projectDeclared` (delivery props only), `redeliver-guard.ts#judgeDeclared` and `bindDeclaredWebhookNameGuard` (name and switch only). In the runtime, `catalog-activation.ts` `DECLARATION_LOOKUPS.webhook` (name, packageId). In the CLI, the ownership port `declaredWebhooks.list` (name, packageId). `organization-ownership-apply.ts#isSwitchOnlyEdit` compares a seeded row with that row's own stored `definition_json`: a migration read of 18.0 data, not of the authored key.\n\nThis follows the `hook.label` and `email_template.label` rows, under the designer-previews ruling (liveness README, \"Designer previews count as consumers\"). For a display key, being shown to a human is the whole of its claimed effect. No enforce-or-retire decision is owed.\n\n## Files\n\n- `packages/spec/liveness/webhook.json`: both rows are now `live`, with `evidenceScope: cross-repo`, `evidence`, `producer` and `verifiedAt: 2026-10-20`. The `authorHint` is removed, the old note is kept as HISTORY, and the file `_note` is corrected.\n- `packages/spec/liveness/state-counts/webhook.md`: regenerated with `gen:liveness-counts`; live/dead moves from 17/2 to 19/0.\n- `packages/lint/src/lint-liveness-properties.test.ts`: the webhook case reads the real ledger and now pins silence on a declared webhook that authors every prop.\n- `examples/app-showcase/src/automation/webhooks/index.ts` (comment only) and `docs/qa/platform-checklist/areas/integration-system.json` (source line): both now state the `live` grading and the Studio reader.\n- `.changeset/24900-webhook-label-description-live.md`: `@objectstack/spec` patch. The spec package ships `liveness/` in `files[]`, and the advisory `os lint` reads it from there, so this change publishes: the `liveness-dead-property` warning on these two keys stops. That is why there is no `skip-changeset`.\n\n## Verification (head `5848b7dd99`)\n\n- `pnpm --filter @objectstack/spec check:liveness`: exit 0, all-clear line printed.\n- `pnpm check:platform-checklist`: exit 0.\n- Lint test `src/lint-liveness-properties.test.ts`: against the re-graded ledger before the test edit, 1 failed / 102 passed (`warns on a declared webhook's label and description only`, expected an empty list to equal two findings). After the edit, 103 passed.\n- `node scripts/pm/dispatch-gates.mjs --commands`: 78 families derived. 76 exited 0 and `--ran` reconciles 78 of 78. The two non-zero results, `check:dts-closure` and `check:dual-build-cjs-loads`, are NOT MEASURED. Reason: the local dists were built with `OS_SKIP_DTS=1`, so they hold no `.d.ts` (`@objectstack/types`, triggers, verify), and this diff touches no package source. CI builds with declarations.\n- Families 1 to 70 ran at `bf94c93377`. The 8 changeset families the changeset commit added ran at `5848b7dd99`. Between those heads only `.changeset/` changed.\n\n## Acceptance notes\n\n- The security issue measured on the same boot is filed separately as #24966: `GET /api/v1/meta/webhook` serves a declared webhook's authored `secret` verbatim, because `webhook` has no metadata-type redactor. Nothing in this PR touches it.\n- `origin/main` was merged once (no rebase). Nothing it brought adds a reader of these keys.\n\n---\n_Generated by [Claude Code](https://claude.ai/code/session_01D6F9axfoPzR7t8G1J7Ytzz)_\n"
+}

@@ -1,0 +1,33 @@
+{
+  "number": 24950,
+  "kind": "issue",
+  "title": "fix(cli,service-datasource): under bin/run-dev.js (NODE_ENV=development) an unopenable SQLite datasource steps down to an in-memory engine, so a dev-mode os migrate audit-mail-bodies reports an unreachable archive as examined and clean",
+  "state": "closed",
+  "state_reason": "completed",
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "domain:services",
+    "priority:p3"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-20T17:29:22Z",
+  "updated_at": "2026-10-20T19:26:12Z",
+  "closed_at": "2026-10-20T19:24:37Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": null,
+  "comments": 4,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/24950",
+  "body": "Filing gate **③**: a finding from the #24899 work (PR #24934). The dev measured it, and the seat's delta review recorded it as R2 (6296994906).\n- **Reader who acts:** the `domain:services` lane (`sqlite-driver-fallback.ts`), with `domain:cli` for the entry point.\n- **Dedupe:** none found (\"sqlite fallback in-memory unopenable\", \"run-dev NODE_ENV development datasource\").\n\n## What was measured\n- `packages/cli/bin/run-dev.js` pins `NODE_ENV=development`. Under development, the SQLite factory (`sqlite-driver-fallback.ts`) steps a datasource file it cannot open down to a wasm/in-memory engine instead of failing.\n- So an `archive` datasource declared on an unopenable SQLite path (here, a path under a regular file) reads `connected` on a dev-mode boot. `os migrate audit-mail-bodies` then reports it `examined`, scanned 0, exit 0.\n- The archive was never read, yet the report says it is clean.\n- The production entry `bin/run.js` pins `production`. There the native driver is returned unprobed, the read fails with `DATABASE_ERROR`, and the command counts a failure and exits 1. Released operators are therefore not affected. Source-tree runs and any development-mode deployment are.\n\n## Why it matters\nA maintenance command that reports \"examined, 0 to mask\" over a store it never opened is a false all-clear. The same step-down presumably applies to any datasource and any command on a development boot. That is acceptable for a scratch dev database, and wrong for a declared datasource holding real data.\n\n## Measure, then decide\n1. Which datasources and commands take the step-down under development: only the primary, or every declared datasource as well?\n2. Should a **declared** datasource ever fall back to in-memory? A plausible rule: the fallback applies to the primary's absent dev file only, and a declared datasource that cannot open fails its connect, so `listConnectionStates()` reports it.\n3. Fix, with a pin. #24934's integration test uses an unreachable Postgres archive for exactly this reason, and could then add the SQLite case.\n\nNot a security regression on released 18.0.0. It belongs to the same honesty class as #24934's B1."
+}

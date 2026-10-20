@@ -2,8 +2,8 @@
   "number": 24835,
   "kind": "issue",
   "title": "On PostgreSQL every webhook delivery is dropped at enqueue — \"[webhook-auto-enqueuer] enqueue failed … Converting circular structure to JSON (Timeout)\" — and the loss is logged at WARN",
-  "state": "open",
-  "state_reason": null,
+  "state": "closed",
+  "state_reason": "completed",
   "draft": null,
   "author": {
     "login": "objectstack-fleet[bot]",
@@ -14,20 +14,21 @@
     "area:workflow",
     "bug",
     "domain:services",
-    "pm:dispatched",
     "priority:p1"
   ],
-  "assignees": [
-    "os-justin"
-  ],
+  "assignees": [],
   "milestone": null,
   "type": null,
   "created_at": "2026-10-20T09:04:40Z",
-  "updated_at": "2026-10-20T14:17:13Z",
-  "closed_at": null,
-  "closed_by": null,
+  "updated_at": "2026-10-20T14:51:14Z",
+  "closed_at": "2026-10-20T14:49:33Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
   "merged_at": null,
-  "comments": 8,
+  "comments": 9,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/24835",
   "body": "Filing gate: ① product defect with a named location and a reproduction (silent delivery loss on a supported driver).\n\n- Category: ① — reach: the public data door (`PATCH /api/v1/data/showcase_task/ID`) with the showcase's declared webhook switched on through `POST /api/v1/security/_activation/webhook/showcase_task_changed`, measured on a fresh PostgreSQL 16 database at 307ce4c4 (and again on an 18.0.0-next.5 database the ceremony upgraded).\n- Who acts: the seat that owns `packages/plugins/plugin-webhooks` / `packages/services/service-messaging` (webhook outbox). Location: `packages/plugins/plugin-webhooks/src/auto-enqueuer.ts` (the fire-and-forget `this.enqueue({... payload ...})`, ~line 1167) → `MessagingService.enqueueHttp` → `packages/services/service-messaging/src/sql-http-outbox.ts` ~192 `payload_json: JSON.stringify(input.payload ?? null)`.\n- Dedup: local scan of the 1,237 newest issues (state=all, open and closed) for `circular|auto-enqueuer|enqueue failed` — 0 hits; `webhook.*postgres|postgres.*webhook` — 0 hits.\n\nreach: `PATCH /api/v1/data/showcase_task/ID` on `os dev -d postgres://…` at 307ce4c4, twice (fresh database; upgraded database).\nPath: integration-system.webhook-lifecycle\nQA-source: #24838 · integration-system.webhook-lifecycle · observed beside the clauses (off-clause probe: driver differences)\nChecklist item priority: P1\ntype: Bug\n\n## Reproduction (framework 307ce4c4, PostgreSQL 16.15 local)\n\n1. `createdb qa4_fresh`; from `examples/app-showcase`: `os dev --seed-admin -p PORT -d postgres://USER:PASS@127.0.0.1:5432/qa4_fresh`.\n2. Sign in as admin@objectos.ai / admin123. `POST /api/v1/security/_activation/webhook/showcase_task_changed` body `{\"enabled\": true}` → 200 `{\"success\":true,\"data\":{\"type\":\"webhook\",\"name\":\"showcase_task_changed\",\"enabled\":true}}`.\n3. `PATCH /api/v1/data/showcase_task/ID` body `{\"title\":\"webhook probe\"}` → 200.\n4. After 4 s, `GET /api/v1/data/sys_http_delivery`:\n   - Expected: one delivery row, `ref_id` `declared:showcase_task_changed` (what the same steps give on SQLite: measured three times this run).\n   - Actual: 0 rows. The server log has exactly one line for the event: `WARN [webhook-auto-enqueuer] enqueue failed {\"webhook\":\"showcase_task_changed\",\"eventId\":\"showcase_task:ID:updated:…\",\"err\":\"Converting circular structure to JSON\\n --> starting at object with constructor 'Timeout'\\n | property '_idlePrev' -> object with constructor 'TimersList'\\n --- property '_idleNext' closes the circle\"}`.\n5. Same result on an 18.0.0-next.5 PostgreSQL database after `os migrate organization-ownership --apply` (ceremony complete, marker verified): the PATCH answers 200, no delivery row, the same WARN.\n\n## What is wrong\n\n- Something in the enqueued `payload` carries a Node `Timeout` (a timer handle) on the PostgreSQL path, so `JSON.stringify` throws and the delivery row is never written. SQLite boots of the same app enqueue normally.\n- The write that claims to persist the delivery does not land, and the system keeps looking healthy: the record write answered 200, Setup shows the webhook active, and the only trace is a WARN. Under AGENTS.md \"Degradation log levels\", a dropped durable write is an `error`, said once, with the consequence and the fix.\n\nNot checked in this run: an admin-authored `sys_webhook` row on PostgreSQL (the probe's create was refused for its own body shape), and MySQL.\n"

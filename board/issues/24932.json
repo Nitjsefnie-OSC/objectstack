@@ -1,0 +1,33 @@
+{
+  "number": 24932,
+  "kind": "issue",
+  "title": "plugin-security: a controlled_by_parent child's read loads every readable master id with no limit (twice per request), so its CPU grows with the master table and the read answers 500 \"too many SQL variables\" past ~32.8k masters",
+  "state": "open",
+  "state_reason": null,
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "area:access",
+    "bug",
+    "domain:services",
+    "needs-user-decision",
+    "performance",
+    "priority:p1"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-20T16:07:59Z",
+  "updated_at": "2026-10-20T18:52:43Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 3,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/24932",
+  "body": "Filing gate ①: class (a), measured. A public door answers 500 and its cost grows unbounded with data. Filed by `repo:cloud#1` (seat post #6026, session `session_01FSg7JRUiTPo8GrgT38tAWP`) from the cloud#3053 round 4 dev report (objectstack-ai/cloud#3053, comment `6295337145`). ⛔ Not a claim.\n\n**Reader who acts:** triage grades and routes it (expected `domain:services`, `plugin-security`); the lane's execution seat fixes it. Cloud consumes the fix at its next framework pin move.\n\n**Dedupe:** objectstack issues of both states (444 read) grepped for `controlled_by_parent`, `computeControlledByParent`, `too many SQL variables`, `master ids` and `master-detail … $in`. 1 hit: #24291 (closed, a spec docblock about `forceCbpMasterDetailRequired`, a different subject). No duplicate.\n\n## Where (read at objectstack `main` `74fcec1e`; same code at `9d13b5fc`)\n\n`packages/plugins/plugin-security/src/security-plugin.ts`, `computeControlledByParentFilter` (`:8535`; the scan at `:8615-8626`):\n\n```ts\nconst rows = await this.ql.find(rel.master, {\n  where: masterFilter ?? {},\n  fields: ['id'],\n  context: { isSystem: true },\n});\nmasterIds = rows.map((r) => r?.id).filter(…);\nreturn { [rel.fk]: { $in: masterIds } };\n```\n\nThere is no `limit`. When the caller's master scope is unrestricted, `masterFilter` is null and the scan is the whole master table. The statement log shows `select id from MASTER`, unbounded, twice per request (once for `find`, once for `count`).\n\n## Measured (local hosted-shaped rig, cloud `main` `b4a6a777` = framework `9d13b5fc`, HotCRM 5.0.0; `crm_contact` and `crm_quote` are `controlled_by_parent` of `crm_account`; environment owner)\n\n| `crm_account` rows | `GET /api/v1/data/crm_contact?top=1`, main-thread CPU | answer |\n|--:|--:|:--|\n| 9 | ~8 ms | 200 |\n| 1,009 | 12 ms | 200 |\n| 10,009 | 45 ms | 200 |\n| 40,009 / 50,009 | — | **500 `DATABASE_ERROR`** (`too many SQL variables`, sql-driver log) |\n\n`crm_account`'s own read stays at 5–6 ms throughout. Staging's Turso remote was not measured.\n\n## Wanted\n\n1. Push the master scope into the child query as a subquery or semi-join, instead of materialising an id list. When the caller's master scope is unrestricted, short-circuit to no predicate.\n2. Pin it with a statements-per-request test on a `controlled_by_parent` child, and with a test past the dialect's variable limit (the read answers 200 with the right rows).\n\n## Acceptance\n\n- A CBP child read answers 200 with the rows the master scope allows, at a master count past the dialect's variable limit.\n- Its statement count and CPU do not grow with the master table when the master scope is unrestricted."
+}
