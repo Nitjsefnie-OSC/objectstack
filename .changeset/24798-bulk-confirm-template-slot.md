@@ -1,6 +1,7 @@
 ---
 '@objectstack/spec': minor
 '@objectstack/lint': minor
+'@objectstack/cli': minor
 ---
 
 feat(spec,lint): a bulk action's `confirmText` is a `template` slot over `count` and the action's params
@@ -12,4 +13,5 @@ Clause-②: yes (widening)
 - **Parsed shape.** A parsed `confirmText` is now the `{ dialect: 'template', source }` envelope rather than a string, as `titleFormat` and a notify node's `title` already are. A reader of the parsed or served def takes the text from `source` (`templateSlotSource` in `@objectstack/spec/automation` reads both forms). A stored sentence with no hole parses as before, its text unchanged.
 - **Judged by the one template judge.** `objectstack validate`, `objectstack compile` and the runtime publish gate (now also on `view` writes, and on an object's own `listViews` at an object write) judge each bulk `confirmText` through `closedScopeTemplateRefusal`. That is the closed-scope entry of the judge the flow text slots use (`automation/flow-text-slot-template.ts`). A hole over an unbound root and a single-brace `{x}` token are named, the latter with its `{{ }}` spelling. A text carrying neither is then compiled as a template, which names a hole holding logic or an unknown formatter.
 - **A warning in 18.x, refused in 19.** Each of those texts parsed while `confirmText` was a plain string, so refusing it now would be a narrowing that no ADR-0087 conversion carries. Every finding above is therefore a **warning**: an advisory at the publish gate, never a refusal. A blank `confirmText` (`''`) still parses, and the doors warn on it. Refusing all of these waits for protocol 19.
+- **`os i18n extract`.** A bulk `confirmText` written as the envelope is seeded exactly as the bare string: the extractor reads the slot's text through `templateSlotSource`, so the envelope form no longer records as an absent key with nothing to translate.
 - **Unchanged.** The `confirm` / `confirmmessage` near-misses still name `confirmText`. Every other bulk-def key, the default confirm sentence and the flow text slots' verdicts are unchanged.
