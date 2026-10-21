@@ -1,0 +1,34 @@
+{
+  "number": 25141,
+  "kind": "pull_request",
+  "title": "fix(plugin-auth)!: the last-admin guard and the default-org bootstrap count only the Default Organization's admin_full_access grant",
+  "state": "open",
+  "state_reason": null,
+  "draft": true,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "dependencies",
+    "documentation",
+    "size/xl",
+    "tests",
+    "tooling"
+  ],
+  "assignees": [
+    "os-steve"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-21T19:55:12Z",
+  "updated_at": "2026-10-21T20:09:03Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 1,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/pull/25141",
+  "body": "Fixes #24883\n\nClause-②: yes (narrowing)\nMetadata-protocol: none\n\nSeat decision 6324268472 (option A). The measurement behind it is 6324239568.\n\n## Why\n\nSince 18.x step 7a-2, `resolveAuthzContext` gives an `admin_full_access` grant platform standing only under `single`, and only when the Default Organization owns it (`grantAnchorsPlatformStanding`). An organization-less grant anchors nothing in any posture (ADR-0131 D1/D5).\n\nTwo plugin-auth readers still counted such a grant:\n- the last-admin guard's `anchorOwnerTest`;\n- the default-organization bootstrap's grant read.\n\nTwo compositions can still hold that row:\n- a lean embedding of `registerLastAdminGuard` on driver-memory, with no `sys_organization`;\n- a host outside `os serve`, on a database built before 18.x.\n\nIn both, the guard believed an administrator remained where the resolver saw none. It **permitted** banning the deployment's only platform administrator, the verified `OS_PLATFORM_OWNER_EMAIL` account. This PR closes that fail-open.\n\n## What changed\n\n- **`last-admin-guard.ts`**\n  - `anchorOwnerTest` reads the resolver's rule: a grant anchors only when the Default Organization owns it. Under a wall, or with no nameable Default Organization, none anchors.\n  - The header (grade 1), the docblocks and the refusal texts no longer say \"unscoped\" or \"or by none\".\n  - The walled-remedy clause of the emptied-not-fresh refusal is retired. Under a wall no grant is evidence any more, so the clause could not be reached.\n- **`ensure-default-organization.ts`:** the bootstrap reads only the Default Organization's grant, and no grant when none is nameable. The organization-less read is gone.\n- **Tests** (the 81 cases the measurement predicted turned red at the first source commit, and all are re-fixtured; none is skipped or weakened):\n  - Guard suites (47):\n    - each engine registers `sys_organization` with a `default` row, and the platform-admin grant is owned by it;\n    - the suites now run on a fresh NOT NULL store (`relaxEveryRegisteredTenantColumn` dropped), except where a case deliberately models a pre-18 row;\n    - `sqliteEnginePool` gains `keepBootOrganizations`, which keeps the boot's organization rows and refuses a case that changed them.\n  - The config-anchor L5 suite now pins BOTH keys, posture and owner, in both directions:\n    - an organization-less holder is no survivor under `single` either: the new direction;\n    - the Default Organization's grant still anchors under `single`.\n  - Bootstrap suites (34): the fake engines hold the Default Organization the boot invariant creates, and the promotion's grant is owned by it. The org-create cases go through the config anchor, the one population that needs no organization first.\n  - New `last-admin-guard.anchor-parity.test.ts` (13 cases) runs a real engine with the real resolver:\n    - the write-feasibility matrix: sqlite and driver-memory; with and without the organization object; 0, 1 and 2 organizations; `single` and `isolated`. Each case asserts what the engine does with an organization-less grant, then that the guard counts its holder exactly when the resolver does;\n    - **the negative pin, failure direction (ii)**, on a driver-memory lean embedding and on a pre-18 store: banning the resolver's only platform administrator is refused;\n    - the positive control.\n  - Two new bootstrap pins: an organization-less grant binds nobody, and with no nameable Default Organization no grant is read.\n- `@objectstack/driver-memory` is added as a plugin-auth **devDependency**, for the lean-embedding pin.\n- `content/docs/permissions/authorization.mdx`: the platform-admin anchor wording, and the embedder's remedy.\n- One `patch` changeset with the BREAKING banner, the FROM → TO, and the embedder's remedy (D5's config anchor plus membership).\n\n## Verification (local, before CI)\n\n- `@objectstack/plugin-auth`: 3448 tests, 3438 passed, 0 failed, 10 skipped. `pnpm typecheck` exit 0, after a full DTS build of the plugin-auth closure.\n- `@objectstack/organizations`: 233/233.\n- Ablation, each restored blob == HEAD:\n  - putting the organization-less half back in `anchorOwnerTest` turns 6 cases red: the matrix's driver-memory row, both negative pins, and three config-anchor pins;\n  - putting the bootstrap's null element back turns the 2 new bootstrap pins red.\n- `check-governed-merges --branch`: NOT governed, 0 of 16 paths hit the register.\n- The full gate list, the dogfood battery (organization-delete included) and R1/R4 are reported on the card in the os-dev report, against the head they ran on.\n\n## Acceptance notes\n\n- The guard's `judgeOrganizationDelete` (#25016) asks the same count, so it inherits the fix. Its pins are re-run with the dogfood battery.\n- File surface: the claim names the two source files, their tests, the docs page and one changeset. This PR also touches `packages/plugins/plugin-auth/package.json` and `pnpm-lock.yaml`, for the driver-memory devDependency the requested lean-embedding pin needs.\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nhttps://claude.ai/code/session_01GvYt2WyJja4rEjcy6pdD4p\n\n---\n_Generated by [Claude Code](https://claude.ai/code/session_01GvYt2WyJja4rEjcy6pdD4p)_\n"
+}

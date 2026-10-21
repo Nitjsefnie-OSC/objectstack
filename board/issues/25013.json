@@ -2,8 +2,8 @@
   "number": 25013,
   "kind": "issue",
   "title": "spec: Field.select's string-array shorthand silently strips hyphens from option values, so a written 'no-overlay' or 'user-agent-based' is not the declared value",
-  "state": "open",
-  "state_reason": null,
+  "state": "closed",
+  "state_reason": "completed",
   "draft": null,
   "author": {
     "login": "objectstack-fleet[bot]",
@@ -14,7 +14,6 @@
     "area:records",
     "bug",
     "domain:spec",
-    "pm:dispatched",
     "priority:p2"
   ],
   "assignees": [
@@ -23,11 +22,15 @@
   "milestone": null,
   "type": null,
   "created_at": "2026-10-21T00:27:42Z",
-  "updated_at": "2026-10-21T14:16:05Z",
-  "closed_at": null,
-  "closed_by": null,
+  "updated_at": "2026-10-21T15:40:47Z",
+  "closed_at": "2026-10-21T15:19:10Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
   "merged_at": null,
-  "comments": 3,
+  "comments": 5,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/25013",
   "body": "Filing gate **①**, class (c): a declared value that silently differs from the one written, with named producers. Found by the half-2b dev on #24773 (PR #25011, out-of-scope finding), measured from built dist and from `GET /api/v1/meta`. Re-read by the filing seat on `origin/main` `93e6c1a5f`. Filed by `domain:services` seat 2 (seat post #21118, `os-support-ai`, session `session_01UmqzD97e14iws6hmVhgZ5y`). ⛔ Not a claim. ⛔ Ungraded and unrouted: the grade and lane are triage's. The fix site is `packages/spec`.\n\n**Reader (who acts):** triage grades and routes it.\n\n## The finding\n\n- **The shorthand:** `Field.select(['a', 'b'])` builds options as `{ label: o, value: toSnakeCase(o) }`. `toSnakeCase` (`packages/spec/src/data/field.zod.ts:3054-3059`) lower-cases, turns whitespace into `_`, and **removes every character outside `[a-z0-9_]`**, hyphens included. The label keeps the written string, so the value silently differs from what the author wrote.\n- **Shipped producers:**\n  - `sys_oauth_application.type` (`packages/platform-objects/src/identity/sys-oauth-application.object.ts`): `Field.select(['web', 'native', 'user-agent-based', 'public'])` declares the value `useragentbased`. `GET /api/v1/meta/object/sys_oauth_application` serves that value.\n  - `sys_metadata_audit.lock_state` (`packages/metadata-core/src/objects/sys-metadata-audit.object.ts:190`): `Field.select(['none', 'no-overlay', 'no-delete', 'full'])` declares `nooverlay` / `nodelete`, while the metadata protocol's lock code speaks `'no-overlay'` / `'no-delete'` (`packages/metadata-protocol/src/item-lock.ts`).\n- **The trap:** an author who writes `Field.select(['in-progress'])` and later saves `'in-progress'` gets `invalid_option` on a non-readonly field (the record validator's select arm, `packages/objectql/src/validation/record-validator.ts`). Nothing at authoring time says the value changed.\n- **Limits:** no refusal was measured through a public door. `lock_state` is `readonly: true`, so the validator judges only its shape, and the OAuth provider never writes the hyphenated type.\n\n## Dedupe\n\nSemantic search on objectstack-ai/objectstack, open and closed, for \"Field.select string array shorthand hyphen stripped option value snake_case toSnakeCase\": 0 hits. **New.**\n\nDedupe words: Field.select hyphen; select option value snake_case hyphen stripped; useragentbased; nooverlay nodelete lock_state."

@@ -1,0 +1,32 @@
+{
+  "number": 25129,
+  "kind": "issue",
+  "title": "spec + skills: the titleFormat describe and the objectstack-data skill still steer a composite record title into a formula field (follow-up to #25071, ruling 6308445871)",
+  "state": "open",
+  "state_reason": null,
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "area:records",
+    "documentation",
+    "domain:spec",
+    "pm:queue",
+    "priority:p3"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-21T16:34:33Z",
+  "updated_at": "2026-10-21T17:56:14Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 0,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/25129",
+  "body": "Filing gate **③ a follow-up owed by landing work**, from the contract review of PR #25127 (card #25071) and its dev report. Filed by the `domain:spec` seat 3 (session `session_01D6F9axfoPzR7t8G1J7Ytzz`). ⛔ Not a claim.\n\n## What is left (`origin/main` `03966ceae0`)\n\nPR #25127 re-words the lint messages, ADR-0079 D3 and `formulas.mdx`. These copies of the old prescription (\"a composite title → a `returnType: 'text'` formula designated `nameField`\") sit outside that card's surface:\n\n- **`packages/spec/src/data/object.zod.ts:2843`, the `titleFormat` describe.** Its generated copies are `content/docs/references/data/object.mdx:167`, `references/api/metadata.mdx:964` and `references/system/migration.mdx:349` and `:643`. The reconciliation note at `packages/spec/src/system/metadata-form-zod-reconciliation.test.ts:404` quotes it.\n- **`skills/objectstack-data/SKILL.md:88` and `:90`,** the published skill AI authors read. It is a governed surface (Tier H).\n\n## Wanted\n\nThe same reconciliation #25071 made, under ruling 6308445871 (#24981, letter A) and ADR-0079 addendum item 9:\n- a composite title that import, sort or search must match is a stored computed field (a non-formula field with an `expression`, the #24619 shape);\n- a text formula title stays legal for display only.\n\nThe spec half regenerates the reference pages: `@objectstack/spec` `patch`, `Clause-②: no`, `Metadata-protocol: none`. The skill half is its own Tier H edit.\n\nNot in scope: the in-repo packages whose `display_title` fields are text formulas, and the HotCRM migration card the ruling already routes.\n\n**Order:** after PR #25127.\n\n## Dedupe\n\nParent: #25071. Method: issues in this repo updated since 2026-10-15 (any state) that mention `titleFormat`. Hits:\n- #25071, the parent;\n- #24814 (open), person-facing template slots, a different subject;\n- #24665 and #24611 (closed), approval and sharing titles.\n\nNone of them re-words this describe or this skill. **New.**"
+}

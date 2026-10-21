@@ -12,18 +12,20 @@
   },
   "labels": [
     "domain:engine",
-    "pm:blocked",
+    "pm:dispatched",
     "priority:p2"
   ],
-  "assignees": [],
+  "assignees": [
+    "os-steve"
+  ],
   "milestone": null,
   "type": null,
   "created_at": "2026-10-20T14:23:03Z",
-  "updated_at": "2026-10-20T17:34:30Z",
+  "updated_at": "2026-10-21T18:39:35Z",
   "closed_at": null,
   "closed_by": null,
   "merged_at": null,
-  "comments": 2,
+  "comments": 5,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/24919",
   "body": "Filing gate **③**: a finding carried from the 18.x line, step 7 (#24583). It comes from the CONTRACT_REVIEW_TIER review of PR #24893 (7b-1+7b-2), record 6293077099, under \"Observation (not this part's)\".\n- **Reader who acts:** the epic seat (`epic:#15194`, `session_01Y5583bs2RDd53MH6kM1ca3`), after step 7 lands. The answer is likely a maintainer decision, because it touches the certificate's meaning.\n- **Dedupe:** none found (`birth marker nullable`, `shapeGeneration NOT NULL`, `D1 certificate`). #24897 (ADR-0131 dated notes) names \"D1 at createTable\" only.\n\n**Not an 18.0 gate, and not a defect today.** No reader on HEAD treats a NULL organization as meaningful: 7a-1 retired the driver arm, 7a-2/7a-3 the authz readers, and 7z made `check-tenant-chokepoint` refuse the arm. What stays open is the *shape* ADR-0131 D1 promises (\"no nullable tenant column anywhere\").\n\n## What is measured\n1. **18.0.0-born stores.** The first boot that creates a datastore writes the birth marker (`details.birth.shapeGeneration = 1`, runtime `organization-ownership-boot-guard.ts` `writeBirthMarker`). 18.0.0 created every tenant column nullable; 7b-0 makes fresh tables NOT NULL at createTable only from the next release on. Such a store reads as certified (`organizationOwnershipShapeGenerationOf` reads birth ?? checkpoint, at `ORGANIZATION_OWNERSHIP_SHAPE_GENERATION = 1`), so no step ever tightens its columns. The fixture in #24911 (`fixture-18.0.0/`) is such a store.\n2. **Ceremonied stores.** The ceremony's `not-null` step sets NOT NULL only where a table will receive it and its NULL count is 0 (`organization-ownership-apply.ts` `runNotNull`). The other tables (`not-declared`, `unsupported` on the Turso remote face, and `sys_email_template` per the 7b-12 measurement) stay nullable, and the store is still certified at generation 1.\n3. **The consequence that is live once #24893 lands.** A new organization-scoped unique declared on an existing table of such a store gets the plain index, which exempts NULL-organization rows. #24893's changeset is being corrected to say so (B1).\n\n## The question to measure, then decide\nHow does D1 become true for stores that are already certified, without making an 18.0.0 install refuse its own next boot? Bumping `ORGANIZATION_OWNERSHIP_SHAPE_GENERATION` would refuse every 18.0.0-born store until it runs a ceremony; the 18.x line has kept the generation at 1 for that reason.\n- **Measure:**\n  - how many tables per posture stay nullable on an 18.0.0-born store and on a ceremonied store;\n  - whether any of them can hold a NULL `organization_id` row today (7b-3 measured such rows on an 18.0.0-born store, record 6284717698);\n  - what an attributing NOT NULL step would need for an already-certified store: a boot-time tighten (a narrowing DDL, never applied unattended today), an operator command, or a generation bump with its boot refusal.\n- **Then:** a decision card with those options, a recommendation, and the ADR-0131 D1 text each one makes true.\n\nBlocks on: step 7 (#24583) landing. 7b-0 and 7b-1+7b-2 change the baseline this measures."

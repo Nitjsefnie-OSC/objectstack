@@ -12,18 +12,20 @@
   },
   "labels": [
     "domain:services",
-    "pm:blocked",
+    "pm:dispatched",
     "priority:p2"
   ],
-  "assignees": [],
+  "assignees": [
+    "os-steve"
+  ],
   "milestone": null,
   "type": null,
   "created_at": "2026-10-20T12:55:24Z",
-  "updated_at": "2026-10-20T14:50:46Z",
+  "updated_at": "2026-10-21T19:09:03Z",
   "closed_at": null,
   "closed_by": null,
   "merged_at": null,
-  "comments": 4,
+  "comments": 8,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/24883",
   "body": "Filing gate **③**: a finding carried from the 18.x line, step 7 (#24583). It was found by the 7z closing part (os-dev report on #24583) and the review of PR #24872 (6291176705, R3).\n- **Reader who acts:** the epic seat (`epic:#15194`, `session_01Y5583bs2RDd53MH6kM1ca3`), or the lane seat for `plugin-auth`.\n- **Dedupe:** none found (`organization-less admin_full_access`, `anchorOwnerTest`, `ensure-default-organization`).\n\n**Not an 18.0 gate.** On a certified or fresh platform database both readers below answer the same as the resolver, because no organization-less grant exists there. The divergence is confined to the embedding and bootstrap contracts described below.\n\n## What was measured\nThe 7z dev tried to retire both NULL halves and stopped, because both are live contracts. The experiments are in the 7z report on #24583.\n\n1. **`plugins/plugin-auth/src/last-admin-guard.ts` `anchorOwnerTest` (~1017-1030)** counts an organization-less `admin_full_access` grant as an administrator.\n   - Making it Default-Organization-only, the rule 7a-2 (#24872) gives `grantAnchorsPlatformStanding`, turns 44 of 207 guard tests red.\n   - Why it is live: `registerLastAdminGuard` is a **public export** (`plugin-auth/src/index.ts`, `export * from './last-admin-guard.js'`). Its suite registers it on an engine with **no** `sys_organization`, where the organization-less grant is the only anchor. Retiring the half would make the guard recognise no administrator there, so it would **fail open**.\n   - Inside the platform it is dead. The one internal caller (`auth-plugin.ts` ~1671) sits in plugin-auth, which always registers `sys_organization`.\n2. **`plugins/plugin-auth/src/ensure-default-organization.ts` (~503-511)** finds the administrator *before* a Default Organization exists, and then creates one. With no organization yet, the organization-less grant is its only way in. `plugins/organizations` wraps it as the walled-posture bootstrap.\n   - NOT MEASURED: whether a production walled fresh boot writes that organization-less grant before the first organization exists, or whether ADR-0131 D9 refuses it first.\n\n## Why it matters after 7a-2\nOnce #24872 lands, the resolver and the guard disagree on an organization-less `admin_full_access` grant:\n- the resolver gives it no platform standing;\n- the guard still counts it.\n\nThe guard's side fails closed: it refuses to revoke the last admin.\n\n## The question to settle (measure first)\n- **(a) Embedding.** What anchors \"an administrator\" for a guard embedded with no organization object? Options: keep the organization-less grant as that composition's anchor, by declaration, the way 7b-3 keeps `__global__` for lean embeddings; or refuse to register the guard without an organization object.\n- **(b) Bootstrap.** Does the pre-organization bootstrap need an organization-less grant at all, or can it read the promoted owner (`OS_PLATFORM_OWNER_EMAIL`, or the seeded admin) directly?\n- Then align `anchorOwnerTest` and `ensure-default-organization` with ADR-0131 D1/D8/D9, and re-fixture their suites.\n\nGoverning text: ADR-0131 D1, D8, D9; 7b-3's lean-embedding rule (#24845, `__global__` kept where no organization object is registered).\n\nBlocked-by: #24872\n"
