@@ -11,13 +11,17 @@
     "type": "Bot"
   },
   "labels": [
-    "bug"
+    "area:devpath",
+    "bug",
+    "domain:engine",
+    "pm:queue",
+    "priority:p3"
   ],
   "assignees": [],
   "milestone": null,
   "type": null,
   "created_at": "2026-10-21T08:23:28Z",
-  "updated_at": "2026-10-21T08:23:28Z",
+  "updated_at": "2026-10-21T10:00:42Z",
   "closed_at": null,
   "closed_by": null,
   "merged_at": null,

@@ -2,8 +2,8 @@
   "number": 25063,
   "kind": "issue",
   "title": "plugin-security / objectql: an on-behalf-of insert by a crossing platform operator that names no organization may be stamped outside the delegator's organization set (source reading only; measure reach first)",
-  "state": "open",
-  "state_reason": null,
+  "state": "closed",
+  "state_reason": "completed",
   "draft": null,
   "author": {
     "login": "objectstack-fleet[bot]",
@@ -14,7 +14,6 @@
     "area:access",
     "bug",
     "domain:services",
-    "pm:dispatched",
     "priority:p1",
     "security"
   ],
@@ -24,11 +23,15 @@
   "milestone": null,
   "type": null,
   "created_at": "2026-10-21T06:22:27Z",
-  "updated_at": "2026-10-21T08:10:23Z",
-  "closed_at": null,
-  "closed_by": null,
+  "updated_at": "2026-10-21T11:06:12Z",
+  "closed_at": "2026-10-21T11:04:48Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
   "merged_at": null,
-  "comments": 2,
+  "comments": 7,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/25063",
   "body": "Filing gate **①**, the security exception (\"may alter data\": measure reach first). The source is a source reading by the isolated contract reviewer of PR #25048 (#24822 half 1), note N3 in `6309495055`. It is not measured. Filed by `domain:services` seat 2 (seat post #21118, `os-support-ai`, session `session_01UmqzD97e14iws6hmVhgZ5y`). ⛔ Not a claim. ⛔ Ungraded and unrouted: the grade and lane are triage's.\n\n**Disclosure:** the maintainer's ruling recorded on #9387 (`5323310017`) applies. This card states where the reading lives and the governing text. ⛔ No probe, request or payload goes on this card, its PR or any comment.\n\n**Reader (who acts):** triage grades the card. The lane that takes it measures reach FIRST, and fixes only if reach is shown.\n\n## Where it lives (`origin/main` `72518d20f`)\n\n- **The wall:** `packages/plugins/plugin-security/src/security-plugin.ts`, the Layer 0 write wall (step 3.7) and its insert stored-image seam, for an on-behalf-of context (ADR-0090 D10) whose caller crosses the wall.\n- **The stamp:** `packages/objectql/src/engine.ts`, `resolveSystemInsertOrganization`, and the driver's `injectTenantOnInsert`. They fill an absent organization from the context's `tenantId` after the seam has run.\n- **The reading:** under `group`, the organization stamped onto such a row may never be held to the delegator's organization set. The reviewer judged it \"existing before PR #25048, identical before and after\".\n\n## Governing text\n\n- ADR-0090 D10: a delegated write is bounded by the delegator's scope.\n- ADR-0105 D5: the engine stamps from the active organization when the value is absent, and validates explicit values.\n- ADR-0123 D2: the insert arms for a row that names no organization.\n\n## Dedupe\n\nSearched: `on-behalf-of delegated insert crossing operator organization stamped from operator tenant not delegator` (semantic). Hits: #24822 (the parent; this is not its scope), #21057, #24821, #24823, #23542, #19775, #19860, #7277. All but #24822 are closed, and none is this reading.\n\nDedupe words: on-behalf-of insert stamp delegator organization set · crossing operator delegated tenant stamp · ADR-0090 D10 insert organization absent."

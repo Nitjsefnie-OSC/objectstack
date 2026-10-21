@@ -1,0 +1,36 @@
+{
+  "number": 25085,
+  "kind": "pull_request",
+  "title": "fix(spec): the script.config.template tombstone points at the notify node's own template key",
+  "state": "closed",
+  "state_reason": null,
+  "draft": false,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "documentation",
+    "size/s",
+    "tooling"
+  ],
+  "assignees": [
+    "baozhoutao"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-21T08:31:16Z",
+  "updated_at": "2026-10-21T09:41:26Z",
+  "closed_at": "2026-10-21T09:41:24Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": "2026-10-21T09:41:24Z",
+  "comments": 2,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/pull/25085",
+  "body": "Closes #24965\n\nClause-②: no (prose only: no shape, key, default or accepted value moves)\n\n## What changed\n\nThe `script.config.template` tombstone in `packages/spec/src/automation/schemaless-node-config.zod.ts` told authors that \"stored templates live in the messaging service (`sys_notification_template`), not on the node\". That text predates the `notify` node's own `template` key. This is the spec-lane half of execution card ② of ruling D on #24770 (decision `6290342354`, recorded by triage in `6293376907`). The services half is #24924.\n\nThe prescription now reads:\n\n> Delete the key. For templated content use a `notify` node and name an email template (`email_template`) in its own `template` key, with `templateData` filling its placeholders: the email and in-app inbox channels render that template in each recipient's locale. Otherwise the node carries inline `title`/`message`. The messaging service's `sys_notification_template` rows are read only by the `email` and `sms` channels, `email` only when the node names no template.\n\nThe `retiredKey()` call, the key's rejection and every other tombstone are unchanged. The generated reference `content/docs/references/automation/schemaless-node-config.mdx` was regenerated with `gen:docs` and carries the same text. No test pins the old wording (`git grep \"stored templates live\"` on the base finds only the source and the generated page).\n\n## Claims verified against the runtime (origin/main `2b1382a5b3`)\n\n| Claim in the new text | Evidence |\n|:--|:--|\n| `notify` has its own `template` key naming an `email_template`, and `templateData` fills its placeholders | `packages/spec/src/automation/io-node-config.zod.ts:585` (`template`, described as an `email_template` item's `name`), `:593` (`templateData`); `email_template` is a metadata type at `packages/spec/src/kernel/metadata-plugin.zod.ts:162` |\n| The executor forwards the template reference, not inline content, when one is named | `packages/services/service-automation/src/builtin/notify-node.ts:465` reads `cfg.template`; `:614-616` puts `{ template, templateData }` in the payload, else `{ title, body }` |\n| The email channel renders the named template per recipient locale and does not read `sys_notification_template` then | `packages/services/service-messaging/src/email-channel.ts:330-333` takes `payload.template`, `:345` calls `email.sendTemplate`, and that branch returns before `:378`, the only `store.load(…, 'email', …)` |\n| The inbox channel renders the named template per recipient locale | `packages/services/service-messaging/src/inbox-channel.ts:163-166` takes `payload.template`, `:182` resolves the recipient locale, `:188` calls `email.renderTemplate` |\n| The inbox never reads `sys_notification_template` | `packages/services/service-messaging/src/messaging-service-plugin.ts:285` builds the inbox channel with no `store`; only the email (`:398`) and sms (`:417`) channels get `templateStore` |\n| `sms` reads `sys_notification_template` whether or not a template is named | `packages/services/service-messaging/src/sms-channel.ts:285` calls `store.load(topic, 'sms', …)` unconditionally; the file reads no `payload.template` |\n| Without a template, the node carries inline `title`/`message` | `notify-node.ts:508` (title required when no template), `io-node-config.zod.ts:559`/`:562` |\n\nThe services side states the same reader set: `packages/services/service-messaging/src/objects/notification-template.object.ts:6-27` (`TEMPLATE_CHANNELS = ['email', 'sms']`).\n\n**One deviation from the dispatch wording.** The dispatch said a named template \"is used on every channel\". The runtime shows otherwise for `sms`: it has no template path and reads `sys_notification_template` (falling back to the topic) even when the node names an email template. So the text names email and inbox as the channels that render the named template. It says `sys_notification_template` is read by `email` only when no template is named, and it does not say the same of `sms`.\n\n## Verification (head `2318cdd237`)\n\n- `pnpm --filter @objectstack/spec build`: `VERDICT command-exit 0`.\n- `pnpm --filter @objectstack/spec check:generated`: before `gen:docs`, `✗ 1 of 14 artifact(s) stale: content/docs/references/**`. After it: `✓ All 14 generated artifacts are up to date`.\n- `pnpm --filter @objectstack/spec test`: `Test Files 705 passed (705)`, `Tests 21424 passed | 1 todo`.\n- `pnpm --filter @objectstack/spec typecheck`: exit 0.\n- `pnpm --filter @objectstack/spec test:repo`: `Test Files 72 passed (72)`, `Tests 1237 passed (1237)`.\n- `node scripts/pm/dispatch-gates.mjs --commands` derived 105 commands: 104 exit 0 (six of them after building the `@objectstack/lint` closure, `@objectstack/client` and `@objectstack/client-react`, which they read as built output). `check:dual-build-cjs-loads` is NOT MEASURED: it exited 3 (PREREQUISITE NOT MET) because it reads every workspace package's `dist/`, which needs a whole-workspace build. CI runs it. `dispatch-gates --ran`: `105 derived famil(ies) accounted for — 104 run, 1 NOT-MEASURED`.\n\n## Acceptance notes\n\n- Changeset `.changeset/24965-script-template-tombstone.md`: `@objectstack/spec` `patch`, because the tombstone text ships in the published runtime's rejection message. Not breaking, so it has no ADR-0087 marker.\n- No open PR touched `schemaless-node-config.zod.ts` when this was opened (all 14 open PRs' file lists were read).\n\n---\n_Generated by [Claude Code](https://claude.ai/code/session_01D6F9axfoPzR7t8G1J7Ytzz)_\n"
+}

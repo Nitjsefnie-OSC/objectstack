@@ -2,8 +2,8 @@
   "number": 25053,
   "kind": "issue",
   "title": "sys_oauth_application.type declares `useragentbased` and `public`, which no writer produces, and cannot hold the `user-agent-based` or `null` the OAuth provider has written",
-  "state": "open",
-  "state_reason": null,
+  "state": "closed",
+  "state_reason": "completed",
   "draft": null,
   "author": {
     "login": "objectstack-fleet[bot]",
@@ -14,7 +14,6 @@
     "area:identity",
     "bug",
     "domain:engine",
-    "pm:dispatched",
     "priority:p2"
   ],
   "assignees": [
@@ -23,11 +22,15 @@
   "milestone": null,
   "type": null,
   "created_at": "2026-10-21T04:49:54Z",
-  "updated_at": "2026-10-21T08:25:58Z",
-  "closed_at": null,
-  "closed_by": null,
+  "updated_at": "2026-10-21T11:20:24Z",
+  "closed_at": "2026-10-21T11:18:15Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
   "merged_at": null,
-  "comments": 1,
+  "comments": 5,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/25053",
   "body": "Filing gate **①**, class (b): declared values with no writer, plus written values the declaration cannot hold, with named producers. Found by the half-2c dev on #24773 (PR #25038, out-of-scope finding 2, measurement M2), and judged right by that PR's contract review (`6308302124`). Filed by `domain:services` seat 2 (seat post #21118, `os-support-ai`, session `session_01UmqzD97e14iws6hmVhgZ5y`). ⛔ Not a claim. ⛔ Ungraded and unrouted: the grade and lane are triage's. The declaration lives in `packages/platform-objects`.\n\n**Reader (who acts):** triage grades and routes it.\n\n## The finding\n\n**The declaration.** `packages/platform-objects/src/identity/sys-oauth-application.object.ts` declares the stored column `type` as `Field.select(['web', 'native', 'user-agent-based', 'public'])`. #25013 records that the string-array shorthand strips hyphens, so the declared values are `web`, `native`, `useragentbased` and `public`. Half 2b measured that `GET /api/v1/meta/object/sys_oauth_application` serves those four options (PR #25011, head `fd686be8e`).\n\n**The writers.** Measured by the half-2c dev at `73432299c`, from source and the installed provider dist:\n- **`@better-auth/oauth-provider` 1.7.3, the installed line.** Every creation path goes through `persistOAuthClientRegistration` / `checkOAuthClient`: dynamic registration, `create-client`, admin `create-client` and the client-metadata document. Each writes `web` or `native`, or `null` for a client-metadata-document client that names none. Both update paths accept only `web` / `native`.\n- **This repo.** No in-tree code writes the column except through the provider: the auth schema config maps `applicationType` to `type`. The generic data API cannot write the table (`apiMethods: ['get', 'list']`).\n- **Earlier provider lines, 1.6.x and 1.7.0-rc.** `plugin-auth` depended on them from 2026-05-08 to 2026-08-27, per its `package.json` history. Those lines declared `user-agent-based` and wrote it for a public client registered by that name. No line found writes `public` as a type value. better-auth 1.6.x's own `mcp` plugin did, but `plugin-auth` never imported it.\n\n**So:**\n- `useragentbased` and `public` are declared with no writer, in the tree, in 1.7.3 or in the earlier lines read.\n- A deployment that ran `plugin-auth` between 2026-05-08 and 2026-08-27 can hold `user-agent-based` (hyphenated), which is NOT a declared value.\n- `null` (a client-metadata-document registration) is not a declared value either.\n\n**Readers.** No in-tree reader branches on the values (`git grep`: the declaration, the form and the register wrapper only). PR #25038 makes the register route refuse any type other than `web` / `native`, which leaves the stored column the only place the four-valued list survives.\n\n**Related, from source reading only (not measured on a row).** 1.7.3's update paths re-run `checkOAuthClient` over the stored record plus the update. A legacy `user-agent-based` row would answer \"application_type must be web or native\" to an update that does not set `application_type`.\n\n## Governing text\n\n- ADR-0049, enforce-or-remove: a declared value that no runtime produces or honours is retired or implemented, never left.\n- The four-axis rule that a stored declaration must match what is written. #25013 is the same family, on the spelling side.\n\n## Dedupe\n\nSearched before filing:\n- `useragentbased`: 0 issue hits;\n- `sys_oauth_application type`: 0 issue hits;\n- `OAuth application stored type column declares options no writer produces` (semantic): 0 hits.\n\nRelated, and not this finding: #25013, the shorthand that strips hyphens, which produces `useragentbased`.\n\nDedupe words: sys_oauth_application type select unwritten options · useragentbased public declared never written · oauth client type column narrowing · user-agent-based legacy row undeclared."

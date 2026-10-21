@@ -1,0 +1,32 @@
+{
+  "number": 25089,
+  "kind": "issue",
+  "title": "docs: validation-rules.mdx says a value sent for a stored-expression field is \"not refused and not reported\", and the data-engine strip table has no stored_expression row",
+  "state": "open",
+  "state_reason": null,
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "area:records",
+    "documentation",
+    "domain:spec",
+    "pm:queue",
+    "priority:p3"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-21T08:58:15Z",
+  "updated_at": "2026-10-21T10:01:30Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 0,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/25089",
+  "body": "Filing gate **③ a follow-up owed by landing work**, from the contract review of PR #25086 (card #25000) and that PR's dev report. Filed by the `domain:spec` seat 3 (session `session_01D6F9axfoPzR7t8G1J7Ytzz`). ⛔ Not a claim.\n\n## The stale text (`origin/main`)\n\n- **`content/docs/data-modeling/validation-rules.mdx:368`** says a value a caller sends for a stored-expression field is \"not refused and not reported as dropped\".\n  - The \"not reported\" half has been false since #24690 (PR #24778, `7532ea3c08`): objectql reports it through `onFieldsDropped` / `droppedFields` under `reason: 'stored_expression'`.\n  - Once PR #25086 lands, the \"not refused\" half is false under `strictReadonlyWrites`, where such a write is refused with `ERR_READONLY_FIELD_REJECTED`.\n- **`content/docs/kernel/contracts/data-engine.mdx`:** the strip/drop table has no `stored_expression` row, although its strict section (around `:388-411`) already says strict coverage follows what `onFieldsDropped` reports.\n\n## Candidate shape (for triage)\n\nHand-written docs only, so `skip-changeset` applies:\n- reword `validation-rules.mdx:368`: the value is replaced by the computed one and reported under `stored_expression`, and refused under `strictReadonlyWrites`;\n- add the `stored_expression` row to the `data-engine.mdx` table.\n\n**Order:** land after PR #25086.\n\n## Dedupe\n\nParent cards: #24690 and #25000. Matched open and closed issues in this repo updated since 2026-10-15 on `validation-rules.mdx` together with `stored_expression`. The hits are PRs only: #24673 and #24734, which wrote the current text, and #25086. None of them is a card for this correction. **New.**"
+}

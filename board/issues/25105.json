@@ -1,0 +1,37 @@
+{
+  "number": 25105,
+  "kind": "issue",
+  "title": "changeset levels: minor only when the metadata protocol changes (added / narrowed / semantic), patch otherwise; release notes grouped by what the reader must do (maintainer ruling A, 2026-10-21)",
+  "state": "closed",
+  "state_reason": "completed",
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "area:devpath",
+    "domain:spec",
+    "enhancement",
+    "priority:p1"
+  ],
+  "assignees": [
+    "huangyiirene"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-21T10:11:59Z",
+  "updated_at": "2026-10-21T13:26:11Z",
+  "closed_at": "2026-10-21T13:23:07Z",
+  "closed_by": {
+    "login": "os-zhuang",
+    "id": 277994282,
+    "type": "User"
+  },
+  "merged_at": null,
+  "comments": 4,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/25105",
+  "body": "Filed by the triage seat (`session_01AavokzJ5DndAwitDXvKy4U`) on the maintainer's ruling in the triage chat, 2026-10-21. ⛔ Not a claim.\n\n- **The question:** 「是否建议协议重大变化时才跳版本号比如 18.1，否则都是补丁」, then 「我说的是元数据协议」 and 「元数据协议变化也分很多种，是否建议进一步区分」.\n- **The answer:** **A**.\n- **Amends** the level rule of the 2026-09-04 ruling on #15294, decision batch #35: \"a purely additive widening of a published package's public surface takes at least `minor`, and the commit type may raise a bump but never lower it\".\n\n## Today (objectstack `origin/main` `1862d8d130`)\n\n- **One version line.** `.changeset/config.json` puts about 73 packages in one `fixed` group, so one `minor` lifts all of them.\n- **No major in the launch window:** `scripts/check-changeset-no-major.mjs`.\n- **What takes minor:**\n  - `Clause-②: yes`, a wider accept set or public surface of any published payload, REST included;\n  - a breaking change;\n  - a `feat:` commit (`.github/workflows/pr-automation.yml:754`, \"WHICH LEVEL\").\n- **The result:** nearly every release is a minor. Of the 95 pending changesets, about half are `minor`, and only about a dozen of them change the metadata protocol. The version number does not say whether the protocol moved.\n- **What the baselines see:** `packages/spec/authorable-surface/*.json` lists key **names** only. A refused value, a narrowed enum, a tightened requirement or a changed meaning is invisible to it. `authorable-defaults/` covers defaults.\n\n## Ruling A\n\n**The level rule** (the fixed group stays, and there is still no major):\n\n| Kind of change | Level |\n|:--|:--|\n| ① **Added** to the metadata protocol: a new authorable key, a new accepted value or enum member, a new metadata type | `minor` |\n| ② **Narrowed or retired**: a key removed or tombstoned, a value refused, a requirement tightened | `minor` |\n| ③ **Semantic**: the meaning or default of an authorable key changes | `minor` |\n| ④ Everything else: description or error text, non-authorable internal types and interfaces, and every non-protocol change (REST, drivers, services, console, `feat:` and `fix!:` alike) | `patch` |\n\n**Why ① takes minor and not patch:** spec schemas are not `.strict()`. An older runtime silently strips a key it does not know, so an app that uses a new key must be able to name a minor floor.\n\n- **Non-protocol breaking changes keep their carriers.** A non-protocol narrowing ships as `patch` but keeps its **BREAKING** banner and its ADR-0087 disposition, unchanged.\n- **Release notes** (the GitHub Release body, and the docs release page if one exists) are grouped by what the reader must do. Each section is read from the declarations each changeset already carries:\n  - **需手动处理**: narrowed, no ADR-0087 conversion;\n  - **自动迁移**: narrowed, with a conversion that `objectstack migrate meta` applies;\n  - **新增能力**;\n  - **语义变化**;\n  - **其他修复**.\n\n## Dispatch shape (`domain:spec`, one PR or two serial)\n\n1. **The declaration.** Every PR and changeset states its metadata-protocol kind: added, narrowed, semantic or none.\n   - Extend the existing `Clause-②` line and its one reader (`scripts/pm/clause2-line.mjs`). ⛔ Do not add a new gate; the maintainer's standing rule is that new gates default to no.\n   - Whether this is a new arm of the line or a sibling line is the dev's call. State the choice in the PR.\n2. **The level axis** in `check-changeset-no-major.mjs`:\n   - a declared protocol kind requires at least one `minor`;\n   - a PR that declares none grades `patch`;\n   - where the existing ratchets can see it, a changed `authorable-surface` key set or `authorable-defaults` entry with \"none\" declared is refused, naming the remedy.\n   Update the existing fixtures, and do not loosen any other verdict of that check.\n3. **The prose** (Tier H, so a draft PR with both approvers requested):\n   - AGENTS.md's changeset rule (the `Clause-②` paragraph, around `:1084–1089`);\n   - `pr-automation.yml`'s \"WHICH LEVEL\" text (`:754`).\n   Both are restated from the table above.\n4. **Console refresh:** `scripts/objectui-changeset-digest.mjs` writes the console's refresh changeset at `minor`. It becomes `patch`, because objectui never changes the metadata protocol itself.\n5. **Release notes grouping:** the five sections above, generated from the declarations. The mechanism is the dev's call; prefer extending the existing release-notes or `annotate-shipped` path over a new one.\n6. **Out of scope:**\n   - the major / GA end condition in `check-changeset-no-major.mjs`;\n   - regrading the pending changesets. The next release is **18.1.0** under either rule, because pending protocol narrowings already take minor. The new rule applies from the release after.\n\n**Workload:** about 2 days.\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_"
+}

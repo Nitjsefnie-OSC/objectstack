@@ -1,0 +1,37 @@
+{
+  "number": 25100,
+  "kind": "pull_request",
+  "title": "fix(platform-objects): the sys_user page's Security tab shows only on the viewer's own record",
+  "state": "closed",
+  "state_reason": null,
+  "draft": false,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "documentation",
+    "size/s",
+    "tests",
+    "tooling"
+  ],
+  "assignees": [
+    "os-project-manager"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-21T09:57:32Z",
+  "updated_at": "2026-10-21T11:04:48Z",
+  "closed_at": "2026-10-21T11:04:46Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": "2026-10-21T11:04:46Z",
+  "comments": 3,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/pull/25100",
+  "body": "Fixes #24938\n\nClause-②: no (platform metadata only: the Security tab's self-service sections are shown on the viewer's own record only; no action, param, response, spec key or export moves)\n\n## What changed\n\nThe `sys_user` record page's **Security** tab item (`packages/platform-objects/src/pages/sys-user.page.ts`) now carries an item-level gate: `visibleWhen: P` + \"`has(record.id) && record.id == ctx.user.id`\". This is the same `P` (CEL) envelope and `has()` guard that the page's unverified-email `record:alert` uses. On the viewer's own record, the tab is unchanged. On any other user's record, both the tab header and its panel are omitted. Nothing else moves: the actions and their own gates in `sys-user.object.ts`, the other tabs and the alert are all unchanged.\n\n## Measured before the edit\n\n- **Tab item `visibleWhen` is declared and honoured.**\n  - Spec: `PageTabsProps.items[].visibleWhen` (`packages/spec/src/ui/component.zod.ts`, an `EvaluatedExpressionInputSchema`). The docs say a FALSE gate omits the whole tab (header and panel), and that a child component's own `visibleWhen` \"hides only the panel content and would leave an empty tab header behind\".\n  - Renderer, objectui at the pinned `.objectui-sha` `cf153eb2e535`: `packages/components/src/renderers/layout/containers.tsx`, `isItemVisible` in `PageTabsRenderer`. It calls `ExpressionEvaluator.evaluateCondition` (`packages/core/src/evaluator/ExpressionEvaluator.ts`), which sends an explicit `{ dialect: 'cel' }` envelope to the CEL engine. Bare strings stay on the legacy evaluator. The scope is `buildNodeEvaluationScope`: the ambient scope binds `ctx: { user }` (`packages/app-shell/src/providers/ExpressionProvider.tsx`), with `record` set to the row.\n- **Component-node `visibleWhen` is honoured too.** `PageComponentSchema.visibleWhen` (`packages/spec/src/ui/page.zod.ts`) is evaluated by objectui's `SchemaRenderer`. The alert above already relies on it.\n- **The whole Security tab is self-service.** It holds four headed sections whose `record:quick_actions` name `change_my_password`, `change_my_email`, `enable_two_factor`, `disable_two_factor`, `generate_backup_codes`, `resend_verification_email` and `delete_my_account`. Each of those actions has a `visible` led by `has(record.id) && record.id == ctx.user.id` in `sys-user.object.ts`. Nothing in the tab serves an administrator. On another user's record, an administrator sees only the four headings and captions.\n- **Choice: gate the tab, not the sections.** A per-node gate would leave an empty \"Security\" tab header on every other user's record. The item-level gate is the shape the spec documents for this case.\n- **Pin census.** Before this change, no test asserted the Security tab's structure. `sys-user-details-tab.test.ts` pins only the first (Details) tab. `canonical-expression-envelopes.test.ts` covers every expression position on the page, and stays green with the new envelope.\n\n## Pin\n\n`packages/platform-objects/src/pages/sys-user-security-tab-own-record.test.ts` asserts:\n\n- the page parses through `PageSchema`;\n- the Security item's `visibleWhen` equals `{ dialect: 'cel', source: 'has(record.id) && record.id == ctx.user.id' }`;\n- Security is the only tab item that carries an item-level gate;\n- every action the tab names exists on `SysUser` and is a pure conjunction (no `||`) led by the own-record guard. If someone later adds an administrator action to this tab, the test goes red, because gating the whole tab would hide that action.\n\n**Ablation.** I deleted the `visibleWhen` line with `scripts/ablation-replace.mjs` (anchor 1 → 0, blob `c4dd9db6ae30` → `200f0d8d63f6`). The pin went red: 2 failed, 2 passed (\"carries the own-record gate…\" and \"gates only the Security tab…\"). After restore: blob == HEAD (`c4dd9db6ae30`) and `git diff HEAD` is empty. The test imports the page from `src/`, so no build or `dist/` leg is involved.\n\n## Verification (head `0c2c418b8`, after merging `origin/main` `28c9a2cb6`)\n\n- `pnpm exec turbo run build --concurrency=2`: 77/77 tasks, lock VERDICT command-exit 0.\n- `pnpm --filter @objectstack/platform-objects typecheck`: exit 0 (`check:test-typecheck: OK`).\n- `pnpm --filter @objectstack/platform-objects test`: exit 0, Test Files 85 passed (85), Tests 1247 passed (1247).\n- `pnpm --filter @objectstack/core test:repo`: exit 0, Test Files 6 passed (6), Tests 82 passed (82).\n- `node scripts/pm/dispatch-gates.mjs --commands --repo objectstack-ai/objectstack`: 66 lines, all run on this head, every one exit 0. Before the full build, three families exited 3 (`check:dual-build-cjs-loads`, `check:i18n`, `check:lean-entry-closure`); after it, all three exit 0. `--ran`: \"66 derived famil(ies) accounted for — 66 run, 0 NOT-MEASURED (a DERIVED zero — all 66 recorded an exit code and none of them is 3)\".\n- Browser reading: not taken.\n\n## Acceptance notes\n\n- **Tab URL tokens shift on another user's record.** No item on this page sets `value`, so the renderer derives the `?tab=` token from the index in the FILTERED item list (`tab-INDEX`). On another user's record, hiding Security moves API Keys from `tab-9` to `tab-8` and Preferences from `tab-10` to `tab-9`. On the viewer's own record the tokens are unchanged. A `?tab=` link copied from your own record to someone else's can therefore open the tab after the intended one. The spec already recommends a semantic `value` for durable links. Giving the items one touches the other tabs, which this card leaves out of scope. Carrier: none.\n- `#24277` is not addressed here. It cites this tab as precedent for a platform-default Settings tab.\n\n---\n_Generated by [Claude Code](https://claude.ai/code/session_011VbHLLCsMcBUhfcGuZikJp)_\n"
+}

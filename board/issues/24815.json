@@ -2,8 +2,8 @@
   "number": 24815,
   "kind": "issue",
   "title": "sys_member list view: a User filter (the searchable user picker), so an organization's members can be found by name from the Members tab's View all",
-  "state": "open",
-  "state_reason": null,
+  "state": "closed",
+  "state_reason": "completed",
   "draft": null,
   "author": {
     "login": "objectstack-fleet[bot]",
@@ -14,18 +14,21 @@
     "area:records",
     "domain:engine",
     "enhancement",
-    "needs-user-decision",
     "priority:p3"
   ],
   "assignees": [],
   "milestone": null,
   "type": null,
   "created_at": "2026-10-20T07:45:30Z",
-  "updated_at": "2026-10-21T07:02:36Z",
-  "closed_at": null,
-  "closed_by": null,
+  "updated_at": "2026-10-21T08:44:12Z",
+  "closed_at": "2026-10-21T08:43:35Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
   "merged_at": null,
-  "comments": 8,
+  "comments": 9,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/24815",
   "body": "Ruled: 6289508074 · letter E′ · 2026-10-20T11:09Z\n\n## Problem\n\nOn the organization record page (Setup → `sys_organization` → **Members** tab), an org with 1,002 members shows a 25-row related list with **no way to search**. A maintainer asked a plain question — \"is this person a member of this org?\" — and the only answer today is paging through 40 pages, or going the other way round (open the user's record → **Organizations** tab).\n\nThis is not specific to members: every `record:related_list` (contacts on an account, lines on an order, team members, …) has the same gap.\n\n## Why it can't be fixed by \"just turning the magnifier on\"\n\nVerified against `main` (objectstack `0904d85`, objectui `2d8a8b7`):\n\n1. **objectui — the existing box is client-side and matches raw ids.** `RelatedList.tsx` has an opt-in `filterable` input, but `record-related-list.tsx` never passes it, so no page can show it. Even if shown, it sweeps `row[key]` — for `user_id` that is `usr_…`, not the name the cell draws — and while a term is typed it drops out of windowed mode and downloads the whole child collection.\n2. **objectstack — `$search` never traverses a lookup.** `search-filter.ts` expands over the object's own textual/enum fields. `sys_member` is a junction (two lookups, formula title), so its resolved search set is empty and, since #24284, a non-blank `search` on it is refused `400 INVALID_FIELD`. A related list that forwarded the term to the server would get a 400.\n\n## Proposal\n\n### Part 1 — objectstack: lookup-aware `$search` (the core)\n\n- A **single-valued lookup** in an object's search set matches when its **referenced record** matches the term on the referenced object's own resolved search fields (e.g. `sys_member.user_id` → `sys_user` name / email; pinyin via the `__search` companion where enabled).\n- Expansion: run the term against the referenced object **under the caller's execution context** (RLS + FLS apply — otherwise search becomes an existence oracle for records the caller cannot read), then OR `{ <lookup>: { $in: … } }` into the term's clause. One hop only, never recursive.\n- Scale: prefer a semi-join (subquery) when both objects share a datasource; cross-datasource falls back to an id list capped at N (e.g. 500) and the response says the result may be incomplete — never a silent short answer.\n- Resolution: explicit `searchableFields` may name a lookup; the auto-default adds single-valued lookups whose target has a non-empty search set. `sys_member` then searches with no metadata change and the #24284 refusal no longer fires for it.\n- Record the rule as an addendum to ADR-0061.\n- Free side-benefit: main list views (\"search accounts by owner name\"), lookup pickers, REST and MCP/AI reads get the same behaviour.\n\n### Part 2 — spec: `record:related_list.searchable`\n\n- New `searchable?: boolean` on `RecordRelatedListProps`, default `true`; `false` hides the box. Enforced in the renderer per ADR-0049 (pin test), not declared-only.\n\n### Part 3 — objectui: the search box on the related list\n\nWhere the user types — **in the related-list card header**, the same magnifier control the main list toolbar uses:\n\n```\ndefault\n┌──────────────────────────────────────────────────────────────┐\n│ 👥 Members  1002                  🔍   [Invite user] [Add member] │\n\nafter clicking 🔍 — expands in place inside the header\n┌──────────────────────────────────────────────────────────────┐\n│ 👥 Members  1 / 1002   [🔍 Zhang Yang        ×]  [Invite user] [Add member] │\n├──────────────────────────────────────────────────────────────┤\n│ Zhang Yang    Member     2026/10/15 4:30 PM          ···    │\n│                          View all results for \"Zhang Yang\" → │\n\nno match\n│        No members match \"Zhang San\"     [Invite user]      │\n```\n\n| Aspect | Behaviour |\n|---|---|\n| Placeholder | derived from the searchable columns, e.g. \"Search user, role…\" |\n| Trigger | 300 ms debounce; Enter searches immediately |\n| Count badge | \"matched / total\" while a term is active |\n| Paging | stays windowed — term sent as `$search`, server pages; never a full download |\n| Clear | × or Esc clears and collapses |\n| Tabs | each related list keeps its own term |\n| View all | link carries the term (`?search=…`); the list page already reads an initial term |\n| Mobile | expands to a full-width row under the header |\n| Hidden when | the object resolves no search field (reuse ListView's \"searchless object\" handling on `INVALID_FIELD`) or `searchable: false` |\n\n- Retire the client-side `filterable` prop (inert today, and wrong if switched on) under enforce-or-remove, after confirming it has no consumers.\n- i18n for placeholder / no-match / incomplete-result strings (en, zh, ja, es).\n\n## Acceptance\n\n1. Org page → Members → 🔍 → type a member's name: only that member is listed, badge shows `1 / 1002`, the request is a windowed `$search` (no full-collection fetch).\n2. A non-member's name: \"No members match …\" with the card's existing Invite action.\n3. With pinyin search enabled, `zy` finds 张杨.\n4. A user the caller cannot read is not found by name (RLS/FLS honoured in the lookup hop).\n5. Invitations tab searches by email, Teams tab by name.\n6. \"View all\" opens the full list with the same term applied.\n7. A business object's related list (e.g. Account → Contacts) is searchable with no metadata change.\n\n## Delivery\n\n1. objectstack PR — lookup-aware `$search` + ADR-0061 addendum + tests (permissions, cap, pinyin) + spec `searchable`.\n2. objectui PR — header search box, `filterable` retirement, renderer wiring, i18n, browser-verified on the org Members tab.\n\nWorkaround until then: open the user's record → **Organizations** tab.\n\n---\n_Generated by [Claude Code](https://claude.ai/code/session_01GxPMXDCakZJBGiviBsXtzC)_\n"
