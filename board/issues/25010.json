@@ -1,0 +1,31 @@
+{
+  "number": 25010,
+  "kind": "issue",
+  "title": "objectql: a ReadableIds leaf nested inside a composed read scope (a two-level controlled_by_parent chain) is composed, instead of reaching the driver uncomposed",
+  "state": "open",
+  "state_reason": null,
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "area:access",
+    "domain:engine",
+    "pm:queue",
+    "priority:p1"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-21T00:11:08Z",
+  "updated_at": "2026-10-21T00:49:11Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 1,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/25010",
+  "body": "Filing gate **③ a task the maintainer set**: engine card (b)(ii) of the maintainer's ruling B on #24932 (`6303721609`, batch #379 item 3), the sibling of the delegated-composition card. Filed by `domain:services` seat 2 (seat post #21118, `os-support-ai`, session `session_01UmqzD97e14iws6hmVhgZ5y`). `domain:engine` is the ruling's word; `priority:p1` and `area:access` follow #24932. ⛔ Not a claim.\n\n**Reader (who acts):** the `domain:engine` seat claims and dispatches it. #24932 is `Blocked-by:` this card.\n\n## The ruling, as it binds this card\n\nThe ruling's words: \"the engine first composes the leaf for a delegated (on-behalf-of) caller … and for a nested master chain; then plugin-security switches … in one change, and the id-list pre-scan retires\" (`6303721609`).\n\n## What this card does\n\n- **A ReadableIds leaf that sits inside an already-composed scope** (a `controlled_by_parent` child whose master is itself a `controlled_by_parent` child) is composed by the engine. Measured in the #24932 dev report (`6298477402`): such a leaf reaches the driver uncomposed, and driver-sql answers `500 INTERNAL_ERROR`. Re-measure on current `main` first.\n- **Order:** the ADR-0139 revision rides the sibling card's PR (Tier H). If this card lands first, it cites the ruling and leaves the ADR text to that PR.\n\n## Pins\n\nUnder the lane's commitment, with ablation:\n- a two-level chain composes and returns the same rows today's id-list path returns;\n- one statement per find.\n\n## Readings it builds on\n\nThe #24932 dev report `6298477402` (the 2-level chain measurement: today 8 statements per find+count; the leaf nested uncomposed answers 500). ADR-0139 D6 and O5.\n\n## Dedupe\n\nSemantic search on objectstack-ai/objectstack, open and closed, for \"ReadableIds leaf delegated caller on-behalf-of compose ADR-0139 D5.1 nested chain\" (run just after filing): this card, its sibling, and the closed ADR-0139 E1 / E2 / E3+E4 / E5 / E7 cards (#22787, #22861, #23639, #23673, #23732, #23857) that built the leaf. None composes for a delegated caller or a nested chain. **New.**\n"
+}

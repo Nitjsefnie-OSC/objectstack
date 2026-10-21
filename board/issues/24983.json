@@ -1,0 +1,33 @@
+{
+  "number": 24983,
+  "kind": "issue",
+  "title": "service-messaging: refuse sys_notification_template rows for a channel other than email or sms (the 19.0 half of ruling D)",
+  "state": "open",
+  "state_reason": null,
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "area:workflow",
+    "domain:services",
+    "pm:dispatched",
+    "priority:p2"
+  ],
+  "assignees": [
+    "os-justin"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-20T21:26:29Z",
+  "updated_at": "2026-10-21T02:11:51Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 5,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/24983",
+  "body": "Filing gate **③ a task the maintainer set**. This is the 19.0 half of execution card ② of the maintainer's ruling D on #24770. Filed by the `domain:services` seat 2 (seat post #21118, `os-support-ai`, session `session_01UmqzD97e14iws6hmVhgZ5y`), as the ruling record directs, when the 18.x half landed. Labels follow #24924, the card this half was split from.\n\n**Reader (who acts):** the `domain:services` seat claims and dispatches it, now. (「甲」 amended by the maintainer, `6303865025` on #6015: a narrowing that no conversion carries also ships now, in 18.x, as a BREAKING minor; no refusal waits for 19.0.)\n\n## The ruling and the release rule\n\n- **The ruling record** `6293376907` on #24770 reads: \"② refuses stored or new non-email/sms rows. If no stored-row conversion carries that, 18.x warns on write and corrects the copy, and the refusal is filed for 19.0.\"\n- **The standing rule 「甲」** (#6015 `6292005854`): a narrowing no ADR-0087 conversion can carry ships its loud half in 18.x, and its refusal waits for 19.0.\n- **The 18.x half is in `main`:** #24924 → PR #24976 (`0603bfa1cf`).\n  - `sys_notification_template` declares the `format` rule `channel_renders_template`, at `severity: 'warning'`. Its pattern comes from `TEMPLATE_CHANNELS` (`email`, `sms`).\n  - A write naming another channel is accepted and stored, and it reports one advisory.\n  - The object copy says that only email and SMS use a row.\n\n## What to do (18.x, now)\n\n- Refuse a write naming a channel outside `TEMPLATE_CHANNELS`, loudly, with the prescription the ruling asks for: in-app content is an email template (`email_template`) named in a notify step's `template`.\n- Decide, from measurement at dispatch, what \"refuses stored rows\" means for rows already stored with another channel. Rows are stored data, not authored metadata, so no ADR-0087 conversion reaches them.\n- The refusal assertions carry `code` and `status`, and every negative pin is ablation-verified.\n\n## Readings to build on (measured in PR #24976; re-measure on the 19.0 base)\n\n- **A `select` spelling of `channel`, against the `format` rule:**\n  - its refusal is the generic catalog sentence (\"Channel must be one of: email, sms\"), with no per-field sentence to carry the prescription;\n  - an import carrying `keptOptionValues` admits a value outside the options;\n  - the column moves from `varchar(64)` to `varchar(255)`.\n- **objectui `SelectField`, at console pin `616df6598`:** it clears an out-of-set stored value on load. So a Setup edit of a stored `inbox` row would save `channel: null`. That is a source reading, not a browser run, and it decides how a stored row behaves under any `select` spelling.\n- **Bulk updates and import commits** answer the 18.x advisory only in the server log, not in their answer.\n\n## Dedupe\n\nSearched \"sys_notification_template channel refuse non email sms 19.0 refusal\": the only open-or-closed hit is #24924, this card's 18.x parent, now closed. #24770 is the ruling's card. **New.**"
+}

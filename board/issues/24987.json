@@ -1,0 +1,31 @@
+{
+  "number": 24987,
+  "kind": "issue",
+  "title": "service-settings: Company → Legal name help points to \"the organization name set under Branding\", a page that sets the product name and is not offered under a walled posture",
+  "state": "open",
+  "state_reason": null,
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "area:api",
+    "domain:services",
+    "pm:queue",
+    "priority:p3"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-20T21:49:26Z",
+  "updated_at": "2026-10-20T21:50:18Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 0,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/24987",
+  "body": "Filing gate **① a product defect with reach measured**: misleading admin-facing copy in Setup. Recorded by the contract review of PR #24959 (#24766), round 2 (`6301655792`), as a no-verdict observation. Filed by the `domain:services` seat 2 (seat post #21118, `os-support-ai`, session `session_01UmqzD97e14iws6hmVhgZ5y`) when that PR landed. `domain:services` and `area:api` follow #24766. `priority:p3`, and triage may regrade.\n\n**Reader (who acts):** the `domain:services` seat claims and dispatches it. This is an S copy fix.\n\n## The finding (`origin/main` `78ab6474c`)\n\n- `packages/services/service-settings/src/manifests/company.manifest.ts:33`, the `legal_name` description: \"Registered legal name of the organization (may differ from the organization name set under Branding).\"\n- `packages/services/service-settings/src/translations/en.ts:101`, the `legal_name` help: \"Registered legal name (may differ from the organization name set under Branding).\"\n\nBoth are false since PR #24959:\n- Setup → Branding's `workspace_name` is the **product** name: the console, the sign-in page, the browser title, and on `single` the auth mail. It is not an organization name.\n- Under the `group` and `isolated` postures the Branding page is not offered at all. Company, by contrast, is offered on every posture (it is the posture pin's control).\n\n**Reach:** every admin who opens Setup → Company and reads the Legal name help, on every posture. Under a wall it points to a page that does not exist there.\n\n## What to do\n\n- Correct the `legal_name` description and its help in the four settings bundles (`en`, `zh-CN`, `ja-JP`, `es-ES`), so the help no longer names Branding as the source of an organization name.\n- Re-check the file's own header comment (`company.manifest.ts:8`, \"Distinct from `branding` (the public-facing workspace name / logo / theme)\"). `theme_mode` retired with PR #24959.\n- Add a `patch` changeset, `Clause-②: no`.\n\n## Dedupe\n\nSemantic search of objectstack issues, open and closed, for \"legal name help Branding organization name company settings\" (run just after filing): only this card and its parent #24766. **New.**\n"
+}

@@ -1,0 +1,36 @@
+{
+  "number": 24995,
+  "kind": "issue",
+  "title": "spec: the loud half for a declared webhook whose `requires` cannot dispatch it — `os validate` / `os build` warn, naming the missing token and the 19.0 refusal (ruling A on #24910 under 「甲」 rule 2; 18.x)",
+  "state": "closed",
+  "state_reason": "not_planned",
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "area:api",
+    "bug",
+    "domain:spec",
+    "priority:p1",
+    "target:18"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-20T22:56:52Z",
+  "updated_at": "2026-10-20T23:18:54Z",
+  "closed_at": "2026-10-20T23:18:54Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": null,
+  "comments": 1,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/24995",
+  "body": "Filing gate ③ — the maintainer's 「同意」 on ruling **A** of #24910 (batch #379 item 4, the director's chat, 2026-10-20), timed under the standing ruling 「甲」 (#6015 `6292005854`): a breaking narrowing that no ADR-0087 conversion carries ships its loud half in 18.x and its refusal in 19.0. Filed by the director seat (summon #45 continuation 2, `session_01Lg6GQ4xjqmvEzYv78d6H7i`). ⛔ Not a claim.\n\n**Reader who acts:** the `domain:spec` seat. One PR; `@objectstack/spec` changeset with `Clause-②: no` (a warning adds no refusal); contract review at the tier the surface sets. #24910 is `pm:blocked` on this card and closes when it lands. The 19.0 refusal is its companion card, filed right after this one in the same act (`pm:on-hold`); the ruling record on #24910 names both numbers.\n\n**Dedupe:** the 19 open `domain:spec` cards' titles read in this act: 0 name a webhook, a capability or `requires`; #24910's own dedupe (626 newest issues, `webhook` near `requires` / `capability` / `realtime` / `inert`) found 0.\n\n## What the ruling binds (origin/main `e4d604efd39f`)\n\n- **The condition:** a stack whose metadata declares at least one webhook (`webhooks: [defineWebhook(…)]`) while `requires` lacks `'webhooks'` or `'realtime'`. Today `defineStack`, `os validate` and `os build` pass it silently; since PR #24946 (`19e5338cc8`) the boot logs ONE `error` per declared webhook. Measured on the published 18.0.0 scaffold (#24910; QA source #24908).\n- **18.x, this card:** the declared-capability class in `packages/spec/src/stack.zod.ts` (`validateTriggerCapability` :4510, `validateHierarchyScopeCapability` :4432, #20332) gains a `webhook` sibling that, in 18.x, reports a **warning**, not a refusal. It names each declared webhook, the missing token(s), the consequence (writes succeed, nothing is delivered) and the 19.0 spelling (`STACK_WEBHOOK_CAPABILITY_REQUIRED`, the refusal). `os validate` and `os build` print it; the boot report of PR #24946 stays as is.\n- **⛔ Not implied:** no token is auto-added to `requires` — the maintainer's 「同意」 took the director's reading that adding `realtime` changes the deployment's composition, which is not an ADR-0087 spelling rewrite. ⛔ No refusal in 18.x. ⛔ The activation door is unchanged (A′ not taken).\n- **Recorded, not blocking:** cloud's `resolveCapabilityDependencies` for `webhooks` is unmeasured; the warning does not depend on it, the 19.0 refusal does.\n- **Fixture:** `packages/qa/dogfood/test/fixtures/webhook-materialization-fixture.ts` boots without realtime on purpose (it pins the materialization seam); the warning must not turn that test red — assert the warning there, or declare the fixture's intent in its stack.\n\n## What done looks like\n\n- A scaffolded 18.0.0-shaped project with a declared webhook and `requires: ['automation', 'triggers']` gets one warning at `os validate` and at `os build`, naming the webhook, the missing tokens and the 19.0 refusal; with `['automation', 'triggers', 'webhooks', 'realtime']` it gets none (the CONTROL).\n- Spec unit tests for the three arms (no `webhooks`, no `realtime`, both missing); `content/docs/automation/webhooks.mdx` §3.0 names the warning and the 19.0 refusal.\n- Ablation: remove the arm, the pin reads red.\n\n## Related\n\n#24910 (the ruled card: decision `6298521209`; PR #24946 landed part (c)) · #20332 (`validateTriggerCapability`) · #6015 `6292005854` (「甲」) · #24908 (QA source) · #22648 (cross-lane ledger)."
+}

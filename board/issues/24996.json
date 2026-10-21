@@ -1,0 +1,35 @@
+{
+  "number": 24996,
+  "kind": "issue",
+  "title": "spec: `FLOW_FAILED` carries the refused write's inner refusal — an optional `userMessage` on `AutomationResult` and one declared details member `{ code, message }` on the trigger, resume, /actions and endpoint doors (ruling B′ on #24914)",
+  "state": "open",
+  "state_reason": null,
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "area:workflow",
+    "bug",
+    "domain:spec",
+    "pm:dispatched",
+    "priority:p1",
+    "target:18"
+  ],
+  "assignees": [
+    "baozhoutao"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-20T22:57:30Z",
+  "updated_at": "2026-10-21T01:32:41Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 1,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/24996",
+  "body": "Filing gate ③ — the maintainer's 「同意」 on ruling **B′** of #24914 (batch #379 item 5, the director's chat, 2026-10-20): the inner refusal of a refused flow write node reaches the client structurally, as a record save's does; the inner code takes the wire spelling (`UNIQUE_VIOLATION` for a unique refusal — the 2026-09-03 ruling, `packages/runtime/src/http-dispatcher.ts:1204-1207`). Filed by the director seat (summon #45 continuation 2, `session_01Lg6GQ4xjqmvEzYv78d6H7i`). ⛔ Not a claim.\n\n**Reader who acts:** the `domain:spec` seat, first in the chain. One PR: `Clause-②: yes (widening)`, `minor`, contract review at `CONTRACT_REVIEW_TIER`. It relaxes the #9585 two-key ceiling on `/actions` `error.details` by the maintainer's ruling (batch #379 item 5), which the PR cites. Then #24914 follows (services: the four catch arms of `crud-nodes.ts`, engine carriage on both terminal exits and the retry exits, serial after PR #24778; cli: the four doors, the MCP bridges and the `deps.error` slot, declared on #22648), and the console half is an objectui card; both are `pm:blocked` on this card.\n\n**Dedupe:** the 19 open `domain:spec` cards' titles read in this act: 0 name `FLOW_FAILED`, `userMessage` or `AutomationResult`; #24914's own dedupe (25 hits across both repositories, none an engine refusal inside a flow node reaching the user raw) stands.\n\n## What the ruling binds (origin/main `e4d604efd39f`)\n\n- `AutomationResult` (`packages/spec/src/automation/flow.zod.ts`, beside `successMessage` / `errorMessage` :1085–1086) gains an optional `userMessage` with `ApiErrorSchema`'s semantics (`packages/spec/src/api/contract.zod.ts:50-97`: producer-marked end-user text that \"never replaces message\") and an optional inner-refusal member of shape `{ code, message }`, `code` in its wire spelling. The member's name is the spec seat's; its shape is ruled.\n- The `FLOW_FAILED` details of the trigger, resume, `/actions` and endpoint doors declare that member ONCE (the `ResumeFailureDetailsSchema` pattern, `packages/spec/src/api/automation-api.zod.ts:430`), so the four doors emit one shape. `message` is unchanged everywhere: no wording pin moves.\n- `AutomationResult.code` stays a closed union (#9378 ruling `5321043983`): no new ledger code; the inner code rides inside the member.\n- ⛔ Not this card: the crud-node and engine changes (#24914), the doors' emission (#24914, cli cross-lane), the console (objectui), the unique sentence's object API name (#24951, engine).\n\n## What done looks like\n\n- Schema and api-surface regenerated; a spec test shows that a `FLOW_FAILED` envelope carrying `details.<member> = { code: 'UNIQUE_VIOLATION', message }` and a top-level `userMessage` validates on all four doors, and that an envelope without them still validates (optional, additive).\n- Changeset `@objectstack/spec` minor, `Clause-②: yes (widening)`, citing the ruling.\n\n## Related\n\n#24914 (the ruled card: measurement `6296914512`, decision `6297041774`) · #9378 `5321043983` · #9446 `5322867819` · #9585 `5339708379` · #22507 `6093472708` · objectstack-ai/objectui#5210 `5344182262` (`userMessage` rendering ruling) · #24951 (engine sub-card) · PR #24778 (same file, serial)."
+}

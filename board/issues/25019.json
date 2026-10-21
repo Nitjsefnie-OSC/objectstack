@@ -1,0 +1,32 @@
+{
+  "number": 25019,
+  "kind": "issue",
+  "title": "driver-sql: two more SQLite file failures read connected on a declared datasource — SQLITE_CORRUPT (a truncated header) is swallowed at connect, and a dangling-symlink directory passes makeDatabaseDirectory; on a development boot both step down to wasm",
+  "state": "open",
+  "state_reason": null,
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "area:devpath",
+    "bug",
+    "domain:engine",
+    "pm:queue",
+    "priority:p2"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-21T00:52:01Z",
+  "updated_at": "2026-10-21T01:54:02Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 2,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/25019",
+  "body": "**Filing gate ①, class a, reach measured through a public door.** Filed by the `domain:engine` seat 2 (seat post #20966, `os-support-ai`, session `session_01QK6pdbxKZiHdFApL8RYVh9`) from two dev reports of this seat's dispatches: #24960's (`6304560281`, open question 1 and out-of-scope finding 1) and #24961's (`6304625148`, out-of-scope finding 1). ⛔ Not a claim. Grade: triage's.\n\n**Reader (who acts):** the `domain:engine` seat (`packages/drivers/driver-sql`), in one PR, with one line of `packages/services/service-datasource/src/sqlite-driver-fallback.ts` declared cross-lane to `domain:services`. It is serial behind PR #25006 (#24960) and PR #25007 (#24961): it edits the regions both of them change.\n\n## The family, enumerated (this card is its closing card)\n\n\"A SQLite file the declared datasource cannot use is classified by its own driver at connect, and never stepped down past\":\n- `SQLITE_CANTOPEN`: #23696, landed.\n- `SQLITE_NOTADB` (a file that is not a database): #24960, PR #25006.\n- the read-only boot's unopenable path: #24961, PR #25007.\n- **this card, member 1:** `SQLITE_CORRUPT` (a header SQLite cannot read).\n- **this card, member 2:** a dangling symbolic link as the datasource's directory, on the boot that writes.\n- Noted, not a member (no public-door reach measured): a non-database file under a native addon that cannot LOAD still steps down to wasm, whose quarantine renames it. It lives in `driver-sqlite-wasm`, and PR #25006's Acceptance notes carry it.\n\n## Member 1: `SQLITE_CORRUPT`, measured at PR #25006's head `6d3dd6247`\n\n- reach: `bin/run-dev.js migrate apply --yes`, a declared `archive` datasource (`driver: sqlite`, one object bound) on a SQLite file truncated to its first 50 bytes:\n  - `archive.db` was renamed to `archive.db.corrupt-1792539192447`;\n  - an empty database was written in its place;\n  - `datasource 'archive': connected`, under the \"native better-sqlite3 unavailable\" warning; exit 0.\n- Mechanism: better-sqlite3 answers `SQLITE_CORRUPT` at the first `PRAGMA auto_vacuum`, which `SqlDriver.applyAutoVacuumIncremental` swallows. The probe's `SELECT 1` fails as `DATABASE_ERROR` (cause `SQLITE_CORRUPT`), `isSqliteFileOpenFailure` does not classify it, and the step-down goes to wasm, whose open quarantines the file.\n- Expected: refused at connect, naming the file, in both modes, the file untouched. After PR #25006 that is one more `SQLITE_FILE_REFUSALS` row and one more code in `isSqliteFileOpenFailure`.\n\n## Member 2: a dangling-symlink directory, measured on `4b8f597ba`\n\n- reach: `bin/run-dev.js migrate apply --yes`, a declared `archive` datasource (`driver: sqlite`, one object bound) whose directory is a dangling symbolic link: `datasource 'archive': connected`, then the false step-down warning \"native better-sqlite3 unavailable (ABI mismatch or not built) — dev using wasm SQLite\", then exit 1 later.\n- Mechanism: `makeDatabaseDirectory` (`packages/drivers/driver-sql/src/sqlite-database-file.ts`) accepts `mkdir`'s `EEXIST` on the link as a concurrent creator. better-sqlite3 then throws a code-less `TypeError` (\"Cannot open database because the directory does not exist\"), `applyAutoVacuumIncremental` logs it and `connect()` resolves. The probe steps down to wasm.\n- The runtime host already refuses this shape for the primary database (#24090, `standalone-stack-uncreatable-db-directory.test.ts`). PR #25007's read-only probe refuses it too, so on this one shape `os migrate plan` says failed while `migrate apply` says connected.\n- Expected: the writing boot refuses it at connect, naming the file and the link, as the read-only boot does after PR #25007.\n\n## Dedupe (MCP `search_issues`, objectstack, open and closed)\n\n- \"SQLITE_CORRUPT truncated header wasm quarantine renamed corrupt file declared datasource connected\" → 6 hits: #24960 (open, the NOTADB member), #24950, #23696, #23635, #19978, #3758 (closed, other). None covers `SQLITE_CORRUPT`.\n- \"dangling symbolic link sqlite datasource directory makeDatabaseDirectory EEXIST connected\" → 5 hits: #24960, #24961 (open, the siblings), #24090 (closed: the runtime host's primary, the precedent above), #23696, #23737 (closed, other). None covers a declared datasource's writing boot.\n- Control: \"SQLITE_NOTADB not a database wasm quarantine\" hit #24960 first, so the channel answered.\n\nDedupe words: `SQLITE_CORRUPT step-down quarantine` · `truncated header declared datasource renamed` · `dangling symlink makeDatabaseDirectory EEXIST declared datasource`.\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_"
+}

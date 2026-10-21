@@ -1,0 +1,32 @@
+{
+  "number": 24997,
+  "kind": "issue",
+  "title": "spec: refuse a declared webhook whose `requires` cannot dispatch it — `STACK_WEBHOOK_CAPABILITY_REQUIRED` in `defineStack`, the third declared-capability refusal (ruling A on #24910; ships in 18.x by the maintainer's re-timing)",
+  "state": "open",
+  "state_reason": null,
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "area:api",
+    "bug",
+    "domain:spec",
+    "pm:queue",
+    "priority:p1"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-20T23:00:35Z",
+  "updated_at": "2026-10-20T23:17:14Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 0,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/24997",
+  "body": "Ruled: 6303859748 · letter A · 2026-10-20T23:16Z\n\nFiling gate ③ — the maintainer's 「同意」 on ruling **A** of #24910 (batch #379 item 4, the director's chat, 2026-10-20), re-timed by the maintainer's word in the same chat, 「暂时不考虑 v19，协议的调整原则上也是尽快，不考虑退役版本。」 (recorded on #24910 as 6303859748, and pointed to under 「甲」 on #6015 as 6303865025): the refusal ships now, in 18.x. Filed by the director seat (summon #45 continuation 2, `session_01Lg6GQ4xjqmvEzYv78d6H7i`); re-timed in the same act. ⛔ Not a claim.\n\n**Reader who acts:** the `domain:spec` seat. One PR with a BREAKING changeset (`Clause-②: no (narrowing)`, the #24813 shape: BREAKING banner, `adr-0087: not-required`), contract review at `CONTRACT_REVIEW_TIER`. #24910 is `pm:blocked` on this card and closes when it lands. The separate 18.x warning card #24995 is closed as superseded: the refusal is the loud half.\n\n**Dedupe:** the 19 open `domain:spec` cards' titles read in this act: 0 name a webhook, a capability or `requires`; #24910's own dedupe (626 newest issues) found 0.\n\n## What the ruling binds (origin/main `e4d604efd39f`)\n\n- `defineStack` refuses a stack that declares a webhook while `requires` lacks `'webhooks'` or `'realtime'`, with ONE code for every arm, `STACK_WEBHOOK_CAPABILITY_REQUIRED`, in the `STACK_*` family beside `STACK_TRIGGER_CAPABILITY_REQUIRED` (`packages/spec/src/stack.zod.ts:3263`, #20332): which token is missing is in the finding, not in the code. Registered in `packages/spec/src/api/error-code-ledger.zod.ts`.\n- Every door that loads a stack refuses with the same sentence: `os validate`, `os build`, `os serve` / `os dev`, an app's own `bootStack` tests, the cloud runtime. The boot `error` of PR #24946 (`19e5338cc8`) stays for a host that wires a stack by hand.\n- **Measure first, at claim:** cloud's `resolveCapabilityDependencies` for `webhooks` (the trigger rule measured it for #20332); the dogfood fixture `packages/qa/dogfood/test/fixtures/webhook-materialization-fixture.ts` (boots without realtime on purpose) is converted or declared, not deleted; the example apps' `requires` re-checked (`examples/app-showcase` already carries both tokens).\n- ⛔ No token implied or auto-added; ⛔ the activation door is unchanged (A′ was not taken on #24910).\n\n## What done looks like\n\n- A scaffolded 18.0.0-shaped project with a declared webhook and `requires: ['automation', 'triggers']` is refused at `os validate`, `os build` and `os dev` with `STACK_WEBHOOK_CAPABILITY_REQUIRED`, naming the webhook and the missing tokens; with `['automation', 'triggers', 'webhooks', 'realtime']` it loads (the CONTROL).\n- The three arms (no `webhooks`, no `realtime`, both missing) pinned; ablation red.\n- Changeset with the BREAKING banner; `content/docs/automation/webhooks.mdx` §3.0 says \"refused\", naming the two tokens.\n\n## Related\n\n#24910 (the ruled card; 6303779439 and its amendment 6303859748) · #24995 (superseded warning card, closed) · #20332 (`validateTriggerCapability`) · #24813 (narrowing changeset precedent) · #6015 `6292005854` (「甲」) and `6303865025` (its amendment).\n"
+}

@@ -1,0 +1,37 @@
+{
+  "number": 24999,
+  "kind": "pull_request",
+  "title": "feat(lint): a page component props CEL slot over the platform parse bounds warns at validate, build and the page door",
+  "state": "closed",
+  "state_reason": null,
+  "draft": false,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "documentation",
+    "size/m",
+    "tests",
+    "tooling"
+  ],
+  "assignees": [
+    "baozhoutao"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-20T23:03:48Z",
+  "updated_at": "2026-10-21T00:06:13Z",
+  "closed_at": "2026-10-21T00:06:11Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": "2026-10-21T00:06:11Z",
+  "comments": 1,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/pull/24999",
+  "body": "Closes #24953\n\n## What\n\nA CEL slot declared **inside** a page component's `properties` bag that overruns `@objectstack/formula`'s `DEFAULT_LIMITS` (`maxAstNodes` 256, `maxDepth`, `maxListElements`) is now reported at `os validate`, `os build`, `os lint` and the page publish door (on its `advisories` channel). The rule is `page-predicate-over-budget` (`validatePagePredicateBounds`, a new file in `packages/lint`). It is a **warning** in 18.x under the standing ruling 「甲」 (#6015, record 6292005854). Refusing a page that saves today is a narrowing that no ADR-0087 conversion can carry, because a predicate cannot be shrunk mechanically. The 19.0 refusal text is in the report for the seat to file.\n\n## Premise, measured on `origin/main` f32d795ce5\n\n- The page:tabs item `visibleWhen` the card names had 98 `||` terms (489 AST nodes, `validateExpression` answers `cel-too-large` / `maxAstNodes` / 256). `PageSchema.safeParse` gave **success**. `runAuthoringRules('validate' | 'build')` gave **0 findings**. The page door gave **0 errors, 0 advisories**.\n- Control: the same source on the component **node** `visibleWhen` gave `visibility-predicate-over-budget`, **error**. So the bound is already enforced as an error on the node slot, by the visibility family. The tab item is not a component, so that pass never reads its `visibleWhen`.\n- The same gap holds for every other CEL slot a props row declares. Measured clean on main, each over the bound: an `object-form` section `visibleWhen`, an `object-form` inline field `visibleWhen`, and `record:alert` `visible`. A syntax fault on a tab item (`record.x === 1`) also drew nothing; see Acceptance notes.\n\n## How\n\n- The slots come from the schema, not from a list of key names. Each walked component's `properties` is parsed with its `ComponentPropsMap` row. Every position where the parse **produces** a `{ dialect: 'cel', source }` envelope (the output of `EvaluatedExpressionInputSchema`) is a CEL slot. A slot that a row declares later is covered with no edit here.\n- The verdict is `validateExpression`'s. Only its `cel-too-large` refusal is reported, with the `limit` and `limitValue` it carries. The finding names the key and the bound. It does not echo the source: `validateExpression`'s `detail` quotes the author's line.\n- There is no double report. Composition slots (`children`, `footer`, `items[].children`, from `pageComponentSlotPositions()`) are not descended, because `walkPageComponents` yields those children as components of their own. The node `visibleWhen` stays the visibility family's error.\n- Wiring: `advisory` tier, all three commands, `CLI_AND_RUNTIME`, `runtimeTypes: ['page']`.\n- `content/docs`: the author-time rule count in four CLI transcripts moves from 49 to 50 (`check:docs-transcript-drift`).\n\n## Tests (head `cceddfcb61`)\n\n- `validate-page-predicate-bounds.test.ts`, 18 cases. They cover: the card's shape as a warning at each of validate, build and lint; the door's advisory equal to the build's finding; the within-bounds control drawing nothing at any door; the envelope form; `maxDepth` and `maxListElements` naming their bound; object-form section, inline field `requiredWhen` and `record:alert` `visible`; a boolean `visible` drawing nothing; nested tabs; no double report on node `visibleWhen`; and the wiring.\n- `@objectstack/lint` full suite: 152 files passed. The one red was the pinned page-door rule roster, updated in `runtime-gate.page-visibility-predicate-writes.test.ts`, and that file is 15/15 green. `@objectstack/lint` typecheck green.\n- `dispatch-gates --ran` accounts for all 94 derived families. `check:generated` is green. NOT MEASURED, prerequisite not met (no built `dist/` for the closure; declared to CI): `check:dual-build-cjs-loads`, `check:lean-entry-closure`, `@objectstack/spec check:skill-examples`.\n\n## Acceptance notes\n\n- Only bounds are judged on the props-bag slots. A **syntax** fault in the same slots (for example `===` on a page:tabs item `visibleWhen`) still draws nothing and fails open in the same way. Root and reference verdicts cannot be borrowed from the node surface: a tab item binds `data` to the row and spreads its bare fields. It is reported for the seat.\n- Out of scope: objectui's fail-open on a faulting tab-item predicate (reported for objectui).\n- Open PR #24947 also touches `authoring-rules.ts`, on a different entry. No textual overlap is expected beyond registry adjacency.\n\n---\n_Generated by [Claude Code](https://claude.ai/code/session_01D6F9axfoPzR7t8G1J7Ytzz)_\n"
+}

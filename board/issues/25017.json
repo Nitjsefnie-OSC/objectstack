@@ -1,0 +1,35 @@
+{
+  "number": 25017,
+  "kind": "pull_request",
+  "title": "fix(pm): check-half-states H16 excludes changeset-release/* as H12 does",
+  "state": "closed",
+  "state_reason": null,
+  "draft": false,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "size/s",
+    "skip-changeset"
+  ],
+  "assignees": [
+    "huangyiirene"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-21T00:46:42Z",
+  "updated_at": "2026-10-21T01:28:50Z",
+  "closed_at": "2026-10-21T01:28:49Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": "2026-10-21T01:28:49Z",
+  "comments": 1,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/pull/25017",
+  "body": "Fixes #24856\nClause-②: no\n\n## What this does\n\nA deletion in `scripts/pm/check-half-states.mjs`, the report-only half-state patrol. Scope is the triage answer on the card (comment 6292721219, scope (b)). H16 now excludes `changeset-release/*` the way H12 already does. H16 does not get a new row, any regeneration remedy text, or a threshold for that branch.\n\nH16's docblock assumed the Version Packages PR is \"regenerated from `main` on every push\". That stopped being true when the `version-pr` job moved to a six-hourly schedule (#11233). `release.yml`'s own header on `origin/main` says: \"Between refreshes `changeset-release/main` is a static branch.\" So a dirty Version Packages PR is in its normal stale window. H16 flagged it after 2 h and told the reader to hand-merge `main` into a generated branch, which the next refresh overwrites.\n\n## Changes (one file, +10 / -12)\n\n- `h16StuckMergeConflict` (the predicate, L4262): `if ((pr.head?.ref ?? '').startsWith('changeset-release/')) return null;`, H12's exact spelling.\n- `h16NeedsDetail` (the gathering gate, L4197): the same exclusion, returning `false`.\n- Docblock, replaced in place: the 6-line paragraph claiming the branch is \"deliberately NOT excluded, unlike in H12 ... regenerated from `main` on every push\" is now a 3-line reason that quotes `release.yml` and cites #11233 (L4191). The predicate's existing out-of-scope sentence gains one clause pointing to it (L4248), with no new line. Net prose: -3 lines.\n- Self-test: the two pins that asserted the old premise are flipped in place, and their comment is rewritten (3 lines down to 2):\n  - `H16 gate: a changeset-release head is not a candidate (excluded, as in H12)` now expects `false`.\n  - `H16: a dirty changeset-release/main PR past the threshold yields no row (the limb is deleted, #11233)` now expects `null`.\n  - Every other H16 pin is unchanged, including the ordinary dirty-PR pins (`dirty beyond the threshold -> finding`, `dirty within the threshold -> clean`). The case count is 4916 before and after.\n\n## Where the exclusion lives, and why both functions\n\n- **The live sweep cannot skip the gate.** It calls the predicate in one place only (L22472), and that call comes after `if (!h16NeedsDetail(pr)) continue;` (L22462).\n- **The gate alone is not enough.** The self-test's `never narrower than the predicate (every flagged row is fetched)` invariant requires the gate to fetch every row the predicate can flag. If only the gate excluded the branch, the predicate would still flag it and that invariant would go red. Ablation leg A below measured exactly that. So the predicate carries the exclusion, since every caller ends there.\n- **The gate mirrors it** because its own docblock defines it as \"the halves of the predicate that do not need `mergeable_state`\", and the head ref is one of those halves. Without the mirror, every sweep would spend one GET on the Version Packages PR, which the predicate can never flag.\n\n## Tests (at `43d062e63`)\n\n- Before (`a7199ef97`): `node scripts/pm/check-half-states.mjs --self-test`, exit 0, `✓ check-half-states self-test: 4916 cases pass.`\n- After (`43d062e63`): the same command, exit 0, `✓ check-half-states self-test: 4916 cases pass.`\n\n**Ablation** (the fix was committed first; mutations went through `node scripts/ablation-replace.mjs`, which restores itself on exit):\n- **Leg A**, predicate line removed (gate kept), marker count 1, exit 1, `2 of 4916 case(s) failed`:\n  - the new `yields no row` pin failed (it got the old hand-merge row text, expected `null`);\n  - `H16 gate: never narrower than the predicate` failed (got false, want true).\n  - Restore: blob `4cb17365` matches `HEAD`, and `git diff HEAD` is empty.\n  - The first attempt at this leg was a no-op: the tool refused before mutating, because the replacement text already occurred in the anchor. I picked a new anchor and re-ran it.\n- **Leg B**, gate line removed, marker count 1, exit 1, `1 of 4916 case(s) failed`: `H16 gate: a changeset-release head is not a candidate` (got true, want false). Restore: blob matches `HEAD`, and `git diff HEAD` is empty.\n\n## Gates\n\nI derived the local gates with `node scripts/pm/dispatch-gates.mjs --commands --repo objectstack-ai/objectstack` at `43d062e63`: 43 commands. All 43 were run on `43d062e63` and every one exited 0. `pnpm check:pm-dispatch-gates` was run detached, as its header prescribes: fast tier, 1913 cases pass, exit 0.\n\nThe `--ran` reconciliation answered: `43 derived famil(ies) accounted for — 43 run, 0 NOT-MEASURED (a DERIVED zero — all 43 recorded an exit code and none of them is 3)`. It also warned that the tree is 46 commits behind `origin/main` `62bc12930`, and that 4 derivation-input files changed in that range. None of them is this file. `origin/main` does not touch `scripts/pm/check-half-states.mjs` since the base, and `git merge-tree` against it is clean, so I did not merge. CI runs on the merge ref.\n\n`release.yml` is untouched (Tier H).\n\n## Acceptance notes\n\n- `H36`'s banner (now L8273-8276) gives a second reason for excluding `changeset-release/*` from the shared-file pairing, and that reason repeats the same stale premise: \"it is regenerated from `main` on every push — it holds nothing.\" H36 behaves correctly: it excludes the branch on its first reason, that the Version Packages PR consumes every changeset and would pair with every open PR. Only the stated sub-reason is out of date. The fix would be a prose correction outside this card's declared surface (the claim names H16 only), so I left it alone. No carrier.\n- `scripts/pm/check-skill-line-ratchet.mjs` L1482 already describes that premise as false since #11233. No other row or tool cites H16's treatment of the branch: `.claude/skills/pm-dispatch/**` and `scripts/pm/**` have zero hits.\n\n---\n_Generated by [Claude Code](https://claude.ai/code/session_01M82feuetLzrCiBz41BJb7L)_\n"
+}

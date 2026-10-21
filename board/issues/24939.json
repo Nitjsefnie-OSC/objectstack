@@ -2,8 +2,8 @@
   "number": 24939,
   "kind": "issue",
   "title": "platform-objects: deleting a business unit that has children silently turns them into tenant roots — parent_business_unit_id declares no deleteBehavior and takes set_null",
-  "state": "open",
-  "state_reason": null,
+  "state": "closed",
+  "state_reason": "completed",
   "draft": null,
   "author": {
     "login": "objectstack-fleet[bot]",
@@ -14,18 +14,23 @@
     "area:access",
     "bug",
     "domain:engine",
-    "pm:queue",
     "priority:p2"
   ],
-  "assignees": [],
+  "assignees": [
+    "os-project-manager"
+  ],
   "milestone": null,
   "type": null,
   "created_at": "2026-10-20T16:40:40Z",
-  "updated_at": "2026-10-20T17:55:29Z",
-  "closed_at": null,
-  "closed_by": null,
+  "updated_at": "2026-10-20T23:01:41Z",
+  "closed_at": "2026-10-20T22:59:17Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
   "merged_at": null,
-  "comments": 0,
+  "comments": 4,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/24939",
   "body": "Filing gate **③ a task the maintainer set**: objectstack-ai/hotcrm#2207, the maintainer's browser round on ObjectStack 18.0.0 (「hotcrm 升级到 objectstack 18.0 然后重新安排一轮浏览器测试」). Each defect gets its own card, by the maintainer's ruling 「按照按照具体的issue单独提交卡片，不受数量限制。」 (recorded on objectstack-ai/hotcrm#2188, `6283467378`). This is finding **F-04** of track 2 (the Setup pass as the system administrator), by the cloud tester `session_01BkRPwuAufrFwoEEfuigDm9`. It was measured on HotCRM `main` `16c28664` with `@objectstack/*` 18.0.0 (framework `06cab4849`, console objectui `616df6598b42`), in Chromium at 1440×900 on a locally booted, seeded install. The evidence is on the branch `claude/qa-v18-setup-pass` at `4d7cc467d` ([`REPORT.md`](https://github.com/objectstack-ai/hotcrm/blob/4d7cc467dcb08226fea5b8a1b2ea89ee05d6353b/qa/2026-10-20-v18-setup/REPORT.md)), which is never merged. Filed by the `repo:hotcrm` seat 2 (`os-support-ai`, session `session_01KqkTQNLcxVc588eZpJmp1r`). ⛔ Not a claim. Grade: triage's.\n\n**Reader (who acts):** objectstack triage routes it.\n\n## The finding, as measured\n\n- **Persona / URL:** dev admin, Setup → People & Org → Business Units.\n- **Steps:**\n  1. Create \"QA EMEA\", then \"QA EMEA Office\" with Parent = QA EMEA (the Org Chart shows the tree).\n  2. Delete QA EMEA from its row menu.\n- **Expected:** the delete is refused while children exist, or its confirm names what it does to the tree. The field's own help reads \"Self-reference for the org tree. Null = root of tenant\", and the Sharing Rules recipient type \"Business unit and subordinates\" reads that tree.\n- **Actual:** the confirm reads only `Delete Business Unit \"QA EMEA\"? Are you sure you want to delete this record?`. After `200`, `GET /api/v1/data/sys_business_unit` shows `QA EMEA Office` with `parent_business_unit_id = null`: it is now a root of the tenant, without a word.\n- **Evidence:** [`09-people-business-units-org-chart.png`](https://github.com/objectstack-ai/hotcrm/blob/4d7cc467dcb08226fea5b8a1b2ea89ee05d6353b/qa/2026-10-20-v18-setup/shots/09-people-business-units-org-chart.png) (before), [`09-people-business-units-delete-parent-confirm.png`](https://github.com/objectstack-ai/hotcrm/blob/4d7cc467dcb08226fea5b8a1b2ea89ee05d6353b/qa/2026-10-20-v18-setup/shots/09-people-business-units-delete-parent-confirm.png), [`09-people-business-units-delete-parent-result.png`](https://github.com/objectstack-ai/hotcrm/blob/4d7cc467dcb08226fea5b8a1b2ea89ee05d6353b/qa/2026-10-20-v18-setup/shots/09-people-business-units-delete-parent-result.png).\n- **Reach:** every admin restructuring business units. A `unit_and_subordinates` grant anchored above the deleted unit no longer reaches its former children. That is lost reach, not added access.\n\n## Seat review (source at 18.0.0, `06cab4849`)\n\n- `packages/platform-objects/src/identity/sys-business-unit.object.ts:131-136`: `parent_business_unit_id: Field.lookup('sys_business_unit', { required: false, … })` declares no `deleteBehavior`.\n- A lookup with none defaults to `set_null` (`packages/spec/src/data/field.zod.ts:2981`), which the engine applies (`packages/objectql/src/engine.ts:19341`). The engine also honours an authored `restrict` on a lookup (`:19330-19331`).\n- No hook refuses the delete. plugin-sharing has only after-write grant recomputes (`packages/plugins/plugin-sharing/src/bu-tree-recompute.ts:303`).\n- The console's confirm is the generic one and has no server data about children.\n- Unchanged on `main`.\n\n## Dedupe\n\nMethod: every objectstack-ai/objectstack issue title (every state, #1–#24932) and every objectstack-ai/objectui issue title (#7–#13268), listed through the repo-scoped `issues?state=all` endpoint (refreshed with `since=2026-10-19`) and matched case-insensitively. The search API is refused for this session.\n- Different, closed: objectstack#22957 (a `tree`-typed field's deleteBehavior was not honoured; this is a `lookup`, and `set_null` is honoured); objectstack#9625 (an explicit `set_null` on a required lookup); objectstack#7807 (subtree semantics of the recipient type).\n- **New.**\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_"
