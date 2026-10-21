@@ -2,8 +2,8 @@
   "number": 24948,
   "kind": "issue",
   "title": "[Decision] Deleting an organization once organization_id is NOT NULL: refuse while it still owns records, or delete them with it",
-  "state": "open",
-  "state_reason": null,
+  "state": "closed",
+  "state_reason": "completed",
   "draft": null,
   "author": {
     "login": "objectstack-fleet[bot]",
@@ -21,11 +21,15 @@
   "milestone": null,
   "type": null,
   "created_at": "2026-10-20T17:23:14Z",
-  "updated_at": "2026-10-21T01:48:33Z",
-  "closed_at": null,
-  "closed_by": null,
+  "updated_at": "2026-10-21T06:37:44Z",
+  "closed_at": "2026-10-21T06:35:19Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
   "merged_at": null,
-  "comments": 9,
+  "comments": 16,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/24948",
   "body": "Ruled: 6303709566 · letter B · 2026-10-20T23:07Z\n\n**一句话问题：** 删除一个组织时，它名下还有业务数据，该怎么办？是拒绝删除并告诉管理员每张表还剩多少行，还是连数据一起删掉？\n\n**背景：**\n- 删除组织（`POST /auth/organization/delete`）时，引擎的级联逻辑会把这个组织名下每一行的 `organization_id` 设为空（lookup 字段默认 `set_null`）。按 ADR-0131 D1，`organization_id` 不允许为空。所以这一步要么失败，要么留下无主数据。\n- 7b-0（PR #24940）让新建表的租户列从建表起就不可为空，设空这一步因此直接报错：删除组织返回 500。两个 dogfood 测试 `organization-delete-federated-fixture` 和 `org-record-admin-reach` 复现了这个问题，ablation 也确认了。\n- 已发布的 18.0.0 上的影响，见下面\"前提\"。\n- 读到的既有裁决：ADR-0131 D1（租户列不可为空）、ADR-0131 §8 每张卡都要遵守的规则\"除 D10 fate 2 外不删除任何行\"。删除组织时数据怎么处理，没有任何 ADR 裁决过。\n\nGoverning text: ADR-0131 D1 (no nullable tenant column) rules out option C. The card-wide rule in ADR-0131 §8, \"no deletion except D10 fate 2 after a verified rewrite\", bears on option A. No ADR decides what deleting an organization does to the rows it owns, so this is a decision, not execution.\n\n**前提（带复核命令）：**\n- 级联逻辑在 main 上：`git grep -n \"set_null\" origin/main -- packages/objectql/src/engine.ts`，见 19110-19123 行（lookup 默认 `set_null`）。\n- 在 main 上实测（不含 7b-0）：**测量中**，由 7b-0 的开发者执行，结果补在本卡评论里。预期：\n  - 跑过仪式的 18.0.0 库：仪式的 `not-null` 步骤已经把租户列设为 NOT NULL，所以删除组织同样失败，这是已发布 18.0.0 上的缺陷；\n  - 用 18.0.0 新建的库：租户列可为空，删除组织会把数据悄悄设为空，留下无主数据。\n\n**选项：**\n\n| 选项 | 做什么 | 客户能感知的后果 | 工作量 |\n|---|---|---|---|\n| **B（推荐）** | 组织名下还有业务数据时拒绝删除，返回 409，并列出每张表剩多少行。组织自身的成员结构（成员、邀请、团队等）由删除流程自己清掉 | 管理员要先删除或迁走这个组织的业务数据，才能删掉组织。不会丢数据，也不会留下无主数据 | 中：改 objectql 的级联判断，加一条拒绝及其测试 |\n| A | 删除组织时，把它名下所有表的数据一起删除 | 一键清空一个组织，删了就找不回来，误删代价很大 | 中：同样改级联，但它会删数据，违反 ADR-0131 §8 的卡片规则，需要先修订 ADR |\n| C | 保持现状，设为空。对这些表撤回 D1 | 留下谁都看不到的无主数据；而且在租户列已不可为空的库上照样会失败 | 小，但违反 ADR-0131 D1 |\n\n**业务含义：**\n- **B** 像注销公司前，必须先把公司名下的资产清点、处置完；\n- **A** 像一键注销，连资产一起销毁；\n- **C** 是公司没了、资产却没人认领。\n\nos-decision-facets\n- ① 项目长远合理性：B 守住 D1，也守住\"不删数据\"的规则，以后要加\"连数据一起删\"可以单独做成一个显式命令；A 把不可逆删除藏进了一个常用按钮；C 与 ADR 冲突。\n- ② 实际业务拉动：今天没有客户在用\"删除有数据的组织\"。这个按钮目前要么报 500，要么悄悄留下无主数据，两种都不能交付。\n- ③ 防 AI 犯错：B 出错的后果是拒绝删除，A 出错的后果是删掉数据。级联逻辑要碰所有带组织的表，越保守越好。\n- ④ 创业阶段不扩散：B 只加一条拒绝，不新增任何删除路径。\nPrior rulings read: organization delete,cascade,set_null,orphan,offboard,restrict,deletebehavior → 5 hits; ADR-0029 D9.7, ADR-0035 Decision §3, ADR-0058 D7, ADR-0067 D2, ADR-0070 D6 (none decides it); plus ADR-0131 D1 and §8; thread: 7b-0's report on #24583; repo: objectstack-ai/objectstack\n\n**推荐：** B。只看①时选 B；②③④ 都不翻转。回退方案是 A，前提是先修订 ADR-0131 §8 的规则。\n- 置信缺口：\n  - 删除时组织必然拥有哪些行（成员、邀请、团队、岗位等），认证库是否会先自己删掉它们，还在测量。B 的\"组织自身结构由删除流程清掉\"具体包括哪些表，取决于这个结果。\n  - 18.0.0 上的影响也还在测量。\n\n**会不会留下迁移债：** 不会。B 不改表结构，也不改已有数据，只是把\"设为空\"换成\"拒绝\"。已经被设为空的旧数据，由迁移仪式或 #24919 处理。\n\n**裁后执行：**\n- 选 **B**：修复单独做成一个 PR 先合入 main，作为 18.0.x 补丁，因为已发布的 18.0.0 就受影响（见前提）。修复范围是 objectql 的级联判断及其测试。7b-0 再合 main，继承这个修复，两个 dogfood 测试转绿。\n- 选 **A**：先开一个 Tier H 的 ADR-0131 修订 PR，再实现。\n- 选 **C**：先修订 ADR-0131 D1，7b-0 不改级联。\n\nBlocks: #24940 (7b-0) and with it 7b-1+7b-2 (#24893), so step 7 (#24583) cannot close until this is answered."

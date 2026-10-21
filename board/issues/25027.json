@@ -2,7 +2,7 @@
   "number": 25027,
   "kind": "pull_request",
   "title": "docs(qa): 18.0 sweep anchor round 19 — RUNNER's connector entry names the own-port boot by what it is, and the packaged-automation board's inventory clause judges the switch",
-  "state": "open",
+  "state": "closed",
   "state_reason": null,
   "draft": false,
   "author": {
@@ -21,10 +21,14 @@
   "milestone": null,
   "type": null,
   "created_at": "2026-10-21T01:50:57Z",
-  "updated_at": "2026-10-21T02:02:59Z",
-  "closed_at": null,
-  "closed_by": null,
-  "merged_at": null,
+  "updated_at": "2026-10-21T02:52:36Z",
+  "closed_at": "2026-10-21T02:52:34Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": "2026-10-21T02:52:34Z",
   "comments": 1,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/pull/25027",

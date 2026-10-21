@@ -2,7 +2,7 @@
   "number": 25024,
   "kind": "pull_request",
   "title": "feat(service-messaging,spec,cli)!: retire sys_notification_subscription — no reader ever expanded a subscription (ADR-0030 L3, amended)",
-  "state": "open",
+  "state": "closed",
   "state_reason": null,
   "draft": false,
   "author": {
@@ -24,10 +24,14 @@
   "milestone": null,
   "type": null,
   "created_at": "2026-10-21T01:26:55Z",
-  "updated_at": "2026-10-21T02:03:00Z",
-  "closed_at": null,
-  "closed_by": null,
-  "merged_at": null,
+  "updated_at": "2026-10-21T05:06:35Z",
+  "closed_at": "2026-10-21T05:06:33Z",
+  "closed_by": {
+    "login": "os-zhuang",
+    "id": 277994282,
+    "type": "User"
+  },
+  "merged_at": "2026-10-21T05:06:33Z",
   "comments": 2,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/pull/25024",

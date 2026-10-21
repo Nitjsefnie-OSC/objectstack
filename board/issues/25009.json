@@ -2,8 +2,8 @@
   "number": 25009,
   "kind": "issue",
   "title": "objectql: the ReadableIds leaf composes for a delegated (on-behalf-of) caller, with the delegator intersection (ADR-0139 D5.1's exit), and ADR-0139 records O5 answered",
-  "state": "open",
-  "state_reason": null,
+  "state": "closed",
+  "state_reason": "completed",
   "draft": null,
   "author": {
     "login": "objectstack-fleet[bot]",
@@ -13,7 +13,6 @@
   "labels": [
     "area:access",
     "domain:engine",
-    "pm:dispatched",
     "priority:p1"
   ],
   "assignees": [
@@ -22,11 +21,15 @@
   "milestone": null,
   "type": null,
   "created_at": "2026-10-21T00:10:31Z",
-  "updated_at": "2026-10-21T02:23:12Z",
-  "closed_at": null,
-  "closed_by": null,
+  "updated_at": "2026-10-21T04:40:13Z",
+  "closed_at": "2026-10-21T04:38:18Z",
+  "closed_by": {
+    "login": "os-zhuang",
+    "id": 277994282,
+    "type": "User"
+  },
   "merged_at": null,
-  "comments": 2,
+  "comments": 6,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/25009",
   "body": "Filing gate **③ a task the maintainer set**: engine card (b)(i) of the maintainer's ruling B on #24932 (`6303721609`, batch #379 item 3). The ruling directs the `domain:services` seat to file this card and the sibling card before #24932's plugin-security switch. Filed by `domain:services` seat 2 (seat post #21118, `os-support-ai`, session `session_01UmqzD97e14iws6hmVhgZ5y`). `domain:engine` is the ruling's word; `priority:p1` and `area:access` follow #24932. ⛔ Not a claim.\n\n**Reader (who acts):** the `domain:engine` seat claims and dispatches it. #24932 is `Blocked-by:` this card.\n\n## The ruling, as it binds this card (verbatim from `6303721609`)\n\n- \"O5 is answered yes, in the end-state form. `controlled_by_parent` becomes the seventh consumer of the engine-internal semi-join leaf, once for every shape: the engine first composes the leaf for a delegated (on-behalf-of) caller (the exit condition D5.1 itself names) and for a nested master chain; then plugin-security switches the caller, the delegator intersection and `getReadFilter` in one change, and the id-list pre-scan retires.\"\n- \"Order. … (b) Two `domain:engine` cards: delegated composition and nested composition, with the ADR-0139 revision in the first PR (Tier H, the maintainer's approval) answering O5 and amending D5.1.\"\n\n## What this card does\n\n- **The engine composes the ReadableIds leaf for a delegated caller,** intersected with the delegator's own scope (ADR-0139 D10), instead of refusing. Measured on `origin/main` at the time of the dev report on #24932 (`6298477402`): the engine refuses a delegated caller at the leaf (`engine.ts` ~`:6185`, ADR-0139 D5.1) with `500 INTERNAL_ERROR`, and it composes for the outer caller only, so the delegator half cannot be spelled. Re-measure on current `main` first.\n- **The ADR-0139 revision rides this PR (Tier H, left as a draft for the maintainer):** O5 answered yes (`controlled_by_parent` is the seventh consumer), and D5.1 amended to the composition this card builds.\n- **Sub-question the ruling does not name; measure and report:** the dev report also read, from source only, that a federated master (`engine.ts` ~`:6202`) and a master narrowed by an object-scoped middleware (~`:6196`) are refused `500` at the leaf. If either blocks \"once for every shape\", report it as a fork on this card rather than choosing.\n\n## Pins\n\nUnder the lane's commitment, with ablation:\n- a delegated read composes and returns exactly the rows the delegator intersection allows;\n- the closed doors stay closed.\n\n## Readings it builds on\n\nThe #24932 dev report `6298477402` (M2 and the three measured differences). ADR-0139 D5.1, D6, D10 and O5. ADR-0055 §2.\n\n## Dedupe\n\nSemantic search on objectstack-ai/objectstack, open and closed, for \"ReadableIds leaf delegated caller on-behalf-of compose ADR-0139 D5.1 nested chain\" (run just after filing): this card, its sibling, and the closed ADR-0139 E1 / E2 / E3+E4 / E5 / E7 cards (#22787, #22861, #23639, #23673, #23732, #23857) that built the leaf. None composes for a delegated caller or a nested chain. **New.**\n"

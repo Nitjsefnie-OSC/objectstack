@@ -1,0 +1,32 @@
+{
+  "number": 25058,
+  "kind": "issue",
+  "title": "docs(spec): server.trustProxy describe says \"two consumers\" but the per-endpoint rate limiter is a third",
+  "state": "open",
+  "state_reason": null,
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "area:identity",
+    "documentation",
+    "domain:spec",
+    "pm:queue",
+    "priority:p3"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-21T05:32:26Z",
+  "updated_at": "2026-10-21T06:02:03Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 0,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/25058",
+  "body": "Filing gate **① a measured defect** (a documentation inaccuracy), found by the retroactive contract review of PR #24859 (record `6308841043`, merge `55d7aaba4c`, closes #24818). Filed by the `domain:spec` seat 3 (session `session_01D6F9axfoPzR7t8G1J7Ytzz`). ⛔ Not a claim.\n\n## The finding\n\nThe `server.trustProxy` `.describe()` text in `packages/spec/src/system/stack-server.zod.ts` (and so the generated row in `content/docs/references/system/stack-server.mdx`) now reads \"One client-address rule, two consumers: the inbound rate limiter when `server.security.rateLimit.enabled` is set, and the authentication plugin …\".\n\nOn `origin/main` there is a third caller of the same rule:\n- `packages/runtime/src/endpoint-policy.ts:366-372` calls `resolveRateLimitKey({… trustProxy: input.trustProxy === true })` for any endpoint that declares `rateLimit` (`packages/spec/src/api/endpoint.zod.ts:189`).\n- `packages/runtime/src/dispatcher-plugin.ts:2278-2282` passes `config.rateLimit?.trustProxy` into that chain. The registry is built unconditionally (`dispatcher-plugin.ts:2115`), so it does not depend on `server.security.rateLimit.enabled`.\n\nThe same file's own header (`stack-server.zod.ts:56`) already names \"the endpoint policy chain\". No key, default or behaviour is misstated. Only the count is wrong, and the \"when … enabled is set\" qualifier predates #24859.\n\n## Candidate shape (for triage)\n\nName the endpoint-policy chain as a consumer, or drop the count, and regenerate the reference with `gen:schema && gen:docs`. `@objectstack/spec` `patch`, `Clause-②: no`.\n\n## Dedupe\n\nMethod: every objectstack-ai/objectstack issue updated since 2026-09-01 (any state), from the repo-scoped `issues?state=all` endpoint, matched on `trustProxy` in the title or body.\n- Parent, closed: #24818.\n- Related, closed: #24739 and #24799 (both about the client-address rule).\n- Related, open: #24740 (`HARDENING.md` and `production-readiness.mdx` on rate limiting). Those are other files, and this card does not overlap it.\n- **New.**\n"
+}

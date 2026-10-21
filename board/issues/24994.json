@@ -2,8 +2,8 @@
   "number": 24994,
   "kind": "issue",
   "title": "spec: `WebhookSchema` marks `secret` and `headers` as credential fields, and the kernel registry derives the meta read-door redaction for any marked type — `webhook` first, with a ratchet for unmarked credential-named fields (ruling B+ on #24966)",
-  "state": "open",
-  "state_reason": null,
+  "state": "closed",
+  "state_reason": "completed",
   "draft": null,
   "author": {
     "login": "objectstack-fleet[bot]",
@@ -14,7 +14,6 @@
     "area:access",
     "bug",
     "domain:spec",
-    "pm:dispatched",
     "priority:p1",
     "security",
     "target:18"
@@ -25,11 +24,15 @@
   "milestone": null,
   "type": null,
   "created_at": "2026-10-20T22:56:29Z",
-  "updated_at": "2026-10-20T23:51:26Z",
-  "closed_at": null,
-  "closed_by": null,
+  "updated_at": "2026-10-21T04:33:32Z",
+  "closed_at": "2026-10-21T04:31:15Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
   "merged_at": null,
-  "comments": 1,
+  "comments": 4,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/24994",
   "body": "Ruled: 6304303975 · letter B+ · 2026-10-20T23:43Z\n\nFiling gate ③ — the maintainer's ruling **B+** on #24966 (batch #379 item 2; first 「同意」 to B, then 「B+ 可换……是不是长期更合理的方案。类似的问题都可以这样处理。」, recorded as 6304303975), filed by the director seat (summon #45 continuation 2, `session_01Lg6GQ4xjqmvEzYv78d6H7i`) and re-scoped to B+ in the same act. ⛔ Not a claim. **Disclosure:** the maintainer's ruling on #9387 (`5323310017`) applies to this card, its PR and every comment: location, rule and abstract reach only; ⛔ no probe, reproduction or served value.\n\n**Reader who acts:** the `domain:spec` seat. One PR (M), `@objectstack/spec` patch changeset, `Clause-②: no (narrowing)` (the `/meta` read doors return less for `webhook`), contract review at `CONTRACT_REVIEW_TIER`. #24966 is `pm:blocked` on this card and closes when it lands.\n\n**Dedupe:** the 19 open `domain:spec` cards' titles read in this act: 0 name a webhook, a redactor or a credential marker; #24966's own dedupe (`webhook redactor`, `metadata-type redaction`, `secret-bearing headers`, `meta read door`) found only itself.\n\n## What the ruling binds (origin/main `e4d604efd39f`)\n\n**The shape: declare the fact on the schema, derive the behaviour once in the kernel** (the maintainer's standing word on 6304303975: 「类似的问题都可以这样处理」).\n\n1. **The marker, on the declaration.** `WebhookSchema` (`packages/spec/src/automation/webhook.zod.ts:136`) marks `secret` and `headers` as credential fields with a schema-level marker in the repo's existing zod `.meta({ … })` convention (the marker's key and vocabulary are the spec seat's to name; the shape distinguishes a credential VALUE from a credential MAP, so `headers` is marked as a whole map). Nothing else about the schema changes.\n2. **The derivation, once, in the registry.** `getMetadataTypeRedactor(type)` in `packages/spec/src/kernel/metadata-type-redaction.ts` (:126 today: extra registration, then built-in) gains a third resolution: a redactor DERIVED from the type's registered schema (`getMetadataTypeSchema(type)`, `metadata-type-schemas.ts:299`). It walks the declared shape, drops every marked field (not masked) and serves its cleared form (an empty string for a value, an empty map for a map), and names them in `redactedKeys`. Pure, no I/O, as the `MetadataTypeRedactor` contract requires. Any metadata type that marks a field is redacted on every meta read door with nothing else to write; `webhook` is the first type served this way.\n3. **The guard.** A spec ratchet test reads every registered metadata-type schema (`listMetadataTypeSchemaTypes()`) and fails when a field whose name or description reads as a credential (secret, password, token, signing, api key, credential) carries no marker and sits on no explicit allow-list — the fail-closed half the datasource module asks for (`datasource-credential-redaction.ts:40–49`: a positive marker under-redacts when forgotten).\n4. **Precedence and the two legacy types.** An explicit registration or built-in still wins over the derivation; `datasource` (schema-reading plus URL scrubbing) and `flow` (nested regions, write-path strip) keep their explicit redactors and are NOT migrated.\n5. **Unchanged from B:** the write-path carry-forward (a save that omits the two fields keeps the stored values) is accepted and keyed, as today, on \"a redactor resolves for the type\"; the dispatcher's declared-webhook source keeps carrying both credentials (delivery signing unaffected); who may reach a meta read door does not change; plugin-webhooks registers nothing.\n\n## What done looks like\n\n- `WebhookSchema.secret` and `.headers` carry the marker; a spec unit test shows the derived `webhook` redactor drops both, serves the cleared forms, leaves every other field intact, and that an unmarked type derives no redactor (`undefined`, \"serve as is\").\n- The ratchet: a marked field passes; a credential-named field without a marker reds the suite; the allow-list is explicit and empty or near-empty.\n- Door-level pins in the dogfood suite, in BOTH compositions (with and without plugin-webhooks): the meta list (both spellings), item, layered-view and published reads, and the stored-row data door with its history twin, withhold both fields; ablation-verified (remove the marker, the pin reads red).\n- A save round trip of the served form leaves the stored values intact (the carry-forward pin).\n- `@objectstack/spec` patch changeset, `Clause-②: no (narrowing)`; api-surface regenerated for any exported helper.\n- ⛔ No probe output, request shape or served value in the PR, its tests or their names; the pins assert absence by rule name.\n\n## Related\n\n#24966 (the ruled card: dev report `6301197652`, decision `6301250022`, ruling 6303716122 and its amendment 6304303975) · #8300 (`datasource` built-in precedent) · #9387 (disclosure) · #24900 (source report).\n"

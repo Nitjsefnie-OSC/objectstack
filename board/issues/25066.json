@@ -1,0 +1,37 @@
+{
+  "number": 25066,
+  "kind": "pull_request",
+  "title": "fix(plugin-security)!: an update of a controlled_by_parent detail also asks for edit access on the master its body names (ADR-0055 §3)",
+  "state": "closed",
+  "state_reason": null,
+  "draft": false,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "documentation",
+    "size/l",
+    "tests",
+    "tooling"
+  ],
+  "assignees": [
+    "os-justin"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-21T06:33:10Z",
+  "updated_at": "2026-10-21T08:02:15Z",
+  "closed_at": "2026-10-21T08:02:13Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": "2026-10-21T08:02:13Z",
+  "comments": 3,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/pull/25066",
+  "body": "Fixes #25044\n\nClause-②: no (narrowing)\n\n## What changed\n\nADR-0055 §3 requires edit access to the master for every write to a `controlled_by_parent` detail, and it reads a create's master from the master id in the incoming body. A write can involve more than one master. For one shape of write, the master-detail write gate (`assertControlledByParentWrite`, step 2.8) asked the master-edit question of only one of the masters the write involves. It now asks every one of them.\n\n- `packages/plugins/plugin-security/src/security-plugin.ts`, inside `assertControlledByParentWrite` only. The gate first asks about the master or masters it already asked about, unchanged. Then it runs the same chain walk on the master id the write's body names, unless that master was already asked. The walk is `assertControlledByParentChainEditable`, the one walk PR #25042 extracted; no second copy exists.\n  - A refusal uses the by-id leg's own envelope: `403 PERMISSION_DENIED`, naming the caller's detail and operation, with its leg recorded. It is thrown before the write runs, so nothing is written.\n  - An insert's master already is its body's, so it is asked once.\n  - A write that selects no row involves no master and is not refused.\n  - No master scope is composed into any write. `computeControlledByParentFilter`, `packages/objectql/**` and `packages/spec/**` are untouched.\n- `packages/plugins/plugin-security/src/controlled-by-parent-every-master-edit.test.ts` (new): 17 cases on a real stack. That is `ObjectQL` over better-sqlite3, the real `SecurityPlugin`, the real sharing service and middleware, and contexts built by `resolveAuthzContext` and `assembleExecutionContext`.\n- `.changeset/25044-cbp-every-master-edit.md`: `@objectstack/plugin-security` `minor`. It is BREAKING under the launch-window convention for an accept-set narrowing. It carries the `Clause-②` line and the ADR-0087 disposition `not-required (no-migration-prescription)`.\n\n## Reach\n\nReach is stated abstractly here, because the disclosure ruling recorded on #9387 applies. The reading was re-measured on a real `ObjectQL` + `SqlDriver` + `SecurityPlugin`, for a member and for an organization admin. The write landed on `origin/main` `eddffc3390` (before PR #25042) and again on PR #25042's head `033fc75a09` (after it). The probes were throwaway and are not committed. The detail is held privately.\n\n## Verification\n\nEvery run below is on this branch's head `a447bfdb8f`, after the final commit, unless it is marked otherwise. Each one ran under the shared verify lock.\n\n- **Build.** The dependency closure was built with `pnpm --filter '@objectstack/dogfood^...' build` (a superset of `@objectstack/plugin-security^...`, plugin-security itself included). It exited 0.\n- **The new pins.** `controlled-by-parent-every-master-edit.test.ts` passes 17/17, beside PR #25042's `controlled-by-parent-write-shape-master-edit.test.ts` (32/32 for the two files together).\n- **The package.** `pnpm --filter @objectstack/plugin-security exec vitest run`: Test Files 202 passed (202), Tests 4156 passed and 45 skipped (4201). `pnpm --filter @objectstack/plugin-security typecheck` exited 0. That covers `tsc` on both programs and `check:test-typecheck`, and the new test file is in the `tsconfig.test.json` program (`--listFiles`, 1 hit).\n- **Dogfood battery** (`pnpm --filter @objectstack/dogfood test`, no shard and no path, owed by the `!` title). The lock's verdict was command-exit 0. Test Files: 285 passed, 3 skipped (288). Tests: 2375 passed, 18 skipped (2393).\n- **Derived gate families.** `node scripts/pm/dispatch-gates.mjs --commands --repo objectstack-ai/objectstack` derives 69 families. All 69 ran, and each exit code was captured before any pipe. `--ran` reports: 69 run, 0 NOT-MEASURED, 0 UNRUN.\n- **Ablation**, one leg per pinned behaviour. The fix was committed first. Each leg is a mutation made through `scripts/ablation-replace.mjs`, where the anchor must hit and the blob must change. Each restore is `git checkout HEAD --`, proven by blob equality with `HEAD` and an empty `git diff HEAD`. The subject is imported as `./security-plugin.js` from source, so no `dist/` sits on the path. The result:\n\n  | leg | mutation | went red |\n  |---|---|---|\n  | L1 | drop the new question after the by-id leg | the refusal pins (7 cases) and the count pin |\n  | L2 | drop the new question after the predicate leg | the refusal pins (7) and the count pin |\n  | L3 | ask the body's master instead of the stored one | the stored-master pin and the count pin |\n  | L4 | a blanket refusal in place of the walk | the lands-as-it-did pins (7), and the refusal and stored-master pins on the envelope |\n  | L5 | drop the no-row guard | the no-row pin |\n  | L6 | drop the already-asked skip | the count pin (an insert's master asked twice) |\n\n  The first L4 attempt was refused by the tool: its replacement contained its anchor, so the anchor count did not move. It measured nothing and was rerun with a non-overlapping anchor. The unmutated control passed 17/17. The final tree is byte-identical to `HEAD`.\n- **Base.** The branch is `main` at `b2890909aa` (PR #25042 landed) plus this change, merged with `origin/main` `72518d20f5` before the runs above. Since then `main` has gained one commit (`4bf079c693`, plugin-auth), which is disjoint from this diff.\n\n## Acceptance notes\n\n- Two adjacent readings in the same gate family turned up while measuring. Neither is changed here. Both go to the seat privately, for filing under the same ruling.\n- The question is asked of what the body names before the engine's own field strips run. On a reference the engine would strip from the write, a body naming a master the caller may not edit is therefore refused, where before it was dropped. That fails closed. Mirroring the engine's strip rules in the gate would make a second copy of them.\n- The new walk runs on the master id the body names, as the insert's walk already does.\n\n---\n\n**Seat's append** (`domain:services` seat 1, from the dev's patch-round report `6310152347` on #25044; the dev writes its PR body once):\n\n- Patch round 1 (`4b4cfed7af`): only the changeset headline changes, narrowed to the update shape this diff covers, per contract review `6310100720` ③.1. No code or test line moved.\n- `git diff --stat a447bfdb8f 4b4cfed7af` touches only `.changeset/25044-cbp-every-master-edit.md` (+1/−1). Code is byte-identical, so the dogfood battery and the package and gate runs at `a447bfdb8f` stand.\n\n---\n\n_Generated by [Claude Code](https://claude.ai/code/session_011TdZ8GjixNZFLz1xJD9zzK)_"
+}

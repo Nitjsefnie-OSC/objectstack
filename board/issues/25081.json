@@ -1,0 +1,33 @@
+{
+  "number": 25081,
+  "kind": "pull_request",
+  "title": "fix(platform-objects): Create User result dialog reads true for a typed password",
+  "state": "open",
+  "state_reason": null,
+  "draft": false,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "documentation",
+    "size/m",
+    "tests",
+    "tooling"
+  ],
+  "assignees": [
+    "os-project-manager"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-21T07:47:05Z",
+  "updated_at": "2026-10-21T08:20:26Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 3,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/pull/25081",
+  "body": "Fixes #24936\n\nClause-②: no (text only: the create-user result dialog's sentence and button; no param, response, status, outcome or export moves)\n\n## What changed\n\n`sys_user.create_user`'s result dialog said \"Copy the temporary password now — it is shown only once and never stored.\" with an \"I have saved this password\" button. It said that in both outcomes. The endpoint (`plugin-auth` `admin-user-endpoints.ts`, `...(resolved.generated ? { temporaryPassword } : {})`) returns `temporaryPassword` only when it generated one. The dialog skips a field whose path is absent from the response, so after a typed password it showed the email alone and still asked the admin to save a password.\n\n- `packages/platform-objects/src/identity/sys-user.object.ts`: the `create_user` `resultDialog` now reads **\"If a temporary password was generated, copy it now — it is shown only once and never stored.\"** with a **\"Done\"** button. That is the same sentence and button as `set_user_password` in the same file, whose dialog has the same two outcomes. The title, params, `bodyExtra`, handler, response and dialog fields are unchanged.\n- `en.objects.generated.ts`: regenerated with `node scripts/check-i18n-bundles.mjs --write` (exit 0), not edited by hand.\n- `zh-CN` / `ja-JP` / `es-ES` `objects.generated.ts`: the two hand-written leaves now reuse `set_user_password`'s existing translations (如果生成了临时密码… / 完成, 一時パスワードが生成された場合は… / 完了, Si se generó una contraseña temporal… / Hecho). The merge-mode regeneration kept them. None of these leaves has a source-hash entry.\n- New pin `packages/platform-objects/src/identity/create-user-result-dialog-copy.test.ts`. It checks the source sentence and button (the button must not mention a saved password), the three dialog fields, and, in all four locales, that the `create_user` dialog's description and button equal `set_user_password`'s.\n- Changeset: `patch` for `@objectstack/platform-objects`.\n\n## Wording choice\n\n`ActionSchema.resultDialog` has no per-outcome copy, so one sentence must hold for both outcomes. I reused `set_user_password`'s sentence and button rather than writing new copy:\n- **Real need:** the typed case shows only the email. \"Done\" claims nothing about a password, and the conditional sentence is true in both cases.\n- **Long-term fit:** one hedged sentence for the two dialogs that share this response shape. No spec key for per-outcome copy is added; that is out of scope and `domain:spec`'s.\n- **Hard for an AI to get wrong:** the pin ties both dialogs together in every locale, so they cannot drift apart without a red test.\n- **No scope growth:** text only, and the translations already exist in the catalog.\n\n## Pins and fixtures\n\n- `packages/cli/test/i18n-extract.test.ts` has its own `set_password` fixture with different text (\"…shown only once.\"). It does not quote this object and does not move.\n- `packages/spec/src/system/i18n-resolver.test.ts` has its own inline `createUser` object and inline zh-CN bundle. It imports nothing from `platform-objects` and does not move.\n- No pin in another lane moved.\n\n## Verification (head `4fdd4999b`, base `origin/main` `2b1382a5b`; `origin/main` re-fetched before opening and already merged, no new commits)\n\n- `pnpm exec turbo run build --concurrency=2` (full build, under the verify lock): VERDICT command-exit 0.\n- `pnpm --filter @objectstack/platform-objects typecheck`: exit 0.\n- `pnpm --filter @objectstack/platform-objects test`: exit 0, Test Files 84 passed (84), Tests 1243 passed (1243).\n- `pnpm --filter @objectstack/core test:repo`: exit 0, Test Files 6 passed (6), Tests 82 passed (82).\n- `node scripts/check-i18n-bundles.mjs --write`: exit 0 after building its prerequisite closure. The first run exited 3 (CLI not built).\n- Ablation 1 (source): `scripts/ablation-replace.mjs` put the old sentence and button back in `sys-user.object.ts` (anchor 1 → 0, blob `bc6b1792` → `3f5199d7`). 2 of the 4 pin tests went red (\"the source sentence is conditional…\" and \"the button claims no saved password…\"). Restored: blob == HEAD `bc6b1792`, `git diff HEAD` empty.\n- Ablation 2 (locale): put the old zh-CN leaves back (blob `c6d8953c` → `5326f33a`). 1 of 4 went red (\"every locale says the same thing as set_user_password…\"). Restored: blob == HEAD, `git diff HEAD` empty.\n- Gates: `node scripts/pm/dispatch-gates.mjs --commands --repo objectstack-ai/objectstack` derived 66 families. All 66 were run with each exit code captured before any pipe. 65 exited 0 on the first run. `pnpm check:dual-build-cjs-loads` exited 3 (PREREQUISITE NOT MET, no `dist/`), was re-run after the full build, and exited 0. `--ran` reconciliation: \"66 derived famil(ies) accounted for — 66 run, 0 NOT-MEASURED (a DERIVED zero — all 66 recorded an exit code and none of them is 3)\".\n\n## Acceptance notes\n\n- I did not check objectui's dialog renderer locally, because objectui is not in this container. That it skips an absent `temporaryPassword` comes from the card's seat review and the existing code comment on the `fields` list. The renderer is unchanged here.\n\n---\n_Generated by [Claude Code](https://claude.ai/code/session_01MZw2Leqg5M8ZH9pKpMh9jS)_\n"
+}

@@ -1,0 +1,37 @@
+{
+  "number": 25067,
+  "kind": "pull_request",
+  "title": "fix(lint)!: refuse a page component whose properties is present but not an object, nested ones included",
+  "state": "closed",
+  "state_reason": null,
+  "draft": false,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "documentation",
+    "size/m",
+    "tests",
+    "tooling"
+  ],
+  "assignees": [
+    "baozhoutao"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-21T06:38:11Z",
+  "updated_at": "2026-10-21T07:44:22Z",
+  "closed_at": "2026-10-21T07:44:20Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": "2026-10-21T07:44:20Z",
+  "comments": 2,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/pull/25067",
+  "body": "Closes #24991\n\nClause-②: no (narrowing: `os lint --strict` refuses a nested page component whose `properties` is `null` or an array)\n\n## What\n\n`validateComponentProps` (`packages/lint/src/validate-component-props.ts`) now refuses a walked page component, top-level or nested, whose `properties` is present but not a record (`null`, an array, a scalar). The refusal is one `component-props-invalid` error at the node's own `properties` path, for example `pages[0].regions[0].components[0].properties.children[0].properties`. The message names what was received.\n\n- It applies whatever the node's `type`, registered or not: the bag's shape is the node's contract, not a props schema's. An unregistered type with an object bag is still skipped, as before.\n- No per-prop \"missing required\" verdicts are added beside it. A malformed bag yields one finding, not one per required key.\n- An absent bag keeps its earlier verdict (judged as `{}`), unchanged from the absent-bag fix in #22212.\n- The binding verdict for data-source-bound elements is independent of the bag and still fires alongside.\n\n## Why\n\n`PageComponentSchema` declares `properties` a record, but that parse only reaches top-level components (`regions[].components[]`, `slots.*`). A nested component (in `children`, `items[].children` or `footer`) sits in a `z.array(z.unknown())` slot that no parse judges. The rule set `props` to `undefined` for a non-record bag and skipped the node, so a nested `record:related_list` with `properties: null` or `[]`, or a nested `object-metric` with `properties: []`, passed `os lint --strict`, `os validate` and `tsc`. The node published with none of its props.\n\n## No duplicate with the schema's own top-level refusal\n\nAt both doors (CLI and the runtime page save door), the page parse runs before any authoring rule and stops on its own refusal. So a top-level non-record bag is reported once, by the parse (\"expected record\"), and this rule's finding never appears beside it. On a top-level node the new branch only answers a caller that hands the rule an unparsed stack, and it gives the same verdict. A test pins both halves: `PageSchema.safeParse` refuses the top-level bag at `regions.0.components.0.properties` and accepts the nested one, which is the gap.\n\n## Tests\n\nOn head `88d3dd0572` (the lint source is byte-identical to `c444510a55`, where the package suite ran; the later merge brought no `packages/lint` or `packages/spec` change):\n\n- `pnpm --filter @objectstack/lint test`: 153 files passed, 7080 tests passed, 5 skipped.\n- `pnpm --filter @objectstack/lint typecheck` (with `check:test-typecheck`): exit 0.\n- New cases cover five walks (container `children`, tab `items[].children`, accordion `items[].children`, card `footer`, a slot component's `children`) times three bags (`null`, `[]`, `'x'`). Each draws exactly one `component-props-invalid` at the node's `properties` path. Each walk also has two controls: a valid bag stays silent, and an absent bag keeps the earlier verdict. Further cases: the `object-metric` `[]` probe, an unregistered type (refused, plus a silent object-bag control), a data-source-bound element (bag plus binding verdict, nothing more), the top-level parse/no-duplicate pin, and pipeline gating at `error` for `validate`, `lint` and `build`.\n- The old pin \"a present bag that is not an object is still left to the parse that owns its shape\" is removed. It pinned exactly the skip this PR closes.\n\nGates: `node scripts/pm/dispatch-gates.mjs --commands` derived 65 families on `c444510a55`. All 65 ran, and `--ran` reconciled them with exit codes recorded: 65 run, 0 NOT-MEASURED (a derived zero). The `--commands` derivation on `88d3dd0572` is byte-identical. On `88d3dd0572` I reran `check-adr-0087-registration --base origin/main`, `check-changeset-no-major --base origin/main`, `check-empty-changeset --base origin/main` and `check:nul-bytes`, all exit 0. `check:dts-closure` and `check:dual-build-cjs-loads` exited non-zero in the first sweep. That sweep ran while I was rebuilding shared dists with `OS_SKIP_DTS=1` for the producer measurement, so the dists were mid-rebuild. Both reran clean (exit 0) once that build finished, with no source change between the two runs.\n\n## Producers measured\n\nI ran the rule over every in-repo example stack (normalized, through `validateComponentProps`) on `c444510a55`:\n\n| stack | pages | component-props findings | non-record bag findings |\n|---|---|---|---|\n| `examples/app-crm` | 1 | 0 | 0 |\n| `examples/app-multi-package` | 0 | 0 | 0 |\n| `examples/app-showcase` | 29 | 0 | 0 |\n| `examples/app-todo` | 0 | 0 | 0 |\n\nPositive control: I planted a nested `record:related_list` with `properties: null` in memory into the showcase's `showcase_component_gallery` page. It drew exactly 1 finding at `pages[2].regions[0].components[1].properties.children[0].properties`. A static grep of `examples/**` and the page sources for a literal `properties: null` or `properties: []` also returns zero hits. There are no in-repo producers to fix.\n\n## Changeset\n\n`.changeset/24991-nested-props-non-record.md`: `@objectstack/lint` minor, with a BREAKING section (what moves at `os build` / `os validate` / `os lint` and the page save door, the remedy, what is unchanged). It carries the claim's `Clause-②` line. The ADR-0087 disposition is `not-required (no-migration-prescription)`: no authorable key, spelling, export or stored shape moves. Stored pages are not converted and keep loading until their next save, and the repair (restoring the lost props) is not derivable by a ledger entry. `check-adr-0087-registration` accepts it.\n\n## Acceptance notes\n\n- No governed surface is touched: the diff is `packages/lint/src/validate-component-props.ts`, its test and one changeset.\n- No open PR touches `validate-component-props.ts`. I checked the files of all 11 open PRs before opening this one.\n- CI owns the repo-wide `pnpm lint` and the full battery. This PR did not run them locally.\n\n---\n_Generated by [Claude Code](https://claude.ai/code/session_01D6F9axfoPzR7t8G1J7Ytzz)_\n"
+}

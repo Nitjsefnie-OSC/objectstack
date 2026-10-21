@@ -1,0 +1,32 @@
+{
+  "number": 25059,
+  "kind": "issue",
+  "title": "fix(plugin-auth): an organization-delete door lookup that throws hands the delete to better-auth uncounted, so a driver without transactions keeps a partial delete",
+  "state": "open",
+  "state_reason": null,
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "area:access",
+    "bug",
+    "domain:services",
+    "pm:queue",
+    "priority:p3"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-21T05:42:23Z",
+  "updated_at": "2026-10-21T06:01:37Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 0,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/25059",
+  "body": "Filing gate **③**: a finding from the #24948 fix (PR #25016). The seat's contract review recorded it as S1 and S2 at `139abc45a` (6308964493). Neither blocks that PR.\n- **Reader who acts:** the `plugin-auth` lane (`auth-manager.ts`, `assertOrganizationDeletable`).\n- **Dedupe:** none found (\"organization delete fall-through vendor uncounted\", \"assertOrganizationDeletable throws\").\n\n## What the review found\n\n**S1. A thrown lookup falls through uncounted.** The organization-delete door, `assertOrganizationDeletable`, runs in better-auth's global `hooks.before`. Its first block is a `try` (auth-manager.ts:8127-8158 at `139abc45a`). That block hands the request to better-auth, with no count and no refusal, in two kinds of case:\n- when it decides the vendor answers the request: no actor, no member row, the vendor would refuse anyway, or no organization row;\n- and also when one of those lookups **throws**: `resolveActor`, the caller's `sys_member` read, `hasPermission`, or the `sys_organization` read.\n\nOn the second kind, better-auth's writes run: its session write, then the member and invitation deletes. The engine's refusal at the organization row still answers inside the request's unit. On a driver that holds the unit, nothing is lost. On a driver without transactions (Turso remote), the members and invitations stay deleted while the organization row survives. That is the partial delete #24948 ruled out.\n\nThe trigger is infrastructure-only: a caller cannot make the lookup throw. The door documents the fall-through as its design (\"everything this cannot decide falls through to the vendor\"). PR #25016 already closed the same gap for the Default Organization decision (its R3: `isDefaultOrganizationTarget` now runs outside the `try`, so a failed lookup refuses).\n\n**S2. That refusal is a 500, not a 4xx.** The R3 refusal is a plain `Error` thrown from `hooks.before`, not an `APIError`, so the wire answer is a 500-class fault. It refuses and rolls back, which is the contract. The dogfood pin asserts only status 400 or above.\n\n## Fix, with pins\n1. In the `try`, let a **thrown** lookup refuse, as R3 does, and keep the fall-through only for the decidable \"the vendor answers this\" cases.\n2. Answer both refusals with a typed `APIError` (for example `SERVICE_UNAVAILABLE`), not a bare `Error`.\n3. Pin each one the way #25016's R3 pin does:\n   - make one lookup throw through a scoped middleware;\n   - record better-auth's first write (the session's active-organization update), plus the member, invitation and organization deletes;\n   - assert the typed status and that nothing was attempted;\n   - add a CONTROL: with the lookup restored, the same delete proceeds.\n\nNot a regression on released 18.0.0. On 18.0.0 the door did not exist and every organization delete went straight to the vendor."
+}

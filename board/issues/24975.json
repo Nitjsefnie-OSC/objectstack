@@ -2,7 +2,7 @@
   "number": 24975,
   "kind": "pull_request",
   "title": "docs(adr-0050): Decision 2 notes that the add-record open mode is no longer declared on addRecord",
-  "state": "open",
+  "state": "closed",
   "state_reason": null,
   "draft": false,
   "author": {
@@ -21,10 +21,14 @@
   "milestone": null,
   "type": null,
   "created_at": "2026-10-20T19:51:27Z",
-  "updated_at": "2026-10-20T19:54:42Z",
-  "closed_at": null,
-  "closed_by": null,
-  "merged_at": null,
+  "updated_at": "2026-10-21T04:45:08Z",
+  "closed_at": "2026-10-21T04:45:06Z",
+  "closed_by": {
+    "login": "os-zhuang",
+    "id": 277994282,
+    "type": "User"
+  },
+  "merged_at": "2026-10-21T04:45:06Z",
   "comments": 1,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/pull/24975",

@@ -2,8 +2,8 @@
   "number": 24964,
   "kind": "issue",
   "title": "objectql: a master-detail row whose master is missing can be neither read nor removed through any door — the admin answers 404 by id, queries omit it, and the integrity audit only reports it",
-  "state": "open",
-  "state_reason": null,
+  "state": "closed",
+  "state_reason": "completed",
   "draft": null,
   "author": {
     "login": "objectstack-fleet[bot]",
@@ -14,7 +14,6 @@
     "area:records",
     "bug",
     "domain:engine",
-    "pm:dispatched",
     "priority:p2"
   ],
   "assignees": [
@@ -23,11 +22,15 @@
   "milestone": null,
   "type": null,
   "created_at": "2026-10-20T18:52:44Z",
-  "updated_at": "2026-10-21T01:46:05Z",
-  "closed_at": null,
-  "closed_by": null,
+  "updated_at": "2026-10-21T04:41:10Z",
+  "closed_at": "2026-10-21T04:38:34Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
   "merged_at": null,
-  "comments": 3,
+  "comments": 7,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/24964",
   "body": "Filing gate **① a measured defect**, found by a `repo:hotcrm` seat 2 dispatch for objectstack-ai/hotcrm#2073 item 6 (report `6298567112` on that card; the HotCRM PR objectstack-ai/hotcrm#2211). It was measured on HotCRM `main` `b9ecab6d` with `@objectstack/*` 18.0.0, on the `@objectstack/verify` boot (SQL driver). Filed by the seat (`os-support-ai`, session `session_01KqkTQNLcxVc588eZpJmp1r`). ⛔ Not a claim. Grade: triage's.\n\n**Reader (who acts):** objectstack triage routes it. HotCRM cannot fix this app-side: removing the rows needs a door the platform does not offer (hotcrm `AGENTS.md` §3: platform tooling lives in the platform).\n\n## The finding, as measured\n\n- **How such rows exist:**\n  - Until objectstack-ai/hotcrm#2167, HotCRM's Add to Campaign actions were script bodies, which run elevated.\n  - A system write is exempt from the write-time reference check, so a typed campaign name was stored as `crm_campaign_member.crm_campaign`, naming no campaign.\n  - `crm_campaign_member` is a required master-detail child of `crm_campaign` (controlled by parent).\n  - Every released HotCRM through 5.1.2 carries that body. The 2026-10-12 hosted rig holds one such row.\n- **What an administrator can do with one today:**\n  - `GET /api/v1/data/crm_campaign_member/<id>` → `404 RECORD_NOT_FOUND`;\n  - `DELETE` → `404`;\n  - a list query leaves the row out.\n  - The row's access derives from a master that does not exist, so every user, the admin included, is refused.\n- **What it costs:**\n  - The campaign hooks that meet it (`campaign_member_metrics_refresh`, `campaign_lead_conversion_refresh`) log `Record … not found in crm_campaign` on every later write that touches it.\n  - One measured business effect: when an orphan membership sorts before a real, unsubscribed one, a sales rep's lead conversion answers ok, but the real campaign's `num_converted_leads` stays 0 (expected 1). The recompute loop throws at the missing campaign (`onError: log`) and never reaches the next one. Ordered the other way, it reads 1.\n- **Reach:** any install that ever ran a system-context writer which stored a reference to a missing master. Each such row stays until a database edit.\n\n## Seat review (source at 18.0.0, `06cab4849`)\n\n- `packages/objectql/src/engine.ts:9720` `assertReferencesResolve` returns early for an `isSystem` caller, by design (`:9855`). So such rows can be written.\n- `inspectDanglingReferences` (`engine.ts:10778`; `lifecycle-service.ts:118`) finds them.\n- The lifecycle sweep's audit says so and stops: \"stored references that resolve to nothing — reported, never rewritten\" (`packages/objectql/src/integrity/dangling-reference-audit.ts:736`).\n- No HTTP route and no CLI command lets an operator act on what the audit finds. The audit names the row; nothing can remove it.\n- **Candidate shapes, for triage:**\n  - an operator-only removal door (CLI, or an admin-only route) over `inspectDanglingReferences`' findings, dry-run by default;\n  - or a lifecycle remedy that applies the master-detail's own delete semantics to a detail whose master is gone.\n  - Either way the app keeps no tolerance for the dangling reference: HotCRM's hooks stay fail-loud (#2211 adds none).\n\n## Dedupe\n\nMethod: every objectstack-ai/objectstack issue title (every state, #1–#24950), listed through the repo-scoped `issues?state=all` endpoint (refreshed with `since=2026-10-20T17:00Z`), matched case-insensitively on `dangling|orphan|inspectDangling|missing master|resolve to nothing|unresolv… reference|isSystem … reference`. The search API is refused for this session.\n- Related, closed: #19837 (master-detail parent binding reads the header with no tenant, and the dangling-reference audit is blind to cross-org references). That card is about the audit's reach, not a remedy door.\n- Different: #21471, #21571, #21573 (orphaned columns and secrets); #23646, #23690, #24813 (orphaned metadata adoption).\n- **New.**\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_"
