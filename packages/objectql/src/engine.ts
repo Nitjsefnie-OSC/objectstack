@@ -29,7 +29,7 @@ import type { ValidateDataIssue, ValidateDataResponse } from '@objectstack/spec/
 // [#22646] The ADR-0112 catalog — `rejectCredentialAggregation`'s refusal
 // envelope carries `INVALID_FIELD` from it rather than a bare `Error`.
 import { StandardErrorCode } from '@objectstack/spec/api';
-import { parseAutonumberFormat, renderAutonumber, resolveAutonumberFormat, readAutonumberCounter, missingFieldValues, isTenancyDisabled, FILE_REFERENCE_TYPES, REFERENCE_VALUE_TYPES, referenceTargetOf, referenceCarrierOf, isFileIdToken, RAW_FILE_VALUES_CONTEXT_KEY, isCurrentUserDefaultToken, isNowDefaultToken, isMultiValueField, driverSupportsTransactions, AUDIT_PROVENANCE_FIELDS } from '@objectstack/spec/data';
+import { parseAutonumberFormat, renderAutonumber, resolveAutonumberFormat, readAutonumberCounter, missingFieldValues, isTenancyDisabled, FILE_REFERENCE_TYPES, REFERENCE_VALUE_TYPES, referenceTargetOf, referenceCarrierOf, isFileIdToken, RAW_FILE_VALUES_CONTEXT_KEY, isCurrentUserDefaultToken, isNowDefaultToken, isMultiValueField, driverSupportsTransactions, AUDIT_PROVENANCE_FIELDS, resolveInjectedColumnProvenance } from '@objectstack/spec/data';
 import type { FileRefusedValue } from '@objectstack/spec/data';
 // [#5158] Door 2's lowering sink — the SAME pair the protocol face (Door 1)
 // runs, so `FilterArray` has exactly one lowering in the product.
@@ -2411,6 +2411,47 @@ function callerSuppliedRow(row: unknown, sent: ReadonlySet<string> | undefined):
 }
 
 /**
+ * [#24822] The fields ONE insert's static-`readonly` passes may judge: the
+ * {@link staticReadonlyInsertSubject} view, without `organization_id` when the
+ * Layer 0 wall judges that column on this insert's stored rows AND the column
+ * is the platform's injected tenant column.
+ *
+ * The wall says so itself, on the seam it installs
+ * (`PostHookWriteImageCheck.judgesOrganization`). The caller passes that
+ * member's answer, for a non-system caller only. Nothing here derives it:
+ * where no wall judged the column, the strip takes a caller's value exactly
+ * as before.
+ *
+ * Why the column is left on the row: the wall has already refused, before
+ * this engine ran, every supplied value it does not admit. It judges the
+ * stored row again after the hooks. So a value that reaches the strip is one
+ * the wall admitted, and taking it stored the active organization in its
+ * place. That is a silent replacement of an admitted input, which ADR-0105 D5
+ * and the organizations runtime's stamp rule out.
+ *
+ * ONE function for both passes that read the subject, the pre-hook withhold
+ * and the post-hook strip, so the hook view and the stored row cannot
+ * disagree about the column.
+ */
+function insertStaticReadonlySubject(
+  schema: unknown,
+  wallJudgesOrganization: boolean,
+): ReturnType<typeof staticReadonlyInsertSubject> {
+  const subject = staticReadonlyInsertSubject(schema as any);
+  if (!subject || !wallJudgesOrganization) return subject;
+  if (!Object.prototype.hasOwnProperty.call(subject.fields, SystemFieldName.ORGANIZATION_ID)) return subject;
+  // An AUTHORED `organization_id` declared `readonly: true` is the author's
+  // own declaration, and declaration is enforcement: it keeps the strip. Only
+  // the platform's injected tenant column is spared, the one
+  // `TENANT_SCOPE_FIELD_DEF` declares read-only on the platform's behalf. Which
+  // one this is, is the registry's own provenance reader, never a second copy.
+  if (resolveInjectedColumnProvenance(schema, SystemFieldName.ORGANIZATION_ID) === 'author') return subject;
+  const fields = { ...subject.fields };
+  delete fields[SystemFieldName.ORGANIZATION_ID];
+  return Object.keys(fields).length > 0 ? { name: subject.name, fields } : null;
+}
+
+/**
  * [#22306] The insert side of the #16344 invariant — a hook is never handed a
  * value that will not be stored. Takes out of ONE caller row every value the
  * create-side static-`readonly` strip will take, before the defaults and
@@ -2472,6 +2513,10 @@ function callerSuppliedRow(row: unknown, sent: ReadonlySet<string> | undefined):
  * Pure: neither the caller's row nor `supplied` is touched. The row keeps its
  * reference when nothing was taken, else it is a shallow copy without the keys.
  *
+ * [#24822] `wallJudgesOrganization` spares `organization_id` here exactly as
+ * the post-hook strip spares it ({@link insertStaticReadonlySubject}). A value
+ * the wall judges will be stored, so the hook is shown it.
+ *
  * @returns the row the hook view is built from, and the withheld keys with the
  *   caller's values (`undefined` when nothing was withheld) — handed back after
  *   the hooks by {@link handBackWithheldInsertReadonly}.
@@ -2481,8 +2526,9 @@ function withholdInsertReadonlyFromHooks(
   row: Record<string, unknown>,
   supplied: Readonly<Record<string, unknown>>,
   preserveAudit: boolean,
+  wallJudgesOrganization: boolean,
 ): { row: Record<string, unknown>; withheld: Record<string, unknown> | undefined } {
-  let subject = staticReadonlyInsertSubject(schema as any);
+  let subject = insertStaticReadonlySubject(schema, wallJudgesOrganization);
   if (subject && preserveAudit) {
     const fields = { ...subject.fields };
     for (const name of AUDIT_PROVENANCE_FIELDS) delete fields[name];
@@ -3720,6 +3766,29 @@ export interface OperationContext {
 export interface PostHookWriteImageCheck {
   evaluate(rows: readonly Record<string, unknown>[]): void | Promise<void>;
   honoured?: boolean;
+  /**
+   * [#24822] Declared by the installer, and only by it: on an `insert`,
+   * `evaluate` holds every row's `organization_id` to the Layer 0 tenant wall.
+   * It admits the value or refuses the write by throwing.
+   * `@objectstack/plugin-security` sets it at step 3.7, only where it
+   * composes the wall's own parts into the insert's seam. A seam that carries
+   * a business `check` alone does not judge the organization, and neither
+   * does a platform operator's seam that crosses the wall, so neither sets it.
+   *
+   * {@link ObjectQL.insert} reads this member, and nothing else, to decide one
+   * thing: whether a non-system caller's explicit `organization_id` stays on
+   * the row for that judgement or is taken by the static-`readonly` strip
+   * (the platform's tenant column declares `readonly: true`). Set, the value
+   * is stored as sent where the wall admits it and refused where it does not.
+   * It is never silently replaced by the active organization (ADR-0105 D5).
+   * Only the platform's injected column is spared. An AUTHORED
+   * `organization_id` declared `readonly: true` keeps the strip.
+   * Absent or `false`, the strip runs exactly as before. The engine never
+   * sets it, and never derives it from the posture or the context: that
+   * would be a mirror of the wall, and a mirror is wider than the wall
+   * wherever the wall is not mounted.
+   */
+  judgesOrganization?: boolean;
 }
 
 /**
@@ -15852,6 +15921,14 @@ export class ObjectQL implements IObjectQLEngine {
       // write. `opCtx.data` keeps the caller's payload; only the hook view is
       // built from the withheld rows. ⛔ `isSystem` withholds nothing — the
       // strips do not run for it, so every value it sends is stored.
+      //
+      // [#24822] Read ONCE, here, and by both static-`readonly` passes: whether
+      // the Layer 0 wall judges this insert's `organization_id` on the stored
+      // rows. The wall declares it on the seam it installed, and the engine
+      // reads that member and nothing else (`insertStaticReadonlySubject`).
+      // The middleware chain has run by now, so the seam is in place.
+      const wallJudgesOrganization =
+        !opCtx.context?.isSystem && opCtx.postHookWriteImageCheck?.judgesOrganization === true;
       const insertWithheld: Array<Record<string, unknown> | undefined> = [];
       const hookViewSource: unknown[] = (isBatch ? (opCtx.data as unknown[]) : [opCtx.data]).slice();
       if (!opCtx.context?.isSystem) {
@@ -15863,6 +15940,7 @@ export class ObjectQL implements IObjectQLEngine {
           if (!row || typeof row !== 'object' || Array.isArray(row)) continue;
           const hidden = withholdInsertReadonlyFromHooks(
             hideSchema, row as Record<string, unknown>, suppliedPerRow[i] ?? {}, preserveAuditForHide,
+            wallJudgesOrganization,
           );
           insertWithheld[i] = hidden.withheld;
           hookViewSource[i] = hidden.row;
@@ -16280,7 +16358,14 @@ export class ObjectQL implements IObjectQLEngine {
         // to anything", so a user-writable bucket is judged here exactly as it
         // is on update); `null` — no such field on this object — is the cheap
         // exit every ordinary insert takes.
-        const readonlySubject = staticReadonlyInsertSubject(schemaForValidation as any);
+        //
+        // [#24822] ...without `organization_id` where the Layer 0 wall judges it
+        // on this insert's stored rows (`wallJudgesOrganization`, read once
+        // above for the withhold too). That value is stored as sent or refused
+        // by the wall, never taken here and replaced by the active organization.
+        // So it is not reported or refused under `strictReadonlyWrites` either:
+        // strict refuses exactly what this strip takes.
+        const readonlySubject = insertStaticReadonlySubject(schemaForValidation, wallJudgesOrganization);
         if (readonlySubject) {
           const preserveAuditIgnored: string[] = [];
           for (let i = 0; i < rows.length; i++) {
