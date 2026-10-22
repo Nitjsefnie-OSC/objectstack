@@ -2001,7 +2001,7 @@ export interface StackExpressionOptions {
    *
    * [#24798] A sixth judges an object write too: the bulk `confirmText`
    * pass over the object's own `listViews` (`bulkConfirmTextIssues`), warnings
-   * only in 18.x. On a `view` write that pass is the ONLY one, over the
+   * only. On a `view` write that pass is the ONLY one, over the
    * written view's `list` and `listViews` — every other pass reads a
    * collection a view write does not carry.
    *
@@ -3474,12 +3474,12 @@ export function runStackExpressionPasses(stack: AnyRec, options: StackExpression
 /**
  * Why a finding on a bulk `confirmText` is a warning, said once at the end of
  * each: `confirmText` was a plain string before it became a `template` slot,
- * so every one of these sentences parsed — refusing it now is a narrowing no
- * conversion carries, which ships as a warning in 18.x.
+ * so every one of these sentences parsed — refusing it is a narrowing no
+ * conversion carries. This change ships the advisory; the refusal is its own
+ * change, not this one, and the sentence promises no release for it.
  */
 const BULK_CONFIRM_TEXT_WARNING_ONLY =
-  'A warning in 18.x: this text parsed before `confirmText` became a template slot, so it is refused only from '
-  + 'protocol 19.';
+  'A warning, not a refusal: this text parsed before `confirmText` became a template slot.';
 
 /** The slot as {@link closedScopeTemplateRefusal}'s sentences name it. */
 const BULK_CONFIRM_TEXT_SLOT = "A bulk action's `confirmText`";
@@ -3501,10 +3501,12 @@ const LIST_VIEWS_LABEL = 'listViews';
  * `template` it is (`validateExpression('template', …)`), which names a hole
  * holding logic or an unknown formatter. A blank sentence is named too.
  *
- * ⚠️ Every finding is a `warning` in 18.x, never an `error`: each of these
- * texts parsed before the slot was typed, so a refusal would be a narrowing no
- * ADR-0087 conversion carries (the 「甲」 ruling) — its refusal waits for
- * protocol 19. The containers walked: a view's `list` and each
+ * ⚠️ Every finding is a `warning` here, never an `error`: each of these
+ * texts parsed before the slot was typed, so a refusal is a narrowing no
+ * ADR-0087 conversion carries. Under the amended 「甲」 (record 6303865025)
+ * such a refusal ships in 18.x as a BREAKING minor, as its own change (the
+ * `validatePagePredicateBounds` precedent: advisory first, refusal after);
+ * this pass is the advisory. The containers walked: a view's `list` and each
  * `listViews.<key>`, a standalone list view (the flattened overlay or the
  * ViewItem record), and an object's `listViews.<key>`.
  */

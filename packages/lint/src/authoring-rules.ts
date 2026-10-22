@@ -721,8 +721,9 @@ export const AUTHORING_RULES: readonly AuthoringRule[] = [
     // def's params. On a view write `runStackExpressionPasses` runs that pass
     // alone (by construction, as for an object write), and on an object write
     // it also judges the object's own `listViews`. Every finding is a
-    // `warning` in 18.x — an advisory here, never a refusal — because every
-    // such sentence parsed before the slot was typed (the 「甲」 ruling).
+    // `warning` — an advisory here, never a refusal — because every such
+    // sentence parsed before the slot was typed; its refusal, a narrowing no
+    // conversion carries, is its own change (the amended 「甲」, 6303865025).
     // MEASURED first over the shipped corpus at `b42c621c05`: 6 bulk defs
     // carry a `confirmText` (examples/app-showcase `project.view.ts`), none
     // with a brace → 0 findings, against a warning for each of an unbound

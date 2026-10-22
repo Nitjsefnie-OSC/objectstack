@@ -5,9 +5,9 @@
 // and the def's params by name). `validateStackExpressions` — the rule
 // `objectstack validate`, `objectstack compile` and the runtime publish gate
 // all run — judges it through the template judge's closed-scope entry, then
-// compiles it as a template. Every finding is a WARNING in 18.x: each of these
-// sentences parsed before the slot was typed, so a refusal would be a
-// narrowing no conversion carries; it waits for protocol 19.
+// compiles it as a template. Every finding is a WARNING: each of these
+// sentences parsed before the slot was typed, so a refusal is a narrowing no
+// conversion carries, and it is its own change, not this one.
 //
 // The gate half drives the REAL dispatch (`runRuntimeAuthoringRules`) with the
 // three shapes a view write carries — the container's `list`, the flattened
@@ -57,7 +57,6 @@ describe('validateStackExpressions — a bulk confirmText is judged as the templ
     expect(issue!.where).toBe("view 'crm_account' · list · bulkActionDefs[0] 'update_tier' confirmText");
     expect(issue!.message).toContain('binds only `count`, `tier`');
     expect(issue!.message).toContain('`{{ owner }}`');
-    expect(issue!.message).toContain('protocol 19');
     expect(issue!.source).toBe('Move {{count}} to {{ owner }}?');
   });
 

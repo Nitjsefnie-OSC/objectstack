@@ -50,9 +50,9 @@ describe('BulkActionDef.confirmText — a template slot (ADR-0032 Decisions 2–
       .toEqual({ dialect: 'template', source: 'Set these labels on every selected project?' });
   });
 
-  it('still parses a blank string, verbatim: refusing it is a narrowing, a warning in 18.x', () => {
+  it('still parses a blank string, verbatim: refusing it is a narrowing, a warning at the doors', () => {
     // `confirmText` was `z.string()`, so `''` passed. The shared template
-    // input refuses a blank source; this slot keeps the 18.x accept instead.
+    // input refuses a blank source; this slot keeps the accept instead.
     expect(parsed('')).toBe('');
     expect(parsed('  \t')).toBe('  \t');
   });
