@@ -1,0 +1,37 @@
+{
+  "number": 25258,
+  "kind": "pull_request",
+  "title": "fix(service-messaging)!: refuse a notification template html or mjml body that places a hole outside element text and quoted attribute values",
+  "state": "closed",
+  "state_reason": null,
+  "draft": false,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "documentation",
+    "size/xl",
+    "tests",
+    "tooling"
+  ],
+  "assignees": [
+    "os-sales"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-22T16:50:02Z",
+  "updated_at": "2026-10-22T18:23:20Z",
+  "closed_at": "2026-10-22T18:23:18Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": "2026-10-22T18:23:18Z",
+  "comments": 3,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/pull/25258",
+  "body": "<!-- claude-projects-attribution: {\"github_login\":\"os-sales\"} -->\n_Requested by **Sales** · [project thread](https://claude.ai/code/project/chan_01D5bWFY3rFzgJcytD5gD4Uu?thread=cmsg_01D5bWFY3rFzgJcytD5gD4UuCEWuyujzKTbaPka99SBtDD)_\n\nFixes #25082\n\nThe notification half of ruling `6335348115` (items 2 to 4). The email half is #25189, which is not addressed here.\n\nClause-②: no (narrowing)\nMetadata-protocol: none\n\n## What changes\n\n`renderNotification` HTML-escapes every hole's value in an `html` or `mjml` body (the five characters an HTML parser reads as markup in element text and in a quoted attribute value). That encoding is right in exactly two placements: element text, and a quoted plain-text attribute value. A `sys_notification_template` save whose `html` or `mjml` body places a hole anywhere else is now refused.\n\n- **The judge** (`template-hole-placement.ts`) is this package's own, beside the renderer's hole grammar (ruling item 2). It reads the holes through the renderer's own token (`templateHoles`, new in `template-renderer.ts`), so it judges exactly the spans the renderer substitutes. Its placement table is re-derived from the renderer's encoder, not copied from the email half. It uses the same class names and author-facing labels as the email half, plus one class of its own, `meta-attribute` (every attribute of a meta element, read as a setting of the document).\n- **Context-strict** (ruling F3, C2): a hole is supported only when every reading an HTML parser can give the body places it in one of the two placements. The scan forks where the tree builder decides what the tokenizer cannot: at a `noscript` start tag, and at every raw-text or escapable-text start tag once a `select` or `frameset` is open. Foreign content (SVG, MathML) is never treated as left, so every hole after its root is refused. Each of these rules only refuses more than a parser would.\n- **The save hooks** (`notification-template-placement.ts`) are `beforeInsert` / `beforeUpdate` on `sys_notification_template` at priority 30, bound by `MessagingServicePlugin.init` on the kernel's ObjectQL engine and unbound in `destroy()`. They are hooks rather than a validation rule because a CEL condition has no reading of HTML placement; plugin-security's grant-name refusal is the precedent shape.\n- **Judged over the merged record** (ruling item 4): an update is judged on the stored row overlaid with the write, on the by-id path and per matched row of a predicate update. A row stored before this change that breaks the rule is frozen, not bricked: it is refused on any edit that leaves it breaking the rule, and it is still read, listed, deleted, rendered and delivered. Nothing runs at send and no stored row is rewritten. There is no migration.\n- **The envelope**: the existing `400 VALIDATION_FAILED` with one finding at `body`, `code: 'invalid_value'`, naming each refused hole and its placement (up to five, then a count) and the fix. An import commit fails that row and a bulk update fails that record. No new error code.\n\nThe plugin logs a warning when the engine it is given has no hook registry, so an embedder without one is told the check is not running.\n\n## Tests\n\n- `src/template-hole-placement.test.ts` (74): both supported placements; every refused class; the label table's completeness; elements closing and judging afresh; the script comment escape; abrupt comments, declarations and reconsumed characters; the readings (foreign content never left, a self-closed root opening none, the `noscript` straddle, the `select` / `frameset` fork, a plain style element not forked); the renderer's grammar and spans; parity with `renderNotification`'s substitution; `isHtmlFormat` matching the html face.\n- `src/objects/notification-template-placement.integration.test.ts` (20), on a real ObjectQL over SqlDriver through `ObjectStackProtocolImplementation`, `mapDataError` and `runImport`: html and mjml creates refused at the REST data door with nothing stored; the message naming each hole and counting past five; the positive twins; text, markdown and an absent format not judged; a by-id move to html refused; an import commit's failed row; a stored violating row refused on an edit of another column, on a bulk update's row while the other row lands, and on a predicate update that then writes no row; an edit moving the hole or the format accepted; the row still read, deleted and rendered as before; and the plugin binding the hooks on a booted kernel and unbinding them on `destroy()`.\n- `text-field-html-outlets.pin.test.ts`: the two new files are classified as non-outlets (they render nothing).\n- `pnpm --filter @objectstack/service-messaging test`: 58 files, 722 tests pass. `typecheck` passes. ESLint over the changed files is clean.\n\n## Acceptance notes\n\n- The branch is the harness-pinned `claude/project-thread-iydt23`; it names no issue, so the Duplicate Fix Guard's branch-name hint will not match. The claim comment on #25082 is the identity record.\n- No package export is added: the judge and hooks are module exports only, and `index.ts` is unchanged.\n- The changeset is `patch` (Metadata-protocol `none`) with the BREAKING banner and an ADR-0087 `not-required (no-migration-prescription)` disposition; `check:adr-0087-registration` reads it.\n- #25190 (retiring the `renderTemplate` / `renderNotification` exports) follows this card and is not addressed here.\n- Per the disclosure ruling on #9387, nothing in this PR or its comments carries a probe or a sample value. The test bodies carry holes and markup only.\n\n---\n_Generated by [Claude Code](https://claude.ai/code/session_01ApJv4hDHQ6M1JprNZFKzAW)_\n"
+}

@@ -2,9 +2,9 @@
   "number": 25239,
   "kind": "pull_request",
   "title": "fix(cli): retire the five stale scaffold peerDependencyRules entries",
-  "state": "open",
+  "state": "closed",
   "state_reason": null,
-  "draft": true,
+  "draft": false,
   "author": {
     "login": "objectstack-fleet[bot]",
     "id": 332303061,
@@ -22,11 +22,15 @@
   "milestone": null,
   "type": null,
   "created_at": "2026-10-22T14:02:52Z",
-  "updated_at": "2026-10-22T14:03:49Z",
-  "closed_at": null,
-  "closed_by": null,
-  "merged_at": null,
-  "comments": 1,
+  "updated_at": "2026-10-22T15:23:24Z",
+  "closed_at": "2026-10-22T15:23:22Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": "2026-10-22T15:23:21Z",
+  "comments": 2,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/pull/25239",
   "body": "<!-- claude-projects-attribution: {\"github_login\":\"os-sales\"} -->\n_Requested by **Sales** · [project thread](https://claude.ai/code/project/chan_01D5bWFY3rFzgJcytD5gD4Uu?thread=cmsg_01D5bWFY3rFzgJcytD5gD4UuDWJsBGQpadCH8JR2xZQ5re)_\n\nFixes #25123\n\nClause-②: no\nMetadata-protocol: none\n\n## What\n\nOn the better-auth `1.7.12` pin, all five `SCAFFOLD_ALLOWED_PEER_VERSIONS` entries suppress peer mismatches that no longer exist, so they retire at once (a ledger entry states a fact that holds; no staged grace):\n\n| Entry | Reading on `origin/main` 123ff6f4e |\n|:---|:---|\n| `better-auth>better-sqlite3` (`13`) | `better-auth@1.7.12` declares no `better-sqlite3` peer (lockfile `peerDependencies` block and `npm view`). Control leg: `npm view better-auth@1.7.3 peerDependencies` still names `better-sqlite3: ^12.0.0`. |\n| `@better-auth/core`, `/oauth-provider`, `/scim`, `/sso` each `>@better-auth/utils` (`0.5.0`) | All four at 1.7.12 peer `^0.4.2 \\|\\| ^0.5.0`; the tree resolves `0.5.0`. |\n\nThe map is now empty, so both scaffold paths (`objectstack init` and `npx create-objectstack`) stop emitting a `peerDependencyRules` block; `renderPnpmWorkspaceYaml` already omitted it for an empty map. The docblock's better-call reading is corrected to what holds: stable scim peers `better-call` exactly at `1.4.4`, the resolved copy (it read `1.4.0` on the 1.7.3 pin).\n\n`allowedVersions` only silences a report, so the resolution a scaffold gets is unchanged.\n\n## Files\n\n- `packages/cli/src/commands/init.ts`: map emptied; its docblock rewritten as the retired-entries record; the `renderPnpmWorkspaceYaml` docblock line about the peer block updated.\n- `packages/cli/test/init.test.ts`: presence pins flipped to per-key absence pins, a set pin (`toEqual({})`), a no-block pin, and a fixture-map pin for the render path; the top-level key list loses `peerDependencyRules`.\n- `packages/cli/test/better-sqlite3-peer-declaration.pin.test.ts`: the widening-equals-declared-major limb becomes an absence pin; the CLI's own 13.x declaration pins stay.\n- `packages/cli/test/scaffold-workspace-consistency.test.ts`: drops the non-vacuity guard that required a non-empty peer map (two empty maps are now the intended state; the byte-equality limb still holds both files).\n- `packages/create-objectstack/src/templates/blank/pnpm-workspace.yaml` + `src/template-consistency.test.ts`: same retirement in the bundled template, which is held byte-equal to the cli renderer.\n- `pnpm-workspace.yaml` (root): one comment sentence that called these entries' retirement conditions unmet.\n- `.changeset/25123-scaffold-peer-ledger-retired.md`: `patch` for `@objectstack/cli` and `create-objectstack` (the template ships in `dist/templates`).\n\n## Verification (head 373725438)\n\n- Closure build under the verify lock: `pnpm --filter '@objectstack/cli^...' --filter 'create-objectstack^...' --filter @objectstack/cli --filter create-objectstack build` → `VERDICT command-exit 0`.\n- Targeted: cli `test/init.test.ts`, `test/better-sqlite3-peer-declaration.pin.test.ts`, `test/scaffold-workspace-consistency.test.ts` → 3 files, 63/63; create-objectstack `src/template-consistency.test.ts` → 1 file, 39/39.\n- cli unit layer (`vitest run --project unit`) → 324 files, 4775/4775; `create-objectstack` `pnpm test` → 18 files, 278/278; `pnpm --filter @objectstack/cli typecheck` and `pnpm --filter create-objectstack typecheck` → exit 0. The integration layer is left to CI (no spawn entry or integration file touched).\n- Mutation leg (one-shot, via `scripts/ablation-replace.mjs`, restored by `git checkout HEAD`, blob re-verified as `73c71be9f`): re-adding `'better-auth>better-sqlite3': '13'` to the map turns 7 tests red across the three cli files. Tests import `src/`, so no dist leg applies.\n- `pnpm lint` → exit 0.\n- `dispatch-gates --commands`: 81 derived; 79 exit 0; `check:dual-build-cjs-loads` and `check:i18n-coverage` exit 3 PREREQUISITE NOT MET (they need dist for packages outside this closure) → NOT MEASURED locally, CI runs them.\n\n## Acceptance notes\n\n- The dispatch named `packages/cli/src/commands/init.test.ts`; the pins actually live at `packages/cli/test/init.test.ts`.\n- The bundled template's package is named `create-objectstack` (unscoped), so the changeset names it that way.\n\n---\n_Generated by [Claude Code](https://claude.ai/code/session_01CxBKycaiUpA1yGx1XyoGqX)_\n"

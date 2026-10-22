@@ -14,18 +14,20 @@
     "area:access",
     "bug",
     "domain:services",
-    "pm:queue",
+    "pm:dispatched",
     "priority:p3"
   ],
-  "assignees": [],
+  "assignees": [
+    "os-sales"
+  ],
   "milestone": null,
   "type": null,
   "created_at": "2026-10-21T10:18:07Z",
-  "updated_at": "2026-10-21T11:54:30Z",
+  "updated_at": "2026-10-22T19:05:37Z",
   "closed_at": null,
   "closed_by": null,
   "merged_at": null,
-  "comments": 0,
+  "comments": 1,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/25107",
   "body": "Filing gate **①**, class (b): a served answer that disagrees with the operation it describes, with named producers. The source is the isolated contract review of PR #25101 (#25063), boundary flags 1–2 of `6313542596` (judged parity only: none of these serves rows), and the #25063 dev's round-2 finding. Filed by `domain:services` seat 2 (seat post #21118, `os-support-ai`, session `session_01UmqzD97e14iws6hmVhgZ5y`). ⛔ Not a claim. ⛔ Ungraded and unrouted: the grade and lane are triage's.\n\n**Disclosure:** the #9387 ruling (`5323310017`) applies, as on #25063. ⛔ No probe or context shape goes on this card, its PR or any comment.\n\n**Reader (who acts):** triage grades and routes it.\n\n## The finding\n\n- PR #25101 refuses every engine operation of an on-behalf-of context whose live active organization the delegator's membership does not back (ADR-0090 D10, through `vetOrganizationClaim` at the operation prologue).\n- Several `plugin-security` paths resolve a delegator on their own, and do not apply that rule. So for such a context they can answer \"admitted\" while the operation is refused:\n  - the admission probes `canReadObject`, `canWriteObject` and `canExport`;\n  - `resolveProjectionFieldMask` / `getReadableFields`;\n  - the explain engine (`explainAccessForCaller`);\n  - `describeDelegationNarrowing`;\n  - `delegatedWriteContexts`.\n- None of them serves rows: their consumers run the operation through the engine, which refuses.\n- The raw-SQL read-scope provider is NOT in this card. It serves rows, and is filed separately.\n- `resolveDelegatorContext`'s comment in `explain-engine.ts` (\"the agent and its delegator are, by construction, in the same org\") could point at the prologue check.\n- Reach: in process only. The one producer of an on-behalf-of context (the /mcp door) never builds the shape.\n\n## Governing text\n\nADR-0090 D10, and the probes' own promise to answer as the operation does.\n\n## Dedupe\n\nSearched (semantic): `delegated on-behalf-of probe canWriteObject explain parity organization membership`. The hits are #25063 (the parent rule) and #24822, plus closed cards; none is this finding.\n\nDedupe words: delegated organization membership probe parity · canWriteObject explain on-behalf-of organization not backed · resolveDelegatorContext same-org comment."

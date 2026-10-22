@@ -2,8 +2,8 @@
   "number": 25187,
   "kind": "issue",
   "title": "plugin-sharing regime C residue: declare declaredRuleNamed on the spec contract, document regime C in sharing-rules.mdx, name sharing_rule in the activation ledger's docblock",
-  "state": "open",
-  "state_reason": null,
+  "state": "closed",
+  "state_reason": "completed",
   "draft": null,
   "author": {
     "login": "objectstack-fleet[bot]",
@@ -13,18 +13,23 @@
   "labels": [
     "area:access",
     "domain:spec",
-    "pm:queue",
     "priority:p3"
   ],
-  "assignees": [],
+  "assignees": [
+    "os-bill"
+  ],
   "milestone": null,
   "type": null,
   "created_at": "2026-10-22T07:52:51Z",
-  "updated_at": "2026-10-22T14:14:35Z",
-  "closed_at": null,
-  "closed_by": null,
+  "updated_at": "2026-10-22T17:02:09Z",
+  "closed_at": "2026-10-22T17:00:16Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
   "merged_at": null,
-  "comments": 2,
+  "comments": 6,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/25187",
   "body": "Filing gate **③**: the carried follow-ups of #24421's review 2 (PR #24428, contract review 6260026585). The Landed note 6260568838 listed them as \"not filed until 18.x\". #24421 now closes, so they get their own card.\n- **Who acts:** the `plugin-sharing` lane, plus one line in `packages/spec`.\n- **Dedupe:** none found (\"declaredRuleNamed\" → 0; \"sharing rules regime C docs sharing-rules.mdx\" → no open carrier). #24550 (closed) covered the `/meta` door and the Setup nav entry, not these.\n\n## What is left, measured on `origin/main` at `6251f59051`\n\n1. **The spec contract does not declare the reader the activation door uses.**\n   - The catalog activation door (`POST /api/v1/security/_activation/sharing_rule/:name`, `packages/runtime/src/domains/catalog-activation.ts`) resolves the name through the `sharingRules` service's `declaredRuleNamed`.\n   - That method is on `SharingRuleService`, not on the contract in `packages/spec/src/contracts/sharing-service.ts`. `git grep declaredRuleNamed -- packages/spec/src` returns nothing. The door reads it duck-typed and answers 503 when it is absent.\n   - Declare it, optional, on the contract.\n2. **`content/docs/permissions/sharing-rules.mdx` does not describe regime C.** It never mentions the activation ledger, the clone-to-customise path, or the same-name refusal. Today only `content/docs/concepts/metadata-lifecycle.mdx:121` covers it. Document:\n   - that a declared rule is read-only;\n   - that customising means a clone under a new name, plus the base switched off through the activation door;\n   - that a new or renamed row under a declared name is refused 409 `RESOURCE_CONFLICT`;\n   - that the switch is operator-gated under a wall;\n   - the reconcile-failure window. A failed reconcile is thrown to the door, but a ledger row already flipped stays flipped, and the boot sweep heals the grants.\n3. **The ledger's docblock.** `sys-metadata-activation.object.ts`'s `metadata_type` description still reads \"('flow', 'permission', …)\". Name `sharing_rule` beside the others.\n\n## Acceptance\n- `declaredRuleNamed` (or an equivalent reader) is declared on the spec contract. Adding an optional member is a widening; the dev measures `Clause-②` from the diff.\n- `sharing-rules.mdx` carries the regime C paragraph, and its claims cite code.\n- The docblock names `sharing_rule`.\n- No behaviour change."

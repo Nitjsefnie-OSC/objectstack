@@ -1,0 +1,38 @@
+{
+  "number": 25272,
+  "kind": "pull_request",
+  "title": "feat(cli): the ownership ceremony attributes a walled organization-less self-registration grant to its user's sole membership",
+  "state": "closed",
+  "state_reason": null,
+  "draft": false,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "documentation",
+    "needs:upgrade-harness",
+    "size/m",
+    "tests",
+    "tooling"
+  ],
+  "assignees": [
+    "os-steve"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-22T19:11:36Z",
+  "updated_at": "2026-10-22T20:09:04Z",
+  "closed_at": "2026-10-22T20:09:02Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": "2026-10-22T20:09:02Z",
+  "comments": 2,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/pull/25272",
+  "body": "Fixes #25206\n\nPart of the 18.x upgrade line: item A3 of #24343, carried from 6260319465. Measurement report: the measurement comment on #25206. Claim: 6345859138.\n\n## What changes\n\nUnder a wall, a self-registration grant written before #24453 has no organization (`sys_user_permission_set`). Today the ceremony gives it nothing to read (inventory `anchors: []`), so every such row is unattributable and holds certification until the operator fixes it by hand.\n\nThis PR adds a platform-only, walled-only inventory key on that row: `soleMembership: { userKey: 'user_id', keyColumns: ['permission_set', 'permission_set_id'] }`. The plan tries it after the anchors:\n\n- **The user's stamped `sys_member` rows all name one organization:** the grant takes that organization. It is counted as `sole-membership:user_id->sys_member`, and `--apply` writes it through the existing attribution step. That is the organization the runtime gives the grant today (ruling record 6257510973 item 1).\n- **Several organizations:** reported. The reason is \"user X is a member of N organizations, so the grant's is not derivable\". Which membership came first is not recorded, so the owner is never guessed (D10 fate 4).\n- **No membership:** reported. The reason is \"user X is a member of no organization\".\n- **The key is already held there:** reported. This is the case where an administrator already granted that set to the user in that organization. The NULL-safe unique index (`user_id`, `permission_set`, organization) would refuse the `UPDATE` and stop the apply, so the anchor leaves the row for the operator to resolve.\n- **`single`:** unchanged. The Default Organization takes every NULL grant, and the key is not read.\n\nNothing is deleted. The remedy text, ruling C on unattributable rows, the apply, the spec and `ORGANIZATION_OWNERSHIP_SHAPE_GENERATION` are all unchanged.\n\n**Why a platform-only key and not a spec anchor kind:** a host's objects have no membership semantics the platform can read. `underivableDeparture` is the precedent. The host-supplement parity test excludes the key, as it excludes that one.\n\nClause-②: no\nMetadata-protocol: none\n\n- **Size:** 360 changed lines (+356 / −4) over 5 files.\n- **Governed paths:** `check-governed-merges --branch` reports none (0 of 5 paths), so no Tier H/S.\n- **Review tier:** `TIER_DEFAULT`.\n- **#25208:** its files are untouched here. `organization-ownership-plan.ts` gains one function and a three-line change in `walkNullRows`. `organization-ownership-apply.test.ts` is not edited; the pins are in a new file.\n\n## Pins (`organization-ownership-apply.sole-membership.test.ts`, 5 cases)\n\n- **`isolated` and `group`, plan:** 1 attributed via `sole-membership`; 3 reported, each with its reason (two organizations, none, key already held).\n- **`isolated` and `group`, apply:** the one-membership grant gets `org_a`. The other three stay NULL with `blocking` 3, and no `DELETE` touches the table.\n- **`single`:** `default-organization: 4`, and nothing is reported.\n\n**Ablation** (each restored from the commit, and `git status` clean afterwards):\n\n| ablation | result |\n|:--|:--|\n| the inventory row loses `soleMembership` | 4 of 5 red (both walled plans and both walled applies) |\n| the anchor also runs under `single` | 1 of 5 red (the `single` pin) |\n| no held-key check | 4 of 5 red. Both applies throw on the unique index (`Object.onAttribution … organization-ownership-apply.ts:917`) |\n\n## Proof\n\n- **Measurement** (the comment on #25206): a copy of `fixture-18.0` with the walled pre-#24453 trait. The real binary ran plan then apply.\n  - On `main`, `isolated` and `group` each report 4 unattributable rows, apply exit 1 and `blocking` 4.\n  - On this branch: 1 attributed, 3 reported, `blocking` 3.\n  - `single`: 4 rows go to the Default Organization on both.\n  - Baselines without the trait: `blocking` 0.\n- **`node scripts/pm/dispatch-gates.mjs --commands`:** 68 derived, and 68 exit 0. Each exit code was captured before any pipe.\n  - `check-plugin-teardown-shape --self-test` first exited 3 on the shallow clone. After `git fetch --unshallow` it exited 0.\n  - The run was on the pre-merge head `f2c4fc26`. The `main` merge since then touches none of these paths.\n- **`check-governed-merges --branch`:** NOT governed; 360 lines.\n- **Upgrade harness** (`upgrade-18x-harness.dogfood.test.ts`, both fixture legs and the fresh store): 16/16 pass. This covers R1's fresh store, R2 (18.0 and 18.0.0) and R3 (the v17 trait).\n- **R1, fresh boot:** a production `os serve` of the showcase on an empty database under `single`, `isolated` and `group`. Each is ready in 10–11 s, and health answers 200.\n- **R4, a walled production `os serve`** (`NODE_ENV=production`, `OS_PLATFORM_OWNER_EMAIL`, `OS_AUTH_MEMBERSHIP_POLICY=invite-only`, `OS_SECRET_KEY`), over the measured store after this branch's ceremony:\n  - Uncertified, with 3 grants reported: refused by the ownership boot guard, naming the ceremony.\n  - The operator then resolved the 3 by hand: gave `usr_two`'s grant `org_beta`, and deleted the other two.\n  - Re-run plan and apply: `complete`, `blocking` 0.\n  - `os serve` was then ready under both `isolated` and `group`: health 200, and sign-in 200 for the fixture's admin and member A.\n  - ⚠ The showcase declares no `@objectstack/organizations`, and a walled `os serve` refuses without it. For R4 and R1 only, the dependency was added locally and the lockfile restored afterwards. Nothing of that is in the diff.\n- **`@objectstack/cli`:** after the `main` merge (`c50f9b36`), `pnpm typecheck` exits 0 and every `organization-ownership*` suite passes (289, plus 1 skipped).\n- **NOT MEASURED: the whole `@objectstack/cli` suite.** The local run (`--maxWorkers=2`) was stopped at its 60-minute limit with no failure printed. CI's Test Core shards run it on this PR.\n\n## Acceptance notes\n\n- The population on a real deployment is not measurable here. It is one row per walled self-registrant admitted before `95246668d`. On the one walled deployment on file (cloud's control plane), that grant duplicates the `isDefault` baseline (cloud#3051), so attributing it changes no one's access.\n- The 8b-0f report's alternative was to delete the grant of a user with no membership. It is not taken here: that would be a deletion outside fate 2, so it needs its own ruling.\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nhttps://claude.ai/code/session_01CpKhP8iqtGJKZHZ5PhdNq2\n"
+}

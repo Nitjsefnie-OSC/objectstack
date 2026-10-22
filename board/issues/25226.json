@@ -2,9 +2,9 @@
   "number": 25226,
   "kind": "pull_request",
   "title": "fix(service-settings)!: no tenant- or user-rung settings read admits an organization-less row (ADR-0131 D8)",
-  "state": "open",
+  "state": "closed",
   "state_reason": null,
-  "draft": true,
+  "draft": false,
   "author": {
     "login": "objectstack-fleet[bot]",
     "id": 332303061,
@@ -12,6 +12,7 @@
   },
   "labels": [
     "documentation",
+    "needs:upgrade-harness",
     "size/l",
     "tests",
     "tooling"
@@ -22,11 +23,15 @@
   "milestone": null,
   "type": null,
   "created_at": "2026-10-22T13:34:27Z",
-  "updated_at": "2026-10-22T13:35:36Z",
-  "closed_at": null,
-  "closed_by": null,
-  "merged_at": null,
-  "comments": 1,
+  "updated_at": "2026-10-22T15:56:28Z",
+  "closed_at": "2026-10-22T15:56:26Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": "2026-10-22T15:56:26Z",
+  "comments": 3,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/pull/25226",
   "body": "Fixes #25202\n\n## What\n\nADR-0131 D8 says no layer has a NULL arm, and D1 (as amended by record `6328195425`) says nothing reads a NULL tenant value as an owner. `SettingsService`'s organization reach still had a NULL arm:\n\n- `own`: a caller that named an organization read that organization's `sys_setting` rows **and** the rows written with no organization, as a fallback for every organization.\n- `organization-less` (no organization, walled): it read only the organization-less rows.\n- `unwalled` (no organization, `single`): it read every row.\n\nThis PR retires the NULL arm. Each reach now owns exactly one organization:\n\n| caller | reach | tenant/user rows read | tenant/user rows written |\n|---|---|---|---|\n| names organization X | `own(X)` | `organization_id = X` | X |\n| names none, walled (`group`/`isolated`) | `unowned` | none (global rung / default) | tenant write refused |\n| names none, `single`, D9 derives X | `own(X)` | `organization_id = X` | X |\n| names none, `single`, D9 derives none (zero or several organizations) | `unowned` | none | tenant write refused |\n| names none, composition registers no organization object (lean embedding; ruled kept, ADR-0131 D9 note) | `no-organization-object` | `organization_id` NULL | NULL |\n\nD9's answer comes from the predicate the engine already applies to a system write: `resolveGuestOrganization` / `resolveSystemWriteOrganization` (`@objectstack/core`). `SettingsServicePlugin` binds it next to `tenancyPosture`. The process-wide callers keep passing `{}`, and the service names the organization for them: plugin-auth's email brand name and auth locale, the anonymous `runtime/config` branding read, and `resolveLocalizationContext` for a caller with no active organization.\n\n**A live defect fixed on the way (same cause).** Under `single`, a caller with no organization wrote its row with `organization_id` NULL. The engine stamped the Default Organization on insert, but `upsertRow`'s identity probe still asked for NULL. The second save of a key therefore missed the first row and inserted a second one. Readers kept answering the first value. On a SQL store the identity index refuses that insert, so the save fails. Probe: `[[org_default,'one'],[org_default,'two']]`, with every read answering `'one'`. The write now carries the organization the reach owns.\n\n## Measurement (step 1)\n\nThis was read on `main` `9c431bad37` before building. The full report was prepared as an os-dev-report for #25202.\n\n- **Kept by ruling?** No. D8 note `6325596117` names only storage's `organizationOutOfWriteReach`. D13 lists the settings global rung, which step 2 already moved. The one organization-less path a ruling keeps is the lean embedding (#25133 letter A), and this PR keeps it.\n- **Writable organization-less tenant/user row**, probed through the real engine:\n  - fresh `single`: no. The engine derives the Default Organization.\n  - `group`/`isolated`: no. A tenant key is refused at the service. A user key is refused by the engine (`ERR_SYSTEM_WRITE_ORGANIZATION_REQUIRED`).\n  - 18.0.0-born store: no on a served composition.\n  - lean embedding: yes, by ruling.\n  - `--dev`: same as served, unless the auth tier is off, which takes the lean path.\n- `fixture-18.0.0`: 2 `sys_setting` rows, both owned by `org_mvgqf77lj6oc60fk`; 0 organization-less. `fixture-18.0`: 2.\n- **Ceremony inventory:** unchanged. `sys_setting` already has the `attribution` fate (`organization-ownership-inventory.ts:660`). Under `single` the ceremony gives such rows to the Default Organization. Walled stores keep them NULL and reported, and those reported rows are the population this narrows.\n\n## Clause-② and Metadata-protocol\n\nClause-②: yes (narrowing)\nMetadata-protocol: none\n\nA reported organization-less tenant/user row stops answering every organization's read.\n\n- The changeset ships as `patch` with the BREAKING banner, the FROM/TO and the remedy. ADR-0087 disposition: `not-required (no-migration-prescription)`.\n\n## Proof (head `576b8283`)\n\n- **Pins:**\n  - `settings-organization-isolation.pin.test.ts` (rewritten): own / walled / `single` / lean, tenant and user rungs, and the lock pre-flight.\n  - `settings-organization-reach.pin.test.ts` (new): the real `SettingsServicePlugin` on a real `ObjectKernel` + `ObjectQL`, with `single` and one, zero or several organizations, `group`/`isolated`, and lean. The source is the one the plugin wires.\n  - Upgrade harness, 18.0.0 leg: new test. The fixture's settings still answer through `GET /api/settings/branding` and for a reader that names no organization (`branding.workspace_name`, `localization.timezone`).\n- **Ablation**, from the committed state, each restored with `git checkout HEAD --`:\n  - A1, `own` admits NULL again: 8 pins red.\n  - A2, the plugin wires no organization source: 4 plugin pins red. The harness's new 18.0.0 test is also red (`expected { value: 'ObjectStack', … }`).\n  - A3, the write stores the caller's organization instead of the reach's: 3 pins red.\n- **Package:** `pnpm --filter @objectstack/service-settings typecheck` exit 0. vitest 58 files / 982 tests pass.\n- **Downstream spot-check:** plugin-auth (4 settings files, 124 pass), core (localization cache + authored-translation sync, 33 pass), organizations membership-policy gate (32 pass).\n- **Upgrade harness** (`upgrade-18x-harness.dogfood.test.ts`, both fixture legs and the fresh store): 16/16 pass.\n  - R1: the fresh store boots and serves.\n  - R2: the 18.0 and 18.0.0 stores upgrade and keep their data.\n  - R3: the v17 trait is refused, then takes the ceremony.\n- **R4 (walled):** the walled pins above. NOT MEASURED on a walled dogfood boot locally; CI's dogfood lane covers it.\n- **`node scripts/pm/dispatch-gates.mjs --commands`:** 72 derived; 70 exit 0. Two exit 3 (NOT MEASURED, prerequisites in this container):\n  - `check-plugin-teardown-shape --self-test` needs an unshallow clone.\n  - `check:dual-build-cjs-loads` needs the full build.\n  - `--ran` verdict: ✓ 72 accounted.\n- **`check-governed-merges --branch`:** 0 of 9 paths governed. 645 changed lines (+527/−118). Not Tier H/S.\n\n## Acceptance notes\n\n- `audit.record`'s `tenantId` and the crypto context keep `ctx.tenantId`. Only the row's organization and `auditWriter`'s `organizationId` follow the derived organization.\n- A user-scope write by a caller with no organization behind a wall is still refused by the engine, not the service (unchanged).\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nhttps://claude.ai/code/session_01CUy2hdPMToZMsUtnAoshdP\n"

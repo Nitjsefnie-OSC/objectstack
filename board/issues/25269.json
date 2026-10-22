@@ -1,0 +1,32 @@
+{
+  "number": 25269,
+  "kind": "issue",
+  "title": "spec: the published query schemas declare limit / offset / top / skip as plain numbers the Data API now refuses (declared ≠ enforced)",
+  "state": "open",
+  "state_reason": null,
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "domain:spec",
+    "pm:dispatched",
+    "priority:p3"
+  ],
+  "assignees": [
+    "os-bill"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-22T18:36:29Z",
+  "updated_at": "2026-10-22T19:29:06Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 1,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/25269",
+  "body": "Filing gate **③**: an out-of-scope finding the `domain:engine` seat disposed in its ACCEPT of PR #25260 (comment 6347650135, item 5), confirmed by that PR's contract review (6347561377). It does not block that PR, which merged as `17f3c65a1` (card #25229).\n- **Who acts:** `domain:spec`.\n- **Dedupe:** none found.\n\n## What happens on `main`\n- Since #25260, every Data API list door reaches one window normalizer: a fractional, negative or malformed `limit` / `offset` / `$top` / `$skip` / `?page=` answers **400** naming the parameter as written.\n- The published schemas still declare the window as any number, so a client generated from them, or an author validating against them, is told a value is valid that the server refuses. Examples on `origin/main` at `17f3c65a1`:\n  - `packages/spec/src/data/data-engine.zod.ts:111` / `:114` / `:117` (`limit`, `offset`, `top`: `z.number().optional()`); the same file's `:186` / `:188` already say `.int().min(1)` / `.int().min(0)`.\n  - `packages/spec/src/api/protocol.zod.ts:2375` / `:2376` (`top`, `skip`: `z.coerce.number().optional()`), and `:1823`, `:1921`, `:3281` (`limit`).\n  - `packages/spec/src/api/contract.zod.ts:445` / `:446`.\n  - `packages/spec/src/automation/builtin-node-config.zod.ts:628` (a flow `query`'s `limit`: an authored fractional or negative window is now refused at run time).\n- Not every hit is a Data API window (`analytics.zod.ts:1064` already says `.int().nonnegative()`); the card measures which schemas the normalizer's doors actually read.\n\n## Wanted\n- Each schema that describes a window the Data API normalizer judges declares what the server enforces: `limit` / `top` `.int()` at least 0 (or 1, as the normalizer says), `offset` / `skip` `.int().nonnegative()`; the same accept set on both sides, one source for the bounds if the spec can export it.\n- A narrowing of a published schema: `Clause-②` and `Metadata-protocol` declared per AGENTS.md (an authored flow `query` window is metadata), the changeset level and ADR-0087 disposition they imply, and a migration line for the authored-flow case.\n\n## Acceptance\n- For every listed schema, a value the server refuses fails the schema's parse and a value it accepts passes (a table test over the normalizer's own cases).\n- No door's runtime answer changes (the server already refuses these)."
+}

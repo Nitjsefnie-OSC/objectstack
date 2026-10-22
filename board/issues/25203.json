@@ -12,18 +12,20 @@
   },
   "labels": [
     "domain:engine",
-    "pm:queue",
+    "pm:dispatched",
     "priority:p3"
   ],
-  "assignees": [],
+  "assignees": [
+    "os-bill"
+  ],
   "milestone": null,
   "type": null,
   "created_at": "2026-10-22T11:30:19Z",
-  "updated_at": "2026-10-22T13:41:27Z",
+  "updated_at": "2026-10-22T19:31:44Z",
   "closed_at": null,
   "closed_by": null,
   "merged_at": null,
-  "comments": 2,
+  "comments": 8,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/25203",
   "body": "Filing gate **③**: the small owed carriers of #15212 and #14570, found by the epic seat's reconciliation at `main` `2919ddb875`. None changes behaviour except item 1.\n- **Who acts:** the shared queue.\n- **Dedupe:** none. #25140 fixed only `sys_sharing_rule`'s text.\n\nPart of #15212.\n\n## Items\n1. **8c-3 hardening.** `resolveDeclaredRuleScopes` tests for a short page on the filtered page (`packages/plugins/plugin-sharing/src/sharing-plugin.ts:118-123`). Test the raw page length, and pin it.\n2. **8e wording carriers:**\n   - `packages/spec/src/migrations/entries/semantic/18.sharing-rule-declared-mirror-retired.ts:32-33` (the D13 paraphrase);\n   - `18.driver-read-scope-follows-tenant-wall.ts:18-21`, which should say \"by id or by predicate\";\n   - \"(but on a table…)\" at `packages/cli/src/commands/migrate/organization-ownership.ts:635` and `:1124`, and at `organization-ownership-apply.ts:3804`.\n3. **Texts still describing the retired reading (NULL means global or every organization):**\n   - `sys-user-position.object.ts:19` and `:110`;\n   - `sys-user-permission-set.object.ts:113`;\n   - the generated `en.objects.generated.ts:41` and `:107` (regenerate; never hand-edit);\n   - `email-service.ts:78-81` (\"simply unstamped\");\n   - the `inviteForAudienceGate` comment at `packages/verify/src/harness.ts:1411-1413`.\n4. **#14570's stale docblocks:** `approval-service.ts:2833-2840` and `business-unit-graph.ts:345-357` still say these writes land NULL and are \"tracked as #14570\". That card is closed.\n\n## Acceptance\n- Item 1 is pinned. Items 2–4 match the code they describe.\n- A changeset only where a published package's text moves (`Metadata-protocol: none`, patch). A change that touches a spec semantic entry is the dev's to measure."

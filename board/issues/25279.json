@@ -1,0 +1,30 @@
+{
+  "number": 25279,
+  "kind": "issue",
+  "title": "spec: the stored-shape detector for an external binding on a managed datasource resolves the datasource from the same stack only, so os migrate meta --stored misses a stored object bound to a stored managed datasource",
+  "state": "open",
+  "state_reason": null,
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "domain:spec",
+    "pm:queue",
+    "priority:p3"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-22T19:43:03Z",
+  "updated_at": "2026-10-22T19:43:03Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 0,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/25279",
+  "body": "Filing gate **③**: an observation of the contract review of PR #25257 (record 6347940824, observation 2), disposed in the seat's ACCEPT 6348040277 (item 5). It does not block that PR, which merged as `bda53bb0b` (card #25211).\n- **Who acts:** `domain:spec`.\n- **Dedupe:** none found.\n\n## What happens on `main` (at `bda53bb0b`)\n- `REFUSED_STORED_SHAPES` carries `object-external-binding-managed-datasource-refused` (`packages/spec/src/conversions/refused-shapes.ts:183`). Its `surface` string says \"on a managed one the stack declares\", and its detector resolves a named datasource only from the same stack's `datasources`.\n- Since #25257 the save door also refuses an object bound `external` to a datasource stored as its own `sys_metadata` row. `os migrate meta --stored` lists the refused stored rows an author must fix, but it does not list a stored object bound to a stored managed datasource — the row the next save will refuse.\n\n## Wanted\n- The stored-shape listing names a stored object whose named datasource is a stored (or stack-declared) managed datasource, through the same predicate; the `surface` string says what it now covers.\n- Or a written reason the detector cannot see stored datasources, with the gap named in the migration guidance.\n\n## Acceptance\n- Pinned: a stored object bound `external` to a stored managed datasource appears in the `--stored` listing; a federated datasource's object does not."
+}

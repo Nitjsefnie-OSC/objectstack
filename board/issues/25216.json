@@ -2,8 +2,8 @@
   "number": 25216,
   "kind": "issue",
   "title": "pm-dispatch: inside a Claude Code project, a card thread's `needs_decision` fork goes to a separate ruling thread at the contract-review tier, which rules when confident and sends the maintainer a decision card otherwise (maintainer's word 2026-10-22)",
-  "state": "open",
-  "state_reason": null,
+  "state": "closed",
+  "state_reason": "completed",
   "draft": null,
   "author": {
     "login": "objectstack-fleet[bot]",
@@ -13,7 +13,6 @@
   "labels": [
     "domain:skills",
     "enhancement",
-    "pm:dispatched",
     "priority:p2"
   ],
   "assignees": [
@@ -22,11 +21,15 @@
   "milestone": null,
   "type": null,
   "created_at": "2026-10-22T12:52:58Z",
-  "updated_at": "2026-10-22T14:20:09Z",
-  "closed_at": null,
-  "closed_by": null,
+  "updated_at": "2026-10-22T16:16:57Z",
+  "closed_at": "2026-10-22T15:59:35Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
   "merged_at": null,
-  "comments": 0,
+  "comments": 4,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/25216",
   "body": "## Source\n\nSplit out of #25185 by contract review `6341183860` on PR #25214 (FAIL 3): the rule rests on a maintainer word that was quoted only in a PR body, and it sits against SKILL.md's \"the director is the sole ruler\" line and the 红线 delegated-channel confidence gate. This card carries the word so the rule can be written against those texts on its own.\n\nThe maintainer's word, 2026-10-22T08:35Z, in the Claude Code project's ruling thread 「导入预检方案裁决」, verbatim:\n\n> 对于这种类似的问题，能否你自己开一个单独的 fable thread 做评审，对于自己有把握决定的问题，自己决定，不能决定的开决策卡？\n\nFirst use: #25062, ruling `6336640643` (option A), which the maintainer confirmed in that thread at 08:53Z.\n\n## Ask\n\nWhen a PM seat runs inside a Claude Code project and a card thread returns `needs_decision`:\n\n1. The project's coordinator opens a separate ruling thread at `CONTRACT_REVIEW_TIER`. It reads the card, the fork, and the governing texts.\n2. It rules a fork it is confident about, posts the ruling on the card as the record, and hands it back to the seat. It sends the maintainer one decision card for anything it cannot rule.\n3. Each ruling made this way is listed for the maintainer, who can overturn it with one sentence.\n\n## What the change has to reconcile (do not skip)\n\n- SKILL.md: \"the director is the sole ruler, no subagent\". Either the ruling thread acts as the director's delegated channel, or the line names this exception.\n- 红线 delegated-channel confidence gate: say what \"confident\" means here, in terms of that gate.\n- `references/lanes/director.md`: the director charter.\n\n## Acceptance\n\n- The rule appears once, in the pm-dispatch skill, with the maintainer's word quoted.\n- No line contradicts SKILL.md's ruler line, the 红线 gate or the director charter.\n- Line growth is paid by compression under `check:pm-skill-ratchet`, with no ceiling moved.\n- The `.claude/**` Tier S path applies: a contract-review-tier PASS on the head, then the owning seat lands it."

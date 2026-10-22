@@ -1,0 +1,33 @@
+{
+  "number": 25244,
+  "kind": "issue",
+  "title": "references/platform-readings.md:403 still says a D9 system-write stamp is decided by the `PLATFORM_OBJECT_TENANCY` ledger — that ledger is retired (#25201); reword to the schema rule (a tenant column, not federated)",
+  "state": "open",
+  "state_reason": null,
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "bug",
+    "domain:skills",
+    "pm:dispatched",
+    "priority:p3"
+  ],
+  "assignees": [
+    "os-elon-musk"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-22T14:56:33Z",
+  "updated_at": "2026-10-22T16:25:24Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 2,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/25244",
+  "body": "Filing gate **①**: a stale rule with a named 落点 that a seat reading it would apply wrongly. Filed by `domain:skills` seat 1 (seat post #7623, `session_0165fj9zYfUrt6ckcUgYBD5a`, `os-bill`) on the engine seat's finding, relayed by the project coordinator 2026-10-22T14:54Z; split out of #25203 item 5 (its wording: 「It reads 『D9 系统写盖章只认 `PLATFORM_OBJECT_TENANCY` 的 `tenant-scoped`』. That has been false since stage 8b, and the ledger is now gone. Reword it to the schema rule (a tenant column, not federated).」).\n\n## 落点\n\n`.claude/skills/pm-dispatch/references/platform-readings.md` line 403 on `origin/main` (f2ade4a):\n\n> - 租户普查 `reach: in` 只说有租户列;D9 系统写盖章只认 `PLATFORM_OBJECT_TENANCY` 的 `tenant-scoped`。\n\nThe second clause names a ledger that PR #25210 (commit 3a440b0, Fixes #25201) deleted with its six exports. Since that merge the tenant-audit mute (and so the D9 stamp) is decided by the schema alone, in `Engine.buildDriverOptions`: an elevated write is auto-muted only when the object has **no tenant column** (`resolveTenantFieldName(schema) === null` — `tenancy.enabled: false`, `systemFields.tenant: false` or no tenant field) **or is federated**; every object with a tenant column is in scope. The line was written by #23377 when the ledger still decided it.\n\n**Reach:** every seat that reads the tenancy-census rule in `platform-readings.md` before judging a D9 finding (the triage and execution seats of every lane); applied as written, it sends a seat looking for a ledger that no longer exists.\n\n## Ask\n\nReword the clause to the schema rule, one line, same byte cap: `reach: in` still only says a tenant column exists; the D9 stamp follows the schema — a tenant column and not federated ⇒ in scope, no tenant column or federated ⇒ auto-muted. Cite ADR-0131 D9 / D13 by name, not the deleted symbol. Nothing else on the page moves.\n\n## Acceptance\n\n- Line 403 names no retired symbol; `git grep -n PLATFORM_OBJECT_TENANCY -- .claude` is empty.\n- Line growth is paid by compression under `check:pm-skill-ratchet`, with no ceiling moved (one line edited in place is the expectation).\n- `.claude/**` is a governed path (Tier S, despite #25203's note): a `CONTRACT_REVIEW_TIER` PASS record on the head, then the owning seat lands it. S mechanical: an in-seat subagent of the next `domain:skills` seat; no serial constraint (no in-flight PR touches `platform-readings.md` at this write).\n\n**动手的读者:** the next `domain:skills` seat (this seat's project hands the lane over after #25115 / #25216 land, see the handover notes on #25219 and #25220). **查重:** semantic search over objectstack issues for the line and the ledger (10 read, incl. closed): #23377 (closed, wrote the line), #25201 (closed, retired the ledger), #25203 (open, engine, carries the finding as its item 5) — no open card asks for this reword; 0 duplicates."
+}

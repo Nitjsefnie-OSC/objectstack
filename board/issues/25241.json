@@ -1,0 +1,36 @@
+{
+  "number": 25241,
+  "kind": "pull_request",
+  "title": "test(dogfood): a walled leg of the sign-up organization census",
+  "state": "closed",
+  "state_reason": null,
+  "draft": false,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "size/m",
+    "skip-changeset",
+    "tests"
+  ],
+  "assignees": [
+    "os-bill"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-22T14:37:13Z",
+  "updated_at": "2026-10-22T15:59:35Z",
+  "closed_at": "2026-10-22T15:59:33Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": "2026-10-22T15:59:33Z",
+  "comments": 4,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/pull/25241",
+  "body": "<!-- claude-projects-attribution: {\"github_login\":\"os-bill\"} -->\n_Requested by **Bill** · [project thread](https://claude.ai/code/project/chan_016iMXWSZDzqWRWvWzdNo8wg?thread=cmsg_016iMXWSZDzqWRWvWzdNo8wgCq1w2KRx6KxuLkmsCrYWrr)_\n\nFixes #25207\nPart of #24343 (its ceremony half, the `advisory` count, is not addressed here; #24343 remains open).\n\nClause-②: no\n\n## What\n\nA walled leg of the sign-up organization census, as a sibling file beside the `single` one: `packages/qa/dogfood/test/signup-organization-census-walled.dogfood.test.ts`. Test-only; nothing outside `packages/qa/dogfood/` moves, and the `single` file is untouched.\n\nOne boot per posture (`group`, `isolated`), `multiTenant: 'posture-only'` with `OS_TENANCY_POSTURE` selecting the posture, and the audit and email plugins composed together. The journey:\n\n1. the admin opens the audience (`open`, declared set `member_default`);\n2. a stranger self-registers (verification mail) and creates an organization (first membership);\n3. they invite a second stranger (invitation mail), who signs up and accepts (first membership).\n\nThen a census of the STORE, not the registry: every sqlite table carrying an `organization_id` column is read from `sqlite_master` plus `PRAGMA table_info` at run time (39 tables on this boot, the date-named `sys_activity` shard included), so a new table joins the census on its own.\n\n| assertion | reads |\n|:--|:--|\n| guard | posture is `group` / `isolated`, not degraded, isolation active; both users' only membership is the journey's organization; the census reaches the writers' tables |\n| whole-store NULL census | 0 rows with NULL or empty `organization_id` on every tenant-column table (boot rows included) |\n| journey rows | every row the journey wrote on a tenant-column table names the organization the users joined (17 rows: activity 10, `sys_member` 2, `sys_user_permission_set` 2, `sys_email` 1, `sys_invitation` 1, `sys_team` 1) |\n| grant writer | the self-registrant holds exactly one `member_default` grant, owned by the organization; the invitee, admitted by its invitation, holds none |\n| activity writer | activity about each grant and about the invitation mail names the organization; no activity row about the org-less `sys_user` records |\n| mail writers | the invitation is tenant mail owned by the organization; each verification mail is identity mail (`sys_identity_email`, no column), none in `sys_email` |\n\n## Why the existence legs matter\n\nMeasured on this boot: 38 of the 39 tenant columns are NOT NULL in the store (`sys_sso_provider` is the one nullable column), and a stamp-less system write on a walled posture is refused by the engine (ADR-0131 D9) before it reaches the column. So \"0 NULL rows\" alone holds even when a writer loses its stamp: the row is refused, not written NULL. The census therefore also requires each writer's own row to exist and to name the organization, and that is the leg the ablation turns red.\n\n## Tests\n\nAt head `70551508`, through `os-verify-lock.sh`:\n\n- `pnpm --filter @objectstack/dogfood exec vitest run --maxWorkers=2 test/signup-organization-census-walled.dogfood.test.ts test/signup-organization-census.dogfood.test.ts`: `Test Files 2 passed (2)`, `Tests 15 passed (15)` (walled 12/12 across both postures; the `single` control 3/3). Lock VERDICT command-exit 0.\n- `pnpm --filter @objectstack/dogfood typecheck`: exit 0; `tsc --listFiles` includes the new file.\n- `eslint --no-inline-config` on the new file: exit 0.\n\n## Ablation (one-shot, never landed)\n\nThe grant writer's stamp: in `packages/plugins/plugin-auth/src/auth-manager.ts` `landSelfRegistrationGrant`, the anchor `setName, organization_id: organizationId }` replaced by `setName, organization_id: (globalThis as any).ABLATION_25207 }` (undefined at run time), through `scripts/ablation-replace.mjs` (anchor 1 to 0, blob `ab76fa3c90e8` to `4db63fdf74d3`), then `pnpm --filter @objectstack/plugin-auth build` and `ablation-dist-preflight.mjs @objectstack/plugin-auth ABLATION_25207`: marker present in 2 built files.\n\n- Mutated: `Tests 4 failed | 11 passed (15)`. Red, in both postures: the grant writer leg (`the declared grant: expected [] to deeply equal [ orgId ]`) and the activity writer leg (`the registrant's grants: expected [ 'organization_admin' ] to include 'member_default'`). The auth log names the cause: `Insert on 'sys_user_permission_set' was REFUSED: a system-context write on a tenant-scoped object must carry an organization, and this install runs the 'group' (resp. 'isolated') tenancy posture`. The `single` control stayed green (the Default Organization is derived there).\n- Restored: blob back to `ab76fa3c90e8` (equal to HEAD, `git diff HEAD` empty), rebuilt, preflight `--absent` (marker absent from all 20 built files, tree clean), then `Tests 15 passed (15)`.\n- A first attempt planted `void \"ABLATION_25207\"`, which the bundler folds to `void 0`; the preflight read the marker ABSENT from `dist/`, so that leg's run was void and is not counted.\n\n## Gates\n\n`dispatch-gates.mjs --commands` derived 56 families for this diff; all run locally at `70551508` and reconciled with `--ran`: 55 exit 0, 1 NOT MEASURED (`check:dual-build-cjs-loads`, exit 3: needs every package built; CI reads it). `check:query-options-erasure` and `check:type-check-debt` were re-run without the per-command 300 s cap after a first timed-out pass; `check-plugin-teardown-shape --self-test` after deepening the shallow clone.\n\n## Changeset\n\nNone: `packages/qa/dogfood` is private and the diff is a test file; nothing published moves (`skip-changeset`).\n\n## Acceptance notes\n\n- The new file boots twice (one stack per posture); run alone on a shared box it read `Duration 33.90s` (import 25.10 s, tests 8.50 s), above the 10 s report line. That line is report-only and none of the declared budget classes fits a real-stack boot, so no budget is declared.\n- The invitee is admitted by the invitation, not by the open posture (`decideAudienceAdmission`), so it is owed no declared set by design; the file pins that reading instead of expecting a second grant.\n\n---\n_Generated by [Claude Code](https://claude.ai/code/session_01UQVH1PSsJbZT4VvCZqEiRu)_\n"
+}

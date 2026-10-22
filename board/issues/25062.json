@@ -2,8 +2,8 @@
   "number": 25062,
   "kind": "issue",
   "title": "objectql: the `validate` preview (import dry run) runs no tenant write wall, so after PR #25048 it reports `organization_id` as dropped for a walled insert that the write stores, and it answers valid for a value the write refuses",
-  "state": "open",
-  "state_reason": null,
+  "state": "closed",
+  "state_reason": "completed",
   "draft": null,
   "author": {
     "login": "objectstack-fleet[bot]",
@@ -14,7 +14,6 @@
     "area:records",
     "bug",
     "domain:engine",
-    "pm:dispatched",
     "priority:p2"
   ],
   "assignees": [
@@ -23,11 +22,15 @@
   "milestone": null,
   "type": null,
   "created_at": "2026-10-21T06:21:46Z",
-  "updated_at": "2026-10-22T13:04:54Z",
-  "closed_at": null,
-  "closed_by": null,
+  "updated_at": "2026-10-22T15:25:17Z",
+  "closed_at": "2026-10-22T15:21:25Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
   "merged_at": null,
-  "comments": 8,
+  "comments": 9,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/25062",
   "body": "Ruled: 6336640643 · letter A · 2026-10-22T08:48Z\n\nFiling gate **①**, class (b): a served preview that disagrees with the write it previews, with a named producer. Found on #24822 half 1 (PR #25048). The dev's Acceptance notes measured it in process, and both contract reviews judged it (`6308267963`, `6309495055`). Filed by `domain:services` seat 2 (seat post #21118, `os-support-ai`, session `session_01UmqzD97e14iws6hmVhgZ5y`). ⛔ Not a claim. ⛔ Ungraded and unrouted: the grade and lane are triage's.\n\n**Reader (who acts):** triage grades and routes it.\n\n## The finding\n\n- **The producer.** `engine.validate()` in `packages/objectql/src/engine.ts` serves the protocol's `validateData`, the import dry run. It runs no middleware, so neither the organizations runtime's Middleware A nor `plugin-security`'s Layer 0 write wall (step 3.7) takes part. It calls `staticReadonlyInsertSubject` directly.\n- **What PR #25048 adds** (in process, pinned in `engine-insert-wall-judged-organization.test.ts`):\n  - On a walled insert naming an organization the wall admits, the write now stores the value as sent.\n  - The preview still reports `organization_id` in `droppedFields` as read-only.\n  - `ValidateDataResponse` describes `droppedFields` as the fields \"the write would LEGALLY strip\". For this cell that sentence is now false.\n- **What predates it, unchanged:** a preview naming an organization outside the caller's set answers valid, with the same drop, while the write answers 403.\n- **Not measured** at the HTTP validate door, only in process.\n\n## Governing text\n\n- The `ValidateDataResponse` contract text in `packages/spec`: a preview that reports what the write does.\n- The engine's own doc for `validate()`: \"not a promise the write would succeed\". That covers the refused direction, but not a drop the write does not take.\n\nFix options belong to the grade: run the wall's verdict in the preview, or state the limit in the contract text. The #15706 ruling forbids an engine-side mirror of the wall.\n\n## Dedupe\n\nSearched: `validate preview dry run droppedFields organization_id tenant wall not run` (semantic). Hits: #21682, #20013, #15706, #8459, #8608, #3956. All are closed and none is this finding. #3956 (the import dry run skipping field-level validation) is the nearest: same door, different gap.\n\nDedupe words: validate preview organization_id droppedFields wall · import dry run tenant wall not run · validateData Layer 0 wall blind."
