@@ -382,8 +382,12 @@ export const CEILINGS = new Map([
   // Lowered 319 → 318 by the domain:server lane merge (maintainer ruling
   // 2026-10-22, letter 乙): the engine, services and cli rows of the 域车道 table
   // became one row, and the alias rule for the three retired labels took one
-  // bullet. Landed count, headroom 0 (lowering is always legitimate).
-  ['.claude/skills/pm-dispatch/SKILL.md', 318],
+  // bullet. Then 318 → 317: #25240 (landed 2026-10-22, the claim template's
+  // `Metadata-protocol:` line) had paid one line more than it took and left
+  // the ceiling where it was; this ledger edit, merging `main` behind it,
+  // takes the ceiling down to the landed count. Headroom 0 (lowering is
+  // always legitimate).
+  ['.claude/skills/pm-dispatch/SKILL.md', 317],
   // Raised 223 → 244 by the triage reading-cost card (maintainer ruling
   // 2026-08-20, quoted in the raising PR): three mandated conventions land in
   // the runbook's triage sections. Landed count, headroom 0, same convention.
