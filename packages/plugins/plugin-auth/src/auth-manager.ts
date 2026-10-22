@@ -39,6 +39,7 @@ import {
   type LinkingAuthContext,
   refuseImplicitAccountLink,
 } from './implicit-account-linking.js';
+import { CLOUD_MANAGED_REFUSAL_CODE, CLOUD_MANAGED_REFUSAL_MESSAGES } from './cloud-managed.js';
 import type { IDataEngine } from '@objectstack/core';
 // [#10348] The ONE id-shaped platform-admin predicate (ADR-0068 D2).
 // `auth-manager` used to re-derive that standing itself, in two spellings
@@ -50,6 +51,9 @@ import {
   API_KEY_MAX_EXPIRY_DAYS,
   accountScopeAuthGate,
   hasPlatformAdminStanding,
+  // [#25083] Is this process a cloud-managed (hosted) environment? The ONE
+  // accessor every managed-mode judgement here asks, and nothing else.
+  isCloudManaged,
   resolveUserAuthzGrants,
 } from '@objectstack/core';
 import type { AuthGate } from '@objectstack/core';
@@ -1992,10 +1996,11 @@ export class AuthManager {
       // lock the registration policy without relying on UI state.
       emailAndPassword: (() => {
         const disableSignUpFromEnv = readDisableSignUpEnv();
-        // SSO-only ("enforced") forces self-registration off (the managed team
-        // signs in via the IdP). `enabled` stays true so the break-glass
-        // password endpoint keeps working for the env owner / local admin.
-        const effectiveDisableSignUp = this.resolveSsoOnly()
+        // SSO-only ("enforced") and a cloud-managed environment force
+        // self-registration off (see `signUpForcedOff`). `enabled` stays true
+        // so the break-glass password endpoint keeps working for the env
+        // owner / local admin.
+        const effectiveDisableSignUp = this.signUpForcedOff()
           ? true
           : (disableSignUpFromEnv ?? this.config.emailAndPassword?.disableSignUp);
         return {
@@ -3750,6 +3755,19 @@ export class AuthManager {
           // denied (auto-org-admin-grant.ts keeps it read-only on those
           // tables precisely so a fresh org admin cannot rebind themselves).
           beforeCreateInvitation: async ({ invitation, inviter, organization }: any) => {
+            // [#25083] A cloud-managed environment creates no invitation at
+            // all: the organisation that hosts it invites its people in the
+            // cloud. First, before the role cap and the placement gate,
+            // because no invitation is issuable whatever its role or
+            // placement; after better-auth's own session and permission
+            // checks, which run before this hook.
+            if (isCloudManaged()) {
+              const { APIError } = await import('better-auth/api');
+              throw new APIError('CONFLICT', {
+                message: CLOUD_MANAGED_REFUSAL_MESSAGES.invitation,
+                code: CLOUD_MANAGED_REFUSAL_CODE,
+              });
+            }
             const inviterUserId = inviter?.id ?? inviter?.userId ?? null;
             const organizationId = organization?.id ?? invitation?.organizationId;
 
@@ -7792,6 +7810,18 @@ export class AuthManager {
   }
 
   /**
+   * Is local self-registration forced off, whatever `disableSignUp` says?
+   * Under SSO-only ({@link resolveSsoOnly}), and [#25083] on a cloud-managed
+   * environment, whose people the hosting organisation invites in the cloud.
+   * Read by the wiring and by `getPublicConfig()` alike, so the advertised
+   * flag cannot disagree with the wired one. Break-glass is untouched: neither
+   * case disables `emailAndPassword.enabled`.
+   */
+  private signUpForcedOff(): boolean {
+    return this.resolveSsoOnly() || isCloudManaged();
+  }
+
+  /**
    * The tenancy posture ACTUALLY IN FORCE on this deployment — the one fact
    * both `organization/create`'s gate and `/auth/config`'s
    * `features.multiOrgEnabled` are derived from, so the two can never disagree.
@@ -7899,7 +7929,8 @@ export class AuthManager {
     const disableSignUpFromEnv = readDisableSignUpEnv();
     // SSO-only ("enforced") hides the local password form + self-registration.
     // `enabled` stays true (break-glass), but signup is forced off and the UI
-    // suppresses the password form via `features.ssoEnforced` below.
+    // suppresses the password form via `features.ssoEnforced` below. A
+    // cloud-managed environment forces signup off too (`signUpForcedOff`).
     const ssoOnly = this.resolveSsoOnly();
     // [#11739] The audience posture, resolved once for this response: the
     // forced-verification mirror below and `features.audiencePosture` must
@@ -7911,7 +7942,7 @@ export class AuthManager {
     const audience = this.getAudience();
     const emailPassword = {
       enabled: emailPasswordConfig.enabled !== false, // Default to true
-      disableSignUp: ssoOnly ? true : (disableSignUpFromEnv ?? emailPasswordConfig.disableSignUp ?? false),
+      disableSignUp: this.signUpForcedOff() ? true : (disableSignUpFromEnv ?? emailPasswordConfig.disableSignUp ?? false),
       // Mirrors the wiring in createAuthInstance() through the SAME resolver:
       // a self-registration-permitting posture forces verification ON, except
       // an `open` deployment's explicit opt-out (#20389) — the advertised flag

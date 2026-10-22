@@ -1,6 +1,7 @@
 // Copyright (c) 2025 ObjectStack. Licensed under the Apache-2.0 license.
 
-import { Plugin, PluginContext, IHttpServer } from '@objectstack/core';
+// [#25083] `isCloudManaged`: the ONE accessor the cloud-managed doors below ask.
+import { Plugin, PluginContext, IHttpServer, isCloudManaged } from '@objectstack/core';
 import type { BetterAuthOptions } from 'better-auth';
 import {
   AuthConfig,
@@ -90,6 +91,7 @@ import {
   type SignInPathConfigView,
 } from './boot-sign-in-reachability.js';
 import { judgePlatformAdmin, isPlatformAdminUser, type PlatformAdminActor } from './platform-admin-gate.js';
+import { cloudManagedRefusal } from './cloud-managed.js';
 import {
   runAdminBanUser,
   runAdminUnbanUser,
@@ -2860,6 +2862,20 @@ export class AuthPlugin implements Plugin {
     rawApp.post(`${basePath}/set-initial-password`, async (c: any) => {
       try {
         const authApi = await this.authManager!.getApi();
+        // [#25083] On a cloud-managed environment the door narrows to a caller
+        // with platform-admin standing: everyone else signs in through the
+        // hosting organisation's identity provider, while an administrator can
+        // still give themselves the local password break-glass needs (ADR-0135
+        // D5.2 splits by population, never wholesale). A caller with no
+        // session falls through to the body, which answers it as before.
+        if (isCloudManaged()) {
+          // [#24222] Read as `AuthSessionApi` declares the answer (see `SessionRead`).
+          const session: SessionRead | null = await authApi.getSession(inProcessSessionReadInput(c.req.raw.headers));
+          if (session?.user?.id && !isPlatformAdminUser(session.user)) {
+            const refusal = cloudManagedRefusal('setInitialPassword');
+            return c.json(refusal.body, refusal.status);
+          }
+        }
         const { status, body } = await runSetInitialPassword(authApi as any, c.req.raw);
         return c.json(body, status);
       } catch (error) {
@@ -3173,6 +3189,12 @@ export class AuthPlugin implements Plugin {
         try {
           const actor = await gateAdmin(c);
           if (actor instanceof Response) return actor;
+          // [#25083] After the identity and admin checks, before any write: a
+          // cloud-managed environment's users are invited in the cloud.
+          if (isCloudManaged()) {
+            const refusal = cloudManagedRefusal('createUser');
+            return c.json(refusal.body, refusal.status);
+          }
           const authApi: any = await this.authManager!.getApi();
           if (typeof authApi.createUser !== 'function') {
             return c.json(
@@ -3443,6 +3465,11 @@ export class AuthPlugin implements Plugin {
         try {
           const actor = await gateAdmin(c);
           if (actor instanceof Response) return actor;
+          // [#25083] Same placement and reason as create-user's refusal.
+          if (isCloudManaged()) {
+            const refusal = cloudManagedRefusal('importUsers');
+            return c.json(refusal.body, refusal.status);
+          }
           const { runAdminImportUsers } = await import('./admin-import-users.js');
           // [#4251] Resolved from `protocol`, not `metadata`. `getMetaItem` is a
           // PROTOCOL method (`ObjectStackProtocolImplementation`, registered by

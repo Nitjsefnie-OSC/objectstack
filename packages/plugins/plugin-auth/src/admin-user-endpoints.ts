@@ -175,6 +175,8 @@ import { revokeSessionsAndApiKeys, type ForcedResetRevocationOutcome } from './f
 import { reconcileMembership, type MembershipPolicy } from './reconcile-membership.js';
 import { resolveDefaultOrgId } from './tenancy-service.js';
 import { readJsonRequestBody } from './request-json-body.js';
+import { cloudManagedRefusal } from './cloud-managed.js';
+import { isCloudManaged } from '@objectstack/core';
 
 const SYSTEM_CTX = { isSystem: true, positions: [], permissions: [] };
 
@@ -302,6 +304,32 @@ async function resolvePassword(
  * fail-open gate, so a failed stamp must not fail the whole operation; we
  * surface the *actual* stamped state in the response instead.
  */
+/**
+ * [#25083] The target's `sys_user.source` (`idp_provisioned` | `env_native`),
+ * read as the system. `ok: false` when it cannot be read at all (no engine,
+ * no read surface, or the read throws), so the cloud-managed check above
+ * fails closed instead of reading an outage as a local account.
+ */
+async function readUserSource(
+  deps: AdminUserEndpointDeps,
+  userId: string,
+): Promise<{ ok: true; value: string | null } | { ok: false }> {
+  const engine = deps.getDataEngine();
+  if (!engine?.find) return { ok: false };
+  try {
+    const rows = await engine.find('sys_user', {
+      where: { id: userId },
+      fields: ['id', 'source'],
+      limit: 1,
+      context: SYSTEM_CTX,
+    });
+    const row = Array.isArray(rows) ? (rows[0] as { source?: unknown } | undefined) : undefined;
+    return { ok: true, value: typeof row?.source === 'string' ? row.source : null };
+  } catch {
+    return { ok: false };
+  }
+}
+
 async function stampMustChangePassword(
   deps: AdminUserEndpointDeps,
   userId: string,
@@ -724,6 +752,30 @@ export async function runAdminSetUserPassword(
 
     if (!(await authCtx.internalAdapter.findUserById(userId))) {
       return { status: 404, body: { success: false, error: { code: 'RESOURCE_NOT_FOUND', message: 'User not found' } } };
+    }
+
+    // [#25083] On a cloud-managed environment a password is set here only on
+    // a local account. An `idp_provisioned` user signs in through the hosting
+    // organisation's identity provider, which owns their password; an
+    // `env_native` row (the break-glass administrator among them) still
+    // answers, because ADR-0135 D5.2 narrows by population, never wholesale.
+    if (isCloudManaged()) {
+      const source = await readUserSource(deps, userId);
+      if (!source.ok) {
+        return {
+          status: 503,
+          body: {
+            success: false,
+            error: {
+              code: 'SERVICE_UNAVAILABLE',
+              message:
+                "The user's identity source could not be read, so whether this cloud-managed environment may set "
+                + 'their password here cannot be judged. No password was changed.',
+            },
+          },
+        };
+      }
+      if (source.value === 'idp_provisioned') return cloudManagedRefusal('setUserPassword');
     }
 
     // Mirrors the stock /admin/set-user-password core: hash, then update the
