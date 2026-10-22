@@ -158,16 +158,15 @@ PM 的工作是循环:选卡 → 认领 → 派发 → 收集 → 复核 → 报
 
 | 标签 | 包家族 |
 |:--|:--|
-| `domain:engine` | `packages/objectql`、`packages/core`、`packages/formula`(CEL / `matches-filter` / RLS 谓词求值)、`plugin-pinyin-search`;`packages/metadata*`、`packages/platform-objects`;`packages/drivers/driver-*`;退役标签 `domain:engine-core` / `domain:metadata` / `domain:drivers` 只退出流通,GitHub 标签对象保留 |
-| `domain:services` | `packages/services/*`、`packages/connectors/*`、`packages/triggers/*`、`plugin-approvals`、`plugin-webhooks`、`plugin-email`、`plugin-reports`、`embedder-openai`、`knowledge-*`;`plugin-auth`、`plugin-security`、`plugin-sharing`、`plugin-audit`;退役标签 `domain:identity` 同上只退流通 |
-| `domain:devx` | `sdui-parser`、`content/docs/**`、`apps/docs`、`docs/qa/**`、`.githooks/`、`docker/README.md`、`examples/**` 仅测试基建面;`packages/lint`、`scripts/`(门禁类)、`.github/workflows/`(接线)三者按锚定规则例外归 `domain:spec`,门禁按 SUBJECT:governed 面归 skills,代码/文档质量归本域 |
+| `domain:server` | 服务端:引擎 + 服务插件 + CLI/运行时;`objectql core formula metadata* platform-objects drivers/* services/* connectors/* triggers/* plugin-* embedder-openai knowledge-* cli runtime verify types rest mcp observability client* cloud-connection create-objectstack adapters/*`;详见 `references/lanes/server.md` |
+| `domain:devx` | `sdui-parser`、`packages/qa`、`content/docs`、`apps/docs`、`docs/qa`、`.githooks`、`docker/README.md`、`examples/**` 仅测试基建面;`packages/lint`、`scripts`(门禁类)、`.github/workflows`(接线)三者按锚定规则归 `domain:spec`,门禁按 SUBJECT:governed 面归 skills,代码/文档质量归本域 |
 | `domain:skills` | governed 面全量(含本文件;统一定义见「governed 面统一定义」行);非门禁的 `scripts/pm/**`(PM 循环工具);governed 面的治理执行文件:`.github/CODEOWNERS` + SUBJECT 是 governed 面本身的门禁/审计(现为 `scripts/pm/check-governed-merges.mjs`) |
 | `domain:spec` | `packages/spec` 整包:schema 形状、`contracts/**`、退役行为半边、strictness 台账;describe/JSDoc/墓碑散文/错误 guidance 与 alias 表;`packages/spec/scripts/**`、`packages/spec/docs/**` 及按锚定规则的例外归本域的工具链(域边界枚举与席内分派见 `references/lanes/spec.md`) |
-| `domain:cli` | `packages/cli`、`runtime`、`verify`、`packages/qa`、`types`、`packages/rest`、`packages/mcp`、`packages/observability`、`packages/client*`、`cloud-connection`、`create-objectstack`、`packages/adapters/*`、`plugin-hono-server`、`plugin-dev` |
 | `domain:cloud` | 云服务旅程,停放(加 `status:parked`,sweep 免扫)待 cloud PM 迁移,本仓不派 |
 | (无固定归属,按落点分诊) | `packages/apps/*`、`packages/console`(dist 由脚本生成 ⛔ 不手改;UI 缺陷走 `repo:objectui`)、`examples/*`(归它演练的子系统)、`docs/audits/**` |
 
 - 表未覆盖的包首次分诊时归类并走 PR 更新本表;新增或退役 `domain:*` 必须同批改本表。
+- 退役 `domain:*` 只退流通,对象保留;`domain:engine`/`domain:services`/`domain:cli` 读作 `domain:server`。
 - `domain:*` 只由分诊席产出,例外一:在飞卡衍生 sub-issue 承父卡域;无标签的卡 ⛔ 不得认领。
 - 例外二:立卡人自贴而车道合上表、正文齐立卡门三件 ⇒ 执行席直接认领,分诊事后抽查。
 - 跨域例外路径:拆不动的跨域单 PR 由分诊席指定一个车道 PM 认领,认领评论申报文件面。
