@@ -1,0 +1,32 @@
+{
+  "number": 25207,
+  "kind": "issue",
+  "title": "test(dogfood): a walled leg of the sign-up organization census — a real-stack walled sign-up with the audit and email plugins composed leaves 0 NULL organization_id rows (#24343 acceptance)",
+  "state": "open",
+  "state_reason": null,
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "domain:engine",
+    "pm:dispatched",
+    "priority:p3"
+  ],
+  "assignees": [
+    "os-bill"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-22T11:31:57Z",
+  "updated_at": "2026-10-22T13:40:31Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 1,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/25207",
+  "body": "Filing gate **③**: the unverified acceptance line of #24343, found by the epic seat's reconciliation at `main` `2919ddb875`.\n- **Who acts:** the shared queue.\n- **Dedupe:** none.\n\nPart of #24343.\n\n## What is on `main`\n- Each of #24343's three writers has a walled unit pin:\n  - the activity writer, `audit-writers.test.ts:2646`;\n  - the grant, `self-registration-grant-first-membership-walled.dogfood.test.ts`;\n  - the identity mail, `identity-mail-sibling.test.ts:100-112`.\n- Step 4 and 7b-0 make a NULL row impossible.\n- But no in-repo real-stack walled census composes the audit and email plugins together: `signup-organization-census.dogfood.test.ts` runs `single` only.\n\n## Wanted\n- A walled leg (`group` and `isolated`) of `signup-organization-census.dogfood.test.ts`: sign-up, invitation, verification mail and first membership, then a census of every platform table with the column.\n- It is test-only.\n\n## Acceptance\n- The walled leg reads 0 NULL `organization_id` rows.\n- An ablation (one writer's stamp removed) turns it red."
+}

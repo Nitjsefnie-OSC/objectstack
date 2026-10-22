@@ -1,0 +1,32 @@
+{
+  "number": 25206,
+  "kind": "issue",
+  "title": "feat(cli): the ownership ceremony's fate for walled organization-less self-registration grants (sys_user_permission_set) — attribute through the user's first membership, or record that ruling C's manual fix governs",
+  "state": "open",
+  "state_reason": null,
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "area:access",
+    "domain:cli",
+    "enhancement",
+    "pm:epic",
+    "priority:p2"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-22T11:31:35Z",
+  "updated_at": "2026-10-22T11:54:23Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 0,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/25206",
+  "body": "Filing gate **③**: owed item A3 of #24343, carried to 18.x (6260319465). Amendment 6258289325 gave it to 8b-0de \"if owed\", and 8b-0f's report said it was owed. The epic seat's reconciliation at `main` `2919ddb875` found it still open.\n- **Who acts:** the epic seat dispatches it.\n- **Dedupe:** none.\n\nPart of #24343.\n\n## What is on `main`\n- `packages/cli/src/utils/organization-ownership-inventory.ts:652` gives `sys_user_permission_set` the fate `attribution` with `anchors: []`.\n- Under `single`, D10 gives such a row the Default Organization.\n- Under a wall, every organization-less self-registration grant is therefore unattributable. Under ruling C, it is reported and blocks certification until it is fixed by hand.\n- Nothing in `packages/cli` handles self-registration. Since #24453, the grant waits for the user's first membership.\n\n## Wanted\n1. **Measure:** on a walled 17.x or pre-release store, how many such grants does a store hold, and does each user have a membership that names one organization?\n2. **Then either:**\n   - **A:** add an anchor, the user's first `sys_member` row's organization, when that is unambiguous; a user in several organizations stays unattributable and is reported;\n   - **B:** stop and report, if the measurement shows ruling C's manual fix is the right answer. The seat records it on #24343.\n\n## Acceptance\n- Under A: a walled ceremony attributes a one-membership user's grant, and reports a several-membership user's grant.\n- Under either, the PR takes `needs:upgrade-harness`, and R1–R4 hold."
+}

@@ -1,0 +1,35 @@
+{
+  "number": 25221,
+  "kind": "pull_request",
+  "title": "fix(pm): the governed register reads `.claude/**` Tier S in objectstack alone",
+  "state": "closed",
+  "state_reason": null,
+  "draft": false,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "size/s",
+    "skip-changeset"
+  ],
+  "assignees": [
+    "os-bill"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-22T13:19:53Z",
+  "updated_at": "2026-10-22T14:02:56Z",
+  "closed_at": "2026-10-22T14:02:54Z",
+  "closed_by": {
+    "login": "os-zhuang",
+    "id": 277994282,
+    "type": "User"
+  },
+  "merged_at": "2026-10-22T14:02:54Z",
+  "comments": 1,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/pull/25221",
+  "body": "<!-- claude-projects-attribution: {\"github_login\":\"os-bill\"} -->\n_Requested by **Bill** · [project thread](https://claude.ai/code/project/chan_016iMXWSZDzqWRWvWzdNo8wg?thread=cmsg_016iMXWSZDzqWRWvWzdNo8wgSZnZg1LiHJmcHVXsZXKpyR)_\n\nFixes #25199\nClause-②: no\nMetadata-protocol: none\n\n## What changed\n\nThe governed register's `claude-tree` row read Tier S in every governed repository, but only objectstack's queue guard has a Tier S arm. objectui's guard (`scripts/check-governed-queue-guard.mjs` at objectui `1aa8851`) carries no tier at all: its `merge_group` leg refuses every governed diff, `.claude/**` included, without an authorized approval. So `check-governed-merges --pr` promised objectui a seat landing its own queue refuses, and the relay's governed-review follow-up (which sends on Tier H alone) never summoned the approvers.\n\n`scripts/pm/check-governed-merges.mjs` only:\n\n- A row's `tier` can be scoped per repository by a `tierRepos` key, read by one pure function, `surfaceTierIn(surface, repo)`: the row's `tier` where the key is absent or names `repo`, else Tier H (fail closed, so a repository added to `GOVERNED_REPOS` later never inherits a cheaper landing than its own guard enforces).\n- `governedSurfacesFor(repo)` hands every matcher the tier for its repository (the table's own frozen row where the tier holds, a frozen copy carrying H otherwise), so `governedPathsIn`, `governedTierFor`, `testVerdict`, `--pr`/`--branch`/`--test` and the relay's `governedReviewPlan` all follow with no change of their own.\n- The `claude-tree` row gains `tierRepos: ['objectstack']`. Membership is untouched (the row still governs `.claude/**` in all five repositories, no `repos` key), and the raw row still reads `tier: 'S'`, which is what the queue guard's `tierSGlobs()` words read.\n- The header's \"two landing tiers\" section and the table's docblock now say where Tier S holds; a new self-test battery (12 cases) pins it, and the roster floor moves 33 to 34.\n\nRoute per triage 6337908442. No gate is loosened. A Tier S arm for objectui's own guard is the maintainer's open question from triage's round report; this PR makes the register follow the guard that is enforced today and does not answer that question.\n\nCloud, objectos and hotcrm: their guards are not readable from this session (private, HTTP 403 on every channel tried), so their `.claude/**` reads Tier H, the stricter tier, **unverified**. Reading Tier S as H costs one authorized approval; the reverse lands a maintainer-owned file on a seat's own review.\n\n## Evidence\n\n- Live replay of objectui#13320 (head `8a0c369`, six `.claude/hooks/` paths), through `--root` on an objectui checkout and `--branch` (the `--pr` read answers HTTP 403 for objectui on every channel here):\n  - before (`15764cd`): `GOVERNED — Tier S(席内达档复核落地)`, exit 3;\n  - after: `GOVERNED — a human merge is the review record` with `⚖️ landing tier: H(人合)`, exit 3.\n- The relay follow-up, `governedReviewPlan` from `fleet-write/execute.mjs` on the same six paths: `objectstack-ai/objectui` answers tier `H`, requesting `os-zhuang`, `hotlong`; `objectstack-ai/objectstack` answers tier `S`, nothing sent. `ops.mjs` and `execute.mjs` are unchanged.\n- objectstack is byte-identical: `tierSGlobs()` reads `.claude/**` before and after; the per-repo tier table differs only in the four non-objectstack rows of `claude-tree`; `check-governed-queue-guard.mjs --self-test` prints the same output before and after (334 cases).\n- Ablation (fix committed first; the `tierRepos` key deleted through `scripts/ablation-replace.mjs`, mutation and restore verified on disk, blob back to HEAD `2dc2457c`): the self-test reds with 8 failures, among them the objectui and cloud/objectos/hotcrm Tier H cases and the #13320 replay; the objectstack Tier S case, the objectstack #13320 case and the membership case stay green. A first attempt with an empty `--replacement` was a no-op (the tool refused to run the command) and is not counted.\n\n## Gates (head `0f43df5`)\n\n- `node scripts/pm/dispatch-gates.mjs --commands --repo objectstack-ai/objectstack`: 35 derived families, all run, all exit 0; `--ran` reconciliation: 35 derived, 35 run, 0 NOT-MEASURED, 0 UNRUN.\n- Beyond the derivation, exit 0 each: `check-governed-merges.mjs --self-test` (512 assertions, was 500), `check-governed-queue-guard.mjs --self-test` (334), `fleet-write/execute.mjs --self-test` (188), `fleet-write/validate.mjs --self-test` (193), `pnpm check:pm-governed-prose`, `check-half-states.mjs --self-test` (4916).\n- `check-governed-merges.mjs --test scripts/pm/check-governed-merges.mjs`: NOT governed. The file is a CODEOWNERS enforcement-chain row, so GitHub requests the approvers when this PR is marked ready.\n- `skip-changeset`: the diff is `scripts/pm/**` only; the root package is private and nothing here ships in any package's `files[]`.\n\n## Acceptance notes\n\n- `scripts/pm/fleet-write/ops.mjs`'s header lists the Tier H surfaces as the rows \"with tier `H`\" (`docs/adr/**`, `skills/**`, ...). That list is objectstack's view; a non-objectstack `.claude/**` is now Tier H through the per-repo tier without being in it. Not edited here (outside this card's file surface); carrier: none.\n- `AGENTS.md` Prime Directive 14 says Tier S is \"all of `.claude/**`\". That is this repository's own instruction file, and in objectstack it stays exactly true; no edit needed.\n\n---\n_Generated by [Claude Code](https://claude.ai/code/session_01T1ABkBhrMzga6Kq81uZ8ro)_\n"
+}

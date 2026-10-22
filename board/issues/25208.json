@@ -1,0 +1,33 @@
+{
+  "number": 25208,
+  "kind": "issue",
+  "title": "fix(core,plugin-security): ADR-0131 8c-2 review carriers — guard a sys_organization insert that moves the platform-admin anchor, pin the ceremony's NULL admin_full_access attribution, one Default Organization definition",
+  "state": "open",
+  "state_reason": null,
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "area:access",
+    "bug",
+    "domain:engine",
+    "pm:epic",
+    "priority:p2",
+    "security"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-22T11:32:46Z",
+  "updated_at": "2026-10-22T11:55:04Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 0,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/25208",
+  "body": "Filing gate **③**: owed scope of #15212. These are the carriers of the 8c-2 contract review (6253205661) that no later stage took up. The epic seat's reconciliation found them at `main` `2919ddb875`.\n- **Who acts:** the epic seat dispatches it after its p1 children.\n- **Dedupe:** none.\n\nPart of #15212.\n\n## Items\n1. **The anchor guard.**\n   - Under `single`, the platform-admin anchor is the Default Organization's `admin_full_access` grant.\n   - Adding a second organization beside a sole one not slugged `default` can move the resolver's answer.\n   - `last-admin-guard.ts:1861-1870` guards update and delete only.\n   - Add the `beforeInsert` half, or show by measurement that the resolver cannot move.\n2. **The ceremony pin.**\n   - The `organization-ownership-apply.test.ts` fixture (`:331-336`) holds no NULL `admin_full_access` grant.\n   - Add one, and pin that the ceremony attributes it to `readDefaultOrganizationId`'s answer.\n   - The PR takes the `needs:upgrade-harness` label.\n3. **One definition of the Default Organization.**\n   - `resolve-authz-context.ts:943` and `:963` hold the resolver, unexported.\n   - Copies sit in `default-organization-invariant.ts:87`, `ensure-default-organization.ts:343`, `last-admin-guard.ts:1009-1030`, `tenancy-service.ts:226`, `suggested-audience-bindings.ts:554` and `organization-ownership-plan.ts:493`.\n   - Export one from core, and retire the copies where they mean the same thing; record why any copy differs.\n\n## Acceptance\n- Each item is pinned, or the measurement that makes it moot is recorded.\n- R1–R4 hold."
+}

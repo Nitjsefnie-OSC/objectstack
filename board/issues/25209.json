@@ -1,0 +1,36 @@
+{
+  "number": 25209,
+  "kind": "pull_request",
+  "title": "docs(agents): Prime Directive 14 — CODEOWNERS routes every Tier H surface, the relay requests review on drafts",
+  "state": "closed",
+  "state_reason": null,
+  "draft": false,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "documentation",
+    "size/xs",
+    "skip-changeset"
+  ],
+  "assignees": [
+    "os-bill"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-22T11:45:23Z",
+  "updated_at": "2026-10-22T12:42:01Z",
+  "closed_at": "2026-10-22T12:41:59Z",
+  "closed_by": {
+    "login": "os-zhuang",
+    "id": 277994282,
+    "type": "User"
+  },
+  "merged_at": "2026-10-22T12:41:59Z",
+  "comments": 2,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/pull/25209",
+  "body": "<!-- claude-projects-attribution: {\"github_login\":\"os-bill\"} -->\n_Requested by **Bill** · [project thread](https://claude.ai/code/project/chan_016iMXWSZDzqWRWvWzdNo8wg?thread=cmsg_016iMXWSZDzqWRWvWzdNo8wg12aSKNQNZLsc93xe2PbAJz)_\n\nFixes #25070\n\nClause-②: no\nMetadata-protocol: none\n\n## What\n\nOne clause of `AGENTS.md` Prime Directive 14 (the paragraph that begins \"**Already armed or queued when you read this?**\", L297–L298) is rewritten in place. Net 0 lines: 2 lines out, 2 lines in, no other line moved, no re-wrap, no other file.\n\nBefore:\n\n> Behind it: the queue guard refuses a governed diff without its tier's record; CODEOWNERS routes review requests for `docs/adr/` only, so nothing summons the maintainer on the other Tier H surfaces; the post-merge audit …\n\nAfter:\n\n> Behind it: the queue guard refuses a governed diff without its tier's record; CODEOWNERS routes every Tier H surface to the approvers, and the relay requests them on drafts (a summons, no barrier); the post-merge audit …\n\n## Why: what the base actually does (read on `origin/main` `2919ddb`)\n\n`.github/CODEOWNERS` routes all six Tier H surfaces and the enforcement chain to both `GOVERNED_APPROVERS` accounts:\n\n```text\n# Tier H governed surfaces — the register's rows with tier H\n/docs/adr/ @os-zhuang @hotlong\n/skills/ @os-zhuang @hotlong\n/AGENTS.md @os-zhuang @hotlong\n/CLAUDE.md @os-zhuang @hotlong\n/docs/NORTH-STAR.md @os-zhuang @hotlong\n/.github/workflows/ @os-zhuang @hotlong\n```\n\nIts header also says why that alone does not summon anyone on a draft: \"GitHub requests a code owner's review when a pull is opened READY or marked ready for review. A DRAFT open requests nobody ... so the fleet relay requests the same accounts itself at `pr_create` and `pr_ready`\".\n\n`git grep -n governedReviewRequests origin/main -- scripts/pm/fleet-write/ops.mjs` gives 3 hits: L108 and L776 (header prose) and L980, the definition `export function governedReviewRequests(repo, pull, { reviewers = [], assignees = [] } = {})`. The L108 header says that on a Tier H hit the relay sends \"ONE `POST /repos/{o}/{r}/pulls/{n}/requested_reviewers` naming every `GOVERNED_APPROVERS` account not already requested, assigned or holding a submitted review\". The `pr_create` and `pr_ready` rows carry `governedReview: true`.\n\nThe old clause said the opposite of both facts. Agents read `AGENTS.md` before they act on a governed PR, so the old text could make one skip a summons the tooling now sends, or report a gap that no longer exists.\n\n## Not a barrier\n\nThe card's Done-when says the clause must not read as a merge barrier. The live `main` ruleset has `require_code_owner_review: false`, so the routing summons reviewers and gates nothing. The new text says so in its parenthesis. The barrier stays where the sentence before it puts it: \"**Draft is no barrier by itself — the barrier is this directive**\".\n\n## Line budget\n\n- `AGENTS.md`: 1117 lines before and after (ratchet ceiling 1117, headroom 0). `git diff --numstat origin/main...HEAD`: `2 2 AGENTS.md`.\n- Line widths: L297 is 115 bytes, L298 is 120 bytes. The ratchet's per-line budget is 120 bytes. The first commit used an em dash, which made L298 122 bytes and turned `check:pm-skill-ratchet` red. The second commit swaps it for a parenthesis with the same meaning. No content went to another line.\n\n## Gates (local, head `c9520ed`)\n\n`node scripts/pm/dispatch-gates.mjs --commands --repo objectstack-ai/objectstack` derives 15 commands. Every one exited 0:\n\n```text\nnode scripts/check-closing-keyword-parity.mjs              exit 0\nnode scripts/check-closing-keyword-parity.mjs --self-test  exit 0\nnode scripts/check-comment-mask-corpus.mjs                 exit 0\npnpm check:agent-test-spelling                             exit 0\npnpm check:docs-audit-scope                                exit 0\npnpm check:driver-memory-census                            exit 0\npnpm check:gitlink-declared                                exit 0\npnpm check:nul-bytes                                       exit 0\npnpm check:pm-governed-merges                              exit 0\npnpm check:pm-governed-prose                               exit 0\npnpm check:pm-skill-id-lint                                exit 0\npnpm check:pm-skill-ratchet                                exit 0\npnpm check:refd-timer-probe                                exit 0\npnpm check:required-contexts                               exit 0\npnpm check:watch-hint-literal                              exit 0\n```\n\n- `--ran` reconciliation: \"15 derived famil(ies) accounted for — 15 run, 0 NOT-MEASURED (a DERIVED zero — all 15 recorded an exit code and none of them is 3)\".\n- `check:pm-governed-prose`: \"2 instruction surface(s) name all 7 registered governed surfaces that govern objectstack ... and claim no others\".\n- The rest of the farm, the type-check lanes included, runs in CI.\n\n`skip-changeset`: the only change is `AGENTS.md` at the repo root, which no package's `files[]` ships.\n\n## Landing\n\n`AGENTS.md` is a Tier H governed surface. This PR stays a draft and lands only on an authorised APPROVED review by a `GOVERNED_APPROVERS` account (Prime Directive 14). No seat readies, queues or arms auto-merge on it.\n\n## Acceptance notes\n\nNone. This PR changes nothing outside the clause.\n\n## 维护者速读(草稿)\n\n**改了什么**:`AGENTS.md` 第 14 条首要指令里只改了一句话,原地重写,行数不变(净 0 行),其他文件都没动。旧句说「CODEOWNERS 只为 `docs/adr/` 分派评审请求,其余 Tier H 面没人会通知维护者」。新句说「CODEOWNERS 把每个 Tier H 面都分派给批准人,fleet 中继在 draft PR 上也会替他们发评审请求(只是通知,不是合并门槛)」。\n\n**为什么改**:#25064 合并以后,旧句和仓库的实际行为正好相反。agent 处理受管面 PR 之前都会读这份文件。旧句可能让它们以为没人会通知维护者,于是去补一次多余的提醒,或者报告一个早已不存在的缺口。\n\n**风险与代价(含回滚)**:风险很低,只改了文字,不碰代码、CI 和规则集。新句特意写明「不是门槛」:规则集并不要求 code owner 评审,真正的合并门槛仍然是第 14 条本身。要回滚,revert 这一个 commit 即可。\n\n**席位意见**:\n\n**你要做的**:读一遍新句。认可的话,用 `GOVERNED_APPROVERS` 里的账号提交 APPROVED 评审,之后由所属席位合并。\n\n---\n_Generated by [Claude Code](https://claude.ai/code/session_0165fj9zYfUrt6ckcUgYBD5a)_\n"
+}

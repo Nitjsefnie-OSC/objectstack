@@ -1,0 +1,36 @@
+{
+  "number": 25213,
+  "kind": "pull_request",
+  "title": "docs(pm-dispatch): objectui keeps two lanes, domain:ui and domain:skills; its domain:spec, domain:devx and domain:tooling retire",
+  "state": "closed",
+  "state_reason": null,
+  "draft": false,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "documentation",
+    "size/s",
+    "skip-changeset"
+  ],
+  "assignees": [
+    "os-bill"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-22T12:26:36Z",
+  "updated_at": "2026-10-22T13:01:39Z",
+  "closed_at": "2026-10-22T13:01:37Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": "2026-10-22T13:01:37Z",
+  "comments": 2,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/pull/25213",
+  "body": "<!-- claude-projects-attribution: {\"github_login\":\"os-bill\"} -->\n_Requested by **Bill** · [project thread](https://claude.ai/code/project/chan_016iMXWSZDzqWRWvWzdNo8wg?thread=cmsg_016iMXWSZDzqWRWvWzdNo8wgFHoc5JJkFBsksRzhkiLVAW)_\n\nFixes #25191\nClause-②: no\nMetadata-protocol: none\n\n## What changed\n\nThe maintainer ruled on 2026-10-22, quoted verbatim from the card: 「objectui 只有 skills 是特殊的，他本身没有 spec 的概念。devx 我感觉可以和 ui 合并」, and on the options 「甲，现在做」. After this PR, objectui has exactly two lanes:\n\n- `domain:ui` — all objectui code: the published library and `apps/*`; `packages/types`, the schema corpus and the spec-pin coupling; `.github/`, `scripts/`, the build and release pipeline and the gate tools; docs, which follow the surface they document.\n- `domain:skills` — the published `skills/**`.\n\n`domain:spec`, `domain:devx` and `domain:tooling` retire **in objectui only**. objectstack's own lanes are untouched. The protocol stays objectstack `domain:spec`'s: a cross-layer feature keeps rule 2 (a parent plus per-layer children, spec and backend first), and its objectui child is now a `domain:ui` card. `domain:cloud` stays a parking label, unchanged.\n\n| File | Change | Lines |\n|:--|:--|:--|\n| `.claude/skills/pm-dispatch/references/cross-repo-coordination.md` | the three 「三流」 lines become: two-lane routing · the retirement · protocol stays objectstack `domain:spec` | 51 → 51 (ceiling 51) |\n| `.claude/skills/pm-dispatch/references/lanes/ui.md` | the seat's scope is the whole objectui code face in the card's four bullets, plus the protocol line; the former `packages/spec` line is folded into it | 38 → 38 (ceiling 38) |\n| `.claude/skills/pm-dispatch/references/lanes/devx.md` | the objectui scope line is deleted | 36 → 35 |\n| `.claude/skills/pm-dispatch/references/lanes/spec.md` | the objectui scope line is deleted | 43 → 42 |\n| `scripts/pm/ensure-pm-labels.sh` | the objectui `domain:devx` / `domain:spec` rows are gone; the objectui `domain:ui` description names the whole scope (93 characters, under the 100 cap); the block and the header record the retirement with the ruling's words and date | — |\n| `scripts/pm/check-half-states.mjs` | the H38 sibling-board fixture is re-spelled from `domain:devx @ objectui` to `domain:ui @ objectui` (the docblock keeps the census provenance) | — |\n\n`SKILL.md` has zero edits: its only objectui mention is the 域车道 table's unanchored row (`repo:objectui` for UI defects); there is no 多仓协调 line about devx / spec pulls on objectui, so nothing to restate (card item 4, re-measured on `origin/main` at `e5f194b`).\n\n**Why re-spell the H38 fixture.** It is a fixture, not a rule, and either choice passes the self-test. Re-spelled because a retired lane name standing as the canonical example of a sibling-board seat title is exactly the trap the label script's own header names for `area:*`: a retired name surviving a `git grep` as though it were still a value, for the next AI to copy. Immediate retirement, no dual spelling.\n\n**Label objects on objectui.** The relay op table (`scripts/pm/fleet-write/ops.mjs`) carries no label-object op at all — `labels_add` / `labels_remove` act on an issue's labels, not on the objects — and this session cannot read objectui (the API answers 403 for the repository), so the live objects' current state is NOT MEASURED here. The script stops creating `domain:devx` / `domain:spec` on objectui; the object cleanup is the separate PM act the script's header describes, with the exact strokes in the report comment on the card.\n\n## 维护者速读(草稿)\n\n**改了什么。** objectui 仓从三条流(devx / spec / ui)收成两条车道:`domain:ui` 管 objectui 全部代码,`domain:skills` 管仓根发布的 `skills/**`。objectui 的 `domain:spec` / `domain:devx` / `domain:tooling` 退役(仅 objectui);objectstack 自己的车道不动。改的是 PM 技能参考四个文件、标签词表脚本与半态巡查的一个夹具。\n\n**为什么改。** 你 2026-10-22 的裁决 甲:objectui 本身没有 spec 的概念,devx 与 ui 合并。实测 10-08 → 10-22 期间 objectui 的 spec 卡全是本仓 `packages/types`、docs、widget 追协议,devx 卡全是本仓 CI、分片、pin 与发版工具,都由 objectui 的人在做;协议本体只在 objectstack。\n\n**风险与代价(含回滚)。** 零发布面,`skip-changeset`。风险只在车道表:座位每次选卡都读这几行,改错会把 objectui 卡派错席。回滚 = revert 本 PR;objectui 上已被分诊改贴到 `domain:ui` 的 4 张卡不受本 PR 影响。标签对象的清理是落地时席位另一笔动作,本 PR 不碰 objectui。\n\n**席位意见。**(席位定稿时填写)\n\n**你要做的。** 无:`.claude/**` 是 Tier S,席位做达档契约复核 PASS 后入队落地。\n\n## Acceptance notes\n\n- `lanes/devx.md` (36 → 35) and `lanes/spec.md` (43 → 42) now sit one line under their ceilings in `scripts/pm/check-skill-line-ratchet.mjs`; lowering the two rows is legitimate any time and is left out of this PR to keep the file surface the claim declared.\n- The roster creates no objectui `domain:skills` object; the card names that lane as staying, so the object presumably already exists on objectui. Not measured here (403); if absent, a row with its named reader is a one-line follow-up.\n- `check-half-states.mjs`: no test file outside the script names it (`git grep` over `scripts/**` tests and `test/**` found none), so its own `--self-test` is the whole suite owed by the edit.\n\n## Gates\n\nLocal subset at head `db3b205`, each exit captured before any pipe (the full derived list and the `--ran` reconciliation are in the report comment on the card):\n\n| Gate | Exit |\n|:--|:--|\n| `pnpm check:pm-skill-ratchet` | 0 — every ceiling held (cross-repo 51/51, ui 38/38, devx 35/36, spec 42/43), every line ≤120 bytes |\n| `pnpm check:pm-skill-id-lint` | 0 — 87 files clean |\n| `pnpm check:pm-governed-prose` | 0 |\n| `pnpm check:pm-label-desc-cap` | 0 — 38 descriptions ≤100 chars |\n| `pnpm check:skill-frame-sync` | 0 |\n| `pnpm check:pm-half-states` (the edited script's own self-test) | 0 |\n| `pnpm check:pm-dispatch-gates` | 0 |\n| derived union (`dispatch-gates.mjs --commands` on the diff, 51 families) | 51 run, 0 NOT-MEASURED, 0 UNRUN (`--ran` reconciliation) |\n\nCI families run by the PR's check-runs; the seat's ACCEPT reads those.\n\n---\n_Generated by [Claude Code](https://claude.ai/code/session_01FRiDG7bG4jkZL2tQKpJgGv)_\n"
+}

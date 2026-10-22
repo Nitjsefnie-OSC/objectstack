@@ -2,8 +2,8 @@
   "number": 25191,
   "kind": "issue",
   "title": "pm-dispatch: objectui has two lanes, domain:ui and domain:skills; retire objectui domain:spec / domain:devx / domain:tooling (maintainer 甲, 2026-10-22)",
-  "state": "open",
-  "state_reason": null,
+  "state": "closed",
+  "state_reason": "completed",
   "draft": null,
   "author": {
     "login": "objectstack-fleet[bot]",
@@ -13,19 +13,24 @@
   "labels": [
     "area:devpath",
     "domain:skills",
-    "pm:queue",
     "priority:p1",
     "tooling"
   ],
-  "assignees": [],
+  "assignees": [
+    "os-bill"
+  ],
   "milestone": null,
   "type": null,
   "created_at": "2026-10-22T08:31:07Z",
-  "updated_at": "2026-10-22T08:31:07Z",
-  "closed_at": null,
-  "closed_by": null,
+  "updated_at": "2026-10-22T13:03:31Z",
+  "closed_at": "2026-10-22T13:01:38Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
   "merged_at": null,
-  "comments": 0,
+  "comments": 5,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/25191",
   "body": "Filed by the triage seat (#6015, `session_01AavokzJ5DndAwitDXvKy4U`) on the maintainer's ruling in the triage chat, 2026-10-22.\n- **The maintainer's words:** 「objectui 只有 skills 是特殊的，他本身没有 spec 的概念。devx 我感觉可以和 ui 合并」. Asked for the options, they answered 「甲，现在做」.\n- ⛔ Not a claim.\n\n**Reader (who acts):** the `domain:skills` seat, in one PR on `.claude/**` (Tier S) and `scripts/pm/ensure-pm-labels.sh`. ⛔ No Tier H file is in scope.\n\n## Why (measured, objectui, 2026-10-08 → 2026-10-22)\n\n- **`domain:spec`: 20 cards, 0 open.** Nearly all are objectui's own `packages/types`, docs and widgets catching up with `@objectstack/spec`. Examples: objectui#12242, objectui#12213, objectui#12156. They were worked by objectui hands (huangyiirene, os-tesla, os-justin). The protocol itself lives only in objectstack.\n  - Triage re-laned the objectui halves of the Spec Shape Gate red (objectui#13308, objectui#13309) from `spec` to `ui` on 10-21, because only ui seats picked them up.\n- **`domain:devx`: 29 cards, 4 open.** These are objectui CI, test shards, the pin tooling and the release prerequisites. They were worked by os-warren (the objectui devx seat) and os-sales (a ui seat).\n- **`domain:skills`:** the published `skills/**` is a governed surface, and it stays a lane.\n- **`domain:tooling`:** 1 historical card, last touched 10-02.\n\n## The change (ruling 甲)\n\nAfter the change, objectui has **two lanes**:\n- **`domain:ui`:** all objectui code.\n  - The published library and `apps/*`.\n  - `packages/types`, the schema corpus and the spec-pin coupling.\n  - `.github/`, `scripts/`, the build and release pipeline and the gate tools.\n  - Docs, which follow the surface they document.\n- **`domain:skills`:** the published `skills/**`.\n\n`domain:cloud` stays a **parking label**, not a lane, unchanged. `domain:spec`, `domain:devx` and `domain:tooling` retire **in objectui only**. objectstack's lanes are untouched. #24907, the objectstack `domain:server` merge, is a separate and still-parked card.\n\n**Platform first is unchanged:** the protocol is still objectstack's `domain:spec`. A cross-layer feature keeps rule 2 (a parent plus per-layer children, spec and backend first). Its objectui child is now `domain:ui`.\n\n## Surfaces (objectstack `origin/main` `f7d740376d`)\n\n1. `.claude/skills/pm-dispatch/references/cross-repo-coordination.md:14–16`, the 「三流」 lines: objectui cards go to two lanes, as above. The 「`domain:devx`（工程面）与 `domain:spec`（契约面）跨仓归各自车道」 line retires.\n2. `references/lanes/ui.md:14`: replace 「objectui 的 `domain:devx` 与 `domain:spec` 卡归各自跨仓车道，⛔ 不归本席」 with the seat's whole objectui scope. Add one line: protocol work stays objectstack `domain:spec`'s, and the objectui half is a `ui` child.\n3. `references/lanes/devx.md:8` and `references/lanes/spec.md:13`: delete the objectui scope lines.\n4. `SKILL.md`, the 多仓协调 text (if it names the devx / spec lanes' cross-repo pulls on objectui): restate it. ⛔ `pnpm check:pm-skill-ratchet`: a line added is paid for by a line deleted.\n5. `scripts/pm/ensure-pm-labels.sh:470–484`:\n   - stop creating objectui `domain:devx` / `domain:spec`;\n   - widen objectui `domain:ui`'s description to the scope above;\n   - state the retirement in the comment block.\n   The existing objectui label objects for `domain:devx`, `domain:spec` and `domain:tooling` get a \"retired, use `domain:ui`\" description, or are deleted if the relay supports it. The dev measures which.\n6. `scripts/pm/check-half-states.mjs` H38 uses `domain:devx @ objectui` as a generic sibling-board seat fixture. Keep it or re-spell it, as the dev judges. It is a fixture, not a rule.\n\n## Already done by triage, in this act\n\n- The 4 open objectui `domain:devx` cards are re-laned to `domain:ui`: objectui#13260, objectui#13017, objectui#4806 and objectui#3592. None was assigned or in flight. objectui has 0 open `domain:spec` or `domain:tooling` cards.\n\n## Seat posts (the PR's landing step, or the seats themselves)\n\n- **objectui#5748** (`domain:devx @ objectui`, os-warren, active) becomes a `domain:ui @ objectui` seat with the next free number. The seat-holder retitles it at its next round, and triage notifies it on the post.\n- **objectui#10217** (`domain:spec @ objectui`, vacant) and **objectui#10917** (`domain:devx @ objectui · seat 2`, vacant) close `not_planned`, citing this card.\n\n**Release:** none. These are PM files only, so `skip-changeset` applies if nothing published changes."

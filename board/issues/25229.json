@@ -1,0 +1,32 @@
+{
+  "number": 25229,
+  "kind": "issue",
+  "title": "Data API paging: a negative $skip/offset answers 500, and a non-numeric or negative $top/limit is silently ignored",
+  "state": "open",
+  "state_reason": null,
+  "draft": null,
+  "author": {
+    "login": "os-sales",
+    "id": 319429713,
+    "type": "User"
+  },
+  "labels": [
+    "area:api",
+    "bug",
+    "domain:engine",
+    "pm:queue",
+    "priority:p2"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-22T13:39:16Z",
+  "updated_at": "2026-10-22T14:07:10Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 0,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/25229",
+  "body": "QA-source: #25227 · api-backend.query-contract-matrix · observed beside the clauses\n\nFound by an off-clause boundary probe during the 18.1.0 P0 run; re-measured on a second boot. Not a regression: the same coercion ships in the published `@objectstack/metadata-protocol@18.0.0`.\n\n## Reproduction (stock showcase, admin bearer)\n\n| request | answer | expected |\n|---|---|---|\n| `GET /api/v1/data/showcase_account?$skip=-5` | **500** `{\"error\":\"Internal server error\",\"code\":\"INTERNAL_ERROR\"}` | 400 naming `$skip` |\n| `GET /api/v1/data/showcase_account?$skip=-1&$top=3` | **500** INTERNAL_ERROR | 400 |\n| `POST /api/v1/data/showcase_account/query {\"offset\":-5}` | **500** INTERNAL_ERROR | 400 naming `offset` |\n| `GET /api/v1/data/showcase_account?$top=abc` | 200, all 14 rows (as if no `$top`) | 400 naming `$top` |\n| `GET /api/v1/data/showcase_account?$top=-1` | 200, all 14 rows | 400 |\n| `POST /api/v1/data/showcase_account/query {\"limit\":-1}` | 200, all 14 rows | 400 |\n| `GET /api/v1/data/showcase_account?$top=` | 200, 0 rows (`Number('')` is 0) | 400, or treated as absent |\n| `POST /api/v1/data/showcase_account/query {\"limit\":\"ten\"}` | 400 VALIDATION_FAILED `query.limit` | (correct — the two doors disagree) |\n\nServer log on the 500s: `[REST] Unhandled error: Error: A non-negative integer must be provided to offset.` (knex `QueryBuilder.offset`, from driver-sql).\n\n## Mechanism\n\n`packages/metadata-protocol/src/protocol.ts` (the list-query normalizer, around the `[#3795]` slot fold) coerces with `options.limit = Number(options.limit)` and `options.offset = Number(options.offset)` and never range-checks: NaN reaches the driver and is dropped (the window is ignored), a negative limit is dropped the same way, and a negative offset reaches knex and throws. The query schema's `offset: z.number()` has no `.nonnegative()`, so the POST door passes a negative offset too.\n\nThis is the silent-coercion class of #7321 (`limit: NaN`): a malformed window answers as if no window was sent. The filter is never widened, only the page window.\n\n## Suggested fix\n\nValidate the coerced `limit`/`offset` (and their `$top`/`$skip`/`top` spellings) as non-negative integers on both doors and refuse otherwise with a 400 that names the parameter the caller wrote (the #4226 spelling discipline), plus a conformance test for `$skip=-1`, `$top=abc`, `$top=-1` and the empty `$top=`."
+}

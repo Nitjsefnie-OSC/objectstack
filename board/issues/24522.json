@@ -2,8 +2,8 @@
   "number": 24522,
   "kind": "issue",
   "title": "test(qa): the 18.x line's upgrade harness (an 18.0 database boots on every later main with its data) and the measured step plan",
-  "state": "open",
-  "state_reason": null,
+  "state": "closed",
+  "state_reason": "completed",
   "draft": null,
   "author": {
     "login": "objectstack-fleet[bot]",
@@ -22,11 +22,15 @@
   "milestone": null,
   "type": null,
   "created_at": "2026-10-19T12:02:51Z",
-  "updated_at": "2026-10-19T13:37:25Z",
-  "closed_at": null,
-  "closed_by": null,
+  "updated_at": "2026-10-22T10:29:05Z",
+  "closed_at": "2026-10-22T10:29:05Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
   "merged_at": null,
-  "comments": 2,
+  "comments": 3,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/24522",
   "body": "Filing gate **③**: a task the maintainer directed. In the epic seat's chat the maintainer wrote 「我不会创建分支，所以你后续的开发能不能一条线一条线的完成，每个开发合并之后都可以随时发版本？如果这样的话要怎么安排」, and on the seat's plan 「同意，按照这个原则继续」. The ruling record is on #15194, posted next.\n- **Reader who acts:** the epic seat (`epic:#15194`, `session_01Y5583bs2RDd53MH6kM1ca3`), which dispatches it now.\n- **Dedupe:** none. No open card carries an 18.0→HEAD upgrade check.\n\nPart of #15194 (ADR-0131). **Step 0 of the 18.x line.** The parents #15212, #24343 and #24421 wait on this card. ⛔ Not an 18.0 gate.\n\n## The line's rule (what this card makes measurable)\n\nEvery PR on the 18.x line, once merged, leaves `main` releasable:\n- **R1.** A fresh install boots and serves.\n- **R2.** **A database an 18.0 install created upgrades to that commit, boots, and keeps its data.**\n- **R3.** A v17 database is still refused (stay on 17.x), until the upgrade ceremony opens at step 6.\n- **R4.** A walled posture is still refused at boot, until the walled lift at step 4.\n\nIntermediate steps only **add**: a new write shape, plus reads that accept both shapes. Every move or delete of 18.0 data happens only inside the upgrade ceremony (step 5). Its command keeps refusing until step 6.\n\n## Wanted\n\n**A. The upgrade harness (R2), built and green on `main`.**\n- **The fixture.** Produce an 18.0-shaped, populated database: the 18.0 code, a showcase boot, then real use. It must touch every table steps 1–7 will reshape:\n  - sign-up and invitation (identity mail);\n  - a setting change and its audit;\n  - a secret;\n  - a declared webhook (seeded rows);\n  - a flow credential;\n  - share links, activity and grants.\n\n  Commit it as a regenerable, reviewable fixture, plus the script that regenerates it from a named git ref. Use the 18.0 release tag once it exists; until then, `main` at or after `f8ef14487` (#24513).\n- **The test.** Boot HEAD on a copy of the fixture. Assert:\n  - the boot succeeds with no ownership refusal;\n  - row counts and key rows of the reshaped tables are intact;\n  - the v17 refusal is unchanged, against a v17-shaped fixture or the existing boot-guard pins.\n- **Where it runs.** The line's PRs must be able to run it before merge. Today dogfood is skipped on `pull_request` and in the merge group. Measure the cheapest wiring (an opt-in label lane or similar) and build it. If that wiring needs a governed path, put it in its own small PR for the maintainer.\n\n**B. The measured plan for steps 1–7 (report only, no code).** For each step, list:\n- every table or object it reshapes;\n- the expand form: the new write shape and the dual read;\n- what the step-5 ceremony must later move or delete;\n- what boot-time schema sync does today on an 18.0 database, both for the additive part and for a removal;\n- the PR-by-PR cut, with each PR's file surface, size, and how it proves R1–R4.\n\nThe steps, from the ruling:\n1. 8b-0g′, declared webhooks from the registry;\n2. 8b-0e′: `sys_secret`, the settings-audit sibling, and the deployment-level `sys_flow_credential`;\n3. 8b-0d′, the identity-mail sibling;\n4. the walled lift: 8b's walled half plus the #24489 restore, in one landing;\n5. the ceremony steps behind the refusal: moves and deletes, 9c (#24421), and 8e `NOT NULL`;\n6. opening the ceremony;\n7. 8c and 8d, plus removing the dual reads.\n\nThe seat files one child card per step from this report.\n\n## Acceptance\n- The harness runs green on `main` and goes red when an 18.0 table loses data or the boot is refused. Ablate it once to prove that.\n- The report carries the step plan above.\n- `Clause-②: no`: tests, a fixture and scripts only."

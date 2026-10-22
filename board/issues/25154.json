@@ -2,7 +2,7 @@
   "number": 25154,
   "kind": "pull_request",
   "title": "docs(adr): ADR-0131 18.x notes, review precision (B1–B3, B6) and the #25155 / #25179 citations (Tier H)",
-  "state": "open",
+  "state": "closed",
   "state_reason": null,
   "draft": false,
   "author": {
@@ -12,7 +12,6 @@
   },
   "labels": [
     "documentation",
-    "needs-user-decision",
     "size/s",
     "skip-changeset"
   ],
@@ -22,10 +21,14 @@
   "milestone": null,
   "type": null,
   "created_at": "2026-10-22T00:59:28Z",
-  "updated_at": "2026-10-22T07:51:10Z",
-  "closed_at": null,
-  "closed_by": null,
-  "merged_at": null,
+  "updated_at": "2026-10-22T09:28:19Z",
+  "closed_at": "2026-10-22T09:26:19Z",
+  "closed_by": {
+    "login": "os-zhuang",
+    "id": 277994282,
+    "type": "User"
+  },
+  "merged_at": "2026-10-22T09:26:19Z",
   "comments": 2,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/pull/25154",

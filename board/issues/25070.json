@@ -2,8 +2,8 @@
   "number": 25070,
   "kind": "issue",
   "title": "AGENTS.md Prime Directive 14 says \"CODEOWNERS routes review requests for docs/adr/ only, so nothing summons the maintainer on the other Tier H surfaces\" — false once PR #25064 lands",
-  "state": "open",
-  "state_reason": null,
+  "state": "closed",
+  "state_reason": "completed",
   "draft": null,
   "author": {
     "login": "objectstack-fleet[bot]",
@@ -14,18 +14,23 @@
     "area:devpath",
     "documentation",
     "domain:skills",
-    "pm:queue",
     "priority:p2"
   ],
-  "assignees": [],
+  "assignees": [
+    "os-bill"
+  ],
   "milestone": null,
   "type": null,
   "created_at": "2026-10-21T06:44:48Z",
-  "updated_at": "2026-10-21T10:01:07Z",
-  "closed_at": null,
-  "closed_by": null,
+  "updated_at": "2026-10-22T12:45:35Z",
+  "closed_at": "2026-10-22T12:42:01Z",
+  "closed_by": {
+    "login": "os-zhuang",
+    "id": 277994282,
+    "type": "User"
+  },
   "merged_at": null,
-  "comments": 1,
+  "comments": 6,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/25070",
   "body": "Filing gate ①: a factual error with a named location (AGENTS.md's documentation guardrail: an agent-read rule stating what the repository no longer does). It turns false the moment PR #25064 merges, so this card waits on it.\n\nBlocked-by: #25046\n\n**Reader who acts:** the `domain:skills` lane. `AGENTS.md` is a governed surface (Tier H), so one PR lands on an authorised APPROVED review. Filed by `domain:skills` seat 1 (seat post #7623, `session_01M82feuetLzrCiBz41BJb7L`). The finding comes from the #25046 dev's report (`open_questions` 2, `out_of_scope_findings`) and the contract review on PR #25064 (comment 6309771962, ③6), which escalated it to this seat as a follow-up. The lane label is self-applied under exception 二; grade and `area:*` belong to triage.\n\n**Dedupe (open and closed), objectstack, MCP `search_issues`** (read 2026-10-21T06:44Z): 「AGENTS.md Prime Directive 14 CODEOWNERS routes review requests docs/adr only nothing summons the maintainer」 gives 79 hits. The top ten are #25046 (the parent), #24241, #20076, #20791, #19128, #17161, #18019, #17971, #16851 and #12896. None covers this sentence. #12896 is the nearest: an earlier stale clause of the same directive, a different sentence.\n\n## The sentence\n\n`AGENTS.md` on `origin/main` `688052e14`, Prime Directive 14, the paragraph that begins \"**Already armed or queued when you read this?**\", reads:\n\n> Behind it: the queue guard refuses a governed diff without its tier's record; CODEOWNERS routes review requests for `docs/adr/` only, so nothing summons the maintainer on the other Tier H surfaces; the post-merge audit …\n\nPR #25064 (for #25046) makes two changes:\n- `.github/CODEOWNERS` routes all six Tier H surfaces (`docs/adr/`, `skills/`, `AGENTS.md`, `CLAUDE.md`, `docs/NORTH-STAR.md`, `.github/workflows/`) and the enforcement chain to every `GOVERNED_APPROVERS` account;\n- the fleet relay requests review from those accounts at `pr_create` and `pr_ready` on a Tier H diff, because GitHub's own code-owner request fires only when a pull is opened ready or marked ready.\n\nThe middle clause then states the opposite of the repository's behaviour.\n\n## Done when\n\n- The clause is rewritten in place to say what is true after the landing: every Tier H surface is routed to the approvers by CODEOWNERS, and the relay requests their review on a draft. ⛔ The clause must not be read as a merge barrier: the live ruleset does not require code-owner review (contract review 6309771962, ①B), so the directive itself stays the barrier.\n- Net 0 lines in `AGENTS.md`. Pay line for line, ⛔ never by re-wrapping. Its ratchet and `check:pm-governed-prose` stay green.\n- No other file changes.\n\nreach: every agent that reads AGENTS.md before acting on a governed PR; the sentence tells it that no one is summoned, so it may skip a summons the tooling now performs, or report a gap that does not exist.\n\nDedupe words: AGENTS.md Prime Directive 14 CODEOWNERS docs/adr only · nothing summons the maintainer Tier H · stale CODEOWNERS sentence"

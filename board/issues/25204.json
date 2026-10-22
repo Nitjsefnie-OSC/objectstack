@@ -1,0 +1,35 @@
+{
+  "number": 25204,
+  "kind": "issue",
+  "title": "fix(organizations)!: retire claimOrphanOrgRows — it gives organization-less rows to the first organization, an owner by guess that ADR-0131 D9 and D10 forbid (measured 6342754850)",
+  "state": "open",
+  "state_reason": null,
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "area:access",
+    "bug",
+    "domain:services",
+    "pm:dispatched",
+    "pm:epic",
+    "priority:p2"
+  ],
+  "assignees": [
+    "os-steve"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-22T11:30:58Z",
+  "updated_at": "2026-10-22T14:13:43Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 5,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/25204",
+  "body": "Filing gate **③**: an unclassified item of #15212, found by the epic seat's reconciliation at `main` `2919ddb875`.\n- **Who acts:** the epic seat dispatches the measurement.\n- **Dedupe:** none (\"claimOrphanOrgRows orphan rows first organization\" → 0).\n\nPart of #15212.\n\n## What is on `main`\n- `packages/plugins/organizations/src/claim-orphan-org-rows.ts:62`: `claimOrphanOrgRows` runs once, when the first organization is created. It back-fills `organization_id` on every `organization_id IS NULL` row of every user-defined object that declares the column.\n- Its companion is `claim-org-seed-ownership.ts`. The caller is `organizations-plugin.ts:449-452`.\n- It reads NULL rows and gives them an owner by guess. ADR-0131 D8 says NULL is not a state, and D10 says the ceremony never guesses an owner. It is on no stage list.\n\n## Wanted (measurement only, no code)\n- On which stores this release serves can it find a row? Check fresh `single` (the Default Organization exists at boot), walled, an 18.0.0-born store (nullable columns, voluntary ceremony), lean embedding, and `--dev`.\n- Is any row it would claim one the ceremony also attributes? Could the two disagree?\n- Recommend one of:\n  - **A:** retire it;\n  - **B:** keep it, with the ADR passage that allows it;\n  - **C:** fold it into the ceremony.\n\n  If B or C needs ADR text, the seat files a decision card for the maintainer.\n\n## Acceptance\n- An os-dev measurement report on this card, with commands and counts."
+}

@@ -1,0 +1,36 @@
+{
+  "number": 25193,
+  "kind": "pull_request",
+  "title": "chore(console): move the objectui pin 56cf4d8e89b7 → cd14d8eeffe1, past objectui#13319's bulk confirmText envelope reader, so #24947 can land",
+  "state": "closed",
+  "state_reason": null,
+  "draft": false,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "documentation",
+    "size/s",
+    "tooling"
+  ],
+  "assignees": [
+    "baozhoutao"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-22T08:52:33Z",
+  "updated_at": "2026-10-22T09:57:07Z",
+  "closed_at": "2026-10-22T09:57:05Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": "2026-10-22T09:57:05Z",
+  "comments": 2,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/pull/25193",
+  "body": "Refs #24798\nClause-②: no\nMetadata-protocol: none\n\nThis PR moves the console pin from `56cf4d8e89b7` to `cd14d8eeffe1`: objectui `main` at `cd14d8eeffe11ae03b6acf82e663c1d293dfdf5f`. That commit is the squash merge of objectstack-ai/objectui#13319, the objectui reader that takes a bulk action's `confirmText` either as a plain string or as a `{ dialect: 'template', source }` envelope. It is also objectui `main`'s tip.\n\n## Landing order\n\nThis is step 2 of the three-step landing order for #24947:\n\n1. objectstack-ai/objectui#13319 landed on objectui `main` as `cd14d8eef`.\n2. This PR moves objectstack's objectui pin past it.\n3. #24947 lands on top of this pin.\n\n#24798 stays open: this PR is only the pin step, and #24947 carries the rest.\n\nThis PR is not a release act. It does not touch the Version Packages PR and dispatches no workflow. No objectui source changed, nothing was written to objectui, and no product code, `.github/workflows/**`, `scripts/build-console.sh` or `content/docs/releases/` is in the diff.\n\n## The diff\n\nIt follows the precedent pin move 06900c9c23 and changes the same four files. Each was written by the repo's own tooling; none was edited by hand.\n\n- `.objectui-sha` and `.changeset/console-cd14d8eeffe1.md`: `OBJECTUI_ROOT=/home/user/objectui OBJECTUI_NO_DEEPEN=1 bash scripts/bump-objectui.sh cd14d8eeffe11ae03b6acf82e663c1d293dfdf5f --no-commit`, exit 0. The script printed \"56cf4d8e89b7..cd14d8eeffe1 walks completely\", \"1 releasing changeset(s), 0 breaking\", \"(on origin/main)\" and \"wrote changeset console-cd14d8eeffe1.md (@objectstack/console: patch)\".\n- `scripts/sdui-manifest.record.json`: `pnpm objectui:build` (os-verify-lock `VERDICT command-exit 0`), then `node scripts/gen-sdui-manifest-node.mjs`, exit 0. It reports 107 components and sha256 `d1fde278ffd6…`, the same as at the old pin, so the tracked `sdui.manifest.json` is byte-identical and only its provenance record moves.\n- `packages/sdui-parser/objectui-lockstep.json`: `OBJECTUI_ROOT=.cache/objectui-cd14d8eeffe1 pnpm gen:sdui-lockstep`, run against the build worktree whose HEAD is the pin. It reports \"214 region line(s), blob 0131f27cf86d, 25 diagnostic code(s)\". Only `rev`, `revDate` and `recordedAgainstPin` changed.\n\n## The changeset\n\n`scripts/objectui-changeset-digest.mjs` derived it from the one objectui changeset added over the range:\n\n- `\"@objectstack/console\": patch`. Under ruling A (#25105, AGENTS.md \"Definition of done\" item 3), a console refresh is `patch` with `Metadata-protocol: none`, whatever level objectui declared. Here objectui itself declared `patch`, so nothing was downgraded.\n- The changeset body carries the generator's line-initial `Metadata-protocol: none` line.\n\n## Choosing the pin\n\n`cd14d8eef` is on objectui `origin/main` (`git merge-base --is-ancestor` exit 0) and is its tip. `56cf4d8e89b7` is its ancestor, and the range is one commit. objectui CI on `cd14d8eef`, read when this PR was opened:\n\n- Merge-group runs, all `success`: CI 39746139602, Lint 39746140055, Repo Gates 39746139523, Changeset Presence 39746139710, Governed Surface Guard 39746139976.\n- Push runs: Lint 39747613739, Repo Gates 39747613846, Changeset Guard 39747613768, Changeset Release 39747613759 and Bundle Analysis 39747613696 are `success`. Push `CI` 39747613641 was still `in_progress`.\n\n**Tier:** not governed. `node scripts/pm/check-governed-merges.mjs --branch claude/objectui-pin-cd14d8eef`: \"0 of 4 path(s) hit the register (7 surfaces govern objectstack) ... NOT governed\", exit 0. Size: 4 files, +19 / -6.\n\n## Local verification at `0006f290fa`\n\n`node scripts/pm/dispatch-gates.mjs --commands --repo objectstack-ai/objectstack` derived 73 commands for this file list. I ran every one, and `--ran` with the exit codes recorded says: \"73 derived famil(ies) accounted for — 72 run, 1 NOT-MEASURED (1 DERIVED from a recorded exit 3)\". 72 exited 0. Verdict lines from the pin-bump gates:\n\n- `check-sdui-manifest`: \"sdui.manifest.json is present, intact (sha256 d1fde278ffd6…, 107 components) and recorded at the live objectui pin cd14d8eeffe1…\".\n- `check:console-sha`: \"Console dist matches the objectui pin (objectui@cd14d8eeffe1).\"\n- `check:sdui-lockstep`: \"OK — this copy is byte-identical to objectui@cd14d8eeffe1 ... over 214 grammar line(s) ... agrees on all 25 diagnostic code(s)\".\n- `check:objectui-changeset`, `check:console-injection`, `check:published-files`, `check-empty-changeset --base origin/main` and `check-adr-0087-registration --base origin/main`: all green (\"adds no declared-breaking changeset (1 non-breaking changeset(s) seen)\").\n- `check:nul-bytes`: \"OK (scanned 11769 text file(s) ... no raw ASCII control bytes)\".\n- `check-changeset-no-major --base origin/main --event` with this body as the `pull_request` payload: exit 0. It reported \"This diff introduces no `major` bump\" and \"LEVEL AXIS: this PR declares clause-② `no` and metadata-protocol `none`, and it introduces no changeset entry graded `minor` or above\".\n\nNOT MEASURED: `check:dual-build-cjs-loads`, reason: \"PREREQUISITE NOT MET — this gate reads built output, and some package has no dist/\" (exit 3). It needs a whole-tree `pnpm build`. This diff touches no package source, so the run is left to CI.\n\n---\n_Generated by [Claude Code](https://claude.ai/code/session_01D6F9axfoPzR7t8G1J7Ytzz)_\n"
+}
