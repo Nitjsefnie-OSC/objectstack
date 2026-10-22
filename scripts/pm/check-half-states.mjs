@@ -30156,7 +30156,10 @@ async function selfTest() {
 
   // The measured specimen: a claim written ~24h after the post's last event.
   t('H38: a lane claim NEWER than the seat post -> finding', typeof h38SeatPostStale(seat38(), SEAT_AT_38, claim38(13398, '2026-08-30T07:30:00Z')), 'string');
-  t('H38: …and the finding names the lane', h38row(seat38(), SEAT_AT_38, claim38(13398, '2026-08-30T07:30:00Z')).includes('domain:services'), true);
+  // The specimen post is titled `domain:services`; since the 2026-10-22 lane
+  // merge that spelling is an alias, and the finding names the lane it speaks
+  // for (the `domain:server lane aliases` battery below holds the controls).
+  t('H38: …and the finding names the lane, in its merged spelling', h38row(seat38(), SEAT_AT_38, claim38(13398, '2026-08-30T07:30:00Z')).includes('domain:server'), true);
   t('H38: …and the card whose claim outran the post', h38row(seat38(), SEAT_AT_38, claim38(13398, '2026-08-30T07:30:00Z')).includes('#13398'), true);
   t('H38: …and states how far behind the post is', h38row(seat38(), SEAT_AT_38, claim38(13398, '2026-08-30T07:09:00Z')).includes('24.0h'), true);
   // ⛔ The row must not read as an accusation — the card is explicit that both
@@ -30201,7 +30204,9 @@ async function selfTest() {
   t('H38 lane: the newest claim on the lane is found', newestLaneClaim('domain:services', laneIssues, laneComments).number, 13398);
   t('H38 lane: a claim on ANOTHER lane is not counted (OR-not-AND)', newestLaneClaim('domain:devx', laneIssues, laneComments).number, 13399);
   t('H38 lane: a `pm:queue` card is not a dispatch claim', newestLaneClaim('domain:services', [laneCard(13400, ['pm:queue', 'domain:services'])], laneComments), null);
-  t('H38 lane: a lane with no dispatched cards is null', newestLaneClaim('domain:engine', laneIssues, laneComments), null);
+  // `domain:skills`, not `domain:engine`: since the 2026-10-22 merge the latter
+  // is the same lane as the fixtures' `domain:services`, so it would be FOUND.
+  t('H38 lane: a lane with no dispatched cards is null', newestLaneClaim('domain:skills', laneIssues, laneComments), null);
   t('H38 lane: an unfetched thread contributes nothing', newestLaneClaim('domain:services', laneIssues, new Map()), null);
   t('H38 lane: the NEWEST of several claims wins', newestLaneClaim('domain:services', [laneCard(1, ['pm:dispatched', 'domain:services']), laneCard(2, ['pm:dispatched', 'domain:services'])], new Map([[1, [{ body: 'Claim: a', created_at: '2026-08-29T00:00:00Z' }]], [2, [{ body: 'Claim: b', created_at: '2026-08-30T00:00:00Z' }]]])).number, 2);
   // ⛔ The claim predicate is REUSED, not re-spelled: a comment that is not a
@@ -30214,7 +30219,8 @@ async function selfTest() {
   // post is compared only against claims of ITS seat number. The title suffix
   // and the claim's `Seat:` line are the two readings; both default to seat 1.
   const seat2Title = '[PM seat] domain:services · seat 2 — 🟢 os-b (session_y)';
-  t('H38 seat: a `· seat N` title suffix parses as the LANE, not foreign', seatLane(seat38(seat2Title)).lane, 'domain:services');
+  // `domain:server`: the title's `domain:services` is an alias since 2026-10-22.
+  t('H38 seat: a `· seat N` title suffix parses as the LANE (merged spelling), not foreign', seatLane(seat38(seat2Title)).lane, 'domain:server');
   t('H38 seat: …and is not foreign', seatLane(seat38(seat2Title)).foreign, false);
   t('H38 seat: …and carries the seat number', seatLane(seat38(seat2Title)).seat, 2);
   t('H38 seat: a bare title is seat 1', seatLane(seat38()).seat, 1);
@@ -30273,13 +30279,14 @@ async function selfTest() {
   b(BATTERY_SERVER, 'alias control: a lane the map does not name passes through untouched', canonicalLane('domain:spec'), 'domain:spec');
   b(BATTERY_SERVER, 'alias control: a non-lane label passes through untouched', canonicalLane('pm:queue'), 'pm:queue');
   b(BATTERY_SERVER, 'alias control: a non-string is handed back, never thrown on', canonicalLane(undefined), undefined);
-  b(BATTERY_SERVER, 'alias map: frozen, and it names exactly the three retired lanes', [Object.isFrozen(LANE_LABEL_ALIASES), Object.keys(LANE_LABEL_ALIASES).sort().join()], [true, 'domain:cli,domain:engine,domain:services']);
+  b(BATTERY_SERVER, 'alias map: frozen', Object.isFrozen(LANE_LABEL_ALIASES), true);
+  b(BATTERY_SERVER, 'alias map: it names exactly the three retired lanes', Object.keys(LANE_LABEL_ALIASES).sort().join(), 'domain:cli,domain:engine,domain:services');
   b(BATTERY_SERVER, 'alias map: every value is the one surviving lane', Object.values(LANE_LABEL_ALIASES).every((v) => v === 'domain:server'), true);
   // The seat title: a post not yet retitled is the merged lane's seat, number intact.
-  b(BATTERY_SERVER, 'seat title: a `domain:engine · seat 2` post reads as `domain:server`, seat 2', [seatLane(seat38('[PM seat] domain:engine · seat 2 — 🟢 os-b')).lane, seatLane(seat38('[PM seat] domain:engine · seat 2 — 🟢 os-b')).seat], ['domain:server', 2]);
+  b(BATTERY_SERVER, 'seat title: a `domain:engine · seat 2` post reads as `domain:server`, seat 2', [seatLane(seat38('[PM seat] domain:engine · seat 2 — 🟢 os-b')).lane, seatLane(seat38('[PM seat] domain:engine · seat 2 — 🟢 os-b')).seat].join(), 'domain:server,2');
   b(BATTERY_SERVER, 'seat title: a vacant `domain:cli` post reads as `domain:server`', seatLane(seat38('[PM seat] domain:cli — ⏳ vacant')).lane, 'domain:server');
   b(BATTERY_SERVER, 'seat title: …and is not foreign', seatLane(seat38('[PM seat] domain:cli — ⏳ vacant')).foreign, false);
-  b(BATTERY_SERVER, 'seat title: a retitled `domain:server · seat 3` post reads as itself', [seatLane(seat38('[PM seat] domain:server · seat 3 — 🟢 os-b')).lane, seatLane(seat38('[PM seat] domain:server · seat 3 — 🟢 os-b')).seat], ['domain:server', 3]);
+  b(BATTERY_SERVER, 'seat title: a retitled `domain:server · seat 3` post reads as itself', [seatLane(seat38('[PM seat] domain:server · seat 3 — 🟢 os-b')).lane, seatLane(seat38('[PM seat] domain:server · seat 3 — 🟢 os-b')).seat].join(), 'domain:server,3');
   b(BATTERY_SERVER, 'seat title control: a `domain:spec` post is untouched by the alias', seatLane(seat38('[PM seat] domain:spec — 🟢 os-b')).lane, 'domain:spec');
   // The lane claim index, through the alias in BOTH directions.
   const engineCard = [laneCard(7, ['pm:dispatched', 'domain:engine'])];
@@ -30291,11 +30298,11 @@ async function selfTest() {
   b(BATTERY_SERVER, 'claim index control: another lane still sees nothing (OR-not-AND holds through the alias)', newestLaneClaim('domain:spec', engineCard, aliasClaims), null);
   b(BATTERY_SERVER, 'claim index control: a `pm:queue` card is still not a dispatch claim', newestLaneClaim('domain:server', [laneCard(9, ['pm:queue', 'domain:engine'])], new Map([[9, CLAIM_ROW]])), null);
   // The census: one lane per card, whatever its spelling, and never twice.
-  b(BATTERY_SERVER, 'census: a `domain:cli` card is counted under `domain:server`', censusLanesOf(laneCard(1, ['domain:cli', 'pm:dispatched'])), ['domain:server']);
-  b(BATTERY_SERVER, 'census: a card carrying an old AND the new spelling is ONE lane, not two', censusLanesOf(laneCard(1, ['domain:engine', 'domain:server'])), ['domain:server']);
-  b(BATTERY_SERVER, 'census control: a `repo:*` lane passes through untouched', censusLanesOf(laneCard(1, ['repo:hotcrm'])), ['repo:hotcrm']);
-  b(BATTERY_SERVER, 'census control: a card with no lane still buckets under `(no lane)`', censusLanesOf(laneCard(1, ['pm:queue'])), ['(no lane)']);
-  b(BATTERY_SERVER, 'floor: this battery is DECLARED on the frozen roster with a positive pin, and the roster floor rose to TEN with it', [Object.hasOwn(SELF_TEST_BATTERIES, BATTERY_SERVER), SELF_TEST_BATTERIES[BATTERY_SERVER] > 0, SELF_TEST_BATTERY_FLOOR === 10, Object.keys(SELF_TEST_BATTERIES).length >= SELF_TEST_BATTERY_FLOOR], [true, true, true, true]);
+  b(BATTERY_SERVER, 'census: a `domain:cli` card is counted under `domain:server`', censusLanesOf(laneCard(1, ['domain:cli', 'pm:dispatched'])).join(), 'domain:server');
+  b(BATTERY_SERVER, 'census: a card carrying an old AND the new spelling is ONE lane, not two', censusLanesOf(laneCard(1, ['domain:engine', 'domain:server'])).join(), 'domain:server');
+  b(BATTERY_SERVER, 'census control: a `repo:*` lane passes through untouched', censusLanesOf(laneCard(1, ['repo:hotcrm'])).join(), 'repo:hotcrm');
+  b(BATTERY_SERVER, 'census control: a card with no lane still buckets under `(no lane)`', censusLanesOf(laneCard(1, ['pm:queue'])).join(), '(no lane)');
+  b(BATTERY_SERVER, 'floor: this battery is DECLARED on the frozen roster with a positive pin, and the roster floor rose to TEN with it', [Object.hasOwn(SELF_TEST_BATTERIES, BATTERY_SERVER), SELF_TEST_BATTERIES[BATTERY_SERVER] > 0, SELF_TEST_BATTERY_FLOOR === 10, Object.keys(SELF_TEST_BATTERIES).length >= SELF_TEST_BATTERY_FLOOR].join(), 'true,true,true,true');
 
   // -- H39 — the closed `pm:*` residue census (#13526, report-only) ---------
   //
