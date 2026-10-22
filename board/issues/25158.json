@@ -1,0 +1,30 @@
+{
+  "number": 25158,
+  "kind": "issue",
+  "title": "fix(cli): a production boot whose auth tier is on and secret is set, but whose plugin-auth fails to load, warns and boots with no organization object",
+  "state": "open",
+  "state_reason": null,
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "area:access",
+    "domain:engine",
+    "priority:p2"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-22T02:12:23Z",
+  "updated_at": "2026-10-22T02:12:23Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 0,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/25158",
+  "body": "Filing gate **③**: a finding from the contract review of #25155 (#25133, ruling 6328987873). The review recorded it as B2 in 6331012625. It does not block that PR.\n- **Who acts:** the `cli` lane (`packages/cli/src/commands/serve.ts`).\n- **Dedupe:** none found (\"plugin-auth fails to load warn boots\", \"auth tier on secret set no AuthPlugin\").\n\n## What the review found\n\n#25155 refuses a production `os serve` / `os start` that composes no organization object in the two compositions the ruling names:\n- the `auth` tier is off and no AuthPlugin is mounted;\n- the tier is on and no secret is resolved (`no-secret`).\n\nA third composition reaches the same state and is not refused. The `auth` tier is on and a secret is set, but `@objectstack/plugin-auth` fails to load (a missing or broken install). In that case `serve.ts:4573-4579` (at `6531b332`) warns and boots with no AuthPlugin, so no organization object is registered. The engine then takes `no-organization-object`, and the boot's writes land with no organization. Those writes go to:\n- 18.0.0-born stores, nullable columns and MongoDB, where the rows are stored ownerless;\n- fresh SQL tables, where they are refused at NOT NULL.\n\nThe behaviour predates #25155. It sits outside the ruling's two named cases.\n\n## Fix\n- Under the same rule as #25133 (ADR-0131 D9; ruling 6328987873's reasoning), a production boot whose auth tier is on but whose AuthPlugin did not compose for a load failure should refuse before any plugin starts. The refusal names the load error, not warn and boot.\n- `--dev` and `host-kernel` stay as they are.\n- Pin it next to `serve-no-auth-secret-refusal.integration.test.ts`. Use a stubbed load failure, refused before any write, plus a control.\n- `Clause-②: yes (narrowing)`."
+}

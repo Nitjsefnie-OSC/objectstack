@@ -1,0 +1,36 @@
+{
+  "number": 25152,
+  "kind": "pull_request",
+  "title": "test(metadata-protocol): the live-MySQL sys_setting probe expects the plain organization_id column",
+  "state": "closed",
+  "state_reason": null,
+  "draft": false,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "size/xs",
+    "skip-changeset",
+    "tests"
+  ],
+  "assignees": [
+    "os-project-manager"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-22T00:55:16Z",
+  "updated_at": "2026-10-22T01:55:55Z",
+  "closed_at": "2026-10-22T01:55:53Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": "2026-10-22T01:55:53Z",
+  "comments": 3,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/pull/25152",
+  "body": "Refs #25131\n\nClause-②: no (test expectation only: no response, status, error, outcome or export moves)\nMetadata-protocol: none\n\nRound 2 of claim 6327765912, under the seat's re-declaration 6329308116. Round 1 (#25142, merged as `4c7dcb4519`) greened step 12 of `Temporal Conformance (live PG + MySQL)`. That let step 16, \"Run the metadata-protocol migration statements against live MySQL and PostgreSQL\", run for the first time since `fccbd9d0d5`, and it fails one test. This PR changes that test's expected row and one stale docblock example. No production statement moves, and nothing is skipped, narrowed or deleted.\n\n## What is red\n\n- `packages/metadata-protocol/src/migrations/sys-setting-identity-index.live-mysql.test.ts`, test \"the MySQL-spelled statement PARSES, and lists exactly the duplicate group\".\n- It expected `organization_id_key: 'org_jia'` and received `organization_id: 'org_jia'`. The rest of the row is identical: namespace, key, scope, `user_id_key: ''` and `duplicate_rows: 2`.\n- **Cause:** #24893 (`d5d8146012`, 7b-1 + 7b-2) re-keyed the `sys_setting` row-identity duplicate probe to the plain `organization_id` on purpose (`WHERE organization_id IS NOT NULL … GROUP BY organization_id, …`; `COALESCE(user_id, '')` stays). It updated the unit test `sys-setting-identity-index.test.ts` to pin that statement. This live-only file runs only in the full battery, so it was missed.\n\n## Is the received shape what #24893 intended? Yes, measured\n\n- The live fixture seeds two `tenant` rows for one `(org_jia, lifecycle, retention_overrides)` with a NULL `user_id`, plus one `user` row. It has **no NULL-organization row**.\n- So the plain probe's `WHERE organization_id IS NOT NULL` excludes nothing here, and the live answer is still exactly the one duplicate group, `duplicate_rows: 2`. No group the probe should list is missed.\n- The received row is the statement #24893 ships, run on a live MySQL 8.0.\n\n## The change\n\n- `sys-setting-identity-index.live-mysql.test.ts`: the expected row's key `organization_id_key` becomes `organization_id`. The test still asserts the whole row and the one group. No other line moves.\n- `runtime-index-preflight.ts`, the `RuntimeIndexDuplicateGroup.key` docblock (about line 152): its example, `organization_id_key = '__global__'`, named the alias #24893 retired.\n  - Measured: none of the three indexes this pre-flight covers projects an organization sentinel any more. `sys_setting` projects `user_id_key`, and the two overlay indexes project `package_id_key` and `bundle_member_key`.\n  - The example now reads `user_id_key = ''` (\"user_id IS NULL\"). Comment only.\n\n## Census\n\nStep 16 runs four `live-*` test files in `packages/metadata-protocol`:\n- `sys-setting-identity-index.live-mysql.test.ts`\n- `seed-tenancy-backfill.live-mysql.test.ts`\n- `seed-tenancy-backfill.live-postgres.test.ts`\n- `live-mysql-database.isolation.test.ts`\n\nOnly the first pinned `organization_id_key` or `COALESCE(organization_id, …)`. The `seed-tenancy-backfill` pair is about the `__global__` autonumber counter, 7b-3's ground, which #24893 left untouched. Both pass live.\n\n## Verification\n\nLive MySQL 8.0 (`mirror.gcr.io/library/mysql:8.0`, `SET GLOBAL time_zone = '+08:00'`) and PostgreSQL 16 (`mirror.gcr.io/library/postgres:16`, timezone `Asia/Shanghai`), both in local containers. Step 16's own command and env: `OS_TEST_MYSQL_URL`, `OS_TEST_POSTGRES_URL` and `OS_EXPECT_LIVE_DIALECT_MATRIX=1`. The build was step 16's `turbo run build --filter=@objectstack/metadata-protocol...` (13/13).\n\n| Run | Head | Result |\n|---|---|---|\n| `pnpm --filter @objectstack/metadata-protocol exec vitest run live-mysql live-postgres`, before the edit | `4c7dcb4519` | `Test Files 1 failed / 3 passed (4)`, `Tests 1 failed / 27 passed (28)`: the one test above, with the same diff as CI |\n| Same command, after the edit | `d7144693b` | `Test Files 4 passed (4)`, `Tests 28 passed (28)`. The `[#9434] live MySQL … sql_mode=…` line is printed, so the cell ran. |\n| `pnpm --filter @objectstack/metadata-protocol test`, default (no live servers) | `d7144693b` | `Test Files 252 passed / 3 skipped (255)`, `Tests 20837 passed / 19 skipped`, exit 0 |\n| `pnpm --filter @objectstack/metadata-protocol typecheck` | `d7144693b`, and again after merging `origin/main` at `0f372a1ff` | exit 0, both times. `tsc --listFiles` lists both edited files. |\n\n**Gates.** `node scripts/pm/dispatch-gates.mjs --commands --repo objectstack-ai/objectstack` derives 54 families (2 paths, +3/−3). On `d7144693b`, after a full `pnpm exec turbo run build --concurrency=2` (77/77), all 54 exited 0. `--ran` reconciliation: \"54 derived, 54 run, 0 NOT-MEASURED, 0 UNRUN\", a DERIVED zero. `origin/main` was then merged (`459afea1f`, `packages/lint` only, disjoint). The derivation at `0f372a1ff` is the identical 54, re-run there: all 54 exited 0, and `--ran` again gives \"54 derived, 54 run, 0 NOT-MEASURED, 0 UNRUN\", a DERIVED zero.\n\n**Changeset.** `skip-changeset`: a test expectation plus one comment line. The comment is a docblock on an exported interface, so it rides into the `.d.ts`, but no symbol, type or runtime byte moves.\n\n**The hourly run.** Step 16 runs only on push, schedule and dispatch, never on a PR or in the queue. The local live run above is its proof here, and the next push or hourly full run on `main` is the proof there.\n\n## Acceptance notes\n\n- #25132 remains open and is not addressed here. The `__global__` autonumber counter (7b-3) is untouched.\n\n---\n_Generated by [Claude Code](https://claude.ai/code/session_018gewcgUaNUX9hMkxeP2HE2)_\n"
+}

@@ -2,8 +2,8 @@
   "number": 24902,
   "kind": "issue",
   "title": "text(spec,platform-objects): two docblocks still describe organization-less rows as live; plus two dormant organization-less code paths to confirm and retire",
-  "state": "open",
-  "state_reason": null,
+  "state": "closed",
+  "state_reason": "completed",
   "draft": null,
   "author": {
     "login": "objectstack-fleet[bot]",
@@ -21,11 +21,15 @@
   "milestone": null,
   "type": null,
   "created_at": "2026-10-20T13:28:41Z",
-  "updated_at": "2026-10-21T19:47:48Z",
-  "closed_at": null,
-  "closed_by": null,
+  "updated_at": "2026-10-21T20:56:16Z",
+  "closed_at": "2026-10-21T20:54:02Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
   "merged_at": null,
-  "comments": 3,
+  "comments": 4,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/24902",
   "body": "Filing gate **①**.\n- **finding:** shipped docs text that contradicts behaviour, carried from the #24880 contract review (6291895530, nits) and its os-dev report.\n- **reach:** readers of the published spec describes and docs.\n- **Reader who acts:** the epic seat.\n- **Dedupe:** none.\n\n## Text that contradicts behaviour (after 18.x step 7)\n- `packages/spec/src/api/events.zod.ts` ~259-262: a bullet about `single`-posture stamping contradicts `content/docs/.../schema.mdx`, as #24880 corrected it. Under D9 the engine derives the Default Organization under `single`. This is a describe, so regenerate the artifacts.\n- `packages/platform-objects/src/.../sys-sharing-rule.object.ts` ~99: \"null = global\". Since #24828 a declared rule is deployment-wide through the typed `deploymentWide` marker, and a stored row has an organization.\n- Gate nit: `scripts/check-tenant-chokepoint.mjs` ~397 would refuse `where(tenantRef, 'is not', null)`, against its own header (~136). Neither spelling is present today, but align the header and the rule.\n\n## Dormant code paths (confirm, then retire or keep with a reason)\n- `organizationOutOfWriteReach`: written against the retired driver NULL arm, now dormant.\n- The `sys_record_share` organization backfill's apply pass (`plugin-sharing/src/backfill-sys-record-share-organizations.ts`): dead on certified databases.\n- Keep `plugin-auth`'s two readers out of this card; they are #24883."

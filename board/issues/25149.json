@@ -1,0 +1,36 @@
+{
+  "number": 25149,
+  "kind": "pull_request",
+  "title": "docs(adr): ADR-0131 dated notes for the 18.x line — release scope, D1 as ruled, the D9 lean-embedding exception and its boundaries (Tier H)",
+  "state": "closed",
+  "state_reason": null,
+  "draft": false,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "documentation",
+    "size/m",
+    "skip-changeset"
+  ],
+  "assignees": [
+    "os-steve"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-22T00:30:36Z",
+  "updated_at": "2026-10-22T00:50:14Z",
+  "closed_at": "2026-10-22T00:43:35Z",
+  "closed_by": {
+    "login": "os-zhuang",
+    "id": 277994282,
+    "type": "User"
+  },
+  "merged_at": "2026-10-22T00:43:35Z",
+  "comments": 1,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/pull/25149",
+  "body": "Fixes #24897\n\nClause-②: no\nMetadata-protocol: none\n\nADR text only. It records shipped behaviour and the rulings of record; no code moves. One file: `docs/adr/0131-total-organization-ownership-no-null-organization-id.md`. **Tier H** (`docs/adr/**`): the maintainer approves. This PR stays a draft, and is not enqueued, until #25133's fix and #25134's `os migrate plan` advisory have merged. Their notes then cite the merge commits.\n\n## What the ADR now records\n\n| # | Where | What | Source |\n|---|---|---|---|\n| 1 | D14, release-scope note | **Replaced.** 18.0.0 (`06cab4849a`) carries steps 1–6, including the walled lift (#24667) and the open ceremony (#24681), plus step 7 parts 7a-1, 7a-3, 7b-3 and 7c. 7a-2, 7b-0, 7b-1+7b-2 and 7z landed after the GA. 18.0.0-born stores are birth-marked at generation 1. One line tells the reader how to take the 2026-10-19 scope note's items 1–3 now. | 6291577585 on #15194; 6323222024 on #24583 (its table) |\n| 2 | D9, dated note | The lean-embedding exception (`no-organization-object` stores NULL; the counter keys `__global__`) and its three boundaries: 7b-0's NOT NULL at CREATE TABLE; every production `os serve`/`os start` that composes no organization object is refused, whether or not `--server` (**#25133, in flight**); so only programmatic embedding and `--dev` keep it. | 6284717698, 6288405082 on #24583; ruling 6328987873 on #25133 (A); #24940 `5e9b100743`; #24845 `df8bb40a03` |\n| 3 | D1 | **Amended text**: the paragraph under 「A 让 D1 变成的样子」, with the 2026-09-04 text quoted in an `Amended` note that also records the ruling's three bindings. One of them is that `os migrate plan` lists the still-nullable tenant columns as an advisory (**#25134's execution, in flight**). A dated note records the tenant column NOT NULL at CREATE TABLE from 7b-0 on. | ruling 6328195425 on #25134 (A); measurement 6323585273 on #24919; 6285122667; #24940 |\n| 4 | D2, dated note | Declared sharing rules are deployment-wide through the typed `deploymentWide` marker. | 6285122667 item 2; #24828 `7cacad5348`; #25140 |\n| 5 | D8, dated note | The gate is implemented: `check-tenant-chokepoint` refuses an IS NULL arm, and #25140 aligned it for `where(col, 'is not', null)`. | #24880 `0091d845e2`; #25140 `60b42cd0b7`; review 6287357347 R1 |\n| 6 | D7, dated note | `sys_audit_log.tenant_id` keeps its NULL arm in the retention pass, by design. | #24825 contract review 6287357347, judgment 3 |\n| 7 | D5, dated note | The last-admin guard counts only the Default Organization's `admin_full_access` grant. The organization-less anchor, the guard's only fail-open, is retired. | #25141 `abc25a3536` (#24883, seat decision 6324268472) |\n| 8 | D8, dated note | Residue on an uncertified database: `organizationOutOfWriteReach` answers \"in reach\" for an organization-less row that D8 makes unreachable. | seat ACCEPT 6325596117 on #25140, Q1 A |\n| 9 | D1, dated note | The organization delete under ruling B is refused while the organization owns records, and the engine never sets a tenant column to NULL. | ruling 6303358360 on #24948; #25016 `688052e147` |\n\nThe status line gains one `Amended (2026-10-22)` entry naming the D1 change and the notes.\n\n## Verification\n\n- `dispatch-gates --commands`, then each command run with its exit code captured before any pipe. `--ran` reconciled **20 derived, 20 run, 0 NOT-MEASURED**. The first run found one real finding: `check-adr-symbol-anchors` refused a `storage-routes.ts:761` line anchor, and it now cites symbols. `check:doc-formula-expressions` first exited 3 because `@objectstack/formula` was not built; it passed after the build.\n- `node scripts/pm/check-governed-merges.mjs --branch origin/claude/issue-24897-adr-0131-dated-notes`: **GOVERNED**, Tier H, `docs/adr/**` ×1, 202 changed lines.\n- Each note was checked against `origin/main` `459afea1f6`: every PR it cites is merged with the stated merge commit. The code facts were read in the tree: the gate's spellings, `deploymentWide`, `ATTRIBUTION_PARTITION_COLUMNS`, the driver's NOT NULL, and `organizationOutOfWriteReach`. The four D7-note objects (`sys_identity_email`, `sys_platform_setting_audit`, `sys_secret`, `sys_flow_credential`) declare `tenant: false` at `06cab4849a`.\n\n## Acceptance notes\n\n- **In flight, cited by card, to update on merge:** the D9 note's boundary 2 (#25133) and the D1 amendment's item 2 (#25134's advisory).\n- **Not touched, outside the nine items:** the D6 note of 2026-10-19 on `sharing_rule` regime C still ends \"it has not shipped\". It was not checked against `main`.\n- No changeset: this diff publishes nothing (`skip-changeset`).\n\n---\n_Generated by [Claude Code](https://claude.ai/code/session_01UQCyrGmMy6kwav9XCzAuQ9)_\n"
+}

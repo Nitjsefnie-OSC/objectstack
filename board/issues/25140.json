@@ -2,7 +2,7 @@
   "number": 25140,
   "kind": "pull_request",
   "title": "fix(spec,plugin-sharing,scripts): retire the organization-less text step 7 left behind; check-tenant-chokepoint accepts where(tenant, 'is not', null)",
-  "state": "open",
+  "state": "closed",
   "state_reason": null,
   "draft": false,
   "author": {
@@ -21,10 +21,14 @@
   "milestone": null,
   "type": null,
   "created_at": "2026-10-21T19:46:39Z",
-  "updated_at": "2026-10-21T20:16:57Z",
-  "closed_at": null,
-  "closed_by": null,
-  "merged_at": null,
+  "updated_at": "2026-10-21T20:54:02Z",
+  "closed_at": "2026-10-21T20:54:00Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": "2026-10-21T20:54:00Z",
   "comments": 2,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/pull/25140",

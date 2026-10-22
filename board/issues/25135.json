@@ -2,7 +2,7 @@
   "number": 25135,
   "kind": "pull_request",
   "title": "docs(objectql,spec): the tenant column is stamped and never NULL on single-tenant stacks (C1)",
-  "state": "open",
+  "state": "closed",
   "state_reason": null,
   "draft": false,
   "author": {
@@ -23,10 +23,14 @@
   "milestone": null,
   "type": null,
   "created_at": "2026-10-21T19:11:09Z",
-  "updated_at": "2026-10-21T20:10:14Z",
-  "closed_at": null,
-  "closed_by": null,
-  "merged_at": null,
+  "updated_at": "2026-10-21T20:45:54Z",
+  "closed_at": "2026-10-21T20:45:52Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": "2026-10-21T20:45:52Z",
   "comments": 3,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/pull/25135",
