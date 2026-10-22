@@ -2,8 +2,8 @@
   "number": 25118,
   "kind": "issue",
   "title": "plugin-auth: MCP clients cannot register over OAuth DCR — /oauth2/register defaults a missing application_type to web and refuses the http://localhost redirect every local MCP client sends",
-  "state": "open",
-  "state_reason": null,
+  "state": "closed",
+  "state_reason": "completed",
   "draft": null,
   "author": {
     "login": "hotlong",
@@ -16,7 +16,6 @@
     "bug",
     "domain:services",
     "mcp",
-    "pm:dispatched",
     "priority:p1"
   ],
   "assignees": [
@@ -25,11 +24,15 @@
   "milestone": null,
   "type": null,
   "created_at": "2026-10-21T13:47:29Z",
-  "updated_at": "2026-10-22T02:09:25Z",
-  "closed_at": null,
-  "closed_by": null,
+  "updated_at": "2026-10-22T03:03:16Z",
+  "closed_at": "2026-10-22T03:01:47Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
   "merged_at": null,
-  "comments": 10,
+  "comments": 12,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/25118",
   "body": "Ruled: 6329352251 · letter A1 · 2026-10-22T00:05Z\n\nFiling gate **① a reproduced defect** — `reach:` measured live on ObjectOS Cloud production, `https://huayan.objectos.ai` (framework pin `9d13b5fc83`, `@better-auth/oauth-provider` 1.7.3), 2026-10-21, with Claude Code 2.1.159 as the MCP client. Filed at the maintainer's request in a cloud session.\n\n**Reader (who acts):** objectstack triage → the `plugin-auth` lane.\n\n## What fails\n\nEvery MCP client that authorizes through Dynamic Client Registration with a loopback redirect — Claude Code, and by the same shape Cursor, VS Code and Codex CLI — cannot connect to an ObjectStack MCP endpoint over OAuth. Registration is refused before the browser ever opens:\n\n```\nSDK auth failed: web clients require https redirect URIs on non-loopback hosts: http://localhost:63678/callback\n```\n\nThe OAuth track is otherwise healthy on the same host: `/api/v1/mcp` answers 401 with `WWW-Authenticate: Bearer … resource_metadata=…`, `/.well-known/oauth-protected-resource` and `/.well-known/oauth-authorization-server/api/v1/auth` both answer 200. Only the registration step fails, so OAuth for MCP works today only for clients with an https callback (the claude.ai web connector). API keys are the sole working path for local agents.\n\n## Reproduction (no state written — the request is refused)\n\n```bash\ncurl -sS -X POST https://<env-host>/api/v1/auth/oauth2/register \\\n  -H 'content-type: application/json' \\\n  -d '{\"client_name\":\"probe\",\"redirect_uris\":[\"http://localhost:63678/callback\"],\"grant_types\":[\"authorization_code\",\"refresh_token\"],\"response_types\":[\"code\"],\"token_endpoint_auth_method\":\"none\"}'\n# → 400 {\"error\":\"invalid_redirect_uri\",\"error_description\":\"web clients require https redirect URIs on non-loopback hosts: http://localhost:63678/callback\"}\n```\n\nThis is the body shape an MCP client sends: a public client (`token_endpoint_auth_method: none`), PKCE, a loopback `http` redirect, and **no `application_type`**.\n\n## Cause\n\n`@better-auth/oauth-provider` 1.7.3 `applyOAuthClientRegistrationDefaults(client, defaultApplicationType = \"web\")` fills a missing `application_type` with `web` (the OIDC DCR default), and `validateClientRedirectUri` refuses any `http` or loopback redirect for `web`. The default is not configurable from plugin options. Only the client-metadata-document path defaults to `native`.\n\nThe MCP authorization spec, though, has clients register `http://localhost` / `127.0.0.1` redirects (RFC 8252 §7.3), and the clients in the field do not send `application_type`. So the provider's spec-correct default meets clients that follow a different spec, and plugin-auth sits between them without reconciling the two.\n\n## Not a duplicate\n\n`Dedupe:` REST `search/issues`, closed included —\n- `repo:objectstack-ai/objectstack \"web clients require https\"` → 5 (#24773, #25011, #24853, #24540, #24141)\n- `repo:objectstack-ai/objectstack \"oauth2/register\" localhost` → 6 (#24773, #24992, #17725, #25038, #16380)\n- `repo:objectstack-ai/objectstack \"application_type\" register` → 13 (#24992, #25038, #24773, #25053, #24853 …)\n\nThe nearest is **#24773** (closed 2026-10-21, fixed by #24992 / #25038 / #25011): the same provider message, but from the Setup form's door `POST /api/v1/auth/sys-oauth-application/register`, where an administrator now picks Web or Native. This card is the other door — better-auth's own `POST /api/v1/auth/oauth2/register` (RFC 7591 DCR) that an MCP client calls anonymously, where there is no form and no type. Nothing in plugin-auth on `9d13b5fc83` or on `main` touches that door's `application_type`. #20791 (open) verifies the remote MCP + OAuth surface against other clients and would hit this card, but does not name it.\n\n## Suggested fix (for the lane to judge)\n\nA before-hook on `/oauth2/register` in plugin-auth: when the body has **no** `application_type`, `token_endpoint_auth_method` is `none`, and **every** `redirect_uri` is `http` on exactly `localhost`, `127.0.0.1` or `[::1]`, register it as `native`. Every other body keeps the provider's default and its rule. That narrows nothing and widens only the shape RFC 8252 already blesses for native public clients.\n\nAcceptance: the curl above returns 201 with `application_type: \"native\"`; the same body with `https://evil.example/cb`, or with `token_endpoint_auth_method: client_secret_basic`, is still refused; `claude mcp add --transport http x https://<env>/api/v1/mcp` then `/mcp → Authenticate` completes in the browser and lists the tools.\n"

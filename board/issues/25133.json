@@ -2,8 +2,8 @@
   "number": 25133,
   "kind": "issue",
   "title": "[Decision] A production os serve that composes no organization object (no auth secret, or no auth) still writes ownerless rows under --no-server: refuse that boot too, or refuse such writes in the engine everywhere",
-  "state": "open",
-  "state_reason": null,
+  "state": "closed",
+  "state_reason": "completed",
   "draft": null,
   "author": {
     "login": "objectstack-fleet[bot]",
@@ -23,11 +23,15 @@
   "milestone": null,
   "type": null,
   "created_at": "2026-10-21T18:38:00Z",
-  "updated_at": "2026-10-22T01:58:05Z",
-  "closed_at": null,
-  "closed_by": null,
+  "updated_at": "2026-10-22T05:22:19Z",
+  "closed_at": "2026-10-22T05:20:45Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
   "merged_at": null,
-  "comments": 5,
+  "comments": 6,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/25133",
   "body": "Ruled: 6328987873 · letter A · 2026-10-21T23:39Z\n\n**一句话问题：** 生产环境用 `os serve --no-server` 启动，又没配 `OS_AUTH_SECRET`（或者根本没启用认证）时，系统里没有「组织」，这次启动写的每一行数据都没有主人。是让这种启动也直接拒绝，还是让引擎在所有场景下都拒绝写无主数据？\n\n**背景：**\n- 18.0.0 起，生产环境的 `os serve` 没配认证密钥就拒绝启动。拒绝的理由写在提示里：「没有组织，这次启动写的每一行都没有主人」。但同一条提示给的补救办法之一是「改用 `--no-server`」，而 `--no-server` 恰好会绕过这条拒绝（`serve.ts:4666`、`:4688` 都只在 `flags.server` 时生效）。\n- #24919 的测量（6323585273）在 main `d5d8146012` 上实测了这条路径：\n  - 18.0.0 建的库：删掉一行种子数据后，用 `os serve --no-server`、不配密钥启动，这行被重新写回，`organization_id` 为空，成了无主数据；\n  - 全新的库：240 条种子写入全部被 7b-0 的 NOT NULL 拒绝，启动日志里 240 行 ERROR，一行也没写进去。\n- 能写进去的地方：18.0.0 建的库、仪式没能收紧的少数表、MongoDB（没有 NOT NULL 约束）。\n- 这是 #24919 里唯一还在写空组织的路径。只要它还开着，#24919 关于「剩余可空表」的结论（另一张决策卡）就不成立。\n\nGoverning text: ADR-0131 D1 (\"NULL is not a state\") and D9 (the engine derives an organization, or refuses). The 7b-3 seat decision (6284744613) applied #3963 rule A1 only to boots that serve a data API, and left `--no-server` unchanged. The refusal's own `--no-server` remedy contradicts its stated reason. No ADR or ruling decides what a production boot with no organization object may write when it serves no data API. That makes this a decision, not execution.\n\n**前提（带复核命令）：**\n- 两条拒绝只看 `flags.server`：`git show origin/main:packages/cli/src/commands/serve.ts | sed -n 4666,4700p`。\n- 引擎在没有组织对象时放行空组织写入：`packages/objectql/src/engine.ts:7785`，判断在 `packages/core/src/security/system-write-organization.ts:115-125`（`no-organization-object`）。\n- 实测数据见 6323585273 第 2 节。\n\n**选项：**\n\n| 选项 | 做什么 | 客户能感知的后果 | 工作量 |\n|---|---|---|---|\n| **A（推荐）** | 生产环境的 `os serve` / `os start`（不带 `--dev`）只要没装上组织对象，而 stack 里又有按组织划分的对象，**不管带不带 `--server` 都拒绝启动**。拒绝提示里去掉「改用 `--no-server`」这条补救办法 | 少数用 `--no-server` 且不配密钥跑生产的人，启动会被拒绝，提示他们配上 `OS_AUTH_SECRET`。`os dev`、`--dev` 以及在代码里直接嵌入引擎的用法都不受影响 | 小：改 `serve.ts` 的拒绝条件和提示，加测试，改文档 |\n| B | 引擎在**所有**组合下都拒绝写空组织（D9 不再有「精简嵌入」的例外）：没有组织对象时，写按组织划分的表一律拒绝 | 最彻底。但在代码里直接嵌入引擎、又没启用认证的用户，写第一行就会被拒，必须给对象声明不分租户。大量用内存驱动、不带组织对象的测试也要跟着改 | 大，而且没测过：要改所有不带组织对象的测试夹具，规模可能和 7b-0 相当，甚至更大 |\n| C | 保持现状，只在文档里写明 `--no-server` 不配密钥会写出无主数据 | 无主数据继续能写进 18.0.0 建的库和 MongoDB；全新库则启动后种子全部写失败 | 很小，但和 ADR-0131 D1「NULL 不是一种状态」直接冲突 |\n\n**业务含义：**\n- **A**：没登记公司（组织）就不许开张，不管开的是门店（数据 API），还是后台仓库（`--no-server`）；\n- **B**：所有入库单都必须写明归属公司，包括内部测试用的临时仓库；\n- **C**：后台仓库可以先收货，归属以后再说，但这批货永远认不出主人。\n\nos-decision-facets\n- ① 项目长远合理性：A 让拒绝提示和拒绝理由一致，守住 D1 和 D9，同时保留嵌入式用法的灵活性。B 最彻底，但把精简嵌入一起收紧了。C 和 D1 冲突。\n- ② 实际业务拉动：生产环境 `--no-server` 又不配密钥，是很少见的用法。今天没有客户依赖它写数据，而且在全新库上它本来就写不进去。\n- ③ 防 AI 犯错：A 出错的后果是拒绝启动，而且提示会说清怎么修。B 改动面大，测试夹具改错的风险高。C 会悄悄留下脏数据。\n- ④ 创业阶段不扩散：A 只改一个启动判断；B 牵动面广。\nPrior rulings read: no-server,auth secret,no-organization-object,lean embedding,authplugin,seed replay → 1 hits; none; thread: 6323585273 on #24919, 6284744613 and 6284717698 on #24583; repo: objectstack-ai/objectstack\n\n**推荐：** A。只看①就选 A，②③④ 都不改变这个结论。回退方案是 C，但前提是修订 ADR-0131 D1，承认这条路径会写出无主数据。\n- 置信缺口：B 的实际改动量没有测过。如果你倾向 B，我先派一轮测量再动手。\n\n**会不会留下迁移债：** 不会。A 只拦启动，不改表结构，也不改已有数据。已经写进去的空组织行（测量的这几个库里都是 0），由升级仪式按现有方式归属或报告。\n\n**裁后执行：**\n- 选 **A**：派一张卡给 cli，作为 18.x 补丁。改 `serve.ts` 的拒绝条件和提示，并改 `cli.mdx` 以及 18.0 升级文档里的对应说明。changeset 声明 `Clause-②: yes (narrowing)`，做 CONTRACT_REVIEW_TIER 复审，合入后 #24919 的另一张决策卡才成立。\n- 选 **B**：先派测量，再开 Tier H 实现卡，同时修订 ADR-0131 D9。\n- 选 **C**：把这条写进 #24897 的 ADR 补充说明。\n\nBlocks: the D1 decision card for already-certified stores (filed alongside this one), and with it #24897 (the ADR-0131 dated notes).\n"

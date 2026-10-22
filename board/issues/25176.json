@@ -1,0 +1,30 @@
+{
+  "number": 25176,
+  "kind": "issue",
+  "title": "Setup → 人员与组织 shows two identical「组织」entries (zh-CN / ja-JP)",
+  "state": "closed",
+  "state_reason": "completed",
+  "draft": null,
+  "author": {
+    "login": "baozhoutao",
+    "id": 6194462,
+    "type": "User"
+  },
+  "labels": [],
+  "assignees": [],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-22T06:26:24Z",
+  "updated_at": "2026-10-22T07:48:33Z",
+  "closed_at": "2026-10-22T07:48:33Z",
+  "closed_by": {
+    "login": "baozhoutao",
+    "id": 6194462,
+    "type": "User"
+  },
+  "merged_at": null,
+  "comments": 0,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/25176",
+  "body": "## Symptom\n\nIn a multi-organization deployment, Setup → 人员与组织 (People & Organization) shows two menu entries both labelled 「组织」 (ja-JP: 「組織」). They open different pages, so an administrator cannot tell them apart.\n\n## Cause\n\n`packages/platform-objects/src/apps/setup-nav.contributions.ts` contributes two different entries to `group_people_org`:\n\n| id | en | opens | shown |\n|---|---|---|---|\n| `nav_organization` | Organization | the active organization's record page (Members / Invitations / Teams) | always |\n| `nav_organizations` | Organizations | the organization list | only where `org-scoping` is mounted |\n\nEnglish tells them apart by the plural. zh-CN and ja-JP have no plural, and both keys translate to 「组织」 / 「組織」 in `translations/zh-CN.ts` / `translations/ja-JP.ts`.\n\n## Fix\n\n- zh-CN: 「当前组织」 / 「所有组织」\n- ja-JP: 「現在の組織」 / 「すべての組織」\n- A test fails when two entries in one Setup nav group read the same in any shipped locale."
+}

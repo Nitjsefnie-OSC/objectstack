@@ -1,0 +1,30 @@
+{
+  "number": 25182,
+  "kind": "issue",
+  "title": "17.x plugin-security: a permission set created in Setup under isolated tenancy is stored with organization_id NULL — \"created\" toast, then \"record not found\" and absent from the list",
+  "state": "closed",
+  "state_reason": "not_planned",
+  "draft": null,
+  "author": {
+    "login": "baozhoutao",
+    "id": 6194462,
+    "type": "User"
+  },
+  "labels": [],
+  "assignees": [],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-22T06:58:48Z",
+  "updated_at": "2026-10-22T07:00:26Z",
+  "closed_at": "2026-10-22T07:00:26Z",
+  "closed_by": {
+    "login": "baozhoutao",
+    "id": 6194462,
+    "type": "User"
+  },
+  "merged_at": null,
+  "comments": 1,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/25182",
+  "body": "## Summary\n\nOn 17.x (reproduced on 17.3.0; same code in 17.7.0), under `isolated` tenancy, creating a permission set through Setup → Access Control → Permission Sets → New answers success (\"权限集创建成功\"), but the detail page it navigates to shows \"record not found\" and the new set never appears in the list for an organization member. The row is stored with `organization_id = NULL`.\n\n## Reproduction\n\n1. Multi-org isolated runtime (`OS_MULTI_ORG_ENABLED=true`), session with an active organization.\n2. `POST /api/v1/data/sys_permission_set` with `{\"name\":\"zz_repro\",\"label\":\"repro\"}` (the same call Setup makes).\n3. Response body: `\"organization_id\": null`, `\"managed_by\": \"admin\"`.\n4. Any organization-scoped read (driver `WHERE organization_id = <active org>`) misses the row → list empty, detail \"not found\". A platform admin, whose read carries no tenant predicate, still sees it — which hides the bug from whoever tests as admin.\n\n## Root cause\n\n`createPermissionSetWriteThrough` (`permission-set-projection.ts`, registered on `sys_permission_set`) handles a non-system `insert` without calling `next()`:\n\n- `saveMetaItem(...)` → `projectAndFetch(protocol, name)` → `projectPermissionMutation(..., { organizationId: null })` → `upsertEnvPermissionSet` → `tryInsert2(ql, 'sys_permission_set', row)` with `seedCtx(undefined)` (no organization).\n- `opCtx.result` is set to that row and the middleware returns.\n\nBecause `next()` is never called, the org-scoping middleware from `@objectstack/organizations` (which stamps `data.organization_id = context.tenantId` on user-context inserts) never runs, and nothing else on this path carries the caller's `tenantId`. The row is born untenanted.\n\n17.7.0 dist, `createPermissionSetWriteThrough`: `projectAndFetch` still passes `organizationId: null`, and the env upsert still inserts without an organization.\n\n## Expected\n\nA permission set created by a member in an active organization is owned by that organization (same as every other tenant-scoped create) and is visible to them right after creation.\n\n## Suggested fix (17.x maintenance)\n\nThread the caller's `opCtx.context.tenantId` through `projectAndFetch` → `projectPermissionMutation` → `upsertEnvPermissionSet` into `tryInsert2(..., organizationId)`, or stamp `organization_id` on the projected row before returning it from the write-through.\n\nI see `main` / 18.0 retires the `sys_permission_set` data door under ADR-0131 (#15194), so this may only need a 17.x backport or a note — please advise if 17.x is still receiving fixes.\n\n## Workaround we're using downstream\n\nA middleware put at the head of the chain for `sys_permission_set` that, after `next()`, updates `organization_id = context.tenantId` (system context) on any returned row whose organization is empty. Existing NULL rows need a one-off backfill."
+}

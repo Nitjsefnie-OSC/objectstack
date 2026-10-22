@@ -2,8 +2,8 @@
   "number": 25144,
   "kind": "issue",
   "title": "objectql: a controlled_by_parent detail whose master is bound to another datasource, or carries an object-scoped read middleware, is admitted at registration and refused only at read time — refuse the boot instead (ADR-0139 D5.2 / D5.3)",
-  "state": "open",
-  "state_reason": null,
+  "state": "closed",
+  "state_reason": "completed",
   "draft": null,
   "author": {
     "login": "objectstack-fleet[bot]",
@@ -14,7 +14,6 @@
     "area:access",
     "bug",
     "domain:engine",
-    "pm:dispatched",
     "priority:p1"
   ],
   "assignees": [
@@ -23,11 +22,15 @@
   "milestone": null,
   "type": null,
   "created_at": "2026-10-21T23:37:14Z",
-  "updated_at": "2026-10-22T02:23:20Z",
-  "closed_at": null,
-  "closed_by": null,
+  "updated_at": "2026-10-22T05:02:05Z",
+  "closed_at": "2026-10-22T04:59:48Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
   "merged_at": null,
-  "comments": 2,
+  "comments": 5,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/25144",
   "body": "**Filing gate ③: a task the maintainer set by ruling.** Batch #382 item 1 on #24932, sub-question Q1, letter **C**: the maintainer answered the director's recommendation (Q1 C, Q2 A) with 「同意」. Filed by the director seat (seat post #12708, `session_01TQvbE2ENCniJr1ffCzbPc6`, `os-bill`). The decision this executes is `6318800595` on #24932; the measurement it rests on is the dev report `6318648840` (P3). ⛔ Not a claim.\n\n**Reader (who acts):** the `domain:engine` seat (seat post #6367) claims and dispatches. #24932 (`domain:services`, p1) is blocked on this card: its plugin-security switch to the ADR-0139 leaf lands only after this refusal has merged, so that at no point does a declaration exist that boots today and answers 500 at read tomorrow. The two may be developed in parallel; the switch merges second.\n\n**Dedupe** (REST list, both states, every objectstack issue updated since 2026-09-20: 3,314 scanned; 39 match `controlled_by_parent` and one of `datasource|middleware|D5.2|D5.3|registration|boot|refuse`). None is this refusal. The nearest are #23270 and #23387 (stored-shape refusals on the master *count*, closed), #22788 (the ADR-0139 execution epic, closed) and #25092 (a write door, a different rule). **New.**\n\n## What is measured (`origin/main` `abc25a3536`; P3 of `6318648840` at `f2b6cf230`)\n\n- The engine composes no ReadableIds leaf over a master in two classes, by name, at read time: a master whose rows an **object-scoped read middleware** narrows (`packages/objectql/src/engine.ts:6553`, `hasObjectMiddleware`), and a master **bound to another datasource** than the detail (`:6557`, `resolveDatasourceBinding`). ADR-0139 D5.2 / D5.3 record both as limits.\n- The declaration path admits both: `ObjectSchema.parse` admits a `controlled_by_parent` child whose master is declared on another datasource, or whose master is `sys_attachment`; `engine.registerApp` admits a child whose master is bound explicitly to a second registered datasource, or carries an object-scoped read middleware (`resolveDatasourceBinding` → `{ datasource: 'other', via: 'explicit' }`; `hasObjectMiddleware` true).\n- Today the id-list pre-scan serves both shapes rows. Under the leaf (the #24932 switch) both answer `INTERNAL_ERROR` / 500 for every caller, by name.\n- **Producers: zero measured.** HotCRM `e6d5d3e` declares six `controlled_by_parent` objects, every master a `crm_*` object on the one datasource with no object-scoped middleware; in-repo declarations outside test fixtures: none. Deployed tenants were not read.\n- Objects that carry an object-scoped read middleware on main, enumerated by `registerMiddleware(fn, { object })` (every one a platform system object): comment and comment reaction (`plugin-audit/src/comment-access-hooks.ts:1215-1216`), activity (`activity-read-visibility.ts`, `activity-field-redaction.ts`), the audit ledger (`audit-log-read-visibility.ts`, `audit-log-field-redaction.ts`), mail message and mail association (`service-mailbox/src/mail-read-visibility.ts:316-320`), attachment (`service-storage/src/attachment-access-hooks.ts:972`), position assignment (`plugin-security/src/security-plugin.ts:4610`), approval request (`plugin-approvals` ×2). Global registrations (`'*'` or no object) are not counted, by `hasObjectMiddleware`'s own reading.\n\n## Governing text\n\n- ADR-0139 D5.2 / D5.3 (the engine refuses to compose a leaf for these classes, loud as D3's envelope; recorded as a limit, not solved).\n- ADR-0049 (enforce-or-remove: a declaration the runtime cannot honour is not admitted).\n- ADR-0055 §1 (a detail's access derives from exactly one required master).\n- The ruling on #24932, batch #382 item 1 (Q1 C): \"refuse the declaration where it is made\"; both facts are deployment facts (datasource mapping, package default datasource, lifecycle routing, middleware registrations), so the refusal lives in the engine/runtime boot, not in the spec parse.\n\n## Wanted\n\n1. **At the point where both facts are known** — every plugin has registered its middleware and every object has its datasource binding — the boot is refused when a `controlled_by_parent` detail's master (a) resolves to a datasource other than the detail's, or (b) carries an object-scoped read middleware. The refusal names the detail, the master, the class, and the remedy (bind both to one datasource; choose a master without an object-scoped read middleware; or declare the detail without `controlled_by_parent`). Loud, as D3's envelope; ⛔ no silent skip, no fallback to an id list.\n2. **Placement is the dev's first measurement (the ruled confidence gap).** Candidates: a `kernel:ready` hook in the engine or the runtime (the hook exists: `dispatchHookPropagating('kernel:ready', …)` in `@objectstack/core`), or `registerApp` if both facts are already resolvable there. The dev measures which point sees the middleware registrations made during plugin start, and reports a fork if neither point sees them; ⛔ a check that cannot see a registration made later than it runs is not the refusal this card asks for.\n3. Not in the spec parse (`ObjectSchema.parse` stays as it is); `os validate` only if it already resolves bindings, otherwise out of scope.\n4. Pins: one per class, plus the control (HotCRM's six `controlled_by_parent` objects and every in-repo example boot unchanged).\n5. Changeset: `Clause-②: yes (narrowing)` — a composition that booted yesterday is refused today; `Metadata-protocol: none` unless the dev finds a spec shape moving, which would be a fork.\n\n## Acceptance\n\n- A stack declaring a `controlled_by_parent` detail whose master is bound to another datasource is refused at boot with the named remedy; so is one whose master carries an object-scoped read middleware (e.g. a detail mastered by `sys_attachment`).\n- Every in-repo example, the showcase and the HotCRM fixture boot unchanged (control).\n- After this merges, #24932's switch may land with the leaf answered for every `controlled_by_parent` object, with no up-front routing to an id list.\n\n## Related\n\n#24932 (blocked on this card; the switch), ADR-0139 (#25009 / PR #25032, #25010 / PR #25072), #25092 (the write-door rule, same family), #25106 (serial after the switch)."

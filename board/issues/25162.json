@@ -1,0 +1,36 @@
+{
+  "number": 25162,
+  "kind": "pull_request",
+  "title": "docs(spec): name only the OpenAPI document where the retired /docs viewer page was named",
+  "state": "closed",
+  "state_reason": null,
+  "draft": false,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "documentation",
+    "size/s",
+    "tooling"
+  ],
+  "assignees": [
+    "os-bill"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-22T03:04:25Z",
+  "updated_at": "2026-10-22T04:45:37Z",
+  "closed_at": "2026-10-22T04:45:35Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": "2026-10-22T04:45:35Z",
+  "comments": 4,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/pull/25162",
+  "body": "<!-- claude-projects-attribution: {\"github_login\":\"os-bill\"} -->\n_Requested by **Bill** · [project thread](https://claude.ai/code/project/chan_016iMXWSZDzqWRWvWzdNo8wg?thread=cmsg_016iMXWSZDzqWRWvWzdNo8wg6zwDuV2XvoDkqC7bXgqnpc)_\n\nFixes #25121\n\nClause-②: no\nMetadata-protocol: none\n\n## What changed\n\n`main` no longer serves the OpenAPI document's HTML viewer page (`GET {basePath}/docs`, retired by PR #25124, `1b3b65e64`). `registerRoutes` gates `registerOpenApiEndpoints` on `api.enableOpenApi`, and that registrar now mounts one route, `GET {basePath}/openapi.json` (`packages/rest/src/discovery-routes.ts`, read at `origin/main` `23540582f`). The spec text that still named the viewer now names the OpenAPI document only:\n\n| Site | Before | After |\n|:---|:---|:---|\n| `rest-server.zod.ts`, `enableOpenApi` TSDoc | `openapi.json` plus \"`GET {basePath}/docs` for a zero-dep Scalar-rendered HTML viewer\" | the one endpoint, `GET {basePath}/openapi.json` |\n| `rest-server.zod.ts`, `enableOpenApi` describe | \"Enable OpenAPI 3.1 spec & docs viewer endpoints\" | \"Enable the OpenAPI 3.1 document endpoint (`GET BASEPATH/openapi.json`)\" |\n| `rest-server.zod.ts`, `documentation.enabled` tombstone prescription | \"…leaves the `/openapi.json` document and its `/docs` viewer unmounted.\" | \"…leaves the `/openapi.json` document unmounted.\" |\n| `liveness/rest_api.json`, `enableOpenApi` evidence | \"mounts both `/openapi.json` and the `/docs` viewer\" | \"mounts `/openapi.json`, the OpenAPI document\"; `verifiedAt` restamped 2026-10-22 (call graph re-closed against `origin/main`) |\n| `scripts/lib/openapi-self-consistency.ts`, rule 1 comment and the dangling-ref refusal | named \"the Scalar viewer at GET /api/v1/docs\" as a consumer | names the document at `GET /api/v1/openapi.json` and client generators |\n| `migrations/entries/semantic/18.rest-api-config-dead-keys-retired.ts`, `replacement` and `acceptanceCriteria` | \"the OpenAPI document and the docs viewer\", \"`GET /openapi.json` and `GET /docs` unmounted\" | the OpenAPI document only, \"`GET /openapi.json` unmounted\" |\n\nRegenerated: `gen:schema` (no tracked change), `gen:docs` → `content/docs/references/api/rest-server.mdx` (the two describe rows and the prescription row). One `patch` changeset for `@objectstack/spec`: `.changeset/25121-spec-openapi-viewer-prose.md`.\n\nThe `documentation.enabled` refusal is an accept-set no-op: same key refused, same issue path, same opening sentence; only its last clause changed. The two pins that read the prescription (`packages/spec/src/api/rest-api-config-dead-keys-retirement.test.ts` `DOCS_ENABLED_PRESCRIPTION` and `packages/rest/src/rest-api-config-dead-keys-refused.test.ts`) match up to \"`api.enableOpenApi: false` is the switch\", which the new text keeps, so neither needed a flip. Both are green below.\n\n## Tests (at `32bfe10cd`, the final head)\n\n- `pnpm --filter @objectstack/spec test` (lock VERDICT command-exit 0): Test Files 706 passed (706), Tests 21462 passed, 1 todo.\n- `pnpm --filter @objectstack/spec typecheck` (lock VERDICT command-exit 0).\n- `pnpm --filter @objectstack/rest exec vitest run --maxWorkers=2 src/rest-api-config-dead-keys-refused.test.ts src/rest-docs-viewer-retired.pin.test.ts` (lock VERDICT command-exit 0): Test Files 2 passed, Tests 17 passed.\n- `pnpm --filter @objectstack/spec check:generated`: exit 0, all 14 artifacts up to date (it was red on `check:docs` before `gen:docs`).\n- No ablation: no tested behaviour changed (description, TSDoc, comment and prescription text only).\n\n## Gates\n\n`node scripts/pm/dispatch-gates.mjs --commands --repo objectstack-ai/objectstack` at `32bfe10cd` derived 111 commands; each was run with its exit code recorded before any pipe. `--ran` reconciliation: \"111 derived famil(ies) accounted for — 110 run, 1 NOT-MEASURED (1 DERIVED from a recorded exit 3)\".\n\n- 110 exit 0. Five first exited 3 (prerequisite not met: the lint/formula, client-react and objectql dists were unbuilt, and `check:exported-any` / `check:generated` had read a spec dist while a concurrent turbo build was rewriting it). They were re-run green after the builds.\n- NOT MEASURED: `pnpm check:dual-build-cjs-loads`, exit 3. It needs every workspace package built, and this worktree built only the spec, lint, formula, objectql and client-react closures. `Lint & Repo Gates` runs it in CI.\n- Local-only families: `check:skill-frame-freshness` exit 0. `check:dev-prereqs` exit 1, NOT MEASURED: it reports \"the workspace is not built\" (33 of 70 packages have no dist) and names no stale spec dist. That is the box's state, not a finding.\n- CI-owned families (the farm, Test Core, Build Core, Build Docs, type-check lanes): this PR's check-runs.\n\n## Acceptance notes\n\n- Out of scope by the claim and untouched: `ApiTestingUiConfigSchema` (`ApiDocumentationConfigSchema.ui`, `documentation.zod.ts`, viewer enum including `'scalar'`) and `OpenApiGenerationConfigSchema.uiPath` (`plugin-rest-api.zod.ts`, default `/api/docs`, echoed by `REST_API_PLUGIN.md`). Measured at `origin/main` `23540582f`, `git grep -w` outside `packages/spec`, the generated references and the changelogs finds no reader of either. `ApiDocumentationConfig` appears once, in a comment at `packages/runtime/src/http-dispatcher.ts:3061`. `uiPath` appears once, as an unrelated local variable at `packages/rest/src/ui-routes.ts:79`. `RestApiPluginConfig` in `packages/rest` is its own interface (`rest-api-plugin.ts:94`), not the spec schema. The seat files these as their own card.\n- The changeset `.changeset/25077-rest-docs-viewer-attr-escape.md` (already on `main`) describes a viewer fix to a page that has since been retired. It is release-owned input, so it is not touched here.\n\n---\n\n_Generated by [Claude Code](https://claude.ai/code/session_01B2EeooonSXrANpkpgUSfFZ)_\n"
+}

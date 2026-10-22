@@ -1,0 +1,35 @@
+{
+  "number": 25177,
+  "kind": "pull_request",
+  "title": "fix(platform-objects): distinct zh-CN/ja-JP labels for the two Setup organization nav entries",
+  "state": "closed",
+  "state_reason": null,
+  "draft": false,
+  "author": {
+    "login": "baozhoutao",
+    "id": 6194462,
+    "type": "User"
+  },
+  "labels": [
+    "documentation",
+    "size/s",
+    "tests",
+    "tooling"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-22T06:26:34Z",
+  "updated_at": "2026-10-22T07:48:10Z",
+  "closed_at": "2026-10-22T07:48:08Z",
+  "closed_by": {
+    "login": "baozhoutao",
+    "id": 6194462,
+    "type": "User"
+  },
+  "merged_at": "2026-10-22T07:48:08Z",
+  "comments": 1,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/pull/25177",
+  "body": "Refs #25176\n\nClause-②: no\nMetadata-protocol: none\n\n## What\n\nSetup → People & Organization carries `nav_organization` (the active organization's record page) and `nav_organizations` (the organization list, shown where `org-scoping` is mounted). Both translated to 「组织」 in zh-CN and 「組織」 in ja-JP, so a multi-organization deployment showed two identical entries that open different pages.\n\n- zh-CN: 「当前组织」 / 「所有组织」\n- ja-JP: 「現在の組織」 / 「すべての組織」\n- New `setup-nav-distinct-labels.test.ts`: fails when two entries in one Setup nav group read the same in any shipped locale (en / zh-CN / ja-JP / es-ES). Verified red on the old translations, green after.\n- `patch` changeset for `@objectstack/platform-objects`.\n\nOnly translated-locale values change; no translation keys are added or dropped, and the English source (and so the source hashes) is unchanged.\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nhttps://claude.ai/code/session_01RDdLaUJMtzFXcrF3gyzpJD"
+}
