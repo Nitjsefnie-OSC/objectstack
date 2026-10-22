@@ -211,9 +211,11 @@ import {
 } from './signing-key-read-cache.js';
 import {
   ORGANIZATION_DELETE_PATH,
+  ORGANIZATION_DELETE_READ_FAULT_CODE,
   ORGANIZATION_DELETE_REFUSAL_CODE,
   defaultOrganizationDeleteRefusal,
   isDefaultOrganizationTarget,
+  organizationDeleteReadFaultBody,
   organizationDeleteRefusal,
   organizationNotEmptyBody,
   removeOrganizationAuthStructure,
@@ -8148,9 +8150,18 @@ export class AuthManager {
    * part) — the bearer plugin may convert `Authorization: Bearer` to a session
    * AFTER this global before-hook runs. Returns `null` when no valid session
    * can be resolved (→ caller lets `sessionMiddleware` issue the 401).
+   *
+   * [#25059] By default a session read that FAILED answers `null` too, the
+   * same value as no session. `failedReadThrows` tells the two apart for a
+   * caller whose fall-through would let writes run uncounted: when no actor
+   * was resolved and the explicit token read itself threw, that throw
+   * propagates. A request with no credential, a credential the store does not
+   * hold, an expired session, a credential that does not parse or one
+   * carrying a control character still answers `null`.
    */
   private async resolveActor(
     ctx: any,
+    options?: { failedReadThrows?: boolean },
   ): Promise<{ userId: string; activeOrgId?: string } | null> {
     try {
       const { getSessionFromCtx } = await import('better-auth/api');
@@ -8164,6 +8175,7 @@ export class AuthManager {
         };
       }
     } catch { /* fall through to explicit token resolution */ }
+    let failedRead: { cause: unknown } | undefined;
     try {
       const hdr = (k: string): string =>
         ((ctx?.headers?.get?.(k) ?? ctx?.request?.headers?.get?.(k)) as string) || '';
@@ -8183,10 +8195,20 @@ export class AuthManager {
         if (cm?.[1]) token = unsigned(decodeURIComponent(cm[1]));
       }
       if (token) {
-        const sess: any = await (ctx as any).context.adapter.findOne({
-          model: 'session',
-          where: [{ field: 'token', value: token }],
-        });
+        let sess: any;
+        try {
+          sess = await (ctx as any).context.adapter.findOne({
+            model: 'session',
+            where: [{ field: 'token', value: token }],
+          });
+        } catch (cause) {
+          // A token carrying a control character is none the store holds, and
+          // a read of it can fail on the request's own bytes (PostgreSQL
+          // refuses U+0000 in a text parameter): that failure stays no session.
+          const storable = !Array.from(token).some((c) => c.charCodeAt(0) < 0x20 || c.charCodeAt(0) === 0x7f);
+          if (options?.failedReadThrows && storable) failedRead = { cause };
+          throw cause;
+        }
         const exp = sess?.expiresAt ?? sess?.expires_at;
         if (sess && (!exp || new Date(exp).getTime() > Date.now())) {
           const userId = String(sess.userId ?? sess.user_id ?? '');
@@ -8200,6 +8222,7 @@ export class AuthManager {
         }
       }
     } catch { /* unresolved → null */ }
+    if (failedRead) throw failedRead.cause;
     return null;
   }
 
@@ -8314,12 +8337,17 @@ export class AuthManager {
    * Only for a caller the vendor itself admits — a member whose role holds
    * `organization: ['delete']`, asked of the vendor's own `hasPermission`, as
    * {@link assertRemoveMemberPermitted} does — so a caller it refuses gets its
-   * refusal, and no count. Everything this cannot decide falls through to the
-   * vendor: no session, no organization id, no membership, a lookup that
-   * failed. The COUNT does not fall through: it is the guard, and a guard that
-   * could not be evaluated must not pass, so its failure propagates, and so
+   * refusal, and no count. What the vendor itself answers falls through to it:
+   * no session, no organization id, no membership, no permission, no
+   * organization row. A READ this decides on that fails does not fall
+   * through [#25059], the session read included (`resolveActor` with
+   * `failedReadThrows`): the vendor's own reads could then succeed and its writes
+   * run with nothing counted, so it refuses here with 503
+   * `SERVICE_UNAVAILABLE` ({@link organizationDeleteReadFaultBody}), and so
    * does a failure deciding whether the target is the Default Organization.
-   * The Default Organization is asked the last-administrator guard's question
+   * The COUNT does not fall through either: it is the guard, and a guard that
+   * could not be evaluated must not pass, so its failure propagates. The
+   * Default Organization is asked the last-administrator guard's question
    * first (a 403), then its own record count (the same 409), both here, before
    * the first write.
    */
@@ -8329,17 +8357,34 @@ export class AuthManager {
     const organizationId = typeof ctx?.body?.organizationId === 'string' ? ctx.body.organizationId : '';
     if (!organizationId) return;
 
-    let organization: any;
+    const sys = withSystemReadContext(engine);
+    const read = async <T>(object: string, run: () => Promise<T>): Promise<T> => {
+      try {
+        return await run();
+      } catch (cause) {
+        const { APIError } = await import('better-auth/api');
+        const err = new APIError('SERVICE_UNAVAILABLE', {
+          code: ORGANIZATION_DELETE_READ_FAULT_CODE,
+          ...organizationDeleteReadFaultBody(object),
+        });
+        (err as { cause?: unknown }).cause = cause;
+        throw err;
+      }
+    };
+
+    // The session read refuses on failure too, so a session the store could
+    // not read is never taken for no session; no session at all still falls
+    // through.
+    const actor = await read('sys_session', () => this.resolveActor(ctx, { failedReadThrows: true }));
+    if (!actor?.userId) return; // the vendor answers 401
+    const callerRow: any = await read('sys_member', () =>
+      sys.findOne('sys_member', { where: { organization_id: organizationId, user_id: actor.userId } }),
+    );
+    if (!callerRow) return; // the vendor answers USER_IS_NOT_A_MEMBER_OF_THE_ORGANIZATION
+    let permitted: boolean;
     try {
-      const actor = await this.resolveActor(ctx);
-      if (!actor?.userId) return; // the vendor answers 401
-      const sys = withSystemReadContext(engine);
-      const callerRow: any = await sys.findOne('sys_member', {
-        where: { organization_id: organizationId, user_id: actor.userId },
-      });
-      if (!callerRow) return; // the vendor answers USER_IS_NOT_A_MEMBER_OF_THE_ORGANIZATION
       const { hasPermission } = await import('better-auth/plugins/organization');
-      const permitted = await hasPermission(
+      permitted = await hasPermission(
         {
           role: callerRow.role,
           options: (this.orgRolesMap ? { roles: this.orgRolesMap } : {}) as any,
@@ -8348,21 +8393,26 @@ export class AuthManager {
         } as any,
         ctx,
       );
-      if (!permitted) return; // the vendor answers YOU_ARE_NOT_ALLOWED_TO_DELETE_THIS_ORGANIZATION
-      organization = await sys.findOne('sys_organization', { where: { id: organizationId } });
-      if (!organization) return; // the vendor answers 400
     } catch {
-      // A lookup that did not complete hands the request back to the vendor,
-      // which re-reads everything it decides; the engine's own refusal still
-      // stands under the delete.
+      // Not a read: handed a roles map and no dynamic access control, the
+      // vendor's predicate reads nothing, so it throws only on the member row
+      // itself (a role that is no string, or names an inherited object
+      // member), and the vendor's identical call on that row throws too,
+      // before its first write. The vendor answers this.
       return;
     }
+    if (!permitted) return; // the vendor answers YOU_ARE_NOT_ALLOWED_TO_DELETE_THIS_ORGANIZATION
+    const organization: any = await read('sys_organization', () =>
+      sys.findOne('sys_organization', { where: { id: organizationId } }),
+    );
+    if (!organization) return; // the vendor answers 400
 
-    // Which of the two refusals below applies is part of the guard, so it is
-    // decided outside the fall-through above: a lookup that fails here
-    // refuses, never hands the request to the vendor unasked.
-    const defaultOrganization = await isDefaultOrganizationTarget(
-      engine, organization, postureEnforcesWall(resolveTenancyPosture()),
+    // Which of the two refusals below applies is part of the guard, so a
+    // lookup that fails deciding it refuses too, never hands the request to
+    // the vendor unasked.
+    const walled = postureEnforcesWall(resolveTenancyPosture());
+    const defaultOrganization = await read('sys_organization', () =>
+      isDefaultOrganizationTarget(engine, organization, walled),
     );
 
     // The Default Organization is asked the last-administrator guard's
