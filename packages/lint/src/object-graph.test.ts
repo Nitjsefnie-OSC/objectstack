@@ -36,7 +36,10 @@ const stack = {
       name: 'crm_account',
       fields: {
         region: { type: 'text', label: 'Region' },
-        owner: { type: 'user', label: 'Owner', reference: 'crm_person' },
+        // [#24808] A link to a person OBJECT is a `lookup`: a `user` field's
+        // target is fixed to `sys_user`, and `FieldSchema` refuses a `user`
+        // field naming another object (#24952).
+        owner: { type: 'lookup', label: 'Owner', reference: 'crm_person' },
       },
     },
     { name: 'crm_person', fields: { email: { type: 'email', label: 'Email' } } },
@@ -416,12 +419,19 @@ describe('[#19289] object-graph — a `user` field takes its target from the TYP
     expect(isUnjudgeable(verdict)).toBe(true);
   });
 
-  it('control: an EXPLICIT carrier still wins over the constant', () => {
-    // `reference` MATERIALIZES the constant for `user`; where an author named a
-    // different object the arbiter returns what they wrote, unchanged. The
-    // module fixture above relies on this (`owner` → `crm_person`).
-    expect(resolveFieldPath(graph, 'crm_opportunity', 'account.owner.email'))
-      .toMatchObject({ kind: 'ok', object: 'crm_person', field: 'email' });
+  it('[#24952] a foreign carrier on a `user` field no longer wins: the hop lands on `sys_user`', () => {
+    // `reference` MATERIALIZES the constant for `user`. Naming another object
+    // with it is refused at parse, so it reaches the graph only unparsed, and
+    // the arbiter answers the type's constant rather than what was written.
+    const foreign = indexObjectGraph({
+      objects: [
+        { name: 'crm_account', fields: { owner: { type: 'user', label: 'Owner', reference: 'crm_person' } } },
+        { name: 'crm_person', fields: { email: { type: 'email', label: 'Email' } } },
+        { name: 'sys_user', fields: { email: { type: 'email', label: 'Email' } } },
+      ],
+    });
+    expect(resolveFieldPath(foreign, 'crm_account', 'owner.email'))
+      .toMatchObject({ kind: 'ok', object: 'sys_user', field: 'email' });
   });
 
   it('control: an UNREADABLE carrier still REFUSES at index time', () => {

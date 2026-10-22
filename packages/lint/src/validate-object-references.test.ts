@@ -704,12 +704,17 @@ describe('[#19289] validateObjectReferences — a `user` target comes from the T
     expect(findings[0].rule).toBe(OBJECT_REFERENCE_UNKNOWN);
   });
 
-  it('control: the rule still REPORTS a real miss — an explicit carrier naming an unknown object errors', () => {
+  it('control: the rule still REPORTS a real miss — a `lookup` naming an unknown object errors', () => {
     // Without this, "no findings" above reads equally well as a rule that
-    // stopped judging `user` fields altogether.
-    const findings = validateObjectReferences(userField({ reference: 'zzz_nope' }));
-    expect(findings).toHaveLength(1);
-    expect(findings[0].rule).toBe(OBJECT_REFERENCE_UNKNOWN);
+    // stopped judging fields altogether. [#24952] A `user` field can no longer
+    // carry the miss: its target is the type's constant whatever the carrier
+    // says (`FieldSchema` refuses a foreign name), so the same field leg is
+    // proven on a `lookup`, and a foreign carrier on `user` resolves to
+    // `sys_user` and draws nothing.
+    const lookup = validateObjectReferences(userField({ type: 'lookup', reference: 'zzz_nope' }));
+    expect(lookup).toHaveLength(1);
+    expect(lookup[0].rule).toBe(OBJECT_REFERENCE_UNKNOWN);
+    expect(validateObjectReferences(userField({ reference: 'zzz_nope' }))).toEqual([]);
   });
 });
 

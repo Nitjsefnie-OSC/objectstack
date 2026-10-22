@@ -54,10 +54,10 @@ export const jaJP: TranslationData = {
         nav_system_overview: { label: 'システム概要' },
 
         nav_users: { label: 'ユーザー' },
-        nav_organization: { label: '組織' },
+        nav_organization: { label: '現在の組織' },
         nav_business_units: { label: 'ビジネスユニット' },
         nav_teams: { label: 'チーム' },
-        nav_organizations: { label: '組織' },
+        nav_organizations: { label: 'すべての組織' },
         nav_invitations: { label: '招待' },
 
         nav_positions: { label: 'ポジション' },
@@ -90,7 +90,6 @@ export const jaJP: TranslationData = {
         nav_settings_knowledge: { label: 'ナレッジ' },
         nav_settings_feature_flags: { label: '機能フラグ' },
         nav_notification_preferences: { label: '通知設定' },
-        nav_notification_subscriptions: { label: '通知購読' },
         nav_notification_templates: { label: '通知テンプレート' },
 
         nav_sessions: { label: 'セッション' },

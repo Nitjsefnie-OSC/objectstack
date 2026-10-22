@@ -2644,9 +2644,13 @@ const TITLE_FORMAT_RETIRED_EXPLANATION: RuleExplanation = {
       'alias), or one derived from the object\'s fields. `titleFormat` is a render-only template: the ' +
       'server can neither return the title it draws nor query by it, the shared title predicate ' +
       '(`objectTitleCompleteness`) never reads it, and an explicit `nameField` takes precedence over it.',
-    'For a single-field title, set `nameField` to that field. For a composite title, add a formula ' +
-      'field with `returnType: \'text\'` and point `nameField` at it: a formula whose result is text is ' +
-      'title-eligible. Then drop `titleFormat`, which this warning reports for as long as it is declared.',
+    'For a single-field title, set `nameField` to that field. A composite title that must be queried ' +
+      '(matched by an import, sorted, searched) is a stored computed field: a non-formula field, such as ' +
+      'a `text` field, that declares an `expression`, which the engine computes and stores on every ' +
+      'write; point `nameField` at it. A formula with `returnType: \'text\'` is title-eligible too and ' +
+      'stays legal for a title shown for display only: its value is computed on read and stored nowhere, ' +
+      'so a sort by it is refused, search never reaches it, and an import cannot match a lookup cell ' +
+      'against it. Then drop `titleFormat`, which this warning reports for as long as it is declared.',
     'A warning, not an error: the schema still parses the key, so existing metadata keeps loading.',
   ],
 };
@@ -2775,10 +2779,11 @@ const RELATIONSHIP_MASTER_DETAIL_REQUIRED_EXPLANATION: RuleExplanation = {
       'security gate (`assertControlledByParentWrite`) is the only thing refusing such an insert.',
     'Every `master_detail` field of such an object is judged, not only the one the runtime resolves ' +
       'as the master: that is the scope `ObjectSchema.create()` enforces when it forces ' +
-      '`required: true` and refuses an explicit `required: false`. The builder never inspects ' +
-      '`readonly` or `system`, and a plain object literal or a raw `.parse()` of stored metadata ' +
-      'never runs it, so this rule is where all three shapes meet a refusal at authoring time. One ' +
-      'finding per field, located at its first defect.',
+      '`required: true` and refuses an explicit `required: false`. The spec parse also ' +
+      'refuses every shape that leaves the object without exactly one writable required master, so ' +
+      '`os validate`, `os build` and the save door stop there; a shape on a second, non-required ' +
+      '`master_detail` beside the master is this rule\'s report alone. One finding per field, located ' +
+      'at its first defect.',
     DATA_MODEL_SWEEP_REACH,
   ],
 };
@@ -3143,7 +3148,7 @@ const LIST_VIEW_FIELD_UNKNOWN_EXPLANATION: RuleExplanation = {
       'external or introspected schema), a hop through a registry-injected system column, a list ' +
       'view bound to a provider other than `object`, and the positions other rules own: `sort` ' +
       '(`sort-field-unknown`), `searchableFields` (`searchable-field-unknown`), the `chart` ' +
-      'bindings, action names, `conditionalFormatting` predicates and `addRecord.formView`. An ' +
+      'bindings, action names and `conditionalFormatting` predicates. An ' +
       'unresolvable binding skips the whole list view on `os validate`, `os build` and `os lint`, so one ' +
       'typo yields one finding; the runtime save door refuses it once instead, as `list-view-object-unknown` ' +
       'or, for a write into a package, `list-view-object-outside-closure`.',

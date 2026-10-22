@@ -3471,6 +3471,116 @@ describe('runtime authoring gate on PAGE writes — the component visibleWhen ve
     });
 });
 
+// #25002 — a CEL slot INSIDE a page component's `properties` bag that overruns
+// the platform's parse bounds (`page-predicate-over-budget`,
+// `validatePagePredicateBounds`) is refused at the runtime save door, as
+// `os build` refuses it. #24953 shipped it as an advisory (the door admitted the
+// save and listed the finding); the amended 「甲」 (record 6303865025) ships
+// the refusal in 18.x. The card's shape: a `page:tabs` item `visibleWhen` of
+// ~390 AST nodes, over `maxAstNodes` (256). Pinned through the REAL
+// `saveMetaItem`:
+//
+//  (a) the active save is refused — 422 `INVALID_METADATA`, the door's own
+//      envelope — naming the slot and the bound, and nothing lands; the draft
+//      promotion is refused the same way;
+//  (b) the door's finding IS the build's;
+//  (c) control: a within-bounds tab predicate saves, and the row lands.
+//
+// ⚠️ As above: this package reaches `@objectstack/lint` through its built
+// `dist/`, so a registry or rule edit is invisible here until
+// `pnpm --filter @objectstack/lint build` has run.
+describe('runtime authoring gate on PAGE writes — a props-bag CEL slot over the parse bounds (#25002)', () => {
+    const RULE = 'page-predicate-over-budget';
+    const TAB_PATH = 'pages[0].regions[0].components[0].properties.items[1].visibleWhen';
+    /** 78 `||` terms, five AST nodes each — the card's ~390-node class. */
+    const OVER = Array.from({ length: 78 }, (_, i) => `record.f${i} == ${i}`).join(' || ');
+    const WITHIN = "record.stage == 'won' || page.tab != ''";
+    const page = (tabVisibleWhen: string) => ({
+        name: 'deal_home',
+        label: 'Deal',
+        type: 'app',
+        regions: [{
+            name: 'main',
+            components: [{
+                type: 'page:tabs',
+                properties: {
+                    items: [
+                        { label: 'Overview', value: 'overview', children: [] },
+                        { label: 'Finance', value: 'finance', visibleWhen: tabVisibleWhen, children: [] },
+                    ],
+                },
+            }],
+        }],
+    });
+
+    const savePage = (protocol: any, item: unknown, extra: Record<string, unknown> = {}) =>
+        protocol.saveMetaItem({ type: 'page', name: 'deal_home', item, ...extra });
+    const activePageRows = (rows: Map<string, Row>) =>
+        Array.from(rows.values()).filter((r) => r.type === 'page' && r.state === 'active');
+
+    let warn: ReturnType<typeof vi.spyOn>;
+    beforeEach(() => {
+        warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+        delete process.env.OS_ALLOW_UNLINTED_METADATA_WRITES;
+    });
+    afterEach(() => {
+        warn.mockRestore();
+        delete process.env.OS_ALLOW_UNLINTED_METADATA_WRITES;
+    });
+
+    it('(a) REFUSES an active save of the card\'s tab-item `visibleWhen`, naming the bound; nothing stored', async () => {
+        const { protocol, rows } = makeProtocol();
+
+        const err = await savePage(protocol, page(OVER)).catch((e: any) => e);
+
+        expect(err, 'the save resolved — the door still admits the over-budget slot').toBeInstanceOf(Error);
+        expect({ code: err.code, status: err.status }).toEqual({ code: 'INVALID_METADATA', status: 422 });
+        expect(err.rulesRun).toContain('validatePagePredicateBounds');
+        const issues = (err.issues ?? []).filter((i: any) => i.rule === RULE);
+        expect(issues, `issues: ${JSON.stringify(err.issues)}`).toHaveLength(1);
+        expect(issues[0]).toMatchObject({ severity: 'error', path: TAB_PATH });
+        expect(issues[0].message).toContain('`maxAstNodes` budget (platform limit 256)');
+        expect(activePageRows(rows)).toEqual([]);
+    });
+
+    it('(a) gates the draft → active promotion of the same page', async () => {
+        const { protocol, rows } = makeProtocol();
+        await expect(savePage(protocol, page(OVER), { mode: 'draft' })).resolves.toMatchObject({ success: true });
+
+        const err = await protocol.publishMetaItem({ type: 'page', name: 'deal_home' }).catch((e: any) => e);
+
+        expect({ code: err?.code, status: err?.status }).toEqual({ code: 'INVALID_METADATA', status: 422 });
+        expect((err.issues ?? []).map((i: any) => i.rule)).toContain(RULE);
+        expect(activePageRows(rows)).toEqual([]);
+    });
+
+    it('(b) the door and `os build` give the SAME finding', async () => {
+        const { protocol } = makeProtocol();
+        const err = await savePage(protocol, page(OVER)).catch((e: any) => e);
+        const atDoor = (err?.issues ?? []).filter((i: any) => i.rule === RULE);
+
+        const stack = { pages: [page(OVER)] };
+        const atBuild = runAuthoringRules('build', { normalized: stack, parsed: stack })
+            .filter((f) => f.severity === 'error');
+
+        expect(atBuild.map((f) => f.rule)).toEqual([RULE]);
+        expect(atDoor).toHaveLength(1);
+        for (const k of ['rule', 'where', 'path', 'message', 'hint'] as const) {
+            expect(atDoor[0][k], `door and build disagree on '${k}'`).toBe(atBuild[0]![k]);
+        }
+    });
+
+    it('(c) CONTROL — a within-bounds tab predicate saves, and the row lands', async () => {
+        const { protocol, rows } = makeProtocol();
+
+        await expect(savePage(protocol, page(WITHIN))).resolves.toMatchObject({ success: true });
+
+        expect(activePageRows(rows)).toHaveLength(1);
+        const stack = { pages: [page(WITHIN)] };
+        expect(runAuthoringRules('build', { normalized: stack, parsed: stack }).filter((f) => f.rule === RULE)).toEqual([]);
+    });
+});
+
 // A page component's `data` prop naming the retired view-level `api` provider,
 // at the runtime save door. `object-grid`, `object-map`, `object-gantt` and
 // `object-tree` take a view data source (`ViewDataSchema`) as `data`, so the
@@ -4001,5 +4111,135 @@ describe('runtime authoring gate on VIEW writes that name no package — the who
         const err = await saveView(protocol, stored).catch((e: any) => e);
         expectRefusedUnknown(err, 'next save of a stored row');
         expect(JSON.parse(activeViewRows(rows)[0]!.metadata)).toEqual(stored);
+    });
+});
+
+/**
+ * [#24957] The object save door refuses a `validations[]` rule whose predicate
+ * reads `parent`, as `os build` does.
+ *
+ * ObjectQL evaluates every `validations[]` predicate against `record` and
+ * `previous` only; the master-detail header is bound as `parent` for a field's
+ * own `readonlyWhen` / `requiredWhen` alone. Such a rule faults on every write
+ * it judges and fails closed. #24720 reported it at `warning` (the door listed
+ * it among its advisories and admitted the save); this card makes it the
+ * refusal.
+ *
+ * The refusal is in `@objectstack/lint` (the validation pass's root verdict);
+ * no code here moves. Pinned through the REAL `saveMetaItem`, the header stored
+ * in the registry:
+ *
+ *  (a) the measured body is refused on an active save — a 422
+ *      `INVALID_METADATA` carrying the build's located finding — and nothing
+ *      lands;
+ *  (b) the same body still saves as a DRAFT (drafts are never gated), and the
+ *      draft's promotion and a package's draft publish are refused;
+ *  (c) control: `parent` on the field's own `readonlyWhen` saves, and so does a
+ *      rule reading `record`.
+ *
+ * ⚠️ As in the blocks above: this package reaches `@objectstack/lint` through
+ * its built `dist/`, so an edit to the rule is invisible here until
+ * `pnpm --filter @objectstack/lint build` has run.
+ */
+describe('runtime authoring gate on OBJECT writes — a validations[] predicate reading parent (#24957)', () => {
+    const header = {
+        name: 'fx_header',
+        label: 'Header',
+        sharingModel: 'private',
+        fields: { name: { type: 'text', label: 'Name' }, status: { type: 'text', label: 'Status' } },
+    };
+    const line = (validations: unknown[], extraFields: Record<string, unknown> = {}) => ({
+        name: 'fx_line',
+        label: 'Line',
+        sharingModel: 'private',
+        fields: {
+            hdr: { type: 'master_detail', label: 'Header', reference: 'fx_header' },
+            amount: { type: 'number', label: 'Amount' },
+            ...extraFields,
+        },
+        validations,
+    });
+    /** The measured body. */
+    const PARENT = "parent.status == 'paid'";
+    const rule = (condition: string) => ({ name: 'paid_lock', type: 'script', condition, message: 'Locked.' });
+    /** Where the build locates it — the rule the author edits. */
+    const WHERE = "object 'fx_line' · validation 'paid_lock'";
+
+    const hostWithHeader = () => {
+        const { engine, rows } = makeStubEngine();
+        engine.registry.listItems = (type: string) => (type === 'object' ? [header] : []);
+        const protocol = new ObjectStackProtocolImplementation(engine, () => new Map(), 'env_test') as any;
+        return { protocol, rows };
+    };
+    const lineRows = (rows: Map<string, Row>) =>
+        Array.from(rows.values()).filter((r) => r.type === 'object' && r.name === 'fx_line');
+    const saveLine = (protocol: any, item: unknown, extra: Record<string, unknown> = {}) =>
+        protocol.saveMetaItem({ type: 'object', name: 'fx_line', item, ...extra });
+
+    it('(a) REFUSES an active save with a 422 carrying the build\'s located finding, and nothing lands', async () => {
+        const { protocol, rows } = hostWithHeader();
+
+        const err = await saveLine(protocol, line([rule(PARENT)])).catch((e: any) => e);
+
+        expect(err, 'the save resolved — the door still admits the rule').toBeInstanceOf(Error);
+        expect({ code: err.code, status: err.status }).toEqual({ code: 'INVALID_METADATA', status: 422 });
+        const issues = err.issues.filter((i: any) => i.rule === EXPRESSION_INVALID);
+        expect(issues, `issues: ${JSON.stringify(err.issues)}`).toHaveLength(1);
+        expect(issues[0].path).toBe(WHERE);
+        expect(issues[0].severity).toBe('error');
+        expect(issues[0].message).toContain("validation rule 'paid_lock' reads `parent`");
+        expect(lineRows(rows)).toEqual([]);
+
+        // The door's issue IS the build's finding.
+        const stack = { objects: [header, line([rule(PARENT)])] };
+        const atBuild = runAuthoringRules('build', { normalized: stack, parsed: stack })
+            .filter((f) => f.rule === EXPRESSION_INVALID);
+        expect(atBuild).toHaveLength(1);
+        for (const key of ['rule', 'where', 'path', 'message', 'severity'] as const) {
+            expect(issues[0][key], `door and build disagree on '${key}'`).toBe(atBuild[0]![key]);
+        }
+    });
+
+    it('(b) the same body still saves as a DRAFT, and its PROMOTION is refused', async () => {
+        const { protocol, rows } = hostWithHeader();
+
+        await expect(saveLine(protocol, line([rule(PARENT)]), { mode: 'draft' })).resolves.toMatchObject({ success: true });
+        expect(lineRows(rows).map((r) => r.state)).toEqual(['draft']);
+
+        const err = await protocol.publishMetaItem({ type: 'object', name: 'fx_line' }).catch((e: any) => e);
+
+        expect({ code: err?.code, status: err?.status }).toEqual({ code: 'INVALID_METADATA', status: 422 });
+        const issue = err.issues.find((i: any) => i.rule === EXPRESSION_INVALID);
+        expect(issue, `issues: ${JSON.stringify(err.issues)}`).toBeDefined();
+        expect(issue.path).toBe(WHERE);
+        expect(lineRows(rows).map((r) => r.state)).toEqual(['draft']);
+    });
+
+    it("(b) a PACKAGE's draft publish of the same body is refused — nothing goes live", async () => {
+        const { protocol, rows } = hostWithHeader();
+        await expect(
+            saveLine(protocol, line([rule(PARENT)]), { mode: 'draft', packageId: 'app.fx' }),
+        ).resolves.toMatchObject({ success: true });
+
+        const res = await protocol.publishPackageDrafts({ packageId: 'app.fx' });
+
+        expect(res.outcome, JSON.stringify(res)).toBe('refused');
+        expect(res.publishedCount).toBe(0);
+        expect(res.failed).toEqual([expect.objectContaining({ type: 'object', name: 'fx_line', code: 'INVALID_METADATA' })]);
+        expect(lineRows(rows).map((r) => r.state)).toEqual(['draft']);
+    });
+
+    it('(c) control: `parent` on the field\'s own `readonlyWhen`, and a rule reading `record`, save and land', async () => {
+        for (const body of [
+            line([], { note: { type: 'text', label: 'Note', readonlyWhen: PARENT } }),
+            line([rule('record.amount != null && record.amount > 0')]),
+        ]) {
+            const { protocol, rows } = hostWithHeader();
+
+            const result = await saveLine(protocol, body);
+
+            expect(result.success, JSON.stringify(body)).toBe(true);
+            expect(lineRows(rows).map((r) => r.state)).toEqual(['active']);
+        }
     });
 });

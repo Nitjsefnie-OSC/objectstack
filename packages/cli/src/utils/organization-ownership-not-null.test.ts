@@ -11,7 +11,11 @@
  *    the same constraint on any other undeclared-NOT-NULL column still is;
  *  - a table the composition does not declare is `not-declared`, untouched;
  *  - a transport whose apply door declares it cannot perform the op is
- *    `unsupported`, never attempted.
+ *    `unsupported`, never attempted;
+ *  - a rotation shard is never rebuilt: one the driver created NOT NULL is
+ *    `already-not-null`, read from the database, and one created nullable
+ *    before the driver did so is `unsupported`, saying it leaves with the
+ *    base's retention.
  */
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -33,6 +37,16 @@ beforeEach(async () => {
   await driver.initObjects([
     { name: 'crm_deal', fields: { name: { type: 'text' }, organization_id: { type: 'lookup', reference: 'sys_organization', required: false } } },
   ] as never);
+  // The ceremony tightens a table an earlier release built: its tenant column
+  // is nullable, which a table this release creates never is (ADR-0131 D1).
+  // Relaxed through the driver's own drift apply door, the shape of that store.
+  const { applied } = await driver.applyMigrationEntries([
+    {
+      kind: 'nullability_mismatch', remoteName: 'crm_deal', table: 'crm_deal', column: 'organization_id', category: 'needs_confirm',
+      op: { type: 'relax_not_null', table: 'crm_deal', column: 'organization_id' },
+    } as never,
+  ]);
+  if (applied.length !== 1) throw new Error('crm_deal was not returned to its pre-18 shape');
   await knex('crm_deal').insert([
     { id: 'deal_1', name: 'Acme', organization_id: 'org_default' },
     { id: 'deal_2', name: 'Globex', organization_id: 'org_default' },
@@ -97,19 +111,50 @@ describe('organization_id NOT NULL through the drift apply door', () => {
     expect(attempted).toBe(0);
   });
 
-  it('a rotation shard is unsupported, never rebuilt: it has no declaration of its own', async () => {
+  it('a rotation shard created nullable is unsupported, never rebuilt: it has no declaration of its own', async () => {
     let attempted = 0;
     const outcomes = await applyNotNullThroughDrift(
       {
         isDeclared: () => true,
         shardBaseOf: (t) => (t.startsWith('sys_activity__') ? 'sys_activity' : null),
+        isNotNull: async () => false,
         driverFor: () => ({ applyMigrationEntries: async () => { attempted++; return { applied: [], skipped: [] }; } }) as never,
       },
       [{ table: 'sys_activity__r20261019', column: 'organization_id' }],
     );
     expect(outcomes).toEqual([
-      { table: 'sys_activity__r20261019', column: 'organization_id', outcome: 'unsupported', detail: expect.stringMatching(/rotation shard of sys_activity/) },
+      {
+        table: 'sys_activity__r20261019',
+        column: 'organization_id',
+        outcome: 'unsupported',
+        detail: expect.stringMatching(/rotation shard of sys_activity, rotated in before shards were created with organization_id NOT NULL/),
+      },
     ]);
+    expect(outcomes[0]!.detail).not.toMatch(/nullable column/);
+    expect(attempted).toBe(0);
+  });
+
+  it('⭐ a rotation shard the driver created NOT NULL is already-not-null, never reported unsupported or rebuilt', async () => {
+    await knex.schema.createTable('crm_deal__r20261021', (t: any) => {
+      t.string('id').primary();
+      t.string('organization_id').notNullable();
+    });
+    let attempted = 0;
+    const asked: unknown[][] = [];
+    const outcomes = await applyNotNullThroughDrift(
+      {
+        isDeclared: () => true,
+        shardBaseOf: (t) => (t.startsWith('crm_deal__') ? 'crm_deal' : null),
+        isNotNull: async (table, column, database) => {
+          asked.push([table, column, database]);
+          return !(await nullable(table, column));
+        },
+        driverFor: () => ({ applyMigrationEntries: async () => { attempted++; return { applied: [], skipped: [] }; } }) as never,
+      },
+      [{ table: 'crm_deal__r20261021', column: 'organization_id' }],
+    );
+    expect(outcomes).toEqual([{ table: 'crm_deal__r20261021', column: 'organization_id', outcome: 'already-not-null' }]);
+    expect(asked).toEqual([['crm_deal__r20261021', 'organization_id', undefined]]);
     expect(attempted).toBe(0);
   });
 

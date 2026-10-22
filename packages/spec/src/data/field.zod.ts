@@ -35,6 +35,13 @@ import {
 } from './default-value-shape';
 import { AddressSchema, FILE_REFERENCE_TYPES, MULTI_CAPABLE_TYPES, MULTI_OPTION_TYPES, REFERENCE_VALUE_TYPES, SINGLE_OPTION_TYPES } from './field-value.zod';
 import { ValueDomainSchema } from '../shared/value-domain.zod';
+import { SystemObjectName } from '../system/constants/system-names';
+
+/**
+ * [#24952] The one object a `user` field links to — `IMPLICIT_REFERENCE_TARGETS`'s
+ * constant (`field-value.zod.ts`), read here by the refusal of any other name.
+ */
+const USER_FIELD_TARGET: string = SystemObjectName.USER;
 
 /**
  * Field Type Enum
@@ -2431,6 +2438,42 @@ export const FieldSchema = lazySchema(() => {
     });
   }
 
+  // [#24952 — #24808 ruled A on #24854; shipped in an 18.x minor under the
+  // amended 「甲」 ruling] A `user` field's target is FIXED to `sys_user` by the
+  // type (`IMPLICIT_REFERENCE_TARGETS`, `field-value.zod.ts`), so a
+  // `reference` naming any other object contradicts the type: every reader
+  // that follows the target would link the field to that object, while every
+  // reader that branches on the type (the person picker, a `current_user`
+  // default, a sharing rule over the users a field holds) takes its values for
+  // users. Refused here rather than on `ObjectSchema` (the
+  // `refuseForeignTreeReference` precedent needs the declaring object's name;
+  // this verdict needs only the field), so every door that parses a field map
+  // — objects, object extensions — refuses it alike. Absent, blank and
+  // `'sys_user'` are the spellings that name the constant or nothing.
+  //
+  // No ADR-0087 conversion carries it (the D3 entry
+  // `user-field-foreign-reference-refused` says why): rewriting the field to a
+  // `lookup` would add it to the referential delete walk with
+  // `deleteBehavior: 'set_null'`, which a `user` field never joined, and
+  // `deleteBehavior` has no value meaning "leave it", so the author decides.
+  if (
+    field.type === 'user'
+    && field.reference !== undefined
+    && field.reference.trim() !== ''
+    && field.reference !== USER_FIELD_TARGET
+  ) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['reference'],
+      message:
+        `A \`user\` field's target is fixed to \`${USER_FIELD_TARGET}\`, but this one names ` +
+        `\`reference: '${field.reference}'\`. To link records of \`${field.reference}\`, declare a ` +
+        `\`lookup\`: \`{ type: 'lookup', reference: '${field.reference}' }\` (\`Field.lookup('${field.reference}', …)\`), ` +
+        "and choose its `deleteBehavior` (a `lookup` defaults to `'set_null'` when the target record is " +
+        'deleted; a `user` field never did). If a person was meant, drop `reference`.',
+    });
+  }
+
   // A single-choice field (`select` / `radio`) with NO option source — neither
   // a non-empty `options` list nor a `picklist` reference — is a choice with
   // nothing to choose: the form control offers nothing, and server-side value
@@ -3032,15 +3075,28 @@ export type CurrencyValue = z.input<typeof CurrencyValueSchema>;
  */
 export type FieldInput = Omit<Partial<Field>, 'type'>;
 
+/**
+ * The `Field.user()` config: {@link FieldInput} with `reference` narrowed to
+ * the one value a `user` field can carry. A `user` field's target is a constant
+ * of the type (`IMPLICIT_REFERENCE_TARGETS`, `field-value.zod.ts`), and
+ * `FieldSchema` refuses any other name (#24952), so the key has nothing to say.
+ */
+type UserFieldInput = Omit<FieldInput, 'reference'> & {
+  /**
+   * @deprecated A `user` field always targets `sys_user`; omit this key. To
+   * link another object, use `Field.lookup(reference, …)`.
+   */
+  reference?: 'sys_user';
+};
+
 /** `Field.select` with inline options — the array or `{ options }` forms. */
 function selectWithOptions(optionsOrConfig: Array<SelectOption | string> | Omit<FieldInput, 'options'> & { options: Array<SelectOption | string> }, config?: FieldInput) {
-  // Helper function to convert string to lowercase snake_case
-  const toSnakeCase = (str: string): string => {
-    return str
-      .toLowerCase()
-      .replace(/\s+/g, '_')  // Replace spaces with underscores
-      .replace(/[^a-z0-9_]/g, ''); // Remove invalid characters (keeping underscores only)
-  };
+  // The shorthand's whole transform: lower-case, and whitespace runs → `_`.
+  // Every other character stays as written, so a string that is no system
+  // identifier (`'no-overlay'`, `'v2-beta'`) reaches `SelectOptionSchema.value`
+  // and is refused there, by the same rule an explicit `{ value: 'no-overlay' }`
+  // meets — never rewritten into a value the author did not write (#25013).
+  const toSnakeCase = (str: string): string => str.toLowerCase().replace(/\s+/g, '_');
 
   // Support both old and new signatures:
   // Old: Field.select(['a', 'b'], { label: 'X' })
@@ -3147,6 +3203,12 @@ export const Field = {
    * Field.select(['In Progress', 'Closed Won'], { label: 'Status' })
    * // Results in: [{ label: 'In Progress', value: 'in_progress' }, { label: 'Closed Won', value: 'closed_won' }]
    *
+   * Lower-casing and whitespace → `_` are the shorthand's only transforms; any
+   * other character is kept, so `Field.select(['no-overlay'])` yields the value
+   * `no-overlay`, which `SelectOptionSchema.value` refuses (a system identifier
+   * holds letters, digits, `_` and `.`). Write such an option explicitly:
+   * `{ label: 'no-overlay', value: 'no_overlay' }`.
+   *
    * @example Shared picklist — the options come from the named `picklist` item
    * Field.select({ picklist: 'industry', label: 'Industry' })
    * // Results in: { type: 'select', picklist: 'industry', label: 'Industry' } — no `options`
@@ -3200,12 +3262,19 @@ export const Field = {
    * Field.user({ label: 'Watchers', multiple: true })
    * @example Auto-fill the acting user on create
    * Field.user({ label: 'Reporter', defaultValue: 'current_user' })
+   *
+   * [#24952] `config.reference` is deprecated and typed `'sys_user'`: a
+   * `user` field naming any other object is refused by `FieldSchema`, and a
+   * link to another object is `Field.lookup(reference, …)`. `reference` is
+   * written AFTER the spread, so even an untyped caller's foreign value never
+   * reaches the output — the parse would refuse it anyway. It keeps its second
+   * position (re-assigning an existing key does not move it), so the output's
+   * key order is what it always was.
    */
-  user: (config: FieldInput = {}) => ({
-    type: 'user',
-    reference: 'sys_user',
-    ...config,
-  } as const),
+  user: (config: UserFieldInput = {}) => {
+    const field = { type: 'user', reference: 'sys_user', ...config } as const;
+    return { ...field, reference: 'sys_user' } as const;
+  },
 
   // Enhanced Field Type Helpers
   location: (config: FieldInput = {}) => ({ 

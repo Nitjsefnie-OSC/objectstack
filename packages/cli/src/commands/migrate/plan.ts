@@ -16,7 +16,6 @@ import {
 import {
   bootSchemaStack,
   collectDriftApplyLimits,
-  describeWithApplyLimits,
   describeDatabaseSource,
   describeTelemetryDatabase,
   distinctDatabaseDrivers,
@@ -37,8 +36,19 @@ import {
   renderUnmanagedTables,
   type UnmanagedTablesReport,
 } from '../../utils/unmanaged-tables.js';
+import {
+  collectNullableTenantColumns,
+  renderNullableTenantColumns,
+  type NullableTenantColumnsReport,
+} from '../../utils/nullable-tenant-columns.js';
 import { describeOccupancy, JOURNAL_MODE_SWITCH_NOTE } from '../../utils/sqlite-occupancy.js';
 import { describeDriverSqliteFile } from '../../utils/connection-display.js';
+import {
+  DropGateReads,
+  describeDriftEntries,
+  describeHeldDrops,
+  readHeldDrops,
+} from '../../utils/apply-drop-gates.js';
 import {
   resolveTenancyPosture,
   collectGlobalUniques,
@@ -83,6 +93,34 @@ import {
  * driver that declares nothing (every database but a Turso REMOTE one) gets
  * the plan it always got, byte for byte. The `--json` document is the report
  * and is unchanged.
+ *
+ * [#24925, ADR-0131 D10 item 5] Nor a remedy the apply refuses. On a database
+ * the organization-ownership ceremony has not verified (a 17.x one before the
+ * ceremony), `os migrate apply --allow-destructive` refuses every run that
+ * would drop an `organization_id` column, the whole run, and no flag stands
+ * that down (`utils/organization-ownership-drop-gate.ts`). Each such drop is
+ * listed and counted as drift with the ceremony as its remedy, and the footer
+ * offers `--allow-destructive` for nothing while one is listed: it names the
+ * ceremony's two commands instead. Which drops are held, and whether the
+ * ceremony verified, are read through the two functions `apply` asks, never a
+ * second list. A verified database, or one with no such drop, gets the plan it
+ * always got, byte for byte; the `--json` document is unchanged.
+ *
+ * [#24958] The same holds for every drop `apply` refuses, not only the
+ * ceremony's: `sys_account.issuer` while its retirement pre-flight does not
+ * pass, and `sys_comment.reactions` while no verified run of
+ * `os migrate comment-reactions --apply` is recorded. Each gate's predicate
+ * and read live in `utils/apply-drop-gates.ts`, which `apply` asks too; a held
+ * drop names what it waits for, and the footer names each gate's command.
+ *
+ * [ADR-0131 D1; ruling record 6328195425, letter A] Every tenant column the
+ * database still holds nullable is listed in its own advisory section, with
+ * `os migrate organization-ownership` as the remedy: a database the published
+ * 18.0.0 created is certified with them nullable, and the ceremony that
+ * tightens them is voluntary there. Each column says whether the ceremony
+ * tightens it or leaves it, and why. It is not drift: it proposes no op, adds
+ * nothing to the change count, and changes no exit code; under `--json` it is
+ * the separate `nullableTenantColumns` field (`utils/nullable-tenant-columns.ts`).
  */
 export default class MigratePlan extends Command {
   static override description =
@@ -239,6 +277,18 @@ export default class MigratePlan extends Command {
         normalize: normalizeRows,
       });
 
+      // [ADR-0131 D1] The tenant columns still nullable — advisory only, beside
+      // the drift and never in it. Computed before the "in sync" return below:
+      // an 18.0.0-born database has no drift and every such column.
+      const nullableTenantColumns: NullableTenantColumnsReport = await collectNullableTenantColumns({
+        databases: distinctDatabaseDrivers(stack.drivers).map((driver) => (
+          driver === stack.drivers[0] ? { driver } : { driver, database: stack.databaseOf(driver) ?? 'a planned database' }
+        )),
+        tenantDrivers: stack.drivers,
+        mirrored: stack.composition.servedBoot.mirrored,
+        normalize: normalizeRows,
+      });
+
       // [ADR-0120 D5e, advisory form] Installation-wide uniques on app objects
       // are a decision point under the `isolated` posture — organizations there
       // are separate CUSTOMERS. The HARD gate runs at app install; this covers
@@ -278,6 +328,10 @@ export default class MigratePlan extends Command {
           // key on the clean case would make those two byte-identical, which
           // is the blind spot this section exists to remove.
           unmanagedTables,
+          // [ADR-0131 D1] Advisory, not drift: never counted in `total` and
+          // never in `changes`. Present whenever a SQL driver was found, so
+          // `columns: []` (read, none nullable) is not `unreadable`.
+          nullableTenantColumns,
           ...(uniqueScopeAdvisory.length > 0
             ? {
                 uniqueScopeAdvisory: {
@@ -373,6 +427,16 @@ export default class MigratePlan extends Command {
         console.log('');
       }
 
+      // [ADR-0131 D1] Its own block, above the drift verdict: an advisory about
+      // what the voluntary ceremony would tighten, never a change this plan or
+      // `os migrate apply` makes. Silent when every tenant column is NOT NULL.
+      const nullableLines = renderNullableTenantColumns(nullableTenantColumns);
+      if (nullableLines.length > 0) {
+        printInfo(nullableLines[0]!);
+        for (const line of nullableLines.slice(1)) console.log(chalk.dim(`      ${line}`));
+        console.log('');
+      }
+
       if (drift.length === 0 && pending.length === 0) {
         // [#13028] "In sync" is a claim about the objects this plan EXAMINED.
         // On a composed host that examined a strict subset — a control plane
@@ -405,34 +469,47 @@ export default class MigratePlan extends Command {
       // but a drop (it runs no SQLite table rebuild). Empty for a driver that
       // declares nothing, and then everything below reads as it always has.
       const limits = collectDriftApplyLimits(stack, drift);
+      // [#24925, #24958] The drops `os migrate apply` refuses here, each with
+      // the gate that refuses it: an `organization_id` drop until the
+      // organization-ownership ceremony has verified, and the
+      // `sys_account.issuer` / `sys_comment.reactions` drops until their own
+      // preconditions hold. Read through the gates' own predicates and reads,
+      // never a second list. Empty when nothing is held, and then everything
+      // below reads as it always has.
+      const kernel = stack.kernel as { getService?: (n: string) => unknown };
+      const held = await readHeldDrops(new DropGateReads(), () => kernel.getService?.call(kernel, 'objectql'), drift);
 
       await renderPendingSchemaWork(pending);
-      if (limits.size === 0) {
-        renderPlan(drift);
-      } else {
-        // Still listed, still counted: it IS drift. Only the remedy changes,
-        // from a command that cannot perform it here to the reason it cannot.
-        renderPlan(drift, await describeWithApplyLimits(limits));
-      }
+      // Still listed, still counted: it IS drift. Only the remedy changes,
+      // from a command that cannot perform it here to the reason it cannot.
+      renderPlan(drift, await describeDriftEntries(limits, held));
       if (pending.length > 0) printInfo(await summarizePendingSchemaWork(pending));
       printInfo(summarize(drift));
-      if (limits.size === 0) {
+      if (limits.size === 0 && held.size === 0) {
         console.log(chalk.dim('  Apply with: ') + chalk.white('os migrate apply') +
           chalk.dim(' (add --allow-destructive for drops / tightenings)'));
       } else {
         // `--allow-destructive` only for a destructive entry this database can
         // apply; no apply line at all when it can apply nothing listed here.
-        const appliable = drift.filter((d) => !limits.has(d));
+        const appliable = drift.filter((d) => !limits.has(d) && !held.has(d));
         const appliableDestructive = appliable.filter((d) => d.category === 'destructive').length;
-        if (appliable.length > 0 || pending.length > 0) {
-          console.log(chalk.dim('  Apply with: ') + chalk.white('os migrate apply') + (appliableDestructive > 0
+        // [#24925, #24958] While a gate holds a drop, `apply` refuses every
+        // --allow-destructive run, so it is offered for nothing: what `apply`
+        // performs now is the rest, and the destructive changes wait.
+        const appliableNow = held.size === 0 ? appliable : appliable.filter((d) => d.category !== 'destructive');
+        if (appliableNow.length > 0 || pending.length > 0) {
+          console.log(chalk.dim('  Apply with: ') + chalk.white('os migrate apply') + (held.size === 0 && appliableDestructive > 0
             ? chalk.dim(` (add --allow-destructive for the ${appliableDestructive} destructive change(s) it can apply on this database)`)
             : ''));
         }
-        printWarning(
-          `${limits.size} change(s) above cannot be applied on this database by "os migrate apply" (each says why), `
-          + 'so they remain drift after it runs.',
-        );
+        for (const line of describeHeldDrops(held, drift, limits)) printWarning(line);
+        const limited = [...limits.keys()].filter((d) => !held.has(d)).length;
+        if (limited > 0) {
+          printWarning(
+            `${limited} change(s) above cannot be applied on this database by "os migrate apply" (each says why), `
+            + 'so they remain drift after it runs.',
+          );
+        }
       }
       console.log(chalk.dim(`  ${timer.display()}`));
       console.log('');

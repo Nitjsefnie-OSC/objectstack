@@ -28,13 +28,44 @@
  * Fourth contract, on the year (#20602): every `date` and `datetime` cell takes
  * its day from core's `temporalStorageForm` `date` rule — see
  * {@link calendarDay} — so the year keeps four digits and the export re-imports.
+ *
+ * Fifth contract, CSV only (#25078): the value formatters above stay
+ * pass-throughs on the raw path, but the CSV writer applies the CSV text-cell
+ * rule ({@link markCsvTextCell}) to every text cell on BOTH paths, and the CSV
+ * import parse reverses it ({@link unmarkCsvTextCell}). xlsx and json never
+ * read it.
  */
 
 import { temporalStorageForm, type ExportFieldMeta } from '@objectstack/core';
+import {
+  resolveDisplayField,
+  NUMERIC_VALUE_TYPES,
+  BOOLEAN_VALUE_TYPES,
+  CALENDAR_DATE_TYPES,
+  INSTANT_TYPES,
+} from '@objectstack/spec/data';
+import { templateText, type TemplateText } from './import-template.js';
 
 // `ExportFieldMeta` and `buildFieldMetaMap` live in `@objectstack/core`
 // (`utils/import-field-meta.ts`), beside the import runner that reads them.
 export { buildFieldMetaMap, type ExportFieldMeta } from '@objectstack/core';
+
+/**
+ * The field metadata the export renderers read: core's {@link ExportFieldMeta}
+ * plus one export-only key, the title field of a reference field's TARGET
+ * object. It is resolved by the route ({@link withReferenceTitleFields}), never
+ * by the formatter, so the cell renderer holds no title rule of its own.
+ */
+export interface ExportCellMeta extends ExportFieldMeta {
+  /**
+   * The field that titles a record of this reference field's target object:
+   * ADR-0079's `resolveDisplayField` over the target schema the protocol
+   * serves (`nameField`, then the deprecated `displayNameField` alias — the
+   * pointer the registry designates on every object it holds). `undefined`
+   * when the target schema could not be read or resolves no title.
+   */
+  titleField?: string;
+}
 
 /**
  * Build the `Content-Disposition` header for an export download.
@@ -102,7 +133,9 @@ const MULTI_OPTION_TYPES = new Set(['multiselect', 'checkboxes', 'tags']);
 
 /**
  * Keys tried, in order, to derive a referenced record's display value when the
- * field carries no explicit `displayField`.
+ * field carries no explicit `displayField` AND the target object resolves no
+ * title field ({@link ExportCellMeta.titleField}). Only a target with no title
+ * pointer reaches this list: a declared title is never second-guessed by it.
  */
 const NAME_KEY_FALLBACKS = [
   'name', 'title', 'label', 'full_name', 'fullName', 'display_name', 'username', 'email',
@@ -121,9 +154,142 @@ export function referenceFieldNames(metaMap: Map<string, ExportFieldMeta>): stri
   return out;
 }
 
+/**
+ * Stamp every reference field's {@link ExportCellMeta.titleField}: the title
+ * field of its target object, read once per distinct target per export.
+ *
+ * The rule is ADR-0079's `resolveDisplayField`, the spec's single arbiter of
+ * "which field titles a record of this object" — the same function the
+ * registry designates `nameField` with at registration, so over a schema the
+ * protocol serves it answers that designated pointer. A lookup cell therefore
+ * names the record the way the record names itself, rather than by whichever
+ * key of a fixed list the expanded record happens to carry (a contact's job
+ * `title` ahead of its `full_name` title).
+ *
+ * Best-effort, per target: a schema read that throws or returns nothing leaves
+ * that target's fields without a `titleField`, so their cells keep the
+ * key-list fallback exactly as before. Never throws.
+ */
+export async function withReferenceTitleFields(
+  metaMap: Map<string, ExportFieldMeta>,
+  readSchema: (object: string) => Promise<unknown>,
+): Promise<Map<string, ExportCellMeta>> {
+  const titles = new Map<string, Promise<string | undefined>>();
+  const titleOf = (target: string): Promise<string | undefined> => {
+    let pending = titles.get(target);
+    if (!pending) {
+      pending = readSchema(target).then(
+        (schema) => (schema && typeof schema === 'object' ? resolveDisplayField(schema as never) : undefined),
+        () => undefined,
+      );
+      titles.set(target, pending);
+    }
+    return pending;
+  };
+  const out = new Map<string, ExportCellMeta>();
+  for (const [key, meta] of metaMap) {
+    if (meta.type && REFERENCE_TYPES.has(meta.type) && meta.reference) {
+      const titleField = await titleOf(meta.reference);
+      out.set(key, titleField ? { ...meta, titleField } : meta);
+    } else {
+      out.set(key, meta);
+    }
+  }
+  return out;
+}
+
 /** Header label for a column: schema label when present, else the field name. */
 export function headerLabel(field: string, metaMap: Map<string, ExportFieldMeta>): string {
   return metaMap.get(field)?.label || field;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// [#25078] The CSV text-cell rule — defined ONCE, read by both directions.
+//
+// The CSV export writes a TEXT cell that the program its consumer opens the
+// file in would interpret, rather than read as text, in a form that program
+// reads as text: one {@link CSV_TEXT_CELL_MARK} in front of the cell's content
+// ({@link markCsvTextCell}, called by the CSV writer `rowsToCsv` in
+// `./rest-server.ts`). The CSV import parse (`parseCsvToRows` in
+// `./import-prepare.ts`) reverses exactly that ({@link unmarkCsvTextCell}), so
+// an export → import round trip returns the stored value, with the one
+// exception {@link unmarkCsvTextCell} states.
+//
+// Scope, by construction: CSV only — the xlsx and json formats and the json
+// import door never read this rule. Which cells are TEXT cells is the writer's
+// question and is answered by the field's DECLARED type
+// ({@link isCsvTextColumn}), never by the value's JS type. The import side
+// cannot ask the same question before a named mapping has renamed its columns
+// (core's `applyMappingToRows` runs after the parse), so it asks only what the
+// cell's text says: the trigger is a property of the text alone, and the set of
+// cells it can reverse is exactly the set the export can have marked.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** The one character the CSV export puts in front of a text cell it marks (U+0027). */
+export const CSV_TEXT_CELL_MARK = "'";
+
+/**
+ * The first characters that make a CSV text cell one its consumer would
+ * interpret. TAB and CR are spelled as escapes, never as raw bytes.
+ */
+const CSV_TEXT_CELL_LEADS: ReadonlySet<string> = new Set(['=', '+', '-', '@', '\t', '\r']);
+
+/**
+ * A cell made ONLY of these characters is left as written whatever its first
+ * character: digits, space, `+`, `-`, `(`, `)`, `.` and `,` — the characters a
+ * signed amount or a phone number is written with, which stay byte-identical.
+ */
+const CSV_NUMERIC_TEXT_ONLY = /^[0-9 +\-().,]*$/;
+
+/**
+ * The trigger, both halves required: the text's first character is one of
+ * {@link CSV_TEXT_CELL_LEADS}, AND the text holds at least one character
+ * outside {@link CSV_NUMERIC_TEXT_ONLY}'s set (the first character counts).
+ */
+export function csvTextCellNeedsMark(text: string): boolean {
+  return text.length > 0 && CSV_TEXT_CELL_LEADS.has(text[0]) && !CSV_NUMERIC_TEXT_ONLY.test(text);
+}
+
+/** Export direction: the text cell as the CSV writer writes it, before RFC-4180 quoting. */
+export function markCsvTextCell(text: string): string {
+  return csvTextCellNeedsMark(text) ? CSV_TEXT_CELL_MARK + text : text;
+}
+
+/**
+ * Import direction: removes exactly ONE leading {@link CSV_TEXT_CELL_MARK}
+ * when the remainder satisfies {@link csvTextCellNeedsMark}, and returns every
+ * other cell unchanged. Applied to every cell of a parsed CSV, header row
+ * included, so a user-authored cell of that same shape loses its leading mark
+ * too: the file cannot tell the two apart, and the rule is one rule. The same
+ * holds for a STORED text value of that shape — the writer leaves it as is
+ * (its first character is the mark, not a trigger), so it is the one value an
+ * export → import round trip does not return unchanged.
+ */
+export function unmarkCsvTextCell(cell: string): string {
+  return cell.startsWith(CSV_TEXT_CELL_MARK) && csvTextCellNeedsMark(cell.slice(CSV_TEXT_CELL_MARK.length))
+    ? cell.slice(CSV_TEXT_CELL_MARK.length)
+    : cell;
+}
+
+/**
+ * Declared types whose CSV cell is NOT a text cell: numeric, boolean, date and
+ * datetime — the spec's own value classes, composed rather than re-listed.
+ */
+const CSV_NON_TEXT_TYPES: ReadonlySet<string> = new Set([
+  ...NUMERIC_VALUE_TYPES,
+  ...BOOLEAN_VALUE_TYPES,
+  ...CALENDAR_DATE_TYPES,
+  ...INSTANT_TYPES,
+]);
+
+/**
+ * Whether a column's string cells are TEXT cells under the CSV text-cell rule:
+ * every column whose field is not declared numeric, boolean, date or datetime,
+ * reference display titles included. A column with no metadata (the raw path,
+ * an empty meta map, or a field the map does not hold) is a text column.
+ */
+export function isCsvTextColumn(meta: ExportFieldMeta | undefined): boolean {
+  return !meta?.type || !CSV_NON_TEXT_TYPES.has(meta.type);
 }
 
 function pad2(n: number): string {
@@ -333,22 +499,54 @@ export function cellFontColor(value: unknown, meta?: ExportFieldMeta): string | 
   return toArgb(hit?.color);
 }
 
-function displayFromRecord(rec: Record<string, unknown>, displayField?: string): string {
+/**
+ * The display text of one expanded referenced record.
+ *
+ * In order: the lookup field's own `displayField` (the field author's explicit
+ * choice); else the target object's resolved `titleField`; else — only for a
+ * target that resolves no title — the first scalar hit of
+ * {@link NAME_KEY_FALLBACKS}; else the record's id.
+ *
+ * A target that HAS a title field never consults the key list, also when the
+ * title is absent from this record: field-level security deletes an unreadable
+ * field from the expanded record, and the key list would then put another
+ * column in the name's place (a contact named by its job title). The id is the
+ * cell's floor instead.
+ */
+function displayFromRecord(rec: Record<string, unknown>, displayField?: string, titleField?: string): string {
   if (displayField && rec[displayField] != null) return String(rec[displayField]);
-  for (const k of NAME_KEY_FALLBACKS) {
-    const v = rec[k];
+  if (titleField) {
+    const v = rec[titleField];
     if (v != null && typeof v !== 'object') return String(v);
+  } else {
+    for (const k of NAME_KEY_FALLBACKS) {
+      const v = rec[k];
+      if (v != null && typeof v !== 'object') return String(v);
+    }
   }
   if (rec.id != null) return String(rec.id);
   try { return JSON.stringify(rec); } catch { return String(rec); }
 }
 
-function formatReference(value: unknown, displayField?: string): unknown {
+function formatReference(value: unknown, displayField?: string, titleField?: string): unknown {
   const one = (v: unknown): unknown =>
-    v && typeof v === 'object' ? displayFromRecord(v as Record<string, unknown>, displayField) : v;
+    v && typeof v === 'object' ? displayFromRecord(v as Record<string, unknown>, displayField, titleField) : v;
   if (Array.isArray(value)) return value.map(one).join(', ');
   return one(value);
 }
+
+/**
+ * The words a boolean / toggle cell is written as, `[true, false]`.
+ *
+ * [#24945] The export route resolves them once per export, as
+ * `templateText(locale).booleanWords` (`./import-template.ts`) for the locale
+ * its header row is translated to, so the header and the cells of one file read
+ * one language. That is the table the import template already offers the same
+ * words from, and the importer reads both of its languages back
+ * (`IMPORT_BOOLEAN_TRUE_TOKENS` / `IMPORT_BOOLEAN_FALSE_TOKENS`), so a file
+ * exported in either language re-imports. ⛔ No second table here.
+ */
+export type ExportBooleanWords = TemplateText['booleanWords'];
 
 /**
  * Format one storage value into a display value using its field metadata.
@@ -356,18 +554,24 @@ function formatReference(value: unknown, displayField?: string): unknown {
  * `timezone` is the request's business timezone (`ExecutionContext.timezone`).
  * It reaches only the `datetime` branch; absent, the cell renders in UTC —
  * see {@link formatDate} for why `date` never reads it at all.
+ *
+ * `booleanWords` ({@link ExportBooleanWords}) reaches only the boolean /
+ * toggle branch; absent, the cell is written in the words the table answers
+ * for no locale at all.
  */
 export function formatCellValue(
   value: unknown,
-  meta?: ExportFieldMeta,
+  meta?: ExportCellMeta,
   timezone?: string,
+  booleanWords: ExportBooleanWords = templateText(undefined).booleanWords,
 ): unknown {
   if (value === null || value === undefined) return value;
   if (!meta || !meta.type) return value;
   const t = meta.type;
   if (t === 'boolean' || t === 'toggle') {
-    if (value === true || value === 'true' || value === 1) return '是';
-    if (value === false || value === 'false' || value === 0) return '否';
+    const [yes, no] = booleanWords;
+    if (value === true || value === 'true' || value === 1) return yes;
+    if (value === false || value === 'false' || value === 0) return no;
     return value;
   }
   if (OPTION_TYPES.has(t)) return optionLabel(value, meta.options);
@@ -377,23 +581,25 @@ export function formatCellValue(
   }
   if (t === 'date') return formatDate(value, false);
   if (t === 'datetime') return formatDate(value, true, timezone);
-  if (REFERENCE_TYPES.has(t)) return formatReference(value, meta.displayField);
+  if (REFERENCE_TYPES.has(t)) return formatReference(value, meta.displayField, meta.titleField);
   return value;
 }
 
 /**
  * Ordered display cells for one row — the CSV / XLSX column path.
  *
- * `timezone` is threaded straight through to {@link formatCellValue}; the
- * export route reads it off the `ExecutionContext` it already resolved.
+ * `timezone` and `booleanWords` are threaded straight through to
+ * {@link formatCellValue}; the export route reads the timezone off the
+ * `ExecutionContext` it already resolved, and the words off the request locale.
  */
 export function formatRowCells(
   row: Record<string, unknown>,
   fields: string[],
-  metaMap: Map<string, ExportFieldMeta>,
+  metaMap: Map<string, ExportCellMeta>,
   timezone?: string,
+  booleanWords?: ExportBooleanWords,
 ): unknown[] {
-  return fields.map((f) => formatCellValue(row?.[f], metaMap.get(f), timezone));
+  return fields.map((f) => formatCellValue(row?.[f], metaMap.get(f), timezone, booleanWords));
 }
 
 /**
@@ -403,15 +609,16 @@ export function formatRowCells(
  */
 export function formatRowForJson(
   row: Record<string, unknown>,
-  metaMap: Map<string, ExportFieldMeta>,
+  metaMap: Map<string, ExportCellMeta>,
   timezone?: string,
+  booleanWords?: ExportBooleanWords,
 ): Record<string, unknown> {
   if (metaMap.size === 0 || !row || typeof row !== 'object') return row;
   let copy: Record<string, unknown> | null = null;
   for (const key of Object.keys(row)) {
     const meta = metaMap.get(key);
     if (!meta) continue;
-    const formatted = formatCellValue(row[key], meta, timezone);
+    const formatted = formatCellValue(row[key], meta, timezone, booleanWords);
     if (formatted !== row[key]) {
       if (!copy) copy = { ...row };
       copy[key] = formatted;

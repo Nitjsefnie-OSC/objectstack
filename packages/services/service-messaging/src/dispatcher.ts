@@ -3,7 +3,8 @@
 import type { MessagingChannel, MessagingChannelContext, Notification, SendResult } from './channel.js';
 import type { AckResult, ClaimedDeliveryRecord, INotificationOutbox, NotificationDeliveryRecord } from './outbox.js';
 import { classifyDeliveryAttempt } from './backoff.js';
-import { renderDigest } from './digest-render.js';
+import { digestHeading, renderDigest, type DigestRenderResult } from './digest-render.js';
+import { readNotificationTextKeys, type NotificationTextRenderer } from './notification-text.js';
 import { DispatchLoop } from '@objectstack/core';
 
 /** Minimal channel-registry surface the dispatcher needs (MessagingService satisfies it). */
@@ -85,6 +86,13 @@ export interface NotificationDispatcherOptions {
     logger?: NotificationDispatcherLogger;
     /** Observability hook fired after every attempt. */
     onAttempt?: (delivery: NotificationDeliveryRecord, success: boolean) => void;
+    /**
+     * [#24978] Renders a row's snapshotted `keyedText` in its recipient's
+     * language before the channel is called — the same instance the messaging
+     * service renders the inline fan-out with. Absent, a keyed row is sent as
+     * its literal title/body.
+     */
+    textRenderer?: NotificationTextRenderer;
 }
 
 /**
@@ -114,9 +122,9 @@ export interface NotificationDispatcherOptions {
  */
 export class NotificationDispatcher {
     private readonly opts: Required<
-        Omit<NotificationDispatcherOptions, 'rng' | 'logger' | 'onAttempt' | 'cluster' | 'now' | 'maxIdleIntervalMs'>
+        Omit<NotificationDispatcherOptions, 'rng' | 'logger' | 'onAttempt' | 'cluster' | 'now' | 'maxIdleIntervalMs' | 'textRenderer'>
     > &
-        Pick<NotificationDispatcherOptions, 'rng' | 'logger' | 'onAttempt' | 'now'> & { cluster: DispatchCluster };
+        Pick<NotificationDispatcherOptions, 'rng' | 'logger' | 'onAttempt' | 'now' | 'textRenderer'> & { cluster: DispatchCluster };
     /** [#17610, #17623] The timer loop — idle backoff, wake, stop — shared with `HttpDispatcher`. */
     private readonly loop: DispatchLoop;
 
@@ -138,6 +146,7 @@ export class NotificationDispatcher {
             now: options.now,
             logger: options.logger,
             onAttempt: options.onAttempt,
+            textRenderer: options.textRenderer,
         };
         this.loop = new DispatchLoop({
             intervalMs,
@@ -286,7 +295,7 @@ export class NotificationDispatcher {
             return;
         }
 
-        const digest = renderDigest(rows);
+        const digest = await this.localizedDigest(recipient, rows);
         const notification: Notification = {
             notificationId: rows[0].notificationId, // representative event id
             organizationId: rows[0].organizationId,
@@ -319,6 +328,45 @@ export class NotificationDispatcher {
         }
     }
 
+    /**
+     * A digest group's collapsed message, its text rendered in the group's ONE
+     * recipient's language, with one locale read for the whole group:
+     *
+     *  - [#24978] each keyed row's title and body, so the items the digest
+     *    lists read in that language — a row that carries no keys is listed as
+     *    it is;
+     *  - [#25015] for a group of two or more, the heading
+     *    ({@link digestHeading}), which this service keys from its own
+     *    translation bundle, so it is ALWAYS keyed: the group's items and its
+     *    heading go to the renderer in one call.
+     *
+     * With no renderer composed, every row and the heading are their literal
+     * text.
+     */
+    private async localizedDigest(
+        recipient: string,
+        rows: ClaimedDeliveryRecord[],
+    ): Promise<DigestRenderResult> {
+        const heading = rows.length > 1 ? digestHeading(rows.length) : undefined;
+        const renderer = this.opts.textRenderer;
+        if (!renderer) return renderDigest(rows, heading?.literal.title);
+        const items = rows.map((row) => {
+            const p = row.payload ?? {};
+            return {
+                keys: readNotificationTextKeys(p.keyedText),
+                literal: {
+                    title: typeof p.title === 'string' ? p.title : '',
+                    body: typeof p.body === 'string' ? p.body : '',
+                },
+            };
+        });
+        const rendered = await renderer.renderAllFor(recipient, heading ? [...items, heading] : items);
+        const localized = rows.map((row, i) => items[i].keys
+            ? { ...row, payload: { ...row.payload, title: rendered[i].title, body: rendered[i].body } }
+            : row);
+        return renderDigest(localized, heading ? rendered[rows.length].title : undefined);
+    }
+
     private async processRow(row: ClaimedDeliveryRecord): Promise<void> {
         const channel = this.opts.channels.getChannel(row.channel);
         if (!channel) {
@@ -333,12 +381,23 @@ export class NotificationDispatcher {
         }
 
         const p = row.payload ?? {};
+        // [#24978] Rendered here, at delivery, in this row's recipient's
+        // language when the emit keyed its text; the literal snapshot
+        // otherwise, read exactly as before.
+        const literal = {
+            title: typeof p.title === 'string' ? p.title : row.topic ?? '',
+            body: typeof p.body === 'string' ? p.body : '',
+        };
+        const keys = readNotificationTextKeys(p.keyedText);
+        const text = keys && this.opts.textRenderer
+            ? await this.opts.textRenderer.renderFor(row.recipientId, keys, literal)
+            : literal;
         const notification: Notification = {
             notificationId: row.notificationId,
             organizationId: row.organizationId,
             topic: row.topic,
-            title: typeof p.title === 'string' ? p.title : row.topic ?? '',
-            body: typeof p.body === 'string' ? p.body : '',
+            title: text.title,
+            body: text.body,
             severity: (p.severity as Notification['severity']) ?? 'info',
             recipients: [row.recipientId],
             channels: [row.channel],

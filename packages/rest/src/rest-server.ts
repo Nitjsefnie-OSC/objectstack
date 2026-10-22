@@ -285,6 +285,9 @@ import {
     headerLabel,
     formatRowCells,
     exportContentDisposition,
+    isCsvTextColumn,
+    markCsvTextCell,
+    type ExportBooleanWords,
     type ExportFieldMeta,
 } from './export-format.js';
 // [#23050 slice 1] The data-action routes' body moved to its own module — see its header.
@@ -392,7 +395,7 @@ import {
     // `boundedDeclaredRefusalMessage` and `declaredHttpStatus`, read only by the
     // `/references` door's declared-refusal re-dresser, moved with it to
     // `meta-item-read-routes.ts` (#23050 slice 13b).
-    // `sendThrownError`, the OpenAPI document's and viewer's catch-all answer, moved with
+    // `sendThrownError`, the OpenAPI document's catch-all answer, moved with
     // `registerOpenApiEndpoints`' body to `discovery-routes.ts` (#23050 slice 7).
     sendDeclaredFault,
     sendFieldVisibilityFault,
@@ -1116,11 +1119,18 @@ export function importJobToSummary(row: any): Record<string, any> {
  * quotes doubled. `null` / `undefined` become an empty cell. Objects and
  * arrays are serialised as compact JSON so nested data round-trips
  * without flattening surprises.
+ *
+ * [#25078] `textCell` says whether the column is a TEXT column under the CSV
+ * text-cell rule (`isCsvTextColumn`, `./export-format.ts`, decided by the
+ * field's declared type). A string value in a text column is written through
+ * `markCsvTextCell` BEFORE the quoting below; every other value — a number,
+ * a boolean, a `Date`, serialised JSON, or a string in a numeric, boolean,
+ * date or datetime column — is written exactly as before.
  */
-function formatCsvCell(value: any): string {
+function formatCsvCell(value: any, textCell: boolean): string {
     if (value === null || value === undefined) return '';
     let s: string;
-    if (typeof value === 'string') s = value;
+    if (typeof value === 'string') s = textCell ? markCsvTextCell(value) : value;
     else if (typeof value === 'number' || typeof value === 'boolean' || typeof value === 'bigint') s = String(value);
     // [#14078] Total `Date` arm. An Invalid `Date` renders as `String(value)`,
     // which is exactly the visible text `Invalid Date` — the cell an operator
@@ -1142,11 +1152,19 @@ function formatCsvCell(value: any): string {
  * Serialise a list of rows to RFC-4180 CSV text. Caller supplies the ordered
  * list of field names and a (possibly empty) field-metadata map. With metadata,
  * the header row uses field labels and cell values are formatted to readable
- * display values (lookup names, select labels, 是/否, formatted dates). With an
- * empty map the output is byte-identical to the raw, un-formatted behaviour.
+ * display values (lookup names, select labels, yes / no words, formatted
+ * dates). With an empty map the cells carry the raw, un-formatted values.
+ *
+ * [#25078] On both paths every header label and every string cell of a text
+ * column passes through the CSV text-cell rule (`markCsvTextCell`,
+ * `./export-format.ts`), which `parseCsvToRows` reverses on import. On the raw
+ * path every column is a text column; with metadata, a column declared
+ * numeric, boolean, date or datetime is not (`isCsvTextColumn`).
  *
  * `timezone` (#8373) is the caller's business timezone, used to render
  * `datetime` cells in the same clock the UI shows; absent, they render in UTC.
+ * `booleanWords` (#24945) are the words of the caller's language that a boolean
+ * cell is written as (`ExportBooleanWords` in `./export-format.ts`).
  */
 export function rowsToCsv(
     fields: string[],
@@ -1154,11 +1172,17 @@ export function rowsToCsv(
     includeHeader: boolean,
     metaMap: Map<string, ExportFieldMeta>,
     timezone?: string,
+    booleanWords?: ExportBooleanWords,
 ): string {
     const lines: string[] = [];
-    if (includeHeader) lines.push(fields.map(f => formatCsvCell(headerLabel(f, metaMap))).join(','));
+    const textColumns = fields.map((f) => isCsvTextColumn(metaMap.get(f)));
+    if (includeHeader) lines.push(fields.map(f => formatCsvCell(headerLabel(f, metaMap), true)).join(','));
     for (const row of rows) {
-        lines.push(formatRowCells(row, fields, metaMap, timezone).map(formatCsvCell).join(','));
+        lines.push(
+            formatRowCells(row, fields, metaMap, timezone, booleanWords)
+                .map((cell, i) => formatCsvCell(cell, textColumns[i]))
+                .join(','),
+        );
     }
     return lines.join('\r\n') + (lines.length > 0 ? '\r\n' : '');
 }
@@ -4930,10 +4954,12 @@ export class RestServer {
     }
 
     /**
-     * Register OpenAPI 3.1 spec + interactive docs viewer.
+     * Register the OpenAPI 3.1 document.
      *
      *   GET <basePath>/openapi.json   → enriched OpenAPI document
-     *   GET <basePath>/docs           → Scalar-rendered HTML (CDN, no dep)
+     *
+     * [#25104] Its HTML viewer page (`GET <basePath>/docs`) is retired: nothing
+     * read it, and the API origin serves no HTML viewer.
      *
      * Enrichment at request time:
      *   - servers[0].url           — derived from the request's Host header
@@ -5528,6 +5554,8 @@ export class RestServer {
             translateMetaItem: (...a) => this.translateMetaItem(...a),
             resolveMessageTranslator: (...a) => this.resolveMessageTranslator(...a),
             resolveSecurityService: (...a) => this.resolveSecurityService(...a),
+            resolveI18nService: (...a) => this.resolveI18nService(...a),
+            extractLocale: (...a) => this.extractLocale(...a),
             answerImportTemplate: (...a) => this.answerImportTemplate(...a),
         };
         registerDataActionEndpoints.call(host, basePath);

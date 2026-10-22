@@ -36,6 +36,7 @@ import { resolveValueSlotMap } from './value-slot-map.js';
 import { refuseNode } from '../guard-refusal.js';
 import { parseNodeConfig } from './parse-config.js';
 import { resolveRunDataContext, stampSystemInsertOwner } from '../runtime-identity.js';
+import { refusalCarriedBy } from '../inner-refusal.js';
 
 /**
  * Resolve a node's `filter` to the one the query runs (#19939, Fork R17 → A;
@@ -153,10 +154,21 @@ const DROPPED_REASON_LABEL: Record<DroppedFieldsEvent['reason'], string> = {
     primary_key: "the field is the object's primary key and the value sent is not an identifier — the row(s) are identified by the id argument or the filter, so writing it would have overwritten their primary key (pass a scalar id, or put an id set in the filter)",
     // [#20805]
     computed: 'the field is a computed formula — its value is computed each time the record is read, so there is nothing to write (leave it out of the fields map)',
+    // [#24690] The field IS written — with the value its expression computes,
+    // not the one requested — so the closing sentence differs too (below).
+    stored_expression: 'the field is computed from its declared expression on every write, and the value requested differs from the computed one, which was stored instead (leave it out of the fields map, or change the fields its expression reads)',
 };
 
 function droppedFieldsWarning(nodeType: string, e: DroppedFieldsEvent): string {
-    return `${nodeType}(${e.object}): requested field(s) [${e.fields.join(', ')}] were NOT written — ${DROPPED_REASON_LABEL[e.reason] ?? e.reason}. The write succeeded without them.`;
+    const fields = `[${e.fields.join(', ')}]`;
+    const why = DROPPED_REASON_LABEL[e.reason] ?? e.reason;
+    // A `stored_expression` field WAS written — with its computed value — so
+    // both "were NOT written" and "succeeded without them" would be false of
+    // it: what did not land is the requested VALUE, not the field.
+    if (e.reason === 'stored_expression') {
+        return `${nodeType}(${e.object}): the requested value(s) for field(s) ${fields} were NOT stored — ${why}. The write succeeded with the computed value(s).`;
+    }
+    return `${nodeType}(${e.object}): requested field(s) ${fields} were NOT written — ${why}. The write succeeded without them.`;
 }
 
 /**
@@ -539,7 +551,14 @@ export function registerCrudNodes(engine: AutomationEngine, ctx: PluginContext):
                         metrics: { selected: record ? 1 : 0 },
                     };
                 } catch (err) {
-                    return { success: false, error: `get_record(${objectName}) failed: ${(err as Error).message}` };
+                    // [#24914, ruling B′] The refusal the read met rides out
+                    // structurally beside the unchanged `error` text — see
+                    // `refusalCarriedBy` (`../inner-refusal.ts`).
+                    return {
+                        success: false,
+                        error: `get_record(${objectName}) failed: ${(err as Error).message}`,
+                        ...refusalCarriedBy(err),
+                    };
                 }
             },
         });
@@ -685,6 +704,12 @@ export function registerCrudNodes(engine: AutomationEngine, ctx: PluginContext):
                         success: false,
                         error: `create_record(${objectName}) failed: ${(err as Error).message}`,
                         ...(code ? { code } : {}),
+                        // [#24914, ruling B′] …and the refusal itself, for the
+                        // run's CALLER: `{ code, message }` in the wire spelling
+                        // (`UNIQUE_VIOLATION` for the duplicate above, whose
+                        // in-flow `code` stays `DUPLICATE_RECORD`) plus the
+                        // producer-marked `userMessage`. See `refusalCarriedBy`.
+                        ...refusalCarriedBy(err),
                     };
                 }
             },
@@ -785,7 +810,13 @@ export function registerCrudNodes(engine: AutomationEngine, ctx: PluginContext):
                         metrics: { acted: writtenRowCount(result) },
                     };
                 } catch (err) {
-                    return { success: false, error: `update_record(${objectName}) failed: ${(err as Error).message}` };
+                    // [#24914, ruling B′] As `create_record`'s arm: the refusal
+                    // rides out structurally beside the unchanged `error` text.
+                    return {
+                        success: false,
+                        error: `update_record(${objectName}) failed: ${(err as Error).message}`,
+                        ...refusalCarriedBy(err),
+                    };
                 }
             },
         });
@@ -852,7 +883,13 @@ export function registerCrudNodes(engine: AutomationEngine, ctx: PluginContext):
                         metrics: { acted: writtenRowCount(result) },
                     };
                 } catch (err) {
-                    return { success: false, error: `delete_record(${objectName}) failed: ${(err as Error).message}` };
+                    // [#24914, ruling B′] As `create_record`'s arm: the refusal
+                    // rides out structurally beside the unchanged `error` text.
+                    return {
+                        success: false,
+                        error: `delete_record(${objectName}) failed: ${(err as Error).message}`,
+                        ...refusalCarriedBy(err),
+                    };
                 }
             },
         });
