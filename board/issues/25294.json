@@ -1,0 +1,36 @@
+{
+  "number": 25294,
+  "kind": "issue",
+  "title": "core: isCloudManaged() — one accessor for OS_CLOUD_MANAGED=1 beside isHostKernelComposition, with the production fuse (no bound control plane ⇒ refuse to start)",
+  "state": "closed",
+  "state_reason": "completed",
+  "draft": null,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "area:access",
+    "domain:engine",
+    "priority:p1"
+  ],
+  "assignees": [
+    "os-bill"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-22T21:04:37Z",
+  "updated_at": "2026-10-23T02:13:51Z",
+  "closed_at": "2026-10-23T00:07:59Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": null,
+  "comments": 6,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/issues/25294",
+  "body": "Engine half, item 1, of the coordinating card #25083 (`domain:services`, p1), filed on the hand-off from `domain:services` seat 1 (comment 6349658918 on this lane's seat post #20966). The binding text is ruling 6341690661 on #25083, **Q2 → D**; this card quotes it rather than restating it.\n- **Who acts:** `domain:engine`.\n- **Blocks:** #25083's services half (plugin-auth), which cannot start its build until this lands.\n- **Dedupe:** none found (`git grep isCloudManaged origin/main` is empty).\n\nPart of #25083.\n\n## What the ruling binds (quoted)\n> `OS_CLOUD_MANAGED=1` is the managed-mode switch on EVERY boot, read by one accessor `isCloudManaged()` in `@objectstack/core` beside `isHostKernelComposition` (`core/src/stack-auth.ts`); every judgement site on the server (plugin-auth's sign-in surfaces, the admin user doors, the audience posture, invitations, the JIT path) calls it and nothing else, and every kernel in the process reads the same fact\n\n> a production boot (not `--dev`, not `NODE_ENV=test`) that finds the variable set with no bound control plane (`OS_CLOUD_API_KEY` / `controlPlaneApiKey`, the `platformManaged` input cloud-connection already computes) refuses to start loudly at the accessor's first read / kernel boot — ⛔ not in `serve.ts`\n\nThe names are the maintainer's (`OS_CLOUD_MANAGED`, no `_ENABLED` suffix — the recorded exception to Prime Directive 9; `isCloudManaged()`, not `isManaged()`).\n\n## Wanted\n- `export function isCloudManaged(): boolean` in `packages/core/src/stack-auth.ts` (exported from `@objectstack/core`), synchronous, the one reader of `OS_CLOUD_MANAGED`.\n- The fuse at the accessor's first read or at kernel boot, never in `serve.ts`: production (not `--dev`, not `NODE_ENV=test`) + variable set + no bound control plane ⇒ a loud refusal naming the variable and the missing binding. Where \"bound control plane\" is read must be the same fact cloud-connection's `platformManaged` already computes (one source, no second derivation).\n- If the answer is memoized, export a reset for tests and name it in the PR body (the services half's tests set the variable under vitest and remove it afterwards).\n\n## Acceptance (pin 9 as the ruling reads it)\n- A `--dev` boot with the variable runs managed.\n- A production boot with the variable and a bound control plane runs managed.\n- A production boot with the variable and no control plane refuses loudly.\n- Without the variable nothing is managed.\n- `Clause-②` / `Metadata-protocol` declared per AGENTS.md (a new public export of `@objectstack/core`)."
+}

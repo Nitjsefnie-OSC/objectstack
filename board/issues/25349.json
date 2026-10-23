@@ -1,0 +1,31 @@
+{
+  "number": 25349,
+  "kind": "pull_request",
+  "title": "fix(scripts): a same-named member declaration is a homonym in the ADR-0087 reference scan",
+  "state": "open",
+  "state_reason": null,
+  "draft": false,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "size/m",
+    "skip-changeset"
+  ],
+  "assignees": [
+    "os-tesla"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-23T01:47:22Z",
+  "updated_at": "2026-10-23T02:13:31Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 1,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/pull/25349",
+  "body": "<!-- claude-projects-attribution: {\"github_login\":\"os-tesla\"} -->\n_Requested by **Tesla** · [project thread](https://claude.ai/code/project/chan_01AXsQkLFKRdQCqQ3RTr6Jao?thread=cmsg_01AXsQkLFKRdQCqQ3RTr6Jao1GqCDFUGF2cgsx936VTHfj)_\n\nFixes #25293\n\nClause-②: no\nMetadata-protocol: none\n\nThe card asked for a judgment first, between (1) a same-named member declaration is a homonym and (2) it is not, because the contract member is the capability being retired. This PR builds (1). #25190 is not addressed here; this PR only unblocks the `renderTemplate` half the ruling on it holds back.\n\n## The judgment: option 1\n\n`IEmailService.renderTemplate` (`packages/spec/src/contracts/email-service.ts:341` on `97967a9`) resolves a NAMED, stored `email_template` from the metadata registry and renders it. The export being retired, `@objectstack/plugin-email#renderTemplate` (`template-engine.ts:109`), takes a template BODY inline and renders it with no save moment. They are two capabilities that share a word.\n\nThe retirement's own changeset settles it. On #25190's head `85058b6e` its FROM / TO line reads: FROM `renderTemplate` imported from `@objectstack/plugin-email` TO a template saved or registered as an `email_template` and rendered by name through the mail service: `renderTemplate({ template, data, locale })` on the `email` service. The contract member is the TO side, the door consumers are sent to. Option 2 would have to retire the replacement together with the thing it replaces, so the gate refused something it should have admitted. That is a blind spot in a gate that already exists, not a product question, so there is no `needs_decision`.\n\n## What changed\n\n`scripts/check-adr-0087-registration.mjs`, the reference scan shared by `runtime-interface-only` (step 4) and `runtime-export-retired` (predicate 2):\n\n- New `memberDeclarationOffsets(text, symbol)` finds where the symbol is the NAME of a member declaration: a method or property signature in an `interface` body or a type-literal `type` alias (any depth, since every brace there is a type literal), or a method or field at the top depth of a `class` body. Regions are located on the comment- and literal-masked projection. The innermost open bracket must be one of the region's member braces, so a parameter name or a type argument never counts.\n- `metadataSurfaceReference` blanks only those name bytes, then reads the file as before. This is narrower than the top-level homonym rule, which clears the whole file: a member shadows nothing, so a member signature next to a live call still refuses on the call, and the reported line is the call's line.\n- Unchanged: a bare call, a value, a member access (`svc.renderTemplate(...)`), a parameter name, a type argument and every string literal still refuse. Object-literal keys and generic constraints on functions are not read, which is the conservative direction (#4690).\n- A header paragraph records the case and the narrower scope.\n\nSelf-test: new battery `MH1-MH12` (5 clears, 7 floors that must still refuse) is added to `SELF_TEST_BATTERIES` with floor 12. `REX-G4` / `REX-R10b` run the same predicate end to end through `scan()` on a spec contract.\n\n## Verification (on `d0b41c5`)\n\n- `node scripts/check-adr-0087-registration.mjs --self-test`: exit 0, 564 assertions.\n- **Ablation**, one-off and not committed: with `scripts/ablation-replace.mjs`, the blanking loop was mutated to iterate nothing (the anchor hit once; blob `a8c26e1f` became `088e842d`). The self-test went to exit 1 with 8 failures: MH1-MH5, MH9, REX-G4 and REX-R10b. All 7 floors stayed green, which is the expected direction. Restore: the blob matches HEAD and `git diff HEAD` is empty.\n- **Re-run on #25190's shape.** A measurement head is `origin/main` `97967a9`, plus `85058b6e`'s `plugin-email` half (`src/index.ts` and its pin test), plus a changeset that names only `runtime-export-retired @objectstack/plugin-email#renderTemplate` with the same FROM spelling. Running `node scripts/check-adr-0087-registration.mjs --base origin/main` on it:\n  - before (script at `97967a9`): exit 1, `[predicate 2: no-metadata-surface] is false: packages/spec/src/contracts/email-service.ts (a spec contracts/** entry) mentions renderTemplate IN CODE`, quoting the method signature line.\n  - after (script at `d0b41c5`): exit 0, `verified: @objectstack/plugin-email#renderTemplate (export, packages/plugins/plugin-email/src/template-engine.ts)`.\n- Derived gate list (`dispatch-gates --commands`, 1 path against merge base `97967a9`): 36 families, all exit 0. Reconciled with `--ran`: 36 derived, 36 run, 0 NOT-MEASURED (a derived zero: every line recorded its exit code).\n\nNo changeset: `scripts/` is repository tooling and ships in no package's `files[]`, so this PR carries `skip-changeset`.\n\n## Acceptance notes\n\n- `interpolate` (the third operand on `85058b6e`) is still refused, because `io-node-config.zod.ts` names the word inside a string literal. This PR leaves that alone on purpose: strings stay mentions, and the ruling on #25190 already keeps `interpolate` exported.\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nhttps://claude.ai/code/session_013CjPYTdJTD78hcb8LJ9ErK\n\n---\n_Generated by [Claude Code](https://claude.ai/code/session_013CjPYTdJTD78hcb8LJ9ErK)_\n"
+}

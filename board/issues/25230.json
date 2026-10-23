@@ -2,8 +2,8 @@
   "number": 25230,
   "kind": "issue",
   "title": "fix(objectql,driver-sql): ADR-0131 8c-1 follow-up — an elevated insert whose row carries its organization warns [tenant-audit] under a wall, and a wall-exempt admin write cannot declare the exemption to the driver",
-  "state": "open",
-  "state_reason": null,
+  "state": "closed",
+  "state_reason": "completed",
   "draft": null,
   "author": {
     "login": "objectstack-fleet[bot]",
@@ -12,7 +12,6 @@
   },
   "labels": [
     "domain:engine",
-    "pm:dispatched",
     "priority:p3"
   ],
   "assignees": [
@@ -21,11 +20,15 @@
   "milestone": null,
   "type": null,
   "created_at": "2026-10-22T13:42:41Z",
-  "updated_at": "2026-10-22T20:12:17Z",
-  "closed_at": null,
-  "closed_by": null,
+  "updated_at": "2026-10-22T21:32:50Z",
+  "closed_at": "2026-10-22T21:31:02Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
   "merged_at": null,
-  "comments": 4,
+  "comments": 6,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/25230",
   "body": "Filing gate **③**: a finding of the contract review of PR #25210 (record 6341425088, ③ item 3). It does not block that PR, which merged as `3a440b01f6`.\n- **Who acts:** the shared queue.\n- **Dedupe:** none.\n\nPart of #15212.\n\n## What happens on `main`\n- Since #25210, the engine's isSystem `bypassTenantAudit` mute is decided by schema: a tenant column, not federated. It no longer uses a per-table ledger. About 32 platform objects with a tenant column therefore no longer have their audit muted.\n- The SQL driver's `auditMissingTenant` (`packages/drivers/driver-sql/src/sql-driver.ts`, early return at about `:15999`) warns `[tenant-audit] … without options.tenantId` on create and bulkCreate as well as on update and delete. So an elevated insert whose row already carries `organization_id` warns under a walled posture. The dev's walled `os serve` printed 43 such lines at boot.\n- A wall-exempt admin's REST write has no caller that can declare `bypassTenantAudit: true`: the engine sets it only for isSystem. So that line keeps firing under a wall, even though nothing needs fixing.\n- **Diagnostics only:** no write changes. The ruled direction is a warning, never a silent rewrite.\n\n## Wanted\n- The insert audit is skipped when the row carries its tenant field.\n- The engine declares the D8 wall-exemption to the driver, so an exempt admin's write is not told to declare an option it cannot set.\n- Keep the warning's prefix byte-identical: `delivery-claim-tenant-audit.integration.test.ts` matches it.\n\n## Acceptance\n- A walled boot prints no `[tenant-audit]` line for an insert whose row carries its organization. This is pinned.\n- An update or delete with no tenantId still warns. This is pinned.\n- No write behaviour changes. R1–R4 hold."

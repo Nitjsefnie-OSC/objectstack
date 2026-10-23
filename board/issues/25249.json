@@ -12,18 +12,20 @@
   },
   "labels": [
     "domain:services",
-    "pm:queue",
+    "pm:dispatched",
     "priority:p3"
   ],
-  "assignees": [],
+  "assignees": [
+    "os-sales"
+  ],
   "milestone": null,
   "type": null,
   "created_at": "2026-10-22T15:34:19Z",
-  "updated_at": "2026-10-22T15:34:19Z",
+  "updated_at": "2026-10-23T01:52:01Z",
   "closed_at": null,
   "closed_by": null,
   "merged_at": null,
-  "comments": 0,
+  "comments": 3,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/25249",
   "body": "Filing gate **③**: a finding of the contract review of PR #25226 (#25202; record 6343868210, ③ 3b). It does not block that PR.\n- **Who acts:** the shared queue.\n- **Dedupe:** none.\n\nPart of #15212.\n\n## What is on `main` after #25226\n- `SettingsService.organizationReachOf` answers `no-organization-object` (NULL rows read and written) when no `organization` source is bound (`settings-service.ts`, about `:1872` at `576b8283`).\n- The in-repo production binder, `SettingsServicePlugin`, always binds one.\n- But `index.ts` documents hosts that bind their own engine (\"control-plane mocks, embedded runtimes\"). Such a host on a composition that registers `sys_organization` keeps a NULL arm, and keeps the duplicate-insert shape #25226 fixed.\n\n## Wanted\n- When the source is unset, the service derives the organization from the bound engine (the same `resolveSystemWriteOrganization` probe), or refuses to bind without one on a composition that registers `sys_organization`.\n\n## Acceptance\n- A self-binding host on a `sys_organization` composition reads and writes the derived organization, or is refused at bind. This is pinned.\n- The lean composition is unchanged."

@@ -1,0 +1,36 @@
+{
+  "number": 25327,
+  "kind": "pull_request",
+  "title": "test(plugin-security,plugin-auth,plugin-approvals): narrow the blanket pre-18 tenant-column relax rigs to the tables they write organization-less",
+  "state": "closed",
+  "state_reason": null,
+  "draft": false,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "size/m",
+    "skip-changeset",
+    "tests"
+  ],
+  "assignees": [
+    "os-sales"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-23T01:17:14Z",
+  "updated_at": "2026-10-23T02:27:07Z",
+  "closed_at": "2026-10-23T02:27:04Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": "2026-10-23T02:27:04Z",
+  "comments": 2,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/pull/25327",
+  "body": "<!-- claude-projects-attribution: {\"github_login\":\"os-sales\"} -->\n_Requested by **Sales** · [project thread](https://claude.ai/code/project/chan_01D5bWFY3rFzgJcytD5gD4Uu?thread=cmsg_01D5bWFY3rFzgJcytD5gD4Uu9Kz1GpzqNbccvHKqWUx39Y)_\n\nFixes #25132\n\nClause-②: no\nMetadata-protocol: none\n\nWhy `Clause-②: no`: test files only. No source, no export, no schema and no published file changes (the three packages ship `dist`, `README.md` and `CHANGELOG.md`), so no changeset either.\n\n## What changed\n\nEvery blanket `relaxEveryRegisteredTenantColumn(engine)` / `relaxEveryTenantColumn(engine, objects)` call in `plugin-security`, `plugin-auth` and `plugin-approvals` tests now names the tables its rig writes organization-less, through the testkit's existing `relaxTenantColumns(engine, tables)`. On this base there were 41 call sites in 38 files. The card counted 47 occurrences in 40 files on `4e2c42f363`, a count that also matched the testkits' own definitions.\n\n- 39 sites name their tables. Most need one table (`sys_permission_set` is the common one). The widest is `catalog-reference-report` with four.\n- 2 sites wrote no organization-less row at all, so their relax and its comment are gone: `controlled-by-parent-chain-middle-master.test.ts` and the `bootSharing` rig in `explain-enforce-parity.test.ts`.\n- The generic comment `The organization-less rows below (global sets, positions, grants) exist only…` (and its two siblings) named row kinds most rigs do not seed. It now reads `The organization-less rows below exist only on a store built before 18.x (ADR-0131 D1 makes a fresh tenant column NOT NULL): this is that store.` Rig-specific comments are kept as they were.\n- With no caller left, the blanket exports leave the three packages' `pre-18-tenant-column.testkit.ts`. `relaxTenantColumns`' doc gains one sentence on why a suite names only its own tables. `packages/qa/dogfood/test/pre-18-tenant-column.testkit.ts` keeps its own copy and callers; it is outside this card.\n\n## How the lists were measured\n\nThe lists were measured, not read off the code. A temporary probe (never committed) wrapped the blanket form: after relaxing, it put an `AFTER INSERT` / `AFTER UPDATE` trigger on each relaxed table. The trigger fired when a row landed with `organization_id` NULL and logged the table, the test and the call site. All 38 files ran with the probe in place: plugin-security 27 files / 641 tests, plugin-auth 9 / 96 (10 skipped), plugin-approvals 2 / 18. Each site's list is the union of the tables that fired under it.\n\nEvery logged row was then traced to the test's own writes. Each row's id is either a literal in the test file, or comes from a write the test itself makes through the engine as a case's subject. Examples are \"a writer with no active organization stores an organization-less row\" and \"the `single` posture … an emptied organization is admitted\". No table on any list is there only because of an unstamped side write from production code.\n\n## Verification (on `c4a6f34b`)\n\n- **Sufficient:** the 38 files pass with the named lists: plugin-security 27 files / 641 tests, plugin-auth 9 / 96 (10 skipped), plugin-approvals 2 / 18.\n- **Each named table is needed (the card's spot check, on every rig):** for each of the 58 named entries, that one table was dropped from its list on disk, the file was run, and the file was restored from `HEAD` (each restore checked with `git diff --quiet HEAD`). All 58 runs went red. Each one failed only on `NOT NULL constraint failed: TABLE.organization_id` for the dropped table. For the per-test `qa_parity_deal_*` objects of `bootRls`, it failed only on that family.\n- Full suites: `pnpm --filter @objectstack/plugin-approvals --filter @objectstack/plugin-auth run test`: 94 files / 1213 tests and 187 files / 3525 tests (10 skipped), exit 0. plugin-security: see the report.\n- `typecheck` for all three packages, including `check:test-typecheck`, exits 0. The test-typecheck debt ledgers are unchanged.\n- The `driver-fault-auth-log-carriers` Postgres and MySQL cells skip here because their URLs are unset. Their seeds are the same code as the SQLite cell, which measured `sys_permission_set` alone.\n\nBranch: the harness-assigned `claude/project-thread-wxw16a`, not the repo-convention `claude/issue-25132-…` (Duplicate Fix Guard).\n\n## Acceptance notes\n\n- `last-admin-guard.anchor-parity` models \"a tenant column NOT NULL nowhere\" (a pre-18 store, or a driver that enforces no NOT NULL). It now relaxes only `sys_user_permission_set`, the grant table its organization-less row lives in. Its comment says \"a grant tenant column\".\n\n---\n_Generated by [Claude Code](https://claude.ai/code/session_014aRYTwvuSQoDgWzLdw1nc9)_\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nhttps://claude.ai/code/session_014aRYTwvuSQoDgWzLdw1nc9\n"
+}

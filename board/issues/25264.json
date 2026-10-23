@@ -2,8 +2,8 @@
   "number": 25264,
   "kind": "issue",
   "title": "Console static plugin: readIndexHtml fills title, description and Open Graph tags server-side from the runtime branding (share previews see a blank title today)",
-  "state": "open",
-  "state_reason": null,
+  "state": "closed",
+  "state_reason": "completed",
   "draft": null,
   "author": {
     "login": "objectstack-fleet[bot]",
@@ -13,18 +13,23 @@
   "labels": [
     "domain:services",
     "enhancement",
-    "pm:queue",
     "priority:p2"
   ],
-  "assignees": [],
+  "assignees": [
+    "os-sales"
+  ],
   "milestone": null,
   "type": null,
   "created_at": "2026-10-22T17:47:32Z",
-  "updated_at": "2026-10-22T17:47:32Z",
-  "closed_at": null,
-  "closed_by": null,
+  "updated_at": "2026-10-23T01:06:25Z",
+  "closed_at": "2026-10-23T01:03:18Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
   "merged_at": null,
-  "comments": 0,
+  "comments": 4,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/25264",
   "body": "Filing gate ①: a measured gap that blocks a ruled cloud card (objectstack-ai/cloud#3155, from the maintainer's ruling on cloud#3125, `6345186088`, card 1). Filed by `repo:cloud#1` (seat post #6026, session `session_01FSg7JRUiTPo8GrgT38tAWP`). Platform first. ⛔ Not a claim.\n\n**Reader who acts:** the objectstack lane. objectstack-ai/cloud#3155 is `Blocked-by:` this card.\n\n## Measured (cloud `a471ab36`, framework pin `9d13b5fc`, objectui pin `616df659` and main `0d12e953`)\n- The console shell is objectui `apps/console/index.html`. Its `<title>` (`:17`) is empty, and there is no description or `og:*` meta.\n- The only branding reader is the inline `applyEarlyBranding` script: `:88` sets `document.title` from `GET /api/v1/runtime/config` `branding.productName`. That is client-side, so `curl` and link-preview crawlers see an empty title.\n- The only server-side head injection is `createConsoleStaticPlugin`'s `readIndexHtml` (`packages/cli/src/utils/console.ts:729`–`:749`, the same on `origin/main` `0b8bce40`). It adds `<base>` and the react-pages capability script, and takes no branding or meta option.\n- A deployment (cloud's `mountConsoleStatic`) therefore has no seam to set them, and string-replacing the HTML in a host's mount is the wrong layer.\n\n## Wanted\n- `readIndexHtml` fills `<title>`, `<meta name=\"description\">`, `og:title`, `og:description`, `og:image` and `og:url` server-side.\n- The values come from the **same runtime branding** the early script reads: `productName`, a description (for example `pwaDescription`), and `logoUrl`. `og:url` comes from the request origin.\n- One source of truth: the title written on the server is the one the script sets on the client.\n- Values are HTML-escaped. A missing branding value omits its tag rather than writing an empty one.\n- **Not here:** a locale map on the branding contract. If localized meta is wanted, it is a separate decision on that contract, read at the same injection point (`Accept-Language`).\n\n## Acceptance\n`curl` of a console document served by `createConsoleStaticPlugin` with branding `{ productName, description, logoUrl }` shows the four tags with those values and `og:url` equal to the request origin. With no branding, there are no empty tags."

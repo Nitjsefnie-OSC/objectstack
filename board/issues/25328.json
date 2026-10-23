@@ -1,0 +1,32 @@
+{
+  "number": 25328,
+  "kind": "pull_request",
+  "title": "docs: describe the built-in inbound rate limiter, server.security.rateLimit and server.trustProxy",
+  "state": "open",
+  "state_reason": null,
+  "draft": true,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "documentation",
+    "size/m",
+    "skip-changeset"
+  ],
+  "assignees": [
+    "os-elon-musk"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-23T01:20:14Z",
+  "updated_at": "2026-10-23T01:20:52Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 0,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/pull/25328",
+  "body": "<!-- claude-projects-attribution: {\"github_login\":\"os-elon-musk\"} -->\n_Requested by **Elon** · [project thread](https://claude.ai/code/project/chan_01WedDzV26nniwxv7jC88B9D?thread=cmsg_01WedDzV26nniwxv7jC88B9D4iG9zsMgxi6WCwGKNA4uH9)_\n\nFixes #24740\n\nClause-②: no\nMetadata-protocol: none\n\n## What changed\n\n`docs/HARDENING.md`, `content/docs/deployment/production-readiness.mdx` and the rate-limit callout in `content/docs/api/wire-format.mdx` described rate limiting as a primitive the runtime does not wire, to be added at the adapter layer, and never named the two keys an operator actually sets. Since the inbound limiter landed that is false. The three pages now say what the runtime does, each claim read against `origin/main` at `9dc1f42d5`:\n\n| Claim written | Rests on |\n| --- | --- |\n| Built in, off by default; nothing registered when not armed | `packages/runtime/src/security/inbound-rate-limit.ts:89`, `packages/runtime/src/dispatcher-plugin.ts:917-922`, `packages/spec/src/shared/http.zod.ts:221` |\n| Authored as `server.security.rateLimit` (`enabled`, `windowMs`, `maxRequests`), forwarded by `objectstack serve` | `packages/spec/src/stack.zod.ts:906`, `packages/spec/src/system/stack-server.zod.ts:148`, `packages/cli/src/commands/serve.ts:4785-4787` |\n| Defaults 100 per 60000 ms when enabled with no numbers | `packages/spec/src/shared/http.zod.ts:226,231`, `inbound-rate-limit.ts:91-92` |\n| Bucket capacity `maxRequests`, refill `maxRequests / (windowMs / 1000)` per second | `inbound-rate-limit.ts:108-111` |\n| Global middleware on `http.server`; `OPTIONS` never metered; warns when no `http.server` | `dispatcher-plugin.ts:906-942`, `inbound-rate-limit.ts:259,289` |\n| 429 + `Retry-After` (seconds) + `RATE_LIMIT_EXCEEDED`; no `X-RateLimit-*` header anywhere | `inbound-rate-limit.ts:342-352`, pinned in `inbound-rate-limit.test.ts:212-234`; `git grep -i X-RateLimit -- 'packages/**/*.ts' ':!**/*.test.ts'` = 0 hits |\n| Zero or negative budget refused at `defineStack`; unknown keys (`keyBy`, `store`) refused | `stack-server.zod.ts:101-118`, `http.zod.ts:194-214` |\n| Boot line `Inbound rate limit armed` with budget and `trustProxy` | `dispatcher-plugin.ts:924-931` |\n| Key: principal first, else caller address; one shared unknown bucket with one warning | `inbound-rate-limit.ts:149-163,313-323` |\n| Address: peer by default; under `server.trustProxy` the leftmost `X-Forwarded-For`, then `X-Real-IP`, else the peer | `packages/plugins/plugin-auth/src/client-address.ts:69-88`, `client-address-forwarding.ts:24` |\n| `server.trustProxy` defaults `false`; the same value drives the auth allow-list, `last_login_ip` and per-endpoint budgets | `stack-server.zod.ts:203-231`, `serve.ts:4273` |\n| Counters in the kernel `cache` service, resolved at consume time; per-process fallback warned once | `inbound-rate-limit.ts:194-226,275-283`, `packages/plugins/plugin-auth/src/rate-limit-storage.ts:194-225` |\n| Under `objectstack serve` `cache` is always on and in-memory (per process); `adapter: 'redis'` refuses to start | `packages/spec/src/kernel/platform-capabilities.ts:351`, `packages/core/src/capability-providers.ts:84-88`, `packages/services/service-cache/src/cache-service-plugin.ts:80-89` |\n| Read-modify-write: slight over-admit at a boundary across nodes | `inbound-rate-limit.ts:204-208` |\n| Endpoint budgets meter in a separate namespace | `stack-server.zod.ts:54-58` |\n| `DEFAULT_RATE_LIMITS` is reference material nothing reads | `packages/runtime/src/security/rate-limit.ts:229-247` |\n\nThe old Hono recipe (keyed on `X-Forwarded-For` unconditionally) and the Redis `RateLimitStore` paragraph are gone. A compact recipe survives under **Per-class budgets**, the one thing the built-in single bucket does not do, keyed through `resolveRateLimitKey` so its trust rule is the runtime's. The `HARDENING.md` TL;DR row keeps \"Off (opt-in)\" (accurate: off by default) and now points at `server.security.rateLimit`; the audit checklist line and the go-live checklist now name the built-in keys.\n\nThe CORS half of `HARDENING.md` is untouched (another card).\n\n## Gates\n\nDerived with `node scripts/pm/dispatch-gates.mjs --commands --repo objectstack-ai/objectstack` at `4a59f49`: 41 commands, all exit 0; `--ran` reconciliation 41 derived, 41 run, 0 NOT-MEASURED, 0 UNRUN. Docs only, nothing published from any package: `skip-changeset`.\n\n## Acceptance notes\n\n- `content/docs/api/wire-format.mdx` was a third page repeating the same stale claim (and promising `X-RateLimit-*` headers the runtime never sends); named to the seat before editing, which agreed.\n- Out of scope, not fixed here: the per-process fallback warning in `packages/plugins/plugin-auth/src/rate-limit-storage.ts:219-221` prescribes \"Redis via @objectstack/service-cache\", which `cache-service-plugin.ts:80-86` refuses to start. Reported to the seat.\n\n---\n_Generated by [Claude Code](https://claude.ai/code/session_01XyLjAesp3Fkx794wqMb4hK)_\n"
+}

@@ -2,9 +2,9 @@
   "number": 25286,
   "kind": "pull_request",
   "title": "fix(plugin-auth)!: under single, no slug change makes another organization the Default Organization",
-  "state": "open",
+  "state": "closed",
   "state_reason": null,
-  "draft": true,
+  "draft": false,
   "author": {
     "login": "objectstack-fleet[bot]",
     "id": 332303061,
@@ -22,11 +22,15 @@
   "milestone": null,
   "type": null,
   "created_at": "2026-10-22T19:59:12Z",
-  "updated_at": "2026-10-22T20:00:22Z",
-  "closed_at": null,
-  "closed_by": null,
-  "merged_at": null,
-  "comments": 1,
+  "updated_at": "2026-10-22T22:51:10Z",
+  "closed_at": "2026-10-22T22:51:08Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": "2026-10-22T22:51:08Z",
+  "comments": 3,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/pull/25286",
   "body": "Fixes #25271\n\nClause-②: no (narrowing)\nMetadata-protocol: none\n\n## What was wrong (Step 1, measured on `main` at 8dfd1265f0)\n\nUnder `single` the Default Organization is the organization slugged `default`, else the only one, and its `admin_full_access` grant confers platform administrator standing (ADR-0131 D5). On a store holding two organizations, `org_a` slugged `acme` and `org_b` slugged `beta`, where `org_b` owns an `admin_full_access` grant held by its owner, measured on the real stack (`ObjectQL` over `@objectstack/driver-sql` + better-sqlite3, the real last-administrator guard, a real `AuthManager` with the organization plugin, the real `resolveAuthzContext`):\n\n| door | before (8dfd1265f0) | after (this PR) |\n|:---|:---|:---|\n| better-auth `POST /auth/organization/update` `{ organizationId: org_b, data: { slug: 'default' } }`, as `org_b`'s owner | **200**, slug `default`, holder `platform_admin` **false → true** | **403 `PERMISSION_DENIED`**, slug `beta`, `platform_admin` stays false |\n| engine update `{ id: org_b, slug: 'default' }`, `isSystem` (a seed's upsert, a plugin, a script) | **admitted**, `platform_admin` **false → true** | **403 `PERMISSION_DENIED`**, slug unchanged |\n| data API PATCH and update-mode import (engine update in user context, with the ADR-0092 identity write guard) | 403 `PERMISSION_DENIED`, `slug` is not an editable column; slug unchanged | unchanged |\n\nThe last-administrator guard's `sys_organization` update half admitted the re-slug because it only refuses a write that leaves nobody standing (ADR-0135 D5.2), and this one takes standing from nobody.\n\n## The fix, and why this one\n\nA new hook in `last-admin-guard.ts`, registered on `sys_organization` `beforeUpdate` beside the update half: under `single`, a slug changed **to** `default` is admitted only on the organization that is already the Default Organization (the sole organization taking the slug the boot gives it). Anything else is refused `403 PERMISSION_DENIED` (ADR-0112 envelope; the message names the Default Organization rule, the current standing, and the remedy: keep another slug, hold one organization, or declare a walled posture). It reads only when the payload names `slug: 'default'`, reads nothing under a wall, and fails closed when it cannot read the organizations (a predicate write's matches, or the Default Organization).\n\n- **Why the engine and not `beforeUpdateOrganization`.** Every door that can change a slug is an engine update: better-auth's adapter writes through the engine, and so do seeds, plugins and the data API. A better-auth hook alone would leave the seed and plugin doors open. Measured by ablation: with only the engine hook, better-auth's `organization/update` answers 403 with the code `PERMISSION_DENIED` (the guard's refusal reaches the caller through the adapter), so a second check in `auth-manager.ts` would buy nothing but a different answer to a read fault. A first commit carried that pre-check; it was removed, and with it the public export it needed.\n- **Why not gate every slug change the way create is gated.** That refuses renaming the slug of a single-organization deployment, which moves no anchor. The narrow rule refuses only the write that captures the anchor.\n- **Walled postures are unchanged**: no grant anchors there and a slug is just a slug; the hook returns before any read.\n\n## Pins (`packages/plugins/plugin-auth/src/single-reslug-default-anchor.test.ts`, 10 cases)\n\n- HTTP door: refused 403 `PERMISSION_DENIED`, slug unchanged, no standing gained; CONTROL the sole organization takes `default` (200); CONTROL another slug (200); CONTROL walled `isolated` (200); a failed read of this rule's own query refuses.\n- Engine door: by id and by predicate, refused; a `default`-slugged Default Organization beside it, refused by this rule before any unique index (at HTTP, better-auth's own slug-taken check answers that shape 400 first); a failed read refuses; CONTROL walled `group`, admitted.\n- Ablations through `scripts/ablation-replace.mjs`, each restored to the HEAD blob with `git diff HEAD` empty (the suite imports `src`, no dist leg): the hook's registration removed → 6 red (every refusal pin), 4 controls green; the wall short-circuit removed → the 2 walled controls red; the Default-Organization admission removed → the sole-organization control red.\n\nProof (tests, gates, R1, R4, the upgrade harness, dogfood) is in the os-dev-report on #25271.\n\n## Acceptance notes\n\n- The refusal answers the standard `PERMISSION_DENIED`, the code every half of the last-administrator guard answers. A dedicated registered code would need a row in `packages/spec`'s error-code ledger, outside this card's file surface.\n- `docs/adr/**` is untouched. The rule is ADR-0131 D5's definition applied to the update write; the ADR's 2026-10-22 D5 note could name this hook beside the insert half when the epic next amends it.\n\n---\n_Generated by [Claude Code](https://claude.ai/code/session_01S2kKLbAZ5FRjY2StxU3jVG)_\n"

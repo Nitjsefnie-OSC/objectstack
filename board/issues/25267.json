@@ -2,8 +2,8 @@
   "number": 25267,
   "kind": "issue",
   "title": "Formula/CEL: has() over an indexed path is accepted at authoring and refused at runtime, so a visibleWhen using it fails open",
-  "state": "open",
-  "state_reason": null,
+  "state": "closed",
+  "state_reason": "completed",
   "draft": null,
   "author": {
     "login": "objectstack-fleet[bot]",
@@ -13,7 +13,6 @@
   "labels": [
     "bug",
     "domain:spec",
-    "pm:dispatched",
     "priority:p2"
   ],
   "assignees": [
@@ -22,11 +21,15 @@
   "milestone": null,
   "type": null,
   "created_at": "2026-10-22T18:25:12Z",
-  "updated_at": "2026-10-22T20:07:24Z",
-  "closed_at": null,
-  "closed_by": null,
+  "updated_at": "2026-10-22T20:43:37Z",
+  "closed_at": "2026-10-22T20:42:00Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
   "merged_at": null,
-  "comments": 3,
+  "comments": 4,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/25267",
   "body": "Filing gate ①: class (c), metadata accepted and silently not enforced. Measured by the `repo:cloud#1` seat's dev on objectstack-ai/cloud#3158 (PR objectstack-ai/cloud#3166). Filed by `repo:cloud#1` (seat post #6026, session `session_01FSg7JRUiTPo8GrgT38tAWP`). ⛔ Not a claim.\n\n**Reader who acts:** the objectstack lane (`@objectstack/formula` and the predicate lint).\n\n## Measured (framework pin `9d13b5fc`, objectui pin `616df659`)\n- `celEngine.evaluate({ dialect: 'cel', source: 'has(data.environments[0].storage.usedMb)' }, { extra: { data: { environments: [{ storage: { usedMb: 5 } }] } } })` answers `ok: false`, a runtime `has() invalid argument` error.\n- On a page node's `visibleWhen`, the console then **draws the guarded node whatever the value** (fail-open): a \"no reading yet\" caption showed beside \"5 MB\" in a browser reading.\n- Nothing refused it at authoring time: cloud's `check:action-predicate-roots` passed it, and the page published.\n- The equivalent `'usedMb' in data.environments[0].storage` works. The cloud PR uses that form.\n\n## Wanted\n- `has()` over an indexed path either evaluates per the CEL spec (presence test on the selected field) or is **refused when the metadata is published**, with a message naming the `in` form.\n- Not both accepted and runtime-refused.\n\n## Acceptance\n- A page whose `visibleWhen` is `has(a[0].b)` is either refused at publish with that message, or evaluates true/false correctly at runtime.\n- The engine and the publish validator agree.\n\nDedupe words: has() invalid argument; CEL has indexed path; visibleWhen fault fails open; predicate error node shown."

@@ -1,0 +1,32 @@
+{
+  "number": 25354,
+  "kind": "pull_request",
+  "title": "docs(releases): date 18.0.0 by its npm publish day, and the v17 page stops saying a plain install resolves 17.7.0",
+  "state": "open",
+  "state_reason": null,
+  "draft": true,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "documentation",
+    "size/xs",
+    "skip-changeset"
+  ],
+  "assignees": [
+    "os-elon-musk"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-23T02:13:28Z",
+  "updated_at": "2026-10-23T02:13:57Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 0,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/pull/25354",
+  "body": "<!-- claude-projects-attribution: {\"github_login\":\"os-elon-musk\"} -->\n_Requested by **Elon** · [project thread](https://claude.ai/code/project/chan_01WedDzV26nniwxv7jC88B9D?thread=cmsg_01WedDzV26nniwxv7jC88B9DVnDhkexGgHMmRmgKicPYPa)_\n\nFixes #25148\n\n## What changed\n\nDocs only, two files under `content/docs/releases/` (+4 / -3). No script moves in this PR, per the card.\n\n| Page | Before | After | Source |\n|:--|:--|:--|:--|\n| `content/docs/releases/index.mdx:21` (`/docs/releases`), v18 entry | `(current series: 18.0.0, released 2026-10-19)` | `(current series: 18.0.0, released 2026-10-20)` | npm `time[\"18.0.0\"]` = `2026-10-20T12:51:40.837Z` (read from `registry.npmjs.org/@objectstack/spec` at 2026-10-23); the Version Packages commit `06cab4849` (#24524) is dated `2026-10-20T11:47:07Z`; `releases/v18/18-0.mdx` already says \"published 2026-10-20\" |\n| `content/docs/releases/v17/index.mdx:25` (`/docs/releases/v17`), status blockquote | \"A plain install now resolves 17.7.0.\" | \"A plain install resolved 17.7.0 until 2026-10-20, when 18.0.0 took npm's `latest` tag; a plain install now resolves the [v18](/docs/releases/v18) line.\" | npm `dist-tags` = `{latest: 18.0.0, next: 18.0.0-next.5, rc: 17.0.0-rc.6}` (same read) |\n\nThe index field keeps the exact `current series: X.Y.Z, released YYYY-MM-DD` shape, because `sync-release-index-currency.mjs`'s `STATUS_SHAPE` refuses a field with anything after the date; the sources therefore live here, not in the parenthetical. The v17 sentence names the v18 line rather than `18.0.0`, so it does not go stale again at 18.1.0.\n\n## Premise, measured\n\n- `origin/main` `54df640` read both stale sentences as the card quotes them; 18.1.0 is not cut (the index still names 18.0.0, `latest` is 18.0.0).\n- The cause the card gives holds: `8fbbd5082` (#24584, 2026-10-19T16:51Z) wrote \"released 2026-10-19\" before the cut; at the version commit the field already named the newest GA, so the script left it, date included (`rewriteStatusField` returns null for a same-version field). On this branch `node scripts/sync-release-index-currency.mjs` exits 0 with \"nothing rewritten\".\n\n## Done-when 2: should the currency script verify the date it leaves in place?\n\nYes, but not in this PR (the card forbids a code change in a docs PR), so it is reported to the seat as an out-of-scope finding. The reading:\n\n- The script's refusal to re-date a same-version field is right for prerelease cuts (its header records the 17.7.0 re-dating it prevents). The gap is narrower: the run that IS the version commit of the newest GA, where the field was pre-written by hand. That run is detectable without a clock or network: the newest GA in the committed `packages/spec/CHANGELOG.md` at `HEAD` differs from the newest GA after `changeset version`. On that run, and only that run, the date it holds is true, so it should stamp it even when the version already matches.\n- A check-only alternative (compare the date to npm `time`) needs the network at version time and so cannot be the guard on the `version-pr` lane.\n\n## Gates\n\nHead `9be39f2`: `node scripts/pm/dispatch-gates.mjs --commands` derived 48 commands for the two changed paths. Each ran with its exit code captured before any pipe, recorded as `COMMAND :: exit CODE`; `--ran` reconciles 48 derived, 48 run, 0 NOT-MEASURED, 0 UNRUN. All 48 exit 0, among them `check:release-page-status`, `check:release-notes`, `check-release-section-coverage.mjs --strict`, `check:doc-anchors` and `check:docs`. `check:docs-transcript-drift` first exited 3 (PREREQUISITE NOT MET, lint not built); after `@objectstack/lint...` and `@objectstack/client-react...` were built under the verify lock (VERDICT command-exit 0) it exits 0.\n\nNot measured locally, CI's: Build Docs, Test Core, the type-check lanes and the wide-population families. No package source moves, so no test or ablation applies. `content/docs/**` is in no package's `files[]`, so this carries `skip-changeset` and no changeset.\n\n## Acceptance notes\n\n- The attribution block's first line is an HTML comment the session requires; `os-dev.md` forbids HTML comments in GitHub text. Same shape as PRs #25255 and #25322; reported as a deviation.\n- The branch is the harness-pinned `claude/project-thread-bb3ks9`; the claim (comment `6355543510`) records it as the identity.\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nhttps://claude.ai/code/session_01854Y7atqKDuWMySuBxa1SJ\n"
+}

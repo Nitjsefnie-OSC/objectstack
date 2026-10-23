@@ -1,0 +1,32 @@
+{
+  "number": 25320,
+  "kind": "pull_request",
+  "title": "docs(releases-maintenance): wait for the newest in-flight scheduled CI before approving release",
+  "state": "open",
+  "state_reason": null,
+  "draft": true,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "documentation",
+    "size/s",
+    "skip-changeset"
+  ],
+  "assignees": [
+    "os-elon-musk"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-23T00:52:03Z",
+  "updated_at": "2026-10-23T00:52:44Z",
+  "closed_at": null,
+  "closed_by": null,
+  "merged_at": null,
+  "comments": 0,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/pull/25320",
+  "body": "<!-- claude-projects-attribution: {\"github_login\":\"os-elon-musk\"} -->\n_Requested by **Elon** · [project thread](https://claude.ai/code/project/chan_01WedDzV26nniwxv7jC88B9D?thread=cmsg_01WedDzV26nniwxv7jC88B9D3HAzRn9UnnjnvWeBJbjUjJ)_\n\nFixes #24889\nClause-②: no\nMetadata-protocol: none\n\n## What\n\n`docs/releases-maintenance.md`, section \"Cutting a GA release — the Version Packages PR flow\": one maintainer step before the `release` environment approval, after the existing \"First, check #4935 is current\" step.\n\n- Read the Release run's `Full battery green at the version commit` job (step *Read the full battery at or before the version commit*): one line per workflow, naming the chosen run and its distance from the version commit.\n- If a `CI` run on the version commit, or on a commit between it and the one the `CI` line names, is still in progress (normally the hourly `schedule` run), wait for it to complete (about 25–30 minutes) before approving. Green: approve. Red: treat it as the gate's refusal.\n- Why: 18.0.0 was approved on a green gate that read a run 9 commits back while the run 2 commits back was in flight, and that run went red.\n- What it is not: a merge freeze. The snapshot flow's choice against coordinated freezes and `annotate-shipped`'s handling of a Version Packages PR merged behind `main` are referenced, not changed.\n\nDocs only, 32 added lines, one file. No workflow, script, ADR or `content/docs/releases/**` change, so no changeset (`skip-changeset`).\n\n## Measurements (all against `origin/main` at `9dc1f42d50`)\n\n- **Gate job name:** `.github/workflows/release.yml:1508` reads `name: Full battery green at the version commit` (job id `full-battery`, step `Read the full battery at or before the version commit` at `:1556`). It runs `scripts/ci/scheduled-full-run.mjs --release-gate`, whose HALF 3 selection rule reads only `completed` `schedule` or `push` runs of `CI`, `Lint & Type Check` and `Spec Shape Gate` and \"never waits\". It prints its lines to the job log, not to the step summary.\n- **Scheduled CI cadence:** `.github/workflows/ci.yml:58` reads `- cron: '0 * * * *'` (hourly, minute 0). `lint.yml:47` carries the same cron.\n- **Scheduled CI duration:** the 20 most recent completed `schedule` runs of `ci.yml` on `main`, as of 2026-10-23 00:20Z (`run_started_at` to `updated_at`): 14.4–38.7 min, median 28.7, 14 of 20 in 25–31. `lint.yml` and `spec-shape-gate.yml` scheduled runs in the same window were about 10–24 min.\n- **18.0.0 facts, re-read:** run 39412016980 (`CI`, schedule) on `abd5acdaf7`, success, 11:01–11:25Z; run 39419131283 (`CI`, schedule) on `81120caac8`, failure, 12:01–12:30Z; run 39427630088 (`Release`, workflow_dispatch) failure. `git log --first-parent 06cab4849a` puts `81120caac8` 2 commits back and `abd5acdaf7` 9 commits back.\n\n## Gates\n\nDerived by `node scripts/pm/dispatch-gates.mjs --commands --repo objectstack-ai/objectstack` at `64ff9db3c5`. Exit codes were captured before any pipe and reconciled with `--ran`: \"13 derived, 13 run, 0 NOT-MEASURED, 0 UNRUN (a DERIVED zero — all 13 recorded an exit code and none of them is 3)\".\n\n| Command | Exit |\n|---|---|\n| `node scripts/check-ci-filter-parity.mjs` | 0 |\n| `node scripts/check-closing-keyword-parity.mjs` | 0 |\n| `node scripts/check-closing-keyword-parity.mjs --self-test` | 0 |\n| `node scripts/check-comment-mask-corpus.mjs` | 0 |\n| `pnpm --filter @objectstack/lint run check:doc-formula-expressions` | 0 (first run exit 3, a prerequisite: `@objectstack/lint` unbuilt; built `@objectstack/formula` and `@objectstack/lint`, then re-ran) |\n| `pnpm check:cross-package-test-inputs` | 0 |\n| `pnpm check:doc-authoring` | 0 |\n| `pnpm check:driver-memory-census` | 0 |\n| `pnpm check:gitlink-declared` | 0 |\n| `pnpm check:nul-bytes` | 0 |\n| `pnpm check:refd-timer-probe` | 0 |\n| `pnpm check:required-contexts` | 0 |\n| `pnpm check:watch-hint-literal` | 0 |\n\nCI runs the rest of the families on this PR.\n\n## Acceptance notes\n\n- The card names a scheduled `CI` run. The gate reads `push` runs on `main` too, and two more workflows, so the step is written for any in-flight `CI` run between the gate's chosen run and the version commit (normally the hourly one). It adds one sentence that the same wait applies to `Lint & Type Check` and `Spec Shape Gate`, whose scheduled runs are shorter.\n- The card's `:297` anchor was stale. The GA section starts at `:445` on `9dc1f42d50`.\n- The \"Red: do not approve\" branch points at the recovery already written in the `full-battery` job header of `release.yml`. It adds no new recovery procedure.\n- Not touched: the #7447 snapshot section and `annotate-shipped`.\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nhttps://claude.ai/code/session_01LKHDniRQSWjRJyDtacwpEd\n"
+}

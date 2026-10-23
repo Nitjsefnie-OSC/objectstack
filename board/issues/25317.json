@@ -1,0 +1,37 @@
+{
+  "number": 25317,
+  "kind": "pull_request",
+  "title": "feat(cli): the console document carries the runtime branding in its title, description and Open Graph tags, written on the server, so a link preview shows the product's name",
+  "state": "closed",
+  "state_reason": null,
+  "draft": false,
+  "author": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "labels": [
+    "documentation",
+    "size/l",
+    "tests",
+    "tooling"
+  ],
+  "assignees": [
+    "os-sales"
+  ],
+  "milestone": null,
+  "type": null,
+  "created_at": "2026-10-23T00:13:17Z",
+  "updated_at": "2026-10-23T01:03:19Z",
+  "closed_at": "2026-10-23T01:03:17Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
+  "merged_at": "2026-10-23T01:03:17Z",
+  "comments": 2,
+  "locked": false,
+  "html_url": "https://github.com/objectstack-ai/objectstack/pull/25317",
+  "body": "<!-- claude-projects-attribution: {\"github_login\":\"os-sales\"} -->\n_Requested by **Sales** · [project thread](https://claude.ai/code/project/chan_01D5bWFY3rFzgJcytD5gD4Uu?thread=cmsg_01D5bWFY3rFzgJcytD5gD4UuSQfvzuV2ZjD9aZ44eAhnVq)_\n\nFixes #25264\n\nClause-②: no\nMetadata-protocol: none\n\nWhy `Clause-②: no`: no accept set and no public surface changes. `createConsoleStaticPlugin`'s signature and options are byte-identical, no route is added, and no schema or export moves. What changes is the content of the console HTML document the plugin already served.\n\n## What changed\n\n`createConsoleStaticPlugin` (`packages/cli/src/utils/console.ts`, what `os serve` mounts at `/_console/`) writes the console document's head per request. Besides the base tag it already added, it now writes:\n\n- the `title` element and `og:title` from `branding.productName`;\n- `meta name=\"description\"` and `og:description` from `branding.pwaDescription`;\n- `og:image` from `branding.logoUrl`, resolved against the request origin, written only when that gives an `http(s)` URL;\n- `og:url`, the request origin. Its scheme comes from `x-forwarded-proto` when a proxy states `http` or `https`, the same header REST discovery's `servers[0]` reads.\n\n**One source.** The values are read from `GET /api/v1/runtime/config`, the door the shell's early-branding script reads to set `document.title`. They are read in-process, for the visitor's own request (same host and cookies), the way the existing `/forms/:slug` redirect asks the form door. So whatever decides the served name (a saved Branding setting, the host option, `OS_PRODUCT_NAME`, a hosted runtime's per-hostname answer, a distribution's subclass) decides the tags too. Nothing is resolved a second time. The probe drops `accept-encoding`, `if-none-match`, `if-modified-since` and `range`, which would change the encoding or status of the answer rather than its content.\n\n**Values and absence.** Every value is HTML-escaped (element body and double-quoted attributes). The shell's existing `title` element is replaced (objectui ships it empty), or one is added. A missing or blank value writes no tag. With no branding at all, `og:url` is not written either and the document is byte-identical to what was served before. A composition with no `runtime/config` door (`404`) is not a failure. Any other failed read (a non-200 answer, a body that is not JSON, a thrown dispatch) serves the document as before and logs one `warn`, once per plugin instance. That is a functional degradation, so `warn`, per AGENTS.md's log-level rule.\n\nAlso: a changeset (`@objectstack/cli` patch) and one paragraph in `content/docs/deployment/environment-variables.mdx` saying link previews read the same branding values. The docs file is outside the surface the claim declared; it is declared here and in the report.\n\n## Branch\n\nThe harness assigned the branch `claude/project-thread-c4vx2u`, not the repo-convention `claude/issue-25264-…`. This note is for the Duplicate Fix Guard. The card's `Claim:` names this branch.\n\n## Lane\n\nThe card carries `domain:services`, but the fix is wholly `packages/cli` (`domain:cli`). The fleet director ruled that cli seat 1 claims it; the claim comment asks triage to relabel the card.\n\n## Tests\n\n`packages/cli/src/utils/console.branded-head.test.ts`, 17 cases, unit tier (no spawn, no kernel). The \"one source\" cases mount the REAL `RuntimeConfigPlugin` on a REAL `HonoHttpServer` beside the real plugin. They compare the served tags with what `GET /api/v1/runtime/config` answers to the same request, including the door's derived description. The value-shape cases use a stub door: escaping (markup, quotes, `$&` in a replacement string, `&` in a logo query), a blank or absent value writing no tag and no empty `content`, a `data:` logo writing no `og:image`, an absolute logo passing through, a shell with no `title` element, `x-forwarded-proto` taken and a bogus value ignored, and the probe forwarding host and cookies while dropping the four headers. The preservation cases pin the document byte for byte to the pre-change answer with no door, with no branding block, with a door that answers 500 (one `warn` over two requests) and with a door that throws.\n\nAblation (committed fix first, `scripts/ablation-replace.mjs`): `readIndexHtml`'s head-writing return was replaced by a plain return. 13 of 17 went red. The 4 that stayed green are the preservation cases, which is the expected direction. Restored: blob equals HEAD, `git diff HEAD` empty.\n\nRuns (on `1bfcd481`, before the main merge):\n- `pnpm --filter @objectstack/cli exec vitest run --project unit`: 325 files / 4799 tests. Two files (`test/published-subpath-console.pin.test.ts`, `test/published-subpath-hook-body.pin.test.ts`) refused because `packages/cli` was not built yet. After building cli they passed: 2 files, 29 tests.\n- `pnpm --filter @objectstack/cli typecheck`: exit 0.\n- `dispatch-gates --commands`: 97 derived families, all exit 0. `--ran` reconciliation: 97 run, 0 NOT-MEASURED.\n- The dogfood files that mount this plugin: `showcase-public-form-redirect` 9/9 passed. `principal-session-console-boot` and `print-service-render` skipped themselves (no built console on this host), so NOT MEASURED here.\n\nAfter merging `origin/main` (`43e5a2b6`; the incoming change touched only `cloud-connection-plugin.ts`): the three console test files passed, 75/75. The integration tier is declared to CI. The full dogfood battery is n/a: no `!` in the title and no `(narrowing)` arm.\n\n## Acceptance notes\n\n- `og:url` is the request ORIGIN, as the card specifies, not the full document URL. A deep link's preview therefore names the site root as its canonical URL. Changing that would be a separate decision on the card's wording. Carrier: none.\n- No localized meta, per the card's \"Not here\" line.\n\n---\n_Generated by [Claude Code](https://claude.ai/code/session_014FFTcf6msoLbXiD6BR7wHW)_\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nhttps://claude.ai/code/session_014FFTcf6msoLbXiD6BR7wHW\n"
+}

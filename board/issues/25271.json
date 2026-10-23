@@ -2,8 +2,8 @@
   "number": 25271,
   "kind": "issue",
   "title": "fix(plugin-auth): under single, an organization re-slugged to default through better-auth organization/update captures the platform-admin anchor — the single gate covers create only",
-  "state": "open",
-  "state_reason": null,
+  "state": "closed",
+  "state_reason": "completed",
   "draft": null,
   "author": {
     "login": "objectstack-fleet[bot]",
@@ -24,11 +24,15 @@
   "milestone": null,
   "type": null,
   "created_at": "2026-10-22T18:52:14Z",
-  "updated_at": "2026-10-22T19:27:58Z",
-  "closed_at": null,
-  "closed_by": null,
+  "updated_at": "2026-10-22T22:52:37Z",
+  "closed_at": "2026-10-22T22:51:10Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
   "merged_at": null,
-  "comments": 1,
+  "comments": 4,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/25271",
   "body": "Filing gate **③**: a security finding from the contract review of PR #25265 (#25208), ③ finding 1, together with the dev's out-of-scope finding in os-dev-report 6348218751. It predates that PR, which does not open it. The epic seat dispatches security findings directly (the maintainer's 「24625 这种你直接派发处理」).\n- **Who acts:** the epic seat dispatches it.\n- **Dedupe:** none (\"organization slug default re-slug platform admin anchor capture single posture\" → 0).\n\nPart of #15212.\n\n## What is on `main`\n- Under `single`, the platform-admin anchor is an `admin_full_access` grant owned by the Default Organization (ADR-0131 D5). The Default Organization is defined as the organization slugged `default`, else the sole organization.\n- `packages/plugins/plugin-auth/src/auth-manager.ts`:\n  - the `single` gate (`multiOrgPostureEffective()`, about `:3712-3720`) refuses organization **create** only;\n  - `beforeUpdateOrganization` (about `:3859`) checks only the environment-binding slug lock (`ORGANIZATION_SLUG_LOCKED_BY_ACTIVE_ENVIRONMENTS`);\n  - better-auth `organization/update` accepts `slug` (`packages/platform-objects/src/identity/sys-organization-update-door.test.ts`, about `:83`).\n- So on a `single` store that holds several organizations and none slugged `default` (a shape the boot already warns about), an organization owner can re-slug their organization to `default`. If that organization holds a platform-granted `admin_full_access` grant, its holders gain platform administrator standing.\n- The `sys_organization` update half of `last-admin-guard.ts` refuses a re-slug only when no administrator who can sign in would remain (ADR-0135 D5.2). With another administrator standing, the capture is admitted.\n\n## Wanted\n1. **Measure.** On a `single` store with two organizations, neither slugged `default`, and one holding an `admin_full_access` grant: can its owner re-slug it to `default` through `organization/update`, and does the grant then confer `platform_admin`? Check every other door that can change a slug: the data API's update-mode import, and a seed.\n2. **Then close the door.** For example: under `single`, refuse a slug change TO `default` unless the organization is already the Default Organization; or gate slug changes the way create is gated. Say which, and why.\n\n## Acceptance\n- Under `single`, no slug change makes a non-Default organization the Default Organization. This is pinned through the HTTP door, with an ablation.\n- Walled postures are unchanged, since slugs carry no anchor there.\n- R1–R4 hold. R4 is measured by the dev, because CI does not run dogfood on a PR or in the merge queue."

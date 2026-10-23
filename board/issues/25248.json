@@ -2,8 +2,8 @@
   "number": 25248,
   "kind": "issue",
   "title": "fix(core): resolveLocalizationContext's direct sys_setting fallback reads tenant rows with no organization filter, taking the first row per key from any organization (ADR-0131 D8)",
-  "state": "open",
-  "state_reason": null,
+  "state": "closed",
+  "state_reason": "completed",
   "draft": null,
   "author": {
     "login": "objectstack-fleet[bot]",
@@ -25,11 +25,15 @@
   "milestone": null,
   "type": null,
   "created_at": "2026-10-22T15:33:40Z",
-  "updated_at": "2026-10-22T20:11:37Z",
-  "closed_at": null,
-  "closed_by": null,
+  "updated_at": "2026-10-23T00:24:03Z",
+  "closed_at": "2026-10-23T00:21:32Z",
+  "closed_by": {
+    "login": "objectstack-fleet[bot]",
+    "id": 332303061,
+    "type": "Bot"
+  },
   "merged_at": null,
-  "comments": 1,
+  "comments": 3,
   "locked": false,
   "html_url": "https://github.com/objectstack-ai/objectstack/issues/25248",
   "body": "Filing gate **③**: a finding of the contract review of PR #25226 (#25202; record 6343868210, ③ 3a). It is outside that PR's surface.\n- **Who acts:** the epic seat dispatches it.\n- **Dedupe:** none.\n\nPart of #15212.\n\n## What is on `main`\n- `packages/core/src/security/resolve-authz-context.ts`, `resolveLocalizationContextUncached` (about `:2537-2545` at `9c431bad`), has a direct fallback. It reads `sys_setting` with `scope: 'tenant'` and **no organization filter**, and takes the first row per key. That is an any-organization reading outside the settings service, with NULL-organization rows admitted.\n- It is reached when the settings service is absent or throws. After #25226, an organization source that throws (`AuthzStoreUnavailableError`, deliberately not caught) is one more way to reach it.\n- ADR-0131 D8 says no layer has a NULL arm and no shared-owner set. This reader has both.\n\n## Wanted\n1. **Measure** which compositions reach the fallback: the settings service absent, the service throwing, lean embedding.\n2. **Then** retire the fallback, or scope it to the caller's organization (own rows only), with the lean-embedding NULL reading kept only where the composition registers no `sys_organization` (#25133, letter A).\n\n## Acceptance\n- No localization read admits another organization's row or a NULL row outside lean embedding. This is pinned, with an ablation.\n- R1–R4 hold."
