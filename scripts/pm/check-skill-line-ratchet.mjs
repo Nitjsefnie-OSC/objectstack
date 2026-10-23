@@ -1240,12 +1240,12 @@ export const CEILINGS = new Map([
   ['.claude/skills/pm-dispatch/references/seat-lifecycle.md', 96],
   ['.claude/skills/pm-dispatch/references/reading-discipline.md', 37],
   ['.claude/skills/pm-dispatch/references/cross-repo-coordination.md', 51],
-  // Lowered 120 → 107 by the maintainer's revocation of every autonomous-
+  // Lowered 120 → 110 by the maintainer's revocation of every autonomous-
   // adjudication channel: the delegated-adjudication lane, its confidence gate
-  // and the first-class self-ruling gate left; what remains says a seat
-  // analyses and recommends and the maintainer rules. Landed count, headroom 0,
-  // same convention (lowering is always legitimate).
-  ['.claude/skills/pm-dispatch/references/triage-duties.md', 107],
+  // and the first-class self-ruling gate left; the human-floor list stays,
+  // re-homed as what is always presented to the maintainer. Landed count,
+  // headroom 0, same convention (lowering is always legitimate).
+  ['.claude/skills/pm-dispatch/references/triage-duties.md', 110],
   // execution-duties.md, raised 183 → 185 by the split-off-card ruling — an
   // ORDINARY raise, ⛔ not a cross-file move (card #23579). The text is two rule
   // lines beside the derived-sub-issue rules in 〈候选与批次〉: a queued card found
