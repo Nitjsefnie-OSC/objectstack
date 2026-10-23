@@ -1,5 +1,66 @@
 # @objectstack/formula
 
+## 18.1.0
+
+### Minor Changes
+
+- 9d96b2b: fix(formula): `has()` over a selection whose receiver is an index or a call result evaluates as a presence test, as the CEL spec defines it
+  
+  Clause-②: yes (widening)
+  Metadata-protocol: added
+  
+  The CEL spec defines `has(e.f)` for any expression `e`. The engine used to refuse every such argument whose selection chain was not rooted in a plain name — `has(data.environments[0].storage.usedMb)`, `has(record.items[0].name)`, `has(dyn(x).y)` — with `has() invalid argument`, at evaluation and at `compile` / `validateExpression` alike. A page or view `visibleWhen`, whose publish gate checks syntax but not types, published such a predicate and then failed open in the console.
+  
+  - **What now works.** The call is a presence test on the last field: `true` when the receiver has the key, `false` when it does not, and a fault (`No such key`) when a step before the last one is absent, exactly like `has(record.a.b)`. `evaluate`, `compile`, `validateExpression`, `firstUndeclaredReference` and `inferCelType` all give that one answer.
+  - **What widens.** Object, flow, action, sharing-rule and hook predicates that `validateExpression` used to refuse for this argument now pass. They evaluate as written.
+  - **What is still refused.** An argument the spec itself refuses: a bare name (`has(status)`) or an index as the last step (`has(record.items[0])`). Test a key with `'key' in m`, or a list position with `size(list) > n`.
+  - **Nothing to migrate.** A predicate already written in the `'key' in e` form keeps working and answers the same.
+
+### Patch Changes
+
+- Updated dependencies [7cacad5]
+- Updated dependencies [df8bb40]
+- Updated dependencies [0091d84]
+- Updated dependencies [5e9b100]
+- Updated dependencies [7532ea3]
+- Updated dependencies [fde7456]
+- Updated dependencies [de9cd1f]
+- Updated dependencies [e7befa7]
+- Updated dependencies [55d7aab]
+- Updated dependencies [0715fac]
+- Updated dependencies [60b42cd]
+- Updated dependencies [b9a79ef]
+- Updated dependencies [63085c3]
+- Updated dependencies [0b8bce4]
+- Updated dependencies [2069b81]
+- Updated dependencies [1862d8d]
+- Updated dependencies [30d21f6]
+- Updated dependencies [eddffc3]
+- Updated dependencies [69712d5]
+- Updated dependencies [e939357]
+- Updated dependencies [045858f]
+- Updated dependencies [baedcec]
+- Updated dependencies [03c12a5]
+- Updated dependencies [386f60f]
+- Updated dependencies [28c9a2c]
+- Updated dependencies [2354058]
+- Updated dependencies [edcc8ce]
+- Updated dependencies [fccbd9d]
+- Updated dependencies [c8f4c43]
+- Updated dependencies [02ad31a]
+- Updated dependencies [03966ce]
+- Updated dependencies [e3aa111]
+- Updated dependencies [863c580]
+- Updated dependencies [7f5b19d]
+- Updated dependencies [14e7239]
+- Updated dependencies [fe0ec2b]
+- Updated dependencies [dfab597]
+- Updated dependencies [24360dc]
+- Updated dependencies [bda53bb]
+- Updated dependencies [5f30f00]
+- Updated dependencies [7db1697]
+  - @objectstack/spec@18.1.0
+
 ## 18.0.0
 
 ### Minor Changes

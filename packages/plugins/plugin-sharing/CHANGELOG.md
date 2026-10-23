@@ -1,5 +1,141 @@
 # @objectstack/plugin-sharing
 
+## 18.1.0
+
+### Minor Changes
+
+- 7cacad5: **Shipped in 18.0.0**, whose CHANGELOG missed this entry; listed here one release late.
+  
+  feat(plugin-sharing,plugin-approvals,metadata-protocol)!: the organization-less readers of sharing rules, approval units and the seed loader retire (ADR-0131 D2/D8, 18.x step 7)
+  
+  Clause-②: yes (narrowing): a declared sharing rule served under `single` gains the `deploymentWide: true` key on the wire in place of `organization_id: null` (widening); the sharing-rule admin reads, the approval unit screen and the scoped seed pre-load stop reading rows with no organization (narrowing). A declared rule keeps applying deployment-wide; nothing an author declares is refused.
+  
+  <!-- adr-0087: not-required (no-migration-prescription) No key of any metadata schema is removed, renamed or re-shaped, so there is nothing for `objectstack migrate meta` to rewrite and no tombstone. The data migration a database with organization-less rows needs is the operator's ceremony, `os migrate organization-ownership`, stated below; the 18.x boot refusal already names it. The one wire change is a declared sharing rule's response row (`deploymentWide: true` in place of `organization_id: null`), not an authorable key. -->
+  
+  **BREAKING** — readers narrow. On a certified database (every 18.x database: a fresh install, or one the organization-ownership ceremony upgraded) none of these readers has a row left to find; they matter only to a database that still holds organization-less rows, which 18.x refuses at boot.
+  
+  - **A declared sharing rule is deployment-wide by a typed marker, never a NULL organization.** Under `single` it is served as one projection carrying `deploymentWide: true` and no `organization_id` key (was `organization_id: null`); its criteria sweep carries no tenant (the predicate ADR-0131 D8 computes under `single` is none) and each grant is stamped with its record's organization. Under `group` / `isolated` it is served once per organization, exactly as before. FROM `rule.organization_id === null` TO `rule.deploymentWide === true` for any client that told a declared rule apart by its NULL organization (`GET /api/v1/sharing/rules`, `GET /api/v1/sharing/rules/:idOrName`).
+  - **The contract names the marker.** `SharingRuleRow` (`@objectstack/spec/contracts`) declares `deploymentWide?: true`, documented: set only on a declared rule's `single` projection, which carries no `organization_id`.
+  - **A stored sharing rule with no organization sweeps nothing and grants nothing** where the deployment registers the organization object, reported once at `error` with the remedy (run the organization-ownership ceremony, or re-author the rule in its organization). A lean embedding with no organization object keeps sweeping the deployment: it has no organization to scope by.
+  - **Sharing-rule administration reads the caller's own organization only.** `listRules`, `getRule` (by id and by name), `evaluateRule` and `deleteRule` no longer reach an `organization_id = null` row for an organization-bound admin; system contexts and platform operators keep the unfiltered read. Deleting a "platform-global" rule no longer needs platform authority, because that rule class no longer exists: the guard is removed.
+  - **The approval unit screen is a strict equality.** A `department` approver resolves a `sys_business_unit` in the request's organization only (was: that organization or no organization). The ceremony attributes `sys_business_unit`, and a fresh install stamps it.
+  - **The scoped seed pre-load reads one thing: its organization's rows.** The second read that collected keys held by organization-less rows, and refused to twin or adopt them, is deleted; a scoped upsert/ignore/update issues no `organization_id IS NULL` read on any path.
+  
+  Remedy for a database that still holds organization-less rows: `os migrate organization-ownership --out PLAN`, review it, then `os migrate organization-ownership --apply --plan-file PLAN --backup-taken`.
+
+### Patch Changes
+
+- 0091d84: fix: no shipped text says the SQL driver reads organization-less rows, and the in-memory HTTP outbox no longer does
+  
+  Clause-②: no (one fix and texts: the in-memory HTTP outbox's `redeliver()` now answers as `SqlHttpOutbox` already did; no accept set, served body or error code of a shipped composition moves)
+  
+  ADR-0131 D8 retired the driver's `OR organization_id IS NULL` arm. Several shipped texts still described it as the live tenant predicate. They now state the current rule: the tenant term is `organization_id = :tenant`, or `IN (:tenants)` under the `group` posture, and nothing else. No tenant-scoped read reaches an organization-less row on a tenant table.
+  
+  - **`@objectstack/service-messaging` — fix.** `MemoryHttpOutbox.redeliver()` no longer lets a tenant-scoped caller replay a row with no organization. It answers `RESOURCE_NOT_FOUND`, as `SqlHttpOutbox` does through the driver's tenant scope (ADR-0131 D8: no layer has a NULL arm). A caller with no tenant is still unscoped. No shipped composition constructs the in-memory outbox; the messaging plugin always builds `SqlHttpOutbox`. Code that embeds `MemoryHttpOutbox` directly sees the change.
+  - **`@objectstack/service-automation`.** The `[http]` node's warning for a durable callout with no organization no longer says the `sys_http_delivery` row is "a global row every organization's redeliver door can reach". It now says no organization's redeliver door reaches that row.
+  - **`@objectstack/objectql`.** The `sys_record_share` entry of the platform-object tenancy inventory carries an updated `evidence` text.
+  - **`@objectstack/lint`.** `os explain unique/legacy-organization-composite` now says that a new row carries its organization wherever the organization object is registered. A composition that registers no organization object still writes rows whose organization column is NULL.
+  - **`@objectstack/spec`.** The TSDoc of `SharingRuleRow` no longer calls it a 1-to-1 stored shape: `deploymentWide` has no `sys_sharing_rule` column. The TSDoc of `DriverOptions.tenantIds` and of the events `organizationId` member describe the predicate without a NULL arm.
+  - **The other packages.** Code comments only.
+- 60b42cd: fix(spec,plugin-sharing): the `DataEvent.organizationId` description and the sharing-rule Organization help stop describing organization-less rows that 18.x no longer writes
+  
+  Clause-②: no (description and help text only: no response, status, outcome, boot verdict or export moves)
+  Metadata-protocol: none (a schema description and a field's help text; nothing a metadata author writes changes)
+  
+  - **`DataEvent.organizationId` (`@objectstack/spec/api`).** The description said every event on a `single`-posture deployment carries no organization, because nothing stamps the column there. Since 18.x the engine stamps every tenant row on a single-organization deployment with its Default Organization, so those events carry it. The key is now described as absent in two cases: a row of an object outside the wall, and every row of a composition that registers no organization object. The schema itself is unchanged (`z.string().min(1).optional()`).
+  - **`sys_sharing_rule.organization_id` (`@objectstack/plugin-sharing`).** The Setup help said "null = global". A stored rule always carries its organization; a rule that applies to every organization is a declared rule. The help now reads "The organization this rule belongs to.", with the translated locales updated to match.
+- 24360dc: fix(plugin-sharing): the declared-rule organization walk ends on the rows read, and a row with no readable id answers unknown; texts that still described the retired NULL-organization reading are corrected
+  
+  Clause-②: no
+  Metadata-protocol: none
+  
+  - **`@objectstack/plugin-sharing`.** The boot's organization walk for declared sharing-rule scopes (`resolveDeclaredRuleScopes`) judged "short page, stop" on the ids it kept, so a full page of `sys_organization` holding one row with no readable `id` ended the walk early and served a partial list, and the boot sweep then revoked the declared-rule grants of every organization past it. The walk now ends on the number of rows READ, and such a row makes the answer unknown: declared rules are served in no organization until the next boot and no declared rule's grant is revoked, with a warning that names the cause. Under the shipped schema every organization row has a text id, so no install is expected to see the new warning.
+  - **`@objectstack/plugin-security`.** The Organization help on `sys_user_position` and `sys_user_permission_set` no longer says an empty value means "global" or "applies in every org context". A grant or assignment applies only in its own organization, and one with no organization applies nowhere. The four locale bundles carry the new text.
+  - **`@objectstack/cli`.** `os migrate organization-ownership`'s warning about rows whose owner cannot be derived reads "…while one stays NULL, except on a table whose column is not the tenancy anchor." where it read "(but on a table …)".
+  - **`@objectstack/spec`.** Wording only, no schema moves: the upgrade guide's `driver-read-scope-follows-tenant-wall` entry names update and delete "by id or by predicate"; the `sharing-rule-declared-mirror-retired` entry no longer paraphrases ADR-0131 D13 as asking an entry of every retirement; `IEmailService`'s `organizationId` TSDoc no longer says an absent value leaves the row unstamped (the engine stamps the derivable organization or refuses the insert); a TSDoc citation in `schedule-organization.zod.ts` names the run store instead of a deleted file.
+- Updated dependencies [94842ba]
+- Updated dependencies [7cacad5]
+- Updated dependencies [df8bb40]
+- Updated dependencies [0091d84]
+- Updated dependencies [d5d8146]
+- Updated dependencies [5e9b100]
+- Updated dependencies [7532ea3]
+- Updated dependencies [fde7456]
+- Updated dependencies [b42c621]
+- Updated dependencies [de9cd1f]
+- Updated dependencies [7035682]
+- Updated dependencies [d606fc1]
+- Updated dependencies [a8b44d4]
+- Updated dependencies [78ab647]
+- Updated dependencies [73a2b52]
+- Updated dependencies [5872450]
+- Updated dependencies [9ea5afe]
+- Updated dependencies [72518d2]
+- Updated dependencies [e7befa7]
+- Updated dependencies [55d7aab]
+- Updated dependencies [5050442]
+- Updated dependencies [2b1382a]
+- Updated dependencies [644e4b2]
+- Updated dependencies [0715fac]
+- Updated dependencies [60b42cd]
+- Updated dependencies [b9a79ef]
+- Updated dependencies [63085c3]
+- Updated dependencies [0b8bce4]
+- Updated dependencies [5d2c5a1]
+- Updated dependencies [066dabc]
+- Updated dependencies [4b8f597]
+- Updated dependencies [688052e]
+- Updated dependencies [6b656bf]
+- Updated dependencies [2069b81]
+- Updated dependencies [157ebd0]
+- Updated dependencies [1862d8d]
+- Updated dependencies [30d21f6]
+- Updated dependencies [eddffc3]
+- Updated dependencies [69712d5]
+- Updated dependencies [dfe60e3]
+- Updated dependencies [e939357]
+- Updated dependencies [045858f]
+- Updated dependencies [baedcec]
+- Updated dependencies [03c12a5]
+- Updated dependencies [f8c5fb3]
+- Updated dependencies [d96f618]
+- Updated dependencies [386f60f]
+- Updated dependencies [28c9a2c]
+- Updated dependencies [2354058]
+- Updated dependencies [ba244f1]
+- Updated dependencies [edcc8ce]
+- Updated dependencies [9340181]
+- Updated dependencies [fccbd9d]
+- Updated dependencies [c8f4c43]
+- Updated dependencies [db9c02a]
+- Updated dependencies [02ad31a]
+- Updated dependencies [03966ce]
+- Updated dependencies [e3aa111]
+- Updated dependencies [863c580]
+- Updated dependencies [7f5b19d]
+- Updated dependencies [504d8b3]
+- Updated dependencies [14e7239]
+- Updated dependencies [fe0ec2b]
+- Updated dependencies [dfab597]
+- Updated dependencies [3a440b0]
+- Updated dependencies [24360dc]
+- Updated dependencies [8dfd126]
+- Updated dependencies [bda53bb]
+- Updated dependencies [b62f959]
+- Updated dependencies [d196748]
+- Updated dependencies [9d96b2b]
+- Updated dependencies [5f30f00]
+- Updated dependencies [7db1697]
+- Updated dependencies [db1c7cc]
+- Updated dependencies [f7d7403]
+  - @objectstack/core@18.1.0
+  - @objectstack/spec@18.1.0
+  - @objectstack/objectql@18.1.0
+  - @objectstack/metadata-core@18.1.0
+  - @objectstack/platform-objects@18.1.0
+  - @objectstack/formula@18.1.0
+  - @objectstack/types@18.1.0
+
 ## 18.0.0
 
 ### Minor Changes
