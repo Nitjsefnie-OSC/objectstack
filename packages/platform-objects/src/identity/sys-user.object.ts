@@ -286,6 +286,21 @@ export const SysUser = ObjectSchema.create({
           required: false,
           defaultValue: true,
         },
+        // [#25338] Optional: grant one permission set in the same step, so a
+        // new user does not sign in to a screen of refusals. Field-backed on
+        // the grant object's own `permission_set` column, so it is picked
+        // from the security catalog exactly as Setup's grant form picks it.
+        // The route writes the grant under the administrator's OWN context in
+        // the same transaction as the account: the delegated-administration
+        // gate judges it as it judges the form, and a refusal creates no user.
+        {
+          name: 'permissionSet',
+          field: 'permission_set',
+          objectOverride: 'sys_user_permission_set',
+          label: 'Permission Set',
+          required: false,
+          helpText: 'Optional. Grants this permission set to the new user, so they can open their apps on first sign-in.',
+        },
       ],
       resultDialog: {
         title: 'User Created',
@@ -301,6 +316,7 @@ export const SysUser = ObjectSchema.create({
           // phone-based users, temporaryPassword only when the server minted one.
           { path: 'user.email', label: 'Email', format: 'text' },
           { path: 'user.phoneNumber', label: 'Phone Number', format: 'text' },
+          { path: 'permissionSet', label: 'Permission Set', format: 'text' },
           { path: 'temporaryPassword', label: 'Temporary Password', format: 'secret' },
         ],
       },
