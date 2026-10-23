@@ -78,7 +78,11 @@ export {
 // because a host that binds its own engine (control-plane mocks, embedded
 // runtimes) has to be able to get the SAME ledger row rather than re-deriving
 // its shape; the action value and target-object constants travel with it for the
-// same reason a pin must not spell them by hand.
+// same reason a pin must not spell them by hand. [#25249] Such a host with no
+// organization object declares it (`bindEngine`'s `organization` extra answering
+// `no-organization-object`); left out, the service asks `sys_organization` through
+// that engine, so its rows with no organization stop answering, or, where the engine
+// does not know that object, the read throws `AuthzStoreUnavailableError`.
 export {
   buildConfigChangeAuditSink,
   CONFIG_CHANGE_ACTION,
