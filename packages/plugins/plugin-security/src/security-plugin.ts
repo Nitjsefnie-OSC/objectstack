@@ -47,6 +47,7 @@ import {
   type AccessUpgradeNotifier,
   type DeclaredSharingRuleReader,
 } from './access-upgrade-report.js';
+import { ACCESS_UPGRADE_CHECK_SERVICE, createAccessUpgradeCheck } from './access-upgrade-check.js';
 import {
   explainAccessForAsker,
   buildContextForUser,
@@ -1762,6 +1763,29 @@ export class SecurityPlugin implements Plugin {
         } catch {
           return undefined;
         }
+      }),
+    );
+
+    // [ADR-0126 §6 wall 3] The access upgrade check the marketplace door asks
+    // before it replaces an installed package: the boot report's comparison,
+    // run over the registry and over its projection with the incoming
+    // manifest, answering only what the upgrade would create. Reached as a
+    // service, so the door takes no dependency on this plugin. Its sources are
+    // resolved at every call: the engine and the metadata service are bound in
+    // `start()`. See `access-upgrade-check.ts`.
+    ctx.registerService(
+      ACCESS_UPGRADE_CHECK_SERVICE,
+      createAccessUpgradeCheck({
+        engine: () => this.ql as any,
+        metadata: () => this.metadata,
+        sharingRules: () => {
+          try {
+            const service = ctx.getService<Partial<DeclaredSharingRuleReader>>(SHARING_RULES_SERVICE);
+            return typeof service?.listDeclaredRules === 'function' ? (service as DeclaredSharingRuleReader) : undefined;
+          } catch {
+            return undefined;
+          }
+        },
       }),
     );
 
