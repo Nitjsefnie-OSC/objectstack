@@ -286,7 +286,8 @@ function selfBoundDouble(source?: typeof LEAN_ORGANIZATION_SOURCE) {
       const where = query?.where ?? {};
       const branches: Array<Record<string, unknown>> = Array.isArray(where.$or) ? where.$or : [where];
       const { $or: _or, ...rest } = where;
-      return stored.filter((r) => branches.some((b) => Object.entries({ ...rest, ...b }).every(([k, v]) => (r[k] ?? null) === (v ?? null))));
+      const hits = stored.filter((r) => branches.some((b) => Object.entries({ ...rest, ...b }).every(([k, v]) => (r[k] ?? null) === (v ?? null))));
+      return typeof query?.limit === 'number' ? hits.slice(0, query.limit) : hits;
     },
     async insert(_object: string, data: Record<string, unknown>) { stored.push({ ...data }); return { ...data }; },
     async update(_object: string, data: Record<string, unknown>, options?: any) { assertEngineUpdateDispatch(data, options); return 1; },
