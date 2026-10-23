@@ -91,7 +91,7 @@ import {
   PLATFORM_OWNER_WALL_BYPASS_EVENT,
   isVerifiedPlatformOwnerRow,
 } from './platform-owner-wall-bypass.js';
-import { isConfiguredPlatformAdminEmail, resolvePlatformAdminEmails, vetOrganizationClaim, createSecurityCatalogReader, bindSecurityCatalogReader, securityCatalogReaderOf, readDisabledCatalogNames } from '@objectstack/core';
+import { isConfiguredPlatformAdminEmail, resolvePlatformAdminEmails, vetOrganizationClaim, createSecurityCatalogReader, bindSecurityCatalogReader, securityCatalogReaderOf, readDisabledCatalogNames, readPositionGrantsInForce, countPositionHolders } from '@objectstack/core';
 // [#25223 cut 1] The leaf readers (policy collection, unresolved-posture
 // probes, field masks, field-name tables); the methods of the same names below
 // hand each body the members it reads (`ObjectInputsHost`).
@@ -169,6 +169,7 @@ import {
   type ControlledByParentWriteDenialLeg,
   type ControlledByParentWriteOutcome,
   type DelegationNarrowing,
+  type PositionGrantSummary,
   SEED_SETTLEMENT_SERVICE,
   type ISeedSettlementService,
   type SeedSettlementSnapshot,
@@ -208,6 +209,7 @@ import {
   SECURITY_PLUGIN_ID,
 } from './manifest.js';
 import { declareEveryoneBaseline, registerBuiltinPositions } from './builtin-positions.js';
+import { GUEST_POSITION } from '@objectstack/spec';
 import { registerBuiltinCapabilities } from './builtin-capabilities.js';
 
 /**
@@ -2436,6 +2438,10 @@ export class SecurityPlugin implements Plugin {
         // (`buildEffectiveObjectPermissions`). Exposed on the literal for the
         // reason above: a cross-package consumer can only reach it here.
         getEffectiveObjectPermissions: (context?: any) => this.getEffectiveObjectPermissions(context),
+        // [ADR-0131 D3/D4] Positions described as the resolver enforces them —
+        // holders and the sets in force — for the position catalog's list.
+        describePositionGrants: (positions: readonly string[], context?: any) =>
+          this.describePositionGrants(positions, context),
         // [ADR-0090 D6] First-class access explanation. Same code paths as
         // the middleware (resolution/evaluator/RLS compiler) — explained by
         // construction. Explaining ANOTHER user requires `manage_users`.
@@ -7133,6 +7139,78 @@ export class SecurityPlugin implements Plugin {
     const disabled = await readDisabledCatalogNames(this.ql, [], [...new Set(folded)]);
     if (disabled.permissions.size === 0) return resolved;
     return resolved.filter((ps) => !disabled.permissions.has((ps as any)?.name));
+  }
+
+  /**
+   * [ADR-0131 D3/D4] `ISecurityService.describePositionGrants` — each position
+   * as the resolver enforces it for a holder, for the position catalog's list.
+   *
+   * ## The sets, from the enforcement path
+   *
+   * A holder of position P is granted, through P, two things, each read where
+   * the resolver reads it — ⛔ never a second copy of either rule:
+   *
+   *  1. the sets P's DEFINITION names, in force — `@objectstack/core`'s
+   *     `readPositionGrantsInForce`, the reading §6a/§6b of
+   *     `resolveUserAuthzGrants` takes (a switched-off position grants
+   *     nothing; a switched-off set, or a name the catalog holds no set for, is
+   *     not granted). These arrive here as a context's `permissions`;
+   *  2. the set that shares P's NAME — the position-name fold of
+   *     {@link resolvePermissionSetsForContextUnmemoized}, requested by the same
+   *     evaluator call and judged by the same {@link dropDeactivatedFoldedSets}.
+   *     Never for `guest`: the guest envelope requests no position.
+   *
+   * So each position's sets are this resolver's request for a holder of that
+   * position ALONE: the baseline and every other grant left out, and nothing
+   * reported ({@link reportNameFoldCollisions} is the request path's, and an
+   * admin reading the list is not a holder resolving). A set is `via:
+   * 'definition'` when the definition names it, else `via: 'name'`.
+   *
+   * ## The holders
+   *
+   * `countPositionHolders` in `@objectstack/core`, over the caller's active
+   * organization, by the rule the resolver projects a caller's positions by.
+   * The count discloses who holds what in the organization, so it is served only
+   * to a caller who may read the assignment rows themselves
+   * ({@link canReadObject} on `sys_user_position`, the read the position page's
+   * holder list makes); anyone else is told `null`, never `0`.
+   *
+   * A read that fails throws: the caller serves no description, never an
+   * invented one.
+   */
+  private async describePositionGrants(
+    positions: readonly string[],
+    context?: any,
+  ): Promise<PositionGrantSummary[]> {
+    const names = positions.filter((n): n is string => typeof n === 'string' && n !== '');
+    const { inForce, disabledPositions } = await readPositionGrantsInForce(this.ql, names);
+    const tenantId = typeof context?.tenantId === 'string' && context.tenantId !== '' ? context.tenantId : undefined;
+    const holders = tenantId && await this.canReadObject('sys_user_position', context)
+      ? await countPositionHolders(this.ql, tenantId, names)
+      : new Map<string, number>();
+    const summaries: PositionGrantSummary[] = [];
+    for (const position of names) {
+      const permissionSets: PositionGrantSummary['permissionSets'] = [];
+      if (!disabledPositions.has(position)) {
+        const declared = inForce.get(position) ?? [];
+        const folded = position === GUEST_POSITION ? [] : [position];
+        let resolved = await this.permissionEvaluator.resolvePermissionSets(
+          [...folded, ...declared.filter((n) => !folded.includes(n))],
+          this.metadata,
+          this.bootstrapPermissionSets,
+          this.dbLoaderForContext(context),
+          { logger: this.logger },
+        );
+        resolved = await this.dropDeactivatedFoldedSets(folded, declared, [], resolved);
+        for (const set of resolved) {
+          const name = (set as any)?.name;
+          if (typeof name !== 'string' || permissionSets.some((p) => p.name === name)) continue;
+          permissionSets.push({ name, via: declared.includes(name) ? 'definition' : 'name' });
+        }
+      }
+      summaries.push({ position, holderCount: holders.get(position) ?? null, permissionSets });
+    }
+    return summaries;
   }
 
   /**

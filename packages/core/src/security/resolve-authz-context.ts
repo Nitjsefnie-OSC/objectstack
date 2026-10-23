@@ -57,6 +57,7 @@ import {
   ADMIN_FULL_ACCESS,
   ADMIN_FULL_ACCESS_CAPABILITIES,
   GUEST_POSITION,
+  EVERYONE_POSITION,
   ORGANIZATION_ADMIN_GRANTS,
 } from '@objectstack/spec';
 import { SystemObjectName } from '@objectstack/spec/system';
@@ -1301,7 +1302,9 @@ export async function readPositionGrantsInForce(
  * organization `tenantId` — the principals whose own rows give them the name by
  * {@link heldPositionNames}, the rule {@link resolveUserAuthzGrants} projects a
  * caller's positions by, counted over the organization's `sys_member` and
- * `sys_user_position` rows. `everyone` is held by every active member.
+ * `sys_user_position` rows. `everyone` is held by every active member. Holding
+ * is the assignment: a position the activation ledger switched off keeps its
+ * holders (ADR-0049) and grants them nothing ({@link readPositionGrantsInForce}).
  *
  * A position is ABSENT from the answer when no count is a fact about it: the
  * derived `platform_admin` (held through a grant's standing, not a row) and
@@ -1345,7 +1348,7 @@ export async function countPositionHolders(
     const memberRows = membersByUser.get(userId) ?? [];
     const held = heldPositionNames(memberRows, positionRowsByUser.get(userId) ?? [], tenantId, nowMs);
     // §5b: every authenticated member holds the `everyone` audience anchor.
-    if (memberRows.some((m) => isGrantActive(m, nowMs))) held.push('everyone');
+    if (memberRows.some((m) => isGrantActive(m, nowMs))) held.push(EVERYONE_POSITION);
     for (const name of held) {
       if (!wanted.has(name)) continue;
       if (!holders.has(name)) holders.set(name, new Set());
