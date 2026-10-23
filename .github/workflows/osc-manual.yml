@@ -1,0 +1,273 @@
+name: osc-manual
+
+# Fork-only exact-ref validation. This file is intentionally not sent upstream.
+# Mirrors upstream ci.yml's per-PR fast set (Build Core, Test Core, Build Docs)
+# on any target ref. A dispatch has no diff base, so Test Core runs the FULL
+# package list (the same semantics upstream gives its workflow_dispatch runs).
+# Loud skip, stated once here: upstream-only guard steps (shard attestation,
+# timing-drift check, test-completeness gate) and the main-only Dogfood job are
+# not replicated on the fork; every shard prints that in its closing step.
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_ref:
+        description: "Branch, tag, or SHA of this fork to test"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: osc-manual-objectstack-${{ inputs.target_ref }}
+  cancel-in-progress: true
+
+env:
+  OS_TEST_TIERS: queue
+
+jobs:
+  resolve:
+    runs-on: ubuntu-latest
+    outputs:
+      commit: ${{ steps.pin.outputs.commit }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          repository: Nitjsefnie-OSC/objectstack
+          ref: ${{ inputs.target_ref }}
+      - id: pin
+        run: |
+          echo "commit=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          echo "Tested commit: $(git rev-parse HEAD) (resolved from target_ref '${{ inputs.target_ref }}')"
+
+  build-core:
+    name: Build Core
+    needs: resolve
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          repository: Nitjsefnie-OSC/objectstack
+          ref: ${{ needs.resolve.outputs.commit }}
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+      - uses: ./.github/actions/setup-pnpm
+      - name: Get pnpm store directory
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+      - name: Setup pnpm store cache
+        uses: actions/cache@v6
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-v3-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-v3-
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Build packages (excluding docs)
+        env:
+          TURBO_CACHE: 'local:rw'
+        run: pnpm build
+      - name: Sweep the built closure for vanished declarations
+        run: pnpm check:dts-closure
+      - name: Every published require entry point actually loads
+        run: pnpm check:dual-build-cjs-loads
+      - name: No published source map embeds source text
+        run: pnpm check:sourcemap-no-sources-content
+      - name: The lean engine entry loads no forbidden package
+        run: pnpm check:lean-entry-closure
+      - name: Analyze bundle size
+        run: pnpm --filter @objectstack/spec analyze
+
+  build-docs:
+    name: Build Docs
+    needs: resolve
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          repository: Nitjsefnie-OSC/objectstack
+          ref: ${{ needs.resolve.outputs.commit }}
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+      - uses: ./.github/actions/setup-pnpm
+      - name: Get pnpm store directory
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+      - name: Setup pnpm store cache
+        uses: actions/cache@v6
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-v3-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-v3-
+      - name: Setup Next.js cache
+        uses: actions/cache@v6
+        with:
+          path: apps/docs/.next/cache
+          key: ${{ runner.os }}-nextjs-${{ hashFiles('**/pnpm-lock.yaml') }}-${{ hashFiles('apps/docs/**.[jt]s', 'apps/docs/**.[jt]sx', 'content/**/*.mdx') }}
+          restore-keys: |
+            ${{ runner.os }}-nextjs-${{ hashFiles('**/pnpm-lock.yaml') }}-
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Build Docs (the command production runs)
+        working-directory: apps/docs
+        env:
+          TURBO_FORCE: 'true'
+        run: |
+          set -euo pipefail
+          BUILD_COMMAND="$(node -p "JSON.parse(require('node:fs').readFileSync('vercel.json','utf8')).buildCommand || ''")"
+          if [ -z "$BUILD_COMMAND" ]; then
+            echo "::error file=apps/docs/vercel.json::No buildCommand in apps/docs/vercel.json. This gate cannot know what production runs and refuses to guess."
+            exit 1
+          fi
+          echo "Production build command (apps/docs/vercel.json): $BUILD_COMMAND"
+          eval "$BUILD_COMMAND"
+      - name: Assert the docs app actually built
+        run: |
+          set -euo pipefail
+          if [ ! -f apps/docs/.next/BUILD_ID ]; then
+            echo "::error file=apps/docs/vercel.json::The production build command exited 0 but produced no apps/docs/.next/BUILD_ID - nothing was built."
+            exit 1
+          fi
+          echo "Built docs app: BUILD_ID=$(cat apps/docs/.next/BUILD_ID)"
+
+  test-core:
+    name: Test Core (${{ matrix.shard }}/6)
+    needs: resolve
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4, 5, 6]
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          repository: Nitjsefnie-OSC/objectstack
+          ref: ${{ needs.resolve.outputs.commit }}
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+      - uses: ./.github/actions/setup-pnpm
+      - name: Get pnpm store directory
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+      - name: Setup pnpm store cache
+        uses: actions/cache@v6
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-v3-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-v3-
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Compute this shard's package set (full list; a dispatch has no diff base)
+        env:
+          OS_SHARD_EVENT_NAME: workflow_dispatch
+          OS_SHARD_PUSH_BEFORE_SHA: ''
+          OS_SHARD_PR_BASE_REF: ''
+          OS_SHARD_PR_PINNED_BASE_SHA: ''
+          OS_SHARD_MERGE_GROUP_BASE_SHA: ''
+        run: |
+          bash scripts/ci/select-shard-packages.sh
+          node scripts/partition-test-shards.mjs "$RUNNER_TEMP/turbo-ls.json" \
+            --shard ${{ matrix.shard }}/6 --exclude @objectstack/dogfood \
+            > "$RUNNER_TEMP/shard-packages.txt"
+          echo 'Items on this shard:'
+          cat "$RUNNER_TEMP/shard-packages.txt"
+      - name: Build this shard's dependency closure
+        env:
+          TURBO_CACHE: 'local:rw'
+        run: |
+          FILTERS=""
+          if [ -s "$RUNNER_TEMP/shard-packages.txt" ]; then
+            while read -r PKG _; do
+              [ -n "$PKG" ] || continue
+              FILTERS="$FILTERS --filter=$PKG^..."
+            done < "$RUNNER_TEMP/shard-packages.txt"
+          fi
+          if [ -z "$FILTERS" ]; then
+            echo "No packages on this shard — nothing to build."
+            exit 0
+          fi
+          mkdir -p "$RUNNER_TEMP/stall-reports"
+          node scripts/run-with-stall-guard.mjs --log "$RUNNER_TEMP/test-core-closure-build.log" --stall-minutes 10 --report-dir "$RUNNER_TEMP/stall-reports" \
+            -- pnpm turbo run build $FILTERS --concurrency=4 --log-order=stream
+      - name: Build the sliced package's dependency closure
+        env:
+          TURBO_CACHE: 'local:rw'
+        run: |
+          if [ ! -s "$RUNNER_TEMP/shard-packages.txt" ]; then
+            echo "No packages on this shard — nothing to build."
+            exit 0
+          fi
+          while read -r PKG SLICE; do
+            [ -n "$PKG" ] || continue
+            [ -n "$SLICE" ] || continue
+            echo "Slice $PKG=$SLICE — building its dependency closure with no passthrough."
+            LOG="$RUNNER_TEMP/test-core-slice-build-$(printf '%s' "$PKG" | tr -c 'A-Za-z0-9' '-').log"
+            mkdir -p "$RUNNER_TEMP/stall-reports"
+            node scripts/run-with-stall-guard.mjs --log "$LOG" --stall-minutes 10 --report-dir "$RUNNER_TEMP/stall-reports" \
+              -- pnpm turbo run build "--filter=$PKG" --concurrency=4 --log-order=stream
+          done < "$RUNNER_TEMP/shard-packages.txt"
+      - name: Run this shard's tests
+        run: |
+          if [ ! -s "$RUNNER_TEMP/shard-packages.txt" ]; then
+            echo "No packages on this shard — nothing to test."
+            exit 0
+          fi
+          export VITEST_MAX_WORKERS="$(node scripts/vitest-worker-cap.mjs)"
+          FILTERS=""
+          SLICES=""
+          while read -r PKG SLICE; do
+            [ -n "$PKG" ] || continue
+            if [ -n "$SLICE" ]; then
+              SLICES="$SLICES $PKG=$SLICE"
+            else
+              FILTERS="$FILTERS --filter=$PKG"
+            fi
+          done < "$RUNNER_TEMP/shard-packages.txt"
+          STATUS=0
+          LOGS=""
+          for LEG in __whole__ $SLICES; do
+            if [ "$LEG" = __whole__ ]; then
+              [ -n "$FILTERS" ] || continue
+              LOG="$RUNNER_TEMP/test-core-packages.log"
+              set -- pnpm turbo run test test:repo $FILTERS --concurrency=4 --continue=dependencies-successful --log-order=stream
+            else
+              PKG="${LEG%%=*}"
+              SLICE="${LEG#*=}"
+              LOG="$RUNNER_TEMP/test-core-slice-$(printf '%s' "$PKG" | tr -c 'A-Za-z0-9' '-').log"
+              set -- env "OS_TEST_SHARD=$SLICE" pnpm turbo run test "--filter=$PKG" --concurrency=4 --continue=dependencies-successful --log-order=stream
+            fi
+            LOGS="$LOGS $LOG"
+            mkdir -p "$RUNNER_TEMP/stall-reports"
+            node scripts/run-with-stall-guard.mjs --log "$LOG" --stall-minutes 10 --report-dir "$RUNNER_TEMP/stall-reports" \
+              -- "$@" || {
+              CODE=$?
+              if [ "$STATUS" -eq 0 ]; then STATUS=$CODE; fi
+            }
+          done
+          for LOG in $LOGS; do
+            if [ -f "$LOG" ]; then
+              echo "=== $LOG ==="
+              cat "$LOG"
+            fi
+          done
+          exit $STATUS
+      - name: Loud skip notice (upstream-only guards not replicated here)
+        if: always()
+        run: |
+          echo "osc-manual: shard ${{ matrix.shard }}/6 done. Upstream-only steps not run on the fork: shard attestation, timing-drift check, test-completeness gate, test leftovers report."
