@@ -172,10 +172,10 @@ describe('standalone-action owner key — one spelling in @objectstack/objectql 
 const DELETED_PLUGIN_MEMBER = 'actionObjectKey';
 
 /**
- * The live spelling that replaced it. Used as the scan's reach control below —
- * it is the one symbol guaranteed to sit in both scanned roots for as long as
- * the convergence holds, and if it ever stops doing so this pin should say so
- * loudly rather than quietly stop reaching.
+ * The live spelling that replaced it. Used as the scan's reach control below:
+ * its presence in ObjectQL, CLI and runtime under `packages/` checks cross-package
+ * reach. If those sites disappear, this pin should say so loudly rather than
+ * quietly stop reaching.
  */
 const CANONICAL_HELPER = 'standaloneActionOwnerKey';
 
@@ -252,8 +252,8 @@ const PACKAGE_ROOT = findUp((dir) => {
  * that ci.yml's `crosspkg:` filter would then have to carry. Anchoring off the
  * manifest keeps this pin's declared radius inside roots that already exist.
  *
- * The arithmetic is not trusted on faith — the reach test below fails on any
- * wrong root, because no wrong root can see both scanned trees.
+ * The reach test checks this root by requiring files in ObjectQL, CLI and
+ * runtime under `packages/`.
  */
 const REPO_ROOT = resolve(PACKAGE_ROOT, '../..');
 
@@ -267,11 +267,11 @@ const SCANNED_EXTENSION = '.ts';
 const SCANNED_PATHSPECS = SCANNED_ROOTS.map((root) => `:(glob)${root}/**/*${SCANNED_EXTENSION}`);
 
 /**
- * Generous on purpose. The scan is one `git grep` and a handful of file reads —
- * tens of milliseconds — so this is not a budget, it is headroom against a
- * merge-queue runner doing a full monorepo build at the same time. A pin that
- * times out before its assertion runs reports nothing, and reporting nothing is
- * indistinguishable from finding nothing.
+ * The scan hook's budget includes headroom for a merge-queue runner doing a
+ * full monorepo build at the same time. One extension-scoped `git grep` feeds
+ * the shared result used by both tree assertions. A pin that times out before
+ * its assertion runs reports nothing, and reporting nothing is indistinguishable
+ * from finding nothing.
  */
 const SCAN_TIMEOUT_MS = 60_000;
 
@@ -379,7 +379,7 @@ describe('standalone-action owner key — the deleted member is dead TREE-WIDE (
     );
 
     it(
-        'the scan reaches both roots and can see the name it hunts',
+        'the scan reaches across packages/ and can see the name it hunts',
         () => {
             // Anti-vacuity, at both stages a tree scan can go silently blind.
             //

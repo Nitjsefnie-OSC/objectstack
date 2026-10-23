@@ -69,11 +69,10 @@
  * identifiers as FIXED STRINGS, which is a provably exact superset of what
  * `declarationMatcher()` can match (the regex cannot match text that lacks the literal
  * identifier), so no judgement moves into git's regex dialect — the JS regex
- * below remains the sole authority on what counts as a declaration. Reading only
- * the handful of files that mention a symbol, rather than all ~3,600, is also
- * what removes the timeout exposure: one `git grep` process instead of ~3,600
- * sequential `readFileSync` round-trips, which is the part that degrades
- * non-linearly when a runner is I/O-saturated.
+ * below remains the sole authority on what counts as a declaration. One
+ * extension-scoped `git grep` supplies the shared prefilter result; only files
+ * that mention a symbol are read for declaration matching. The scan hook's
+ * budget still applies when the runner is busy.
  */
 
 import { execFileSync } from 'node:child_process';
@@ -111,7 +110,7 @@ const HELPER_SYMBOL = 'withoutOperationPrivateKeys';
  * a docblock line begins with ` * `, and a string-literal or regex-source line
  * begins with something other than `const`/`let`/`var`/`function` followed by a
  * guarded name. That property is load-bearing, so it is asserted rather than
- * trusted — see the last test.
+ * trusted — see "this pin quotes both symbols without declaring them".
  *
  * Returned as a FRESH regex per call, never shared. A `/g` regex carries
  * `lastIndex` across calls, so one shared instance makes the result depend on
@@ -125,11 +124,10 @@ const declarationMatcher = (): RegExp =>
   /^\s*(?:export\s+)?(?:const|let|var|function)\s+(OPERATION_PRIVATE_KEY_PREFIX|withoutOperationPrivateKeys)\b\s*[=(<]/gm;
 
 /**
- * Generous on purpose (#7706). The scan costs tens of milliseconds, so this is
- * not a budget — it is headroom against a merge-queue runner that is doing a
- * full monorepo build at the same time. The default 5s was the whole failure:
- * the pin timed out before the assertion ran, and a pin that reports nothing is
- * indistinguishable from a pin that found nothing.
+ * The scan hook's budget includes headroom for a merge-queue runner doing a
+ * full monorepo build at the same time. The earlier filesystem crawl (#7706)
+ * timed out under the default test budget before its assertion ran. A pin that
+ * reports nothing is indistinguishable from a pin that found nothing.
  */
 const SCAN_TIMEOUT_MS = 60_000;
 
