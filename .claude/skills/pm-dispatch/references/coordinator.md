@@ -32,11 +32,11 @@
 - 改技能(协议语义面)的卡恒契约复审档 `CONTRACT_REVIEW_TIER`;⛔ 不抄模型名。
 - 席位请线程附维护者原话,coordinator 开线程那一笔同设 model 与 effort(`dispatch-runbook.md`)。
 
-## 五、裁决线程(coordinator 收到卡线程 `needs_decision` 时读)
+## 五、卡线程的 `needs_decision`(coordinator 收到时读;席位写分析时读)
 
-- 规则一处:`lanes/director.md` 项目内代裁通道;本文只指不抄。裁决线程档位同上节。
-- 裁决线程不占卡线程槽位。
-- 代裁台账在 GitHub:卡上裁决评论是记录,总监摘要台账照 `lanes/director.md`;⛔ 不落项目文件。
+- 规则一处:`lanes/director.md` 与 `dispatch-runbook.md` 卡线程节;本文只指不抄。
+- 席位写四维分析加推荐,卡并入决裁批次由维护者人工裁;⛔ 无裁决线程、无代裁。
+- 等裁的卡线程不占槽(见第三节);裁决记录 = 卡上裁决评论,⛔ 不落项目文件或记忆。
 
 ## 六、额度压力(coordinator 每次开线程前读)
 
