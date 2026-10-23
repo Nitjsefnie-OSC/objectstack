@@ -141,6 +141,75 @@ jobs:
           fi
           echo "Built docs app: BUILD_ID=$(cat apps/docs/.next/BUILD_ID)"
 
+  lint-eslint:
+    name: Lint (eslint)
+    needs: resolve
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          repository: Nitjsefnie-OSC/objectstack
+          ref: ${{ needs.resolve.outputs.commit }}
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+      - uses: ./.github/actions/setup-pnpm
+      - name: Get pnpm store directory
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+      - name: Setup pnpm store cache
+        uses: actions/cache@v6
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-v3-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-v3-
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: ESLint (the repo's only style authority)
+        run: pnpm lint
+
+  typecheck:
+    name: TypeScript Type Check
+    needs: resolve
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          repository: Nitjsefnie-OSC/objectstack
+          ref: ${{ needs.resolve.outputs.commit }}
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+      - uses: ./.github/actions/setup-pnpm
+      - name: Get pnpm store directory
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+      - name: Setup pnpm store cache
+        uses: actions/cache@v6
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-v3-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-v3-
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      # tsc reads the built workspace declarations (AGENTS.md's stale-artifact
+      # table): build before typechecking, exactly as the required upstream
+      # lane does on a fresh checkout.
+      - name: Build the workspace
+        env:
+          TURBO_CACHE: 'local:rw'
+        run: pnpm build
+      - name: Typecheck every package
+        run: pnpm typecheck
+
   test-core:
     name: Test Core (${{ matrix.shard }}/6)
     needs: resolve
