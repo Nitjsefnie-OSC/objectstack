@@ -1240,7 +1240,12 @@ export const CEILINGS = new Map([
   ['.claude/skills/pm-dispatch/references/seat-lifecycle.md', 96],
   ['.claude/skills/pm-dispatch/references/reading-discipline.md', 37],
   ['.claude/skills/pm-dispatch/references/cross-repo-coordination.md', 51],
-  ['.claude/skills/pm-dispatch/references/triage-duties.md', 120],
+  // Lowered 120 → 107 by the maintainer's revocation of every autonomous-
+  // adjudication channel: the delegated-adjudication lane, its confidence gate
+  // and the first-class self-ruling gate left; what remains says a seat
+  // analyses and recommends and the maintainer rules. Landed count, headroom 0,
+  // same convention (lowering is always legitimate).
+  ['.claude/skills/pm-dispatch/references/triage-duties.md', 107],
   // execution-duties.md, raised 183 → 185 by the split-off-card ruling — an
   // ORDINARY raise, ⛔ not a cross-file move (card #23579). The text is two rule
   // lines beside the derived-sub-issue rules in 〈候选与批次〉: a queued card found
@@ -1392,7 +1397,10 @@ export const CEILINGS = new Map([
   // 「各条规则的出处叙事、事故复盘 根本不重要啊，不需要写入skills啊」) — provenance dates,
   // ruling citations and incident narrative left; every rule stayed. Landed count,
   // headroom 0, same convention (lowering is always legitimate).
-  ['.claude/skills/pm-dispatch/references/lanes/director.md', 72],
+  // Lowered 72 → 70 by the same revocation: the in-project delegated-ruling
+  // channel and its standing order left; `needs_decision` joins the ruling
+  // batch the maintainer rules by hand. Landed count, headroom 0, same convention.
+  ['.claude/skills/pm-dispatch/references/lanes/director.md', 70],
   // Triage seat charter (maintainer ruling: the triage seat stays single; pickup
   // alternates between the two multi-lane repos, oldest-first inside a repo, with a
   // 4-hour starvation guard). A seat charter is read per seat session like every
