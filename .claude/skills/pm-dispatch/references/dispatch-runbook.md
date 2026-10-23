@@ -112,7 +112,7 @@
 - 同时带 `outcome_branch`(= 认领分支)、显式 `model`(trigger 流不可指模型)、`title`。
 - `title` 以车道名开头,⛔ 不叫 os-dev,形如 `⚡ <车道> #<单号> <短语>`。
 - 二、派发词必带自驱条款:云会话回合一结束即停摆等 poke。
-- ⛔ 不为提问或中期汇报结束回合;开放选择按裁决与评估轴自裁,记入终报 `open_questions`。
+- ⛔ 不为提问或中报结束回合;实现取舍自定记入 `open_questions`;碰产品行为/契约报 fork。
 - 合法回合终点只有两个:推送完成加终报,或硬阻塞详报。
 - 三、交付通道:dev 自开 draft PR(`Fixes #<n>` 只写正文,`partof-closing-keyword` RULE 2,含验证记录)。
 - 未 attach 的姊妹仓够不着,跨仓跟进卡由 PM 代立。
