@@ -4712,6 +4712,11 @@
       "pinned": 1
     },
     {
+      "file": "packages/services/service-settings/src/settings-organization-reach.pin.test.ts",
+      "verb": "update",
+      "pinned": 1
+    },
+    {
       "file": "packages/services/service-settings/src/settings-secret-rotation.test.ts",
       "verb": "update",
       "pinned": 2

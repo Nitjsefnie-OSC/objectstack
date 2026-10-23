@@ -27,7 +27,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { isAuthzStoreUnavailableError, ObjectKernel } from '@objectstack/core';
-import { ObjectQL } from '@objectstack/objectql';
+import { assertEngineUpdateDispatch, ObjectQL } from '@objectstack/objectql';
 import { SysOrganization, SysUser } from '@objectstack/platform-objects/identity';
 import { SysPlatformSetting, SysSetting } from '@objectstack/platform-objects/system';
 import { SettingsServicePlugin, wrapEngineAsSettingsEngine } from './settings-service-plugin.js';
@@ -289,7 +289,7 @@ function selfBoundDouble(source?: typeof LEAN_ORGANIZATION_SOURCE) {
       return stored.filter((r) => branches.some((b) => Object.entries({ ...rest, ...b }).every(([k, v]) => (r[k] ?? null) === (v ?? null))));
     },
     async insert(_object: string, data: Record<string, unknown>) { stored.push({ ...data }); return { ...data }; },
-    async update() { return 1; },
+    async update(_object: string, data: Record<string, unknown>, options?: any) { assertEngineUpdateDispatch(data, options); return 1; },
   };
   const service = new SettingsService({ env: {} });
   service.registerManifest(MANIFEST);
