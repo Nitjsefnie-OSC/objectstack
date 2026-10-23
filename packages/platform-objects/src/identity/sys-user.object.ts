@@ -967,13 +967,14 @@ export const SysUser = ObjectSchema.create({
       defaultValue: false,
       readonly: true, // ADR-0092 — a licensed-seat grant; flows through the AiSeatPlugin enforcement path
       group: 'Admin',
+      // The framework synthesizes the `ai_seat` capability from this flag
+      // (plugin-hono-server resolveCtx); the seat cap is enforced by
+      // @objectstack/security-enterprise AiSeatPlugin. Owned by objectql
+      // (better-auth is oblivious to this column).
       description:
-        'Whether this user holds an AI seat — grants access to the in-UI AI ' +
-        'agents (build / ask). The framework synthesizes the `ai_seat` ' +
-        'capability from this flag (plugin-hono-server resolveCtx). Assignment ' +
-        'is capped by the licensed / purchased seat count (enforced by ' +
-        '@objectstack/security-enterprise AiSeatPlugin). Owned by objectql ' +
-        '(better-auth is oblivious to this column).',
+        'Whether this user holds an AI seat, which gives access to the AI ' +
+        'assistants in the app (build and ask). How many users can hold one ' +
+        'is limited by the seats your license includes.',
     }),
 
     // ── Profile ──────────────────────────────────────────────────
@@ -1033,9 +1034,8 @@ export const SysUser = ObjectSchema.create({
       maxLength: 35,
       group: 'Profile',
       description:
-        'Preferred language for notifications, as a BCP-47 tag (e.g. zh-CN, ja-JP). ' +
-        'Read per recipient at delivery time; when unset the deployment default applies. ' +
-        'Owned by objectql (better-auth is oblivious to this column).',
+        'Preferred language for this user\'s notifications, as a language tag such as zh-CN or ja-JP. ' +
+        'When unset, the deployment\'s default language applies.',
     }),
 
     // ── Organization ─────────────────────────────────────────────
