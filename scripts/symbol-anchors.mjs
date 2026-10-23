@@ -389,8 +389,9 @@ const LINE_SPEC = '\\d+(?:\\s*[-–—]\\s*\\d+)?(?:\\s*[,/]\\s*\\d+(?:\\s*[-–
  * colon. ⛔ Tight, exactly as the tilde: a comma followed by a SPACE is a list
  * or a count after a file name (a test file, a comma, a space, `12 cases`), and
  * the loose form was measured to admit three such counts in that ledger. The
- * tight form was measured over all five registered corpora before it became a
- * row for every corpus, not an option: 11 hits, all in the checklist's
+ * tight form was measured over all five registered corpora, on `7b047b4483`
+ * in this repository, before it became a row for every corpus rather than an
+ * option: 11 hits, all in the checklist's
  * `FOLLOW-UPS.md`, and ZERO in `docs/adr/**`, `scripts/**`,
  * `packages/spec/src/**` and the `isSystem` census page -- so nothing that
  * passed anywhere else can start failing on this row alone, and a citation
@@ -485,11 +486,13 @@ const PATHLESS_L_CITATION = new RegExp('(?<![A-Za-z0-9_])~?L(\\d{2,}(?:-\\d+)?)(
  * until a hand sweep re-pointed it, and nothing would have stopped the next.
  *
  * ⛔ Its OWN declaration, and default OFF, both as MEASUREMENTS. Taken on
- * `7b047b4483` in this repository, the tight shape below reads 6 tokens across
- * the four corpora that do not declare it: four in `scripts/**` comment prose
- * (three durations or counts and one approximate month) and two in
- * `docs/adr/**` (one count, one dated read position in a record's prose). In
- * prose it is a quantity first; in the checklist's data it is a line pin.
+ * `7b047b4483` in this repository with the option forced on, it reads 5
+ * tokens across the four corpora that do not declare it: three in `scripts/**`
+ * comment prose, every one a duration or a count, and two in `docs/adr/**`,
+ * one a count and one a dated read position in a record's prose. An
+ * approximate month in `scripts/**` matched the shape and is refused by the
+ * ascending rule below. In prose it is a quantity first; in the checklist's
+ * data it is a line pin.
  *
  * ⚠️ The shape is tight for the same reason the path-less colon form is: with
  * no path in front of it the boundaries ARE the safety margin. No whitespace
