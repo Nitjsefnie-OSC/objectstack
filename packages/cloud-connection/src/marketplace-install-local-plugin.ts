@@ -348,8 +348,9 @@ const ACCESS_UPGRADE_CONFIRMATION_STATUS = 409;
 /**
  * [ADR-0126 §6 wall 3] The service plugin-security registers the access
  * upgrade check under — asked as a capability question, so this package takes
- * no dependency on plugin-security. A composition without it enforces no
- * access item a rename could re-enable, and the door says so once per upgrade.
+ * no dependency on plugin-security. Without it, a re-install is not checked
+ * against the access choices it could un-make, and the door says so once per
+ * upgrade.
  */
 const ACCESS_UPGRADE_CHECK_SERVICE = 'security.accessUpgradeCheck';
 
@@ -2417,9 +2418,9 @@ export class MarketplaceInstallLocalPlugin implements Plugin {
      * plugin's access upgrade check what replacing the installed package with
      * `converted` would un-make, and decide.
      *
-     * - **No check service**: the composition enforces no access item a rename
-     *   could re-enable. The upgrade proceeds, and one `warn` line says no
-     *   check ran.
+     * - **No check service** (no security plugin composed): the re-install is
+     *   not checked against the access choices it could un-make. The upgrade
+     *   proceeds, and one `warn` line says no check ran.
      * - **Stopped** (a store the comparison reads did not answer, or the check
      *   threw): `503 SERVICE_UNAVAILABLE`, nothing written. A comparison that
      *   did not run is never taken for "no finding".
@@ -2446,8 +2447,8 @@ export class MarketplaceInstallLocalPlugin implements Plugin {
         if (typeof checker?.check !== 'function') {
             ctx.logger?.warn?.(
                 `[MarketplaceInstallLocal] upgrade of ${manifestId}: no access upgrade check ran — this composition has no `
-                + `'${ACCESS_UPGRADE_CHECK_SERVICE}' service (the security plugin), so it enforces no switch-off or clone `
-                + 'an upgrade could un-make. Compose the security plugin to have upgrades checked.',
+                + `'${ACCESS_UPGRADE_CHECK_SERVICE}' service (the security plugin), so this re-install is not checked `
+                + 'against the access choices it could un-make. Compose the security plugin to have upgrades checked.',
             );
             return {};
         }
