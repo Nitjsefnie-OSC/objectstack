@@ -20,7 +20,7 @@
 import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
-import { describe, it, expect } from 'vitest';
+import { beforeAll, describe, it, expect } from 'vitest';
 import { GLOBAL_ACTION_OBJECT_KEY, standaloneActionOwnerKey } from './action-governance.js';
 
 /** Rung 1 exactly as `action-governance.ts` writes it. */
@@ -263,6 +263,9 @@ const SCANNED_ROOTS: readonly string[] = ['packages'];
 /** Spelled once so the declared glob and the scan stay in correspondence. */
 const SCANNED_EXTENSION = '.ts';
 
+/** Match the judged extension in git itself, before any file bytes are read. */
+const SCANNED_PATHSPECS = SCANNED_ROOTS.map((root) => `:(glob)${root}/**/*${SCANNED_EXTENSION}`);
+
 /**
  * Generous on purpose. The scan is one `git grep` and a handful of file reads —
  * tens of milliseconds — so this is not a budget, it is headroom against a
@@ -290,27 +293,39 @@ function git(args: string[]): string[] {
     return stdout.split('\0').filter((entry) => entry.length > 0);
 }
 
-/**
- * Every scanned file that so much as mentions `symbol`.
- *
- * Tracked files PLUS untracked ones with ignored paths excluded (`--untracked`)
- * — i.e. exactly the files a human authored, never build output. A file written
- * but not yet `git add`ed still reddens, which is what makes this a local-loop
- * guard rather than something you find out about in the merge queue.
- */
-function filesMentioning(symbol: string): string[] {
-    return git([
+/** The deleted member and the live spelling used by the reach control. */
+const HUNTED_SYMBOLS = [DELETED_PLUGIN_MEMBER, CANONICAL_HELPER];
+
+/** One shared scan: tracked plus untracked authored `.ts` files, ignored paths excluded. */
+function scanTree(): ReadonlyMap<string, readonly string[]> {
+    const candidates = git([
         'grep',
         '--files-with-matches',
         '-z',
         '--untracked',
         '--text',
         '--fixed-strings',
-        '-e',
-        symbol,
+        ...HUNTED_SYMBOLS.flatMap((symbol) => ['-e', symbol]),
         '--',
-        ...SCANNED_ROOTS,
-    ]).filter((file) => file.endsWith(SCANNED_EXTENSION));
+        ...SCANNED_PATHSPECS,
+    ]);
+    const mentions = new Map<string, string[]>(HUNTED_SYMBOLS.map((symbol) => [symbol, []]));
+    for (const file of candidates) {
+        const text = readFileSync(join(REPO_ROOT, file), 'utf8');
+        for (const [symbol, files] of mentions) {
+            if (text.includes(symbol)) files.push(file);
+        }
+    }
+    return mentions;
+}
+
+/** Filled once before the tree assertions, so the reach control judges the same scan. */
+let treeScan: ReadonlyMap<string, readonly string[]>;
+
+function filesMentioning(symbol: string): readonly string[] {
+    const files = treeScan.get(symbol);
+    if (!files) throw new Error(`${symbol} is not one of the tree scan's hunted symbols.`);
+    return files;
 }
 
 /** `<file>:<line>` for every mention that no rule above excuses. */
@@ -327,6 +342,10 @@ function staleMentionSites(symbol: string): string[] {
 }
 
 describe('standalone-action owner key — the deleted member is dead TREE-WIDE (#14878)', () => {
+    beforeAll(() => {
+        treeScan = scanTree();
+    }, SCAN_TIMEOUT_MS);
+
     it(
         'is named nowhere outside the release record and the two pins',
         () => {
