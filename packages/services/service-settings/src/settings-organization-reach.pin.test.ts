@@ -45,6 +45,7 @@ const MANIFEST = {
   specifiers: [
     { key: 'brand', type: 'text', label: 'Brand', scope: 'tenant', default: 'none' },
     { key: 'legacy', type: 'text', label: 'Legacy', scope: 'tenant', default: 'none' },
+    { key: 'theme', type: 'text', label: 'Theme', scope: 'user', default: 'none' },
   ],
 } as any;
 
@@ -252,6 +253,8 @@ async function bootSelfBound(organizations: string[] | null, source?: typeof LEA
   for (const id of organizations ?? []) {
     await engine.insert('sys_organization', { id, name: id, slug: id }, SYS);
   }
+  // The user a user-rung write names, as the store already holds it.
+  memory.rowsOf('sys_user').set('usr_1', { id: 'usr_1', name: 'Ada', email: 'ada@example.test' });
   const service = new SettingsService({ env: {} });
   service.registerManifest(MANIFEST);
   service.bindEngine(wrapEngineAsSettingsEngine(engine as any), undefined, source ? { organization: source } : undefined);
@@ -295,15 +298,25 @@ function selfBoundDouble(source?: typeof LEAN_ORGANIZATION_SOURCE) {
 }
 
 describe('[#25249] a host that binds its own engine and states no organization source', () => {
-  it('(a) one organization: it reads and writes as that organization, through an adapter with no registry', async () => {
+  it('(a) one organization: the tenant and user rungs read and write as that organization, through an adapter with no registry', async () => {
     const b = await bootSelfBound([ORG]);
     await b.seed({ key: 'brand', value: 'Acme', organization_id: ORG });
     await b.seed({ key: 'legacy', value: 'Unowned', organization_id: null });
+    await b.seed({ key: 'theme', value: 'Unowned dark', scope: 'user', user_id: 'usr_1', organization_id: null });
 
     expect((await b.service.get(NS, 'brand', {})).value).toBe('Acme');
     expect((await b.service.get(NS, 'legacy', {})).source).toBe('default');
+    expect((await b.service.get(NS, 'theme', { userId: 'usr_1' })).source).toBe('default');
     await b.service.set(NS, 'brand', 'Acme two', {});
-    expect(b.rows()).toEqual([['brand', ORG, 'Acme two'], ['legacy', null, 'Unowned']]);
+    await b.service.set(NS, 'theme', 'Light', { userId: 'usr_1' });
+    await b.service.set(NS, 'theme', 'Light two', { userId: 'usr_1' });
+
+    expect((await b.service.get(NS, 'brand', { tenantId: ORG })).value).toBe('Acme two');
+    expect((await b.service.get(NS, 'theme', { userId: 'usr_1' })).value).toBe('Light two');
+    expect((await b.service.get(NS, 'theme', { userId: 'usr_1', tenantId: ORG })).value).toBe('Light two');
+    expect(b.rows()).toEqual([
+      ['brand', ORG, 'Acme two'], ['legacy', null, 'Unowned'], ['theme', null, 'Unowned dark'], ['theme', ORG, 'Light two'],
+    ]);
   });
 
   it('(b) no organization object, real engine: the probe is refused as a failed read, loudly', async () => {
